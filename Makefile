@@ -29,7 +29,7 @@ PIN = 6666
 APPNAME = "Cardano ADA"
 APPVERSION = "1.1.0"
 
-APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'"
+APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'"
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
@@ -96,7 +96,7 @@ ifeq ($(DEVEL), 1)
 		DEFINES += PRINTF=screen_printf
 	endif
 else
-    DEFINES += PRINTF\(...\)=
+	DEFINES += PRINTF\(...\)=
 endif
 
 ##############
@@ -128,7 +128,6 @@ LDLIBS   += -lm -lgcc -lc
 ##Enable to strip debug info from app
 #LDFLAGS  += -Wl,-s
 
-
 ##################
 #  Dependencies  #
 ##################
@@ -146,6 +145,7 @@ endif
 ##############
 #   Build    #
 ##############
+
 load: all
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
 
