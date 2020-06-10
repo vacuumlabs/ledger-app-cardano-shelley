@@ -1,6 +1,6 @@
 #ifdef DEVEL
 
-#include "addressUtils.h"
+#include "addressUtilsByron.h"
 #include "test_utils.h"
 #include "hex_utils.h"
 // Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
@@ -68,7 +68,7 @@ void testAddressDerivation()
 }
 
 
-void run_address_utils_test()
+void run_addressUtilsByron_test()
 {
 	testAddressDerivation();
 }
