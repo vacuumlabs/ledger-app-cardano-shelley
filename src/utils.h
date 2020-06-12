@@ -120,7 +120,7 @@
 // start using such variable. deprecated deals with that.
 #define MARK_UNUSED __attribute__ ((unused, deprecated))
 
-#if DEVEL
+#ifdef DEVEL
 #define TRACE(...) \
 	do { \
 		PRINTF("[%s:%d] ", __func__, __LINE__); \

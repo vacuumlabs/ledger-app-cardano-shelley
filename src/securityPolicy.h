@@ -13,8 +13,8 @@ typedef enum {
 
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec);
 
-security_policy_t policyForShowDeriveAddress(const bip44_path_t* pathSpec);
-security_policy_t policyForReturnDeriveAddress(const bip44_path_t* pathSpec);
+security_policy_t policyForShowDeriveAddress(uint8_t header, const bip44_path_t* pathSpec);
+security_policy_t policyForReturnDeriveAddress(uint8_t header, const bip44_path_t* pathSpec);
 
 security_policy_t policyForAttestUtxo();
 

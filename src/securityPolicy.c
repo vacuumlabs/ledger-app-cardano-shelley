@@ -1,8 +1,28 @@
+#include "addressUtilsShelley.h"
 #include "securityPolicy.h"
+#include "bip44.h"
 
 // Warning: following helper macros assume "pathSpec" in the context
 
 // Helper macros
+
+static inline bool path_is_inconsistent_with_header(uint8_t header, const bip44_path_t* pathSpec) {
+	const uint8_t addressType = getAddressType(header);
+
+	// Byron derivation path is only valid for a Byron address
+	if (addressType == BYRON && !bip44_isByron(pathSpec)) return false;
+	if (addressType != BYRON && !bip44_isShelley(pathSpec)) return false;
+
+	if (addressType == REWARD) {
+		if (!bip44_isValidStakingKeyPath(pathSpec)) return false;
+	} else {
+		// for all non-reward addresses, we check chain type and length
+		if (!bip44_hasValidChainTypeForAddress(pathSpec)) return false;
+		if (!bip44_containsAddress(pathSpec)) return false;
+	}
+
+	return true;
+}
 
 static inline bool has_cardano_prefix_and_any_account(const bip44_path_t* pathSpec)
 {
@@ -12,7 +32,7 @@ static inline bool has_cardano_prefix_and_any_account(const bip44_path_t* pathSp
 
 static inline bool has_valid_change_and_any_address(const bip44_path_t* pathSpec)
 {
-	return bip44_hasValidChainType(pathSpec) &&
+	return bip44_hasValidChainTypeForAddress(pathSpec) &&
 	       bip44_containsAddress(pathSpec);
 }
 
@@ -47,21 +67,23 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 }
 
 // Derive address and return it to the host
-security_policy_t policyForReturnDeriveAddress(const bip44_path_t* pathSpec)
+security_policy_t policyForReturnDeriveAddress(uint8_t header, const bip44_path_t* pathSpec)
 {
 	DENY_IF(!has_cardano_prefix_and_any_account(pathSpec));
+	DENY_IF(path_is_inconsistent_with_header(header, pathSpec));
 	DENY_IF(!has_valid_change_and_any_address(pathSpec));
 
 	WARN_IF(!has_reasonable_account_and_address(pathSpec))
-	WARN_IF(is_too_deep(pathSpec));
+	WARN_IF(is_too_deep(pathSpec)); // TODO change to DENY?
 
 	PROMPT_IF(true);
 }
 
 // Derive address and show it to the user
-security_policy_t policyForShowDeriveAddress(const bip44_path_t* pathSpec)
+security_policy_t policyForShowDeriveAddress(uint8_t header, const bip44_path_t* pathSpec)
 {
 	DENY_IF(!has_cardano_prefix_and_any_account(pathSpec));
+	DENY_IF(path_is_inconsistent_with_header(header, pathSpec));
 	DENY_IF(!has_valid_change_and_any_address(pathSpec));
 
 	WARN_IF(!has_reasonable_account_and_address(pathSpec))
