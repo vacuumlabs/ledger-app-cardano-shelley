@@ -33,19 +33,22 @@ enum {
 };
 
 
-// Checks for /44'/1815'/account'
+// Checks for /44'/1815'/account' (Byron) or /1852'/1815'/account' (Shelley)
 bool bip44_hasValidCardanoPrefix(const bip44_path_t* pathSpec);
+bool bip44_isByron(const bip44_path_t* pathSpec);
+bool bip44_isShelley(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
 bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec);
 
 bool bip44_containsChainType(const bip44_path_t* pathSpec);
-bool bip44_hasValidChainType(const bip44_path_t* pathSpec);
+bool bip44_hasValidChainTypeForAddress(const bip44_path_t* pathSpec);
 
 bool bip44_containsAddress(const bip44_path_t* pathSpec);
 bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec);
 
 bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec);
+void bip44_stakingKeyPathFromAddresPath(bip44_path_t* stakingKeyPath, const bip44_path_t* addressPath);
 
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
 
@@ -53,4 +56,10 @@ bool isHardened(uint32_t value);
 
 void bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
 
+
+#ifdef DEVEL
+void bip44_PRINTF(const bip44_path_t* pathSpec);
 #endif
+
+
+#endif // H_CARDANO_APP_BIP44
