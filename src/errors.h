@@ -27,17 +27,19 @@ enum {
 	ERR_INVALID_DATA               = 0x6E07,
 	// BIP44 path is rejected
 	ERR_INVALID_BIP44_PATH         = 0x6E08,
+	// unsupported Shelley address type
+	ERR_UNSUPPORTED_ADDRESS_TYPE   = 0x6E09,
 
 	// User rejected the action
-	ERR_REJECTED_BY_USER           = 0x6E09,
+	ERR_REJECTED_BY_USER           = 0x6E10,
 	// Ledger security policy rejected the action
-	ERR_REJECTED_BY_POLICY         = 0x6E10,
+	ERR_REJECTED_BY_POLICY         = 0x6E11,
 
 	// Pin screen
-	ERR_DEVICE_LOCKED              = 0x6E11,
+	ERR_DEVICE_LOCKED              = 0x6E12,
 
 	// end of errors which trigger automatic response
-	_ERR_AUTORESPOND_END           = 0x6E12,
+	_ERR_AUTORESPOND_END           = 0x6E13,
 
 	// Errors below SHOULD NOT be returned to the client
 	// Instead, leaking these to the main() scope
