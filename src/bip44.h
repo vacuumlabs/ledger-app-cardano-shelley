@@ -11,7 +11,8 @@ typedef struct {
 } bip44_path_t;
 
 
-static const uint32_t BIP_44 = 44;
+static const uint32_t PURPOSE_BYRON = 44;
+static const uint32_t PURPOSE_SHELLEY = 1852;
 static const uint32_t ADA_COIN_TYPE = 1815;
 
 static const uint32_t HARDENED_BIP32 = ((uint32_t) 1 << 31);
