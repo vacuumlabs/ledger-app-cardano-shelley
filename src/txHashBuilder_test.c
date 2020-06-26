@@ -60,11 +60,13 @@ void run_txHashBuilder_test()
 	tx_hash_builder_t builder;
 	txHashBuilder_init(&builder);
 
+	// TODO rewrite
+
 	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {
 		uint8_t tmp[32];
 		size_t tmpSize = parseHexString(PTR_PIC(it->txHashHex), tmp, SIZEOF(tmp));
-		txHashBuilder_addUtxoInput(
+		txHashBuilder_addInput(
 		        &builder,
 		        tmp, tmpSize,
 		        it->index
@@ -82,7 +84,7 @@ void run_txHashBuilder_test()
 		);
 	}
 
-	txHashBuilder_enterMetadata(&builder);
+	//txHashBuilder_enterMetadata(&builder);
 
 	uint8_t expected[32];
 	parseHexString(expectedHex, expected, SIZEOF(expected));

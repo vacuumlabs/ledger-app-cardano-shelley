@@ -1,4 +1,7 @@
+#include <string.h>
+
 #include "textUtils.h"
+#include "hex_utils.h"
 
 #define WRITE_CHAR(ptr, end, c) \
 	{ \
@@ -7,10 +10,7 @@
 		ptr++; \
 	}
 
-size_t str_formatAdaAmount(
-        char* out, size_t outSize,
-        uint64_t amount
-)
+size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
@@ -53,4 +53,18 @@ size_t str_formatAdaAmount(
 	out[rawSize] = 0;
 
 	return rawSize;
+}
+
+// TODO add tests
+size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize)
+{
+	// FIXME TODO uint64 does not fit into %d
+	snprintf(out, outSize, "%d", ttl);
+	return strlen(out);
+}
+
+// TODO add tests
+size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, char* out, size_t outSize)
+{
+	return encodeBytesToHex(metadataHash, metadataHashSize, out, outSize);
 }

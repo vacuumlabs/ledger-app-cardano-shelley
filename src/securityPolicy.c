@@ -153,6 +153,12 @@ security_policy_t policyForSignTxFee(uint64_t fee MARK_UNUSED)
 	SHOW_IF(true);
 }
 
+// For transaction TTL
+security_policy_t policyForSignTxTtl(uint32_t ttl MARK_UNUSED)
+{
+	SHOW_IF(true);
+}
+
 // For each transaction witness
 // Note: witnesses reveal public key of an address
 // and Ledger *does not* check whether they correspond to previously declared UTxOs
@@ -166,4 +172,14 @@ security_policy_t policyForSignTxWitness(const bip44_path_t* pathSpec)
 	WARN_IF(is_too_deep(pathSpec));
 
 	ALLOW_IF(true);
+}
+
+security_policy_t policyForSignTxMetadata()
+{
+	SHOW_IF(true);
+}
+
+security_policy_t policyForSignTxConfirm()
+{
+	PROMPT_IF(true);
 }
