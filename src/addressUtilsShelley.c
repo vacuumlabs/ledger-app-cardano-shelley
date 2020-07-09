@@ -17,14 +17,14 @@ bool isSupportedAddressType(uint8_t addressHeader)
 {
 	const uint8_t addressType = getAddressType(addressHeader);
 	switch (addressType) {
-	case BASE:
-	case POINTER:
-	case ENTERPRISE:
-	case BYRON:
-	case REWARD:
-		return true;
-	default:
-		return false;
+		case BASE:
+		case POINTER:
+		case ENTERPRISE:
+		case BYRON:
+		case REWARD:
+			return true;
+		default:
+			return false;
 	}
 }
 

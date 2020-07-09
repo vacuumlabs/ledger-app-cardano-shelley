@@ -148,13 +148,13 @@ security_policy_t policyForSignTxOutputPath(const bip44_path_t* pathSpec)
 }
 
 // For transaction fee
-security_policy_t policyForSignTxFee(uint64_t fee MARK_UNUSED)
+security_policy_t policyForSignTxFee(uint64_t fee)
 {
 	SHOW_IF(true);
 }
 
 // For transaction TTL
-security_policy_t policyForSignTxTtl(uint32_t ttl MARK_UNUSED)
+security_policy_t policyForSignTxTtl(uint32_t ttl)
 {
 	SHOW_IF(true);
 }

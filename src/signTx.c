@@ -32,6 +32,7 @@ static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 
 static inline void CHECK_STAGE(sign_tx_stage_t expected)
 {
+	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
 	VALIDATE(ctx->stage == expected, ERR_INVALID_STATE);
 }
 
@@ -40,14 +41,14 @@ static inline void advanceStage()
 	switch (ctx->stage) {
 
 	case SIGN_STAGE_INIT:
-		txHashBuilder_enterInputs(&ctx->txHashBuilder);
+		txHashBuilder_enterInputs(&ctx->txHashBuilder, ctx->numInputs);
 		ctx->stage = SIGN_STAGE_INPUTS;
 		break;
 
 	case SIGN_STAGE_INPUTS:
 		// we should have received all inputs
 		ASSERT(ctx->currentInput == ctx->numInputs);
-		txHashBuilder_enterOutputs(&ctx->txHashBuilder);
+		txHashBuilder_enterOutputs(&ctx->txHashBuilder, ctx->numOutputs);
 		ctx->stage = SIGN_STAGE_OUTPUTS;
 		break;
 
@@ -165,11 +166,13 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	TRACE();
 
 	CHECK_STAGE(SIGN_STAGE_INIT);
+	TRACE();
 	VALIDATE(p2 == 0, ERR_INVALID_REQUEST_PARAMETERS);
-
+	TRACE();
 	// Note: make sure that everything in ctx is initialized properly
 
 	txHashBuilder_init(&ctx->txHashBuilder);
+	TRACE();
 
 	ctx->fee = LOVELACE_MAX_SUPPLY + 1;
 	ctx->ttl = 0; // ttl is absolute slot, so 0 is supposed to be invalid for our purpose
@@ -180,6 +183,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	ctx->currentWithdrawal = 0;
 	ctx->currentWitness = 0;
 
+	TRACE();
 	struct {
 		uint8_t numInputs[4];
 		uint8_t numOutputs[4];
@@ -198,7 +202,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	ctx->numInputs            = (uint16_t) u4be_read(wireHeader->numInputs);
 	ctx->numOutputs           = (uint16_t) u4be_read(wireHeader->numOutputs);
 	ctx->numCertificates      = (uint16_t) u4be_read(wireHeader->numCertificates);
-	ctx->numWithdrawals = (uint16_t) u4be_read(wireHeader->numWithdrawals);
+	ctx->numWithdrawals       = (uint16_t) u4be_read(wireHeader->numWithdrawals);
 	ctx->numWitnesses         = (uint16_t) u4be_read(wireHeader->numWitnesses);
 
 	VALIDATE(ctx->numInputs < SIGN_MAX_INPUTS, ERR_INVALID_DATA);
@@ -383,9 +387,9 @@ static void signTx_handleOutputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t 
 	case SIGN_TX_OUTPUT_TYPE_PATH: { // TODO rename the label?
 		parseAddressParams(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view), &ctx->currentAddressParams);
 
-		policy = policyForSignTxOutputAddressParams(&ctx->currentAddressParams);
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
+		// policy = policyForSignTxOutputAddressParams(&ctx->currentAddressParams);
+		// TRACE("Policy: %d", (int) policy);
+		// ENSURE_NOT_DENIED(policy);
 
 		ctx->currentAddress.size = deriveAddress_shelley(&ctx->currentAddressParams, ctx->currentAddress.buffer, SIZEOF(ctx->currentAddress.buffer));
 		break;
@@ -428,7 +432,9 @@ enum {
 static void signTx_handleFee_ui_runStep()
 {
 	TRACE("step %d", ctx->ui_step);
-	ui_callback_fn_t* this_fn = signTx_handleOutput_ui_runStep;
+	ui_callback_fn_t* this_fn = signTx_handleFee_ui_runStep;
+
+	TRACE("fee %d", ctx->fee);
 
 	UI_STEP_BEGIN(ctx->ui_step);
 
@@ -462,20 +468,26 @@ static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 	VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
 
 	uint64_t parsedFee = u8be_read(wireUtxo->fee);
+	ctx->fee = parsedFee;
 
 	TRACE("Adding fee to tx hash");
 	txHashBuilder_addFee(&ctx->txHashBuilder, parsedFee);
+	TRACE();
 
 	security_policy_t policy = policyForSignTxFee(parsedFee);
 
+	TRACE();
 	switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_FEE_STEP_RESPOND); // TODO show tx fee instead
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_FEE_STEP_RESPOND);
 #	undef   CASE
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
+	TRACE();
 	signTx_handleFee_ui_runStep();
+	TRACE();
 }
 
 
@@ -490,7 +502,7 @@ enum {
 static void signTx_handleTtl_ui_runStep()
 {
 	TRACE("step %d", ctx->ui_step);
-	ui_callback_fn_t* this_fn = signTx_handleOutput_ui_runStep;
+	ui_callback_fn_t* this_fn = signTx_handleTtl_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step);
 
@@ -524,6 +536,7 @@ static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 	VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
 
 	uint64_t parsedTtl = u8be_read(wireUtxo->ttl);
+	ctx->ttl = parsedTtl;
 
 	TRACE("Adding ttl to tx hash");
 	txHashBuilder_addTtl(&ctx->txHashBuilder, parsedTtl);
@@ -533,6 +546,7 @@ static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 
 	switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TTL_STEP_RESPOND); // TODO show ttl instead
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TTL_STEP_RESPOND);
 #	undef   CASE
 	default:
@@ -702,8 +716,7 @@ static void signTx_handleMetadata_ui_runStep()
 static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE();
-	ASSERT(ctx->currentInput < ctx->numInputs);
-	CHECK_STAGE(SIGN_STAGE_INPUTS);
+	CHECK_STAGE(SIGN_STAGE_METADATA);
 
 	VALIDATE(p2 == 0, ERR_INVALID_REQUEST_PARAMETERS);
 
@@ -732,12 +745,13 @@ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 	} else if (includeMetadata == SIGN_TX_METADATA_NO) {
 		ctx->ui_step = HANDLE_METADATA_STEP_RESPOND;
 
-		TRACE("Adding metadata hash to tx hash");
+		TRACE("Adding empty metadata hash to tx hash");
 		txHashBuilder_addNullMetadata(&ctx->txHashBuilder);
-
+		TRACE();
 	} else {
 		THROW(ERR_INVALID_DATA);
 	}
+	TRACE();
 
 	signTx_handleMetadata_ui_runStep();
 }
@@ -783,17 +797,23 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* dataBuffer MARK_UNUSED
 
 	CHECK_STAGE(SIGN_STAGE_CONFIRM);
 
+	TRACE();
+
 	txHashBuilder_finalize(
 	        &ctx->txHashBuilder,
 	        ctx->txHash, SIZEOF(ctx->txHash)
 	);
 
+	TRACE();
+
 	security_policy_t policy = policyForSignTxConfirm();
+
+	TRACE();
 
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 #	define  DEFAULT(ERR) default: { THROW(ERR); }
 	switch (policy) {
-		CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
 		DEFAULT(ERR_NOT_IMPLEMENTED);
 	}
@@ -846,13 +866,15 @@ static void signTx_handleWitness_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_RESPOND) {
-		ctx->currentWitness++;
-		if (ctx->currentWitness == ctx->numWitnesses)
-			advanceStage();
-
 		TRACE("io_send_buf");
 		io_send_buf(SUCCESS, ctx->currentWitnessData, SIZEOF(ctx->currentWitnessData));
 		ui_displayBusy(); // needs to happen after I/O
+
+		ctx->currentWitness++;
+		if (ctx->currentWitness == ctx->numWitnesses) {
+			TRACE();
+			advanceStage();
+		}
 	}
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
@@ -860,6 +882,8 @@ static void signTx_handleWitness_ui_runStep()
 static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* dataBuffer, size_t dataSize)
 {
 	VALIDATE(p2 == 0, ERR_INVALID_REQUEST_PARAMETERS);
+	TRACE("Witness n. %d, total %d", ctx->currentWitness, ctx->numWitnesses);
+
 	ASSERT(ctx->currentWitness < ctx->numWitnesses);
 
 	size_t parsedSize = bip44_parseFromWire(&ctx->currentWitnessPath, dataBuffer, dataSize);
@@ -875,6 +899,7 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* dataBuffer, size_t dat
 	        ctx->txHash, SIZEOF(ctx->txHash),
 	        ctx->currentWitnessData, SIZEOF(ctx->currentWitnessData)
 	);
+	TRACE();
 
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 #	define  DEFAULT(ERR) default: { THROW(ERR); }

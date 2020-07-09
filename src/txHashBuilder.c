@@ -20,27 +20,33 @@ void blake2b_256_append_cbor(
 )
 {
 	uint8_t buffer[10];
+	TRACE();
 	size_t size = cbor_writeToken(type, value, buffer, SIZEOF(buffer));
+	TRACE();
 	blake2b_256_append(hashCtx, buffer, size);
 }
 
 void txHashBuilder_init(tx_hash_builder_t* builder)
 {
+	TRACE();
 	blake2b_256_init(&builder->txHash);
 	{
+		TRACE();
 		// main preamble
-		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP_INDEF, 0);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 4);
 	}
+	TRACE();
 	builder->state = TX_HASH_BUILDER_INIT;
 }
 
-void txHashBuilder_enterInputs(tx_hash_builder_t* builder)
+void txHashBuilder_enterInputs(tx_hash_builder_t* builder, const uint16_t numInputs)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_INIT);
 	{
 		// Enter inputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_INPUTS);
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY_INDEF, 0);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, numInputs);
 	}
 	builder->state = TX_HASH_BUILDER_IN_INPUTS;
 }
@@ -70,7 +76,7 @@ void txHashBuilder_addInput(
 	}
 }
 
-void txHashBuilder_enterOutputs(tx_hash_builder_t* builder)
+void txHashBuilder_enterOutputs(tx_hash_builder_t* builder, const uint16_t numOutputs)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_INPUTS);
 	{
@@ -78,7 +84,7 @@ void txHashBuilder_enterOutputs(tx_hash_builder_t* builder)
 		BUILDER_APPEND_CBOR(CBOR_TYPE_INDEF_END, 0);
 		// Enter outputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_OUTPUTS);
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY_INDEF, 0);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, numOutputs);
 	}
 	builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
 }
@@ -237,25 +243,29 @@ void txHashBuilder_addMetadata(tx_hash_builder_t* builder, const uint8_t* metada
 
 void txHashBuilder_addNullMetadata(tx_hash_builder_t* builder)
 {
+	TRACE();
 	switch (builder->state) {
-	case TX_HASH_BUILDER_IN_TTL:
-		break;
+		case TX_HASH_BUILDER_IN_TTL:
+			break;
 
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-		// end certificates
-		BUILDER_APPEND_CBOR(CBOR_TYPE_INDEF_END, 0);
+		case TX_HASH_BUILDER_IN_CERTIFICATES:
+			// end certificates
+			BUILDER_APPEND_CBOR(CBOR_TYPE_INDEF_END, 0);
 
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-		// end withdrawals
-		BUILDER_APPEND_CBOR(CBOR_TYPE_INDEF_END, 0);
-		break;
+		case TX_HASH_BUILDER_IN_WITHDRAWALS:
+			// end withdrawals
+			BUILDER_APPEND_CBOR(CBOR_TYPE_INDEF_END, 0);
+			break;
 
-	default:
-		ASSERT(false);
+		default:
+			ASSERT(false);
 	}
 	{
+		TRACE();
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 7);
-		BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+		TRACE();
+		BUILDER_APPEND_CBOR(CBOR_TYPE_PRIMITIVES, CBOR_PRIMITIVE_NULL);
+		TRACE();
 	}
 	builder->state = TX_HASH_BUILDER_IN_METADATA;
 }

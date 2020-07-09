@@ -20,6 +20,9 @@ size_t bip44_parseFromWire(
 	// Cast length to size_t
 	size_t length = dataBuffer[0];
 
+	TRACE("length: %d", length);
+	TRACE("pathSpec length: %d", ARRAY_LEN(pathSpec->path));
+
 	// Ensure length is valid
 	VALIDATE(length <= ARRAY_LEN(pathSpec->path), ERR_INVALID_DATA);
 	VALIDATE(length * 4 + 1 <= dataSize, ERR_INVALID_DATA);

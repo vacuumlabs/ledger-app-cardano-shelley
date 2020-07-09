@@ -114,19 +114,24 @@ void cbor_advanceToken(stream_t* stream)
 
 size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t bufferSize)
 {
+	TRACE();
 	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
+	TRACE();
 
 #define CHECK_BUF_LEN(requiredSize) if ((size_t) requiredSize > bufferSize) THROW(ERR_DATA_TOO_LARGE);
+	TRACE();
 	if (type == CBOR_TYPE_ARRAY_INDEF || type == CBOR_TYPE_INDEF_END) {
 		CHECK_BUF_LEN(1);
 		buffer[0] = type;
 		return 1;
 	}
+	TRACE();
 
 	if (type & CBOR_VALUE_MASK) {
 		// type should not have any value
 		THROW(ERR_UNEXPECTED_TOKEN);
 	}
+	TRACE();
 
 	// Check sanity
 	switch (type) {
@@ -135,35 +140,43 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 	case CBOR_TYPE_ARRAY:
 	case CBOR_TYPE_MAP:
 	case CBOR_TYPE_TAG:
+	case CBOR_TYPE_PRIMITIVES:
 		break;
 	default:
+		TRACE();
 		// not supported
 		THROW(ERR_UNEXPECTED_TOKEN);
 	}
+	TRACE();
 
 	// Warning(ppershing): It might be tempting but we don't want to call stream_appendData() twice
 	// Instead we have to construct the whole buffer at once to make append operation atomic.
 
 	if (value < VALUE_MIN_W1) {
+		TRACE();
 		CHECK_BUF_LEN(1);
 		u1be_write(buffer, (uint8_t) (type | value));
 		return 1;
 	} else if (value < VALUE_MIN_W2) {
+		TRACE();
 		CHECK_BUF_LEN(1 + 1);
 		u1be_write(buffer, type | 24);
 		u1be_write(buffer + 1, (uint8_t) value);
 		return 1 + 1;
 	} else if (value < VALUE_MIN_W4) {
+		TRACE();
 		CHECK_BUF_LEN(1 + 2);
 		u1be_write(buffer, type | 25);
 		u2be_write(buffer + 1, (uint16_t) value);
 		return 1 + 2;
 	} else if (value < VALUE_MIN_W8) {
+		TRACE();
 		CHECK_BUF_LEN(1 + 4);
 		u1be_write(buffer, type | 26);
 		u4be_write(buffer + 1, (uint32_t) value);
 		return 1 + 4;
 	} else {
+		TRACE();
 		CHECK_BUF_LEN(1 + 8);
 		u1be_write(buffer, type | 27);
 		u8be_write(buffer + 1, value);
