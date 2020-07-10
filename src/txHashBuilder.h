@@ -86,7 +86,7 @@ void txHashBuilder_addMetadata(
         const uint8_t* metadataHashBuffer, size_t metadataHashSize
 );
 
-void txHashBuilder_addNullMetadata(tx_hash_builder_t* builder);
+void txHashBuilder_skipAddMetadata(tx_hash_builder_t* builder);
 
 void txHashBuilder_finalize(
         tx_hash_builder_t* builder,

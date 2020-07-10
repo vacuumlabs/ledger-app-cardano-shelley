@@ -11,8 +11,20 @@
 	blake2b_256_append_cbor(&builder->txHash, type, value)
 
 #define BUILDER_APPEND_DATA(buffer, bufferSize) \
-	blake2b_256_append(&builder->txHash, buffer, bufferSize)
+	blake2b_256_apendd(&builder->txHash, buffer, bufferSize)
 
+
+void blake2b_256_apendd(
+	blake2b_256_context_t* hashCtx,
+	const uint8_t* buffer,
+	size_t bufferSize
+)
+{
+	for (int i = 0; i < bufferSize; i++) {
+		TRACE("%x", buffer[i]);
+	}
+	blake2b_256_append(hashCtx, buffer, bufferSize);
+}
 
 void blake2b_256_append_cbor(
         blake2b_256_context_t* hashCtx,
@@ -23,6 +35,9 @@ void blake2b_256_append_cbor(
 	TRACE();
 	size_t size = cbor_writeToken(type, value, buffer, SIZEOF(buffer));
 	TRACE();
+	for (int i = 0; i < size; i++) {
+		TRACE("%x", buffer[i]);
+	}
 	blake2b_256_append(hashCtx, buffer, size);
 }
 
@@ -33,7 +48,6 @@ void txHashBuilder_init(tx_hash_builder_t* builder)
 	{
 		TRACE();
 		// main preamble
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 4);
 	}
 	TRACE();
@@ -80,8 +94,6 @@ void txHashBuilder_enterOutputs(tx_hash_builder_t* builder, const uint16_t numOu
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_INPUTS);
 	{
-		// End inputs
-		BUILDER_APPEND_CBOR(CBOR_TYPE_INDEF_END, 0);
 		// Enter outputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_OUTPUTS);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, numOutputs);
@@ -116,9 +128,6 @@ void txHashBuilder_addOutput(
 void txHashBuilder_addFee(tx_hash_builder_t* builder, uint64_t fee)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
-
-	// end outputs
-	BUILDER_APPEND_CBOR(CBOR_TYPE_INDEF_END, 0);
 
 	// add fee item into the map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_FEE);
@@ -241,7 +250,7 @@ void txHashBuilder_addMetadata(tx_hash_builder_t* builder, const uint8_t* metada
 	builder->state = TX_HASH_BUILDER_IN_METADATA;
 }
 
-void txHashBuilder_addNullMetadata(tx_hash_builder_t* builder)
+void txHashBuilder_skipAddMetadata(tx_hash_builder_t* builder)
 {
 	TRACE();
 	switch (builder->state) {
@@ -259,13 +268,6 @@ void txHashBuilder_addNullMetadata(tx_hash_builder_t* builder)
 
 		default:
 			ASSERT(false);
-	}
-	{
-		TRACE();
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 7);
-		TRACE();
-		BUILDER_APPEND_CBOR(CBOR_TYPE_PRIMITIVES, CBOR_PRIMITIVE_NULL);
-		TRACE();
 	}
 	builder->state = TX_HASH_BUILDER_IN_METADATA;
 }
