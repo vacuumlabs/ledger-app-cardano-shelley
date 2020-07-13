@@ -11,7 +11,7 @@ void testcase_formatAda(
 {
 	PRINTF("testcase_formatAda %s\n", expected);
 	char tmp[30];
-	size_t len = str_formatAdaAmount(tmp, SIZEOF(tmp), amount);
+	size_t len = str_formatAdaAmount(amount, tmp, SIZEOF(tmp));
 	EXPECT_EQ(len, strlen(expected));
 	EXPECT_EQ(strcmp(tmp, expected), 0);
 }
@@ -32,12 +32,12 @@ void test_formatAda()
 		PRINTF("test_formatAda edge cases");
 		char tmp[12];
 		os_memset(tmp, 'X', SIZEOF(tmp));
-		str_formatAdaAmount(tmp, 9, 0);
+		str_formatAdaAmount(0, tmp, 9);
 		EXPECT_EQ(tmp[8], 0);
 		EXPECT_EQ(tmp[9], 'X');
 
-		EXPECT_THROWS(str_formatAdaAmount(tmp, 9,
-		                                  10000000), ERR_DATA_TOO_LARGE);
+		EXPECT_THROWS(str_formatAdaAmount(10000000, tmp, 9),
+		              ERR_DATA_TOO_LARGE);
 		EXPECT_EQ(tmp[9], 'X');
 	}
 }
@@ -45,6 +45,8 @@ void test_formatAda()
 void run_textUtils_test()
 {
 	test_formatAda();
+
+	// TODO add the missing ones
 }
 
 #endif
