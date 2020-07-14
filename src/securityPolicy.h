@@ -20,9 +20,12 @@ security_policy_t policyForReturnDeriveAddress(shelleyAddressParams_t* addressPa
 security_policy_t policyForSignTxInit();
 security_policy_t policyForSignTxInput();
 security_policy_t policyForSignTxOutputAddress(const uint8_t* rawAddressBuffer, size_t rawAddressSize);
-security_policy_t policyForSignTxOutputPath(const bip44_path_t* pathSpec);
-security_policy_t policyForSignTxFee(uint64_t fee );
+security_policy_t policyForSignTxOutputAddressParams(const shelleyAddressParams_t* params);
+security_policy_t policyForSignTxFee(uint64_t fee);
+security_policy_t policyForSignTxTtl(uint32_t ttl);
+security_policy_t policyForSignTxMetadata();
 security_policy_t policyForSignTxWitness(const bip44_path_t* pathSpec);
+security_policy_t policyForSignTxConfirm();
 
 static inline void ENSURE_NOT_DENIED(security_policy_t policy)
 {
