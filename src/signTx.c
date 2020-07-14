@@ -896,9 +896,8 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* dataBuffer, size_t dat
 	TRACE("getTxWitness");
 	TRACE("TX HASH");
 
-	for (int i = 0; i < SIZEOF(ctx->txHash); i++) {
-		TRACE("%x", ctx->txHash[i]);
-	}
+	TRACE_BUFFER(ctx->txHash, SIZEOF(ctx->txHash));
+
 	TRACE("END TX HASH");
 
 	getTxWitness(
