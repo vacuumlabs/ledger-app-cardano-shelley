@@ -349,8 +349,8 @@ void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* ou
 
 	ASSERT(outSize > 0);
 	snprintf(
-		out,
-		outSize,
+	        out,
+	        outSize,
 	        "(%d, %d, %d)",
 	        (int) blockchainPointer.blockIndex,
 	        (int) blockchainPointer.txIndex,

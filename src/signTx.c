@@ -268,7 +268,7 @@ static void signTx_handleOutputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t 
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
 		rawAddressSize = deriveRawAddress(
-		                         &ctx->currentPath,
+		                         &ctx->currentPath, MAINNET_PROTOCOL_MAGIC,
 		                         rawAddressBuffer, SIZEOF(rawAddressBuffer)
 		                 );
 		break;

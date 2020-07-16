@@ -3,6 +3,8 @@
 #include "addressUtilsByron.h"
 #include "test_utils.h"
 #include "hex_utils.h"
+#include "cardano.h"
+
 // Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
 #define UNWRAP(...) __VA_ARGS__
 
@@ -50,21 +52,29 @@ void testAddressDerivation()
 		testcase_deriveAddress_byron(path, ARRAY_LEN(path), protocolMagic_, expected_); \
 	}
 
-	// TODO use meaningful protocol magic
-
+	// Mainnet
 	TESTCASE(
-	        (HD + 44, HD + 1815, HD + 0, 1, 55), 0x0,
+	        (HD + 44, HD + 1815, HD + 0, 1, 55), MAINNET_PROTOCOL_MAGIC,
 	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912f"
 	);
+
 	TESTCASE(
-	        (HD + 44, HD + 1815, HD + 0, 1, HD + 26), 0x0,
+	        (HD + 44, HD + 1815, HD + 0, 1, HD + 26), MAINNET_PROTOCOL_MAGIC,
 	        "82d818582183581c49dda88b3cdb4c9b60ad35699b2795a446120a2460f1a789c6152ce2a0001a00fb5684"
 	);
 
 	TESTCASE(
-	        (HD + 44, HD + 1815, HD + 0, 1, HD + 26, 32, 54, 61), 0x0,
+	        (HD + 44, HD + 1815, HD + 0, 1, HD + 26, 32, 54, 61), MAINNET_PROTOCOL_MAGIC,
 	        "82d818582183581c7cef664fa8b2c01a9d31cfdc2b0ed662b3b16be4f5bcaf783c24c729a0001aab55fb52"
 	);
+
+	// Testnet
+	TESTCASE(
+	        (HD + 44, HD + 1815, HD + 0, 1, 55), 4747,
+	        "82d818582683581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a1024319128b001af1247f8f"
+	);
+
+
 #undef TESTCASE
 }
 

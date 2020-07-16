@@ -15,13 +15,16 @@ enum {
 	*/
 };
 
+static const size_t ADDRESS_ROOT_SIZE = 28;
+static const size_t PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY = 2;
+
 void addressRootFromExtPubKey(
         const extendedPublicKey_t* extPubKey,
         uint8_t* outBuffer, size_t outSize
 )
 {
 	ASSERT(SIZEOF(*extPubKey) == EXTENDED_PUBKEY_SIZE);
-	ASSERT(outSize == 28);
+	ASSERT(outSize == ADDRESS_ROOT_SIZE);
 
 	uint8_t cborBuffer[64 + 10];
 	write_view_t cbor = make_write_view(cborBuffer, END(cborBuffer));
@@ -63,11 +66,12 @@ void addressRootFromExtPubKey(
 
 size_t cborEncodePubkeyAddressInner(
         const uint8_t* addressRoot, size_t addressRootSize,
+        uint32_t protocolMagic,
         uint8_t* outBuffer, size_t outSize
         /* potential attributes */
 )
 {
-	ASSERT(addressRootSize == 28); // should be result of blake2b_224
+	ASSERT(addressRootSize == ADDRESS_ROOT_SIZE); // should be result of blake2b_224
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
@@ -79,7 +83,21 @@ size_t cborEncodePubkeyAddressInner(
 			view_appendData(&out, addressRoot, addressRootSize);
 		} {
 			// 2
-			view_appendToken(&out, CBOR_TYPE_MAP, 0 /* addrAttributes is empty */);
+			if (protocolMagic == MAINNET_PROTOCOL_MAGIC) {
+				view_appendToken(&out, CBOR_TYPE_MAP, 0 /* addrAttributes is empty */);
+			} else {
+				/* addrAddtributes contains protocol magic for non-mainnet Byron addresses */
+				view_appendToken(&out, CBOR_TYPE_MAP, 1);
+				{
+					view_appendToken(&out, CBOR_TYPE_UNSIGNED, PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY); /* map key for protocol magic */
+
+					// Protocol magic itself is bytes with cbor-encoded content
+					char scratch[10];
+					size_t scratchSize = cbor_writeToken(CBOR_TYPE_UNSIGNED, protocolMagic, scratch, SIZEOF(scratch));
+					view_appendToken(&out, CBOR_TYPE_BYTES, scratchSize);
+					view_appendData(&out, scratch, scratchSize);
+				}
+			}
 		} {
 			// 3
 			view_appendToken(&out, CBOR_TYPE_UNSIGNED, CARDANO_ADDRESS_TYPE_PUBKEY);
@@ -182,7 +200,7 @@ size_t unboxChecksummedAddress(
 
 
 size_t deriveRawAddress(
-        const bip44_path_t* pathSpec,
+        const bip44_path_t* pathSpec, uint32_t protocolMagic,
         uint8_t* outBuffer, size_t outSize
 )
 {
@@ -200,21 +218,19 @@ size_t deriveRawAddress(
 
 	return cborEncodePubkeyAddressInner(
 	               addressRoot, SIZEOF(addressRoot),
+	               protocolMagic,
 	               outBuffer, outSize
 	       );
 }
 
 size_t deriveAddress_byron(
-        const bip44_path_t* pathSpec,
-        uint32_t protocolMagic,
+        const bip44_path_t* pathSpec, uint32_t protocolMagic,
         uint8_t* outBuffer, size_t outSize
 )
 {
-	// TODO incorporate protocolMagic
-
 	uint8_t rawAddressBuffer[40];
 	size_t rawAddressSize = deriveRawAddress(
-	                                pathSpec,
+	                                pathSpec, protocolMagic,
 	                                rawAddressBuffer, SIZEOF(rawAddressBuffer)
 	                        );
 

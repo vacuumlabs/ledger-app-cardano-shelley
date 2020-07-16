@@ -18,7 +18,7 @@ static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uin
 }
 
 static void testcase_deriveAddressShelley(
-        uint8_t type, uint8_t networkId, const uint32_t* spendingPathArray, size_t spendingPathLen,
+        uint8_t type, uint32_t networkIdOrProtocolMagic, const uint32_t* spendingPathArray, size_t spendingPathLen,
         uint8_t stakingChoice, const uint32_t* stakingPathArray, size_t stakingPathLen,
         const char* stakingKeyHashHex, const blockchainPointer_t* stakingKeyBlockchainPointer,
         const char* expectedHex)
@@ -43,9 +43,15 @@ static void testcase_deriveAddressShelley(
 
 	addressParams_t params = {
 		.type = type,
-		.networkId = networkId,
 		.stakingChoice = stakingChoice
 	}; // the rest is initialized to zero
+
+	if (type == BYRON) {
+		params.protocolMagic = networkIdOrProtocolMagic;
+	} else {
+		params.networkId = networkIdOrProtocolMagic;
+	}
+
 	pathSpec_init(&params.spendingKeyPath, spendingPathArray, spendingPathLen);
 	if (stakingPathLen > 0)
 		pathSpec_init(&params.stakingKeyPath, stakingPathArray, stakingPathLen);
@@ -57,7 +63,7 @@ static void testcase_deriveAddressShelley(
 		params.stakingKeyBlockchainPointer = *stakingKeyBlockchainPointer;
 	}
 
-	PRINTF("testcase_deriveAddressShelley 0x%02x ", constructShelleyAddressHeader(type, networkId));
+	PRINTF("testcase_deriveAddressShelley 0x%02x ", constructShelleyAddressHeader(type, networkIdOrProtocolMagic));
 	bip44_PRINTF(&params.spendingKeyPath);
 	if (params.stakingKeyPath.length > 0) {
 		bip44_PRINTF(&params.stakingKeyPath);
@@ -99,7 +105,7 @@ static void testAddressDerivation()
 	}
 
 	TESTCASE(
-	        BYRON, 0x00, (HD + 44, HD + 1815, HD + 0, 1, 55),
+	        BYRON, MAINNET_PROTOCOL_MAGIC, (HD + 44, HD + 1815, HD + 0, 1, 55),
 	        NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
 	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912f"
 	);
