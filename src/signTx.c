@@ -558,26 +558,40 @@ static void signTx_handleFee_ui_runStep()
 
 static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_FEE);
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_FEE);
 
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
 
-	VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
-	ctx->fee = u8be_read(wireDataBuffer);
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-	TRACE("Adding fee to tx hash");
-	txHashBuilder_addFee(&ctx->txHashBuilder, ctx->fee);
+		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
+		ctx->fee = u8be_read(wireDataBuffer);
+	}
+
+	{
+		// add to tx
+		TRACE("Adding fee to tx hash");
+		txHashBuilder_addFee(&ctx->txHashBuilder, ctx->fee);
+	}
 
 	security_policy_t policy = policyForSignTxFee(ctx->fee);
-	switch (policy) {
+
+	{
+		// select UI steps
+		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_FEE_STEP_DISPLAY);
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_FEE_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_FEE_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_FEE_STEP_RESPOND);
 #	undef   CASE
-	default:
-		THROW(ERR_NOT_IMPLEMENTED);
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
 	}
 
 	signTx_handleFee_ui_runStep();
