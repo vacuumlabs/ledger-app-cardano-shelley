@@ -73,7 +73,7 @@ void txHashBuilder_init(
 	builder->state = TX_HASH_BUILDER_INIT;
 }
 
-bool txHashBuilder_assertCanLeaveInit(tx_hash_builder_t* builder)
+void txHashBuilder_assertCanLeaveInit(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_INIT);
 }
@@ -115,7 +115,7 @@ void txHashBuilder_addInput(
 	}
 }
 
-bool txHashBuilder_assertCanLeaveInputs(tx_hash_builder_t* builder)
+void txHashBuilder_assertCanLeaveInputs(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_INPUTS);
 	ASSERT(builder->remainingInputs == 0);
