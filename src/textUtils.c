@@ -57,12 +57,15 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 
 size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize)
 {
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	const uint64_t SLOTS_IN_EPOCH = 21600;
 	uint64_t epoch = ttl / SLOTS_IN_EPOCH;
 	uint64_t slotInEpoch = ttl % SLOTS_IN_EPOCH;
 
 	ASSERT(sizeof(int) >= sizeof(uint32_t));
 
+	ASSERT(outSize > 0); // so we can write null terminator
 	if (epoch > 1000000)  {
 		// thousands of years
 		snprintf(out, outSize, "epoch more than 1000000");

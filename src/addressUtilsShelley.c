@@ -334,46 +334,32 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 	return BUFFER_SIZE_PARANOIA + 1;
 }
 
-// mostly copied from bip44_printToStr
 // TODO(ppershing): this function needs to be thoroughly tested
 // on small outputSize
 void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 	// We have to have space for terminating null
-	ASSERT(outSize > 0);
-	char* ptr = out;
-	char* end = (out + outSize);
-
-// TODO unify with the same macro used in bip44.c ?
-#define WRITE(fmt, ...) \
-	{ \
-		ASSERT(ptr <= end); \
-		STATIC_ASSERT(sizeof(end - ptr) == sizeof(size_t), "bad size_t size"); \
-		size_t availableSize = (size_t) (end - ptr); \
-		/* Note(ppershing): We do not bother checking return */ \
-		/* value of snprintf as it always returns 0. */ \
-		/* Go figure out ... */ \
-		snprintf(ptr, availableSize, fmt, ##__VA_ARGS__); \
-		size_t res = strlen(ptr); \
-		/* TODO(better error handling) */ \
-		ASSERT(res + 1 < availableSize); \
-		ptr += res; \
-	}
 
 	STATIC_ASSERT(sizeof(int) >= sizeof(blockchainIndex_t), "bad blockchainIndex_t size");
 	STATIC_ASSERT(sizeof(int) == 4, "bad int size"); // because of the checks below
 	ASSERT(blockchainPointer.blockIndex <= INT32_MAX);
 	ASSERT(blockchainPointer.txIndex <= INT32_MAX);
 	ASSERT(blockchainPointer.certificateIndex <= INT32_MAX);
-	WRITE(
+
+	ASSERT(outSize > 0);
+	snprintf(
+		out,
+		outSize,
 	        "(%d, %d, %d)",
 	        (int) blockchainPointer.blockIndex,
 	        (int) blockchainPointer.txIndex,
 	        (int) blockchainPointer.certificateIndex
 	);
 
-	ASSERT(ptr < end);
+	size_t len = strlen(out);
+	// ensure we are not truncating
+	ASSERT(len + 1 < outSize);
 }
 
 size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* out, size_t outSize)
