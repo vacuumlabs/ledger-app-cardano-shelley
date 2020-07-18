@@ -1095,7 +1095,7 @@ static void signTx_handleWitness_ui_runStep()
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_DISPLAY) {
 		char pathStr[100];
-		bip44_printToStr(&ctx->currentWitnessPath, pathStr, SIZEOF(pathStr));
+		bip44_printToStr(&ctx->currentWitnessData.path, pathStr, SIZEOF(pathStr));
 		ui_displayPaginatedText(
 		        "Witness path",
 		        pathStr,
@@ -1117,8 +1117,8 @@ static void signTx_handleWitness_ui_runStep()
 		}
 
 		TRACE("Sending witness data");
-		TRACE_BUFFER(ctx->currentWitnessData, SIZEOF(ctx->currentWitnessData));
-		io_send_buf(SUCCESS, ctx->currentWitnessData, SIZEOF(ctx->currentWitnessData));
+		TRACE_BUFFER(ctx->currentWitnessData.signature, SIZEOF(ctx->currentWitnessData.signature));
+		io_send_buf(SUCCESS, ctx->currentWitnessData.signature, SIZEOF(ctx->currentWitnessData.signature));
 		ui_displayBusy(); // needs to happen after I/O
 
 	}
@@ -1127,42 +1127,58 @@ static void signTx_handleWitness_ui_runStep()
 
 static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_WITNESSES);
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_WITNESSES);
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
-	TRACE("Witness no. %d out of %d", ctx->currentWitness, ctx->numWitnesses);
-	ASSERT(ctx->currentWitness < ctx->numWitnesses);
-
-	size_t parsedSize = bip44_parseFromWire(&ctx->currentWitnessPath, wireDataBuffer, wireDataSize);
-	VALIDATE(parsedSize == wireDataSize, ERR_INVALID_DATA);
-
-	security_policy_t policy = policyForSignTxWitness(&ctx->currentWitnessPath);
-	TRACE("policy %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
-
-	TRACE("getTxWitness");
-	TRACE("TX HASH");
-	TRACE_BUFFER(ctx->txHash, SIZEOF(ctx->txHash));
-	TRACE("END TX HASH");
-
-	getTxWitness(
-	        &ctx->currentWitnessPath,
-	        ctx->txHash, SIZEOF(ctx->txHash),
-	        ctx->currentWitnessData, SIZEOF(ctx->currentWitnessData)
-	);
-
-	switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_PROMPT_WARN_UNUSUAL,  HANDLE_WITNESS_STEP_WARNING);
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_WITNESS_STEP_RESPOND);
-#	undef   CASE
-	default:
-		THROW(ERR_NOT_IMPLEMENTED);
+		TRACE("Witness no. %d out of %d", ctx->currentWitness, ctx->numWitnesses);
+		ASSERT(ctx->currentWitness < ctx->numWitnesses);
 	}
 
+	{
+		// parse
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		size_t parsedSize = bip44_parseFromWire(&ctx->currentWitnessData.path, wireDataBuffer, wireDataSize);
+		VALIDATE(parsedSize == wireDataSize, ERR_INVALID_DATA);
+	}
+
+	security_policy_t policy = POLICY_DENY;
+
+	{
+		// get policy
+		policy = policyForSignTxWitness(&ctx->currentWitnessData.path);
+		TRACE("policy %d", (int) policy);
+		ENSURE_NOT_DENIED(policy);
+	}
+
+	{
+		// compute witness
+		TRACE("getTxWitness");
+		TRACE("TX HASH");
+		TRACE_BUFFER(ctx->txHash, SIZEOF(ctx->txHash));
+		TRACE("END TX HASH");
+
+		getTxWitness(
+		        &ctx->currentWitnessData.path,
+		        ctx->txHash, SIZEOF(ctx->txHash),
+		        ctx->currentWitnessData.signature, SIZEOF(ctx->currentWitnessData.signature)
+		);
+	}
+
+	{
+		// choose UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_WARN_UNUSUAL,  HANDLE_WITNESS_STEP_WARNING);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_WITNESS_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
 	signTx_handleWitness_ui_runStep();
 }
 

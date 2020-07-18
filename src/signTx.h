@@ -32,6 +32,11 @@ enum { // TODO enum with the same values?
 #define METADATA_HASH_LENGTH 32
 
 typedef struct {
+	bip44_path_t path;
+	uint8_t signature[64];
+} sign_tx_witness_data_t;
+
+typedef struct {
 	sign_tx_stage_t stage;
 
 	uint64_t fee;
@@ -66,8 +71,7 @@ typedef struct {
 	bip44_path_t certificateKeyPath;
 	uint8_t certificatePoolKeyHash[POOL_KEY_HASH_LENGTH];
 
-	uint8_t currentWitnessData[64];
-	bip44_path_t currentWitnessPath;
+	sign_tx_witness_data_t currentWitnessData;
 
 	int ui_step;
 } ins_sign_tx_context_t;
