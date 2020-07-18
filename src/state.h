@@ -2,18 +2,13 @@
 #define H_CARDANO_APP_STATE
 
 #include "getVersion.h"
-#include "stream.h"
 #include "getExtendedPublicKey.h"
 #include "deriveAddress.h"
 #include "signTx.h"
 
-typedef struct {
-	stream_t s;
-} ins_tests_context_t;
 
 typedef union {
 	// Here should go states of all instructions
-	ins_tests_context_t testsContext;
 	ins_get_ext_pubkey_context_t extPubKeyContext;
 	ins_derive_address_context_t deriveAddressContext;
 	ins_sign_tx_context_t signTxContext;

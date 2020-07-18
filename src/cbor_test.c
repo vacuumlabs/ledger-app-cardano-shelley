@@ -3,13 +3,9 @@
 #include "cbor.h"
 #include "test_utils.h"
 #include "hex_utils.h"
-#include "stream.h"
 #include <os.h>
 #include <string.h>
-#include "state.h"
 #include "utils.h"
-
-static ins_tests_context_t* ctx = &(instructionState.testsContext);
 
 // Test vectors are taken from
 // https://tools.ietf.org/html/rfc7049#appendix-A
@@ -54,14 +50,14 @@ static void test_cbor_peek_token()
 
 	ITERATE(it, testVectors) {
 		PRINTF("test_cbor_peek_token %s\n", PTR_PIC(it->hex));
-		stream_init(& ctx->s);
-		stream_appendFromHexString(& ctx->s, PTR_PIC(it->hex));
-		cbor_token_t res = cbor_peekToken(& ctx->s);
+		uint8_t buf[20];
+		size_t bufSize = decode_hex(PTR_PIC(it->hex), buf, SIZEOF(buf));
+
+		cbor_token_t res = cbor_parseToken(buf, bufSize);
 		EXPECT_EQ(res.type, it->type);
 		EXPECT_EQ(res.width, it->width);
 		EXPECT_EQ(res.value, it->value);
-		cbor_advanceToken(& ctx->s);
-		EXPECT_EQ(stream_availableBytes(& ctx->s), 0);
+		EXPECT_EQ(res.width + 1, bufSize);
 	}
 
 }
@@ -87,9 +83,9 @@ static void test_cbor_parse_noncanonical()
 
 	ITERATE(it, testVectors) {
 		PRINTF("test_cbor_parse_noncanonical %s\n", PTR_PIC(it->hex));
-		stream_init(& ctx->s);
-		stream_appendFromHexString(& ctx->s, PTR_PIC(it->hex));
-		EXPECT_THROWS(cbor_peekToken(& ctx->s), ERR_UNEXPECTED_TOKEN);
+		uint8_t buf[20];
+		size_t bufSize = decode_hex(PTR_PIC(it->hex), buf, SIZEOF(buf));
+		EXPECT_THROWS(cbor_parseToken(buf, bufSize), ERR_UNEXPECTED_TOKEN);
 	}
 }
 
@@ -135,7 +131,6 @@ static void test_cbor_serialization()
 		size_t expectedSize = decode_hex(PTR_PIC(it->hex), expected, SIZEOF(expected));
 		uint8_t buffer[50];
 		size_t bufferSize = cbor_writeToken(it->type, it->value, buffer, SIZEOF(buffer));
-		cbor_appendToken(& ctx->s, it->type, it->value);
 		EXPECT_EQ(bufferSize, expectedSize);
 		EXPECT_EQ_BYTES(buffer, expected, expectedSize);
 	}
@@ -150,8 +145,8 @@ static void test_cbor_serialization()
 	};
 
 	ITERATE(it, invalidVectors) {
-		stream_init(& ctx->s);
-		EXPECT_THROWS(cbor_appendToken(& ctx->s, 47, 0), ERR_UNEXPECTED_TOKEN);
+		uint8_t buf[10];
+		EXPECT_THROWS(cbor_writeToken(it->type, 0, buf, SIZEOF(buf)), ERR_UNEXPECTED_TOKEN);
 	}
 }
 

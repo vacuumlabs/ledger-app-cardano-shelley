@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <os.h>
 #include "test_utils.h"
-#include "stream.h"
 #include <string.h>
 #include "utils.h"
 
@@ -21,17 +20,6 @@ uint8_t hex_parseNibblePair(const char* buffer)
 	return (uint8_t) ((first << 4) + second);
 }
 
-void stream_appendFromHexString(stream_t* s, const char* inStr)
-{
-	unsigned len = strlen(inStr);
-	if (len % 2) THROW(ERR_UNEXPECTED_TOKEN);
-	while (len >= 2) {
-		uint8_t tmp = hex_parseNibblePair(inStr);
-		stream_appendData(s, &tmp, 1);
-		len -= 2;
-		inStr += 2;
-	}
-}
 
 size_t decode_hex(const char* inStr, uint8_t* outBuffer, size_t outMaxSize)
 {
@@ -73,12 +61,6 @@ size_t encode_hex(const uint8_t* bytes, size_t bytesLength, char* out, size_t ou
 	return 2 * bytesLength + 1;
 }
 
-
-void stream_initFromHexString(stream_t* s, const char* inStr)
-{
-	stream_init(s);
-	stream_appendFromHexString(s, inStr);
-}
 
 void test_hex_nibble_parsing()
 {

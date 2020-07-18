@@ -3,7 +3,6 @@
 #include "common.h"
 
 #include "runTests.h"
-#include "stream.h"
 #include "cbor.h"
 #include "endian.h"
 #include "base58.h"
@@ -33,7 +32,6 @@ void handleRunTests(
 		run_txHashBuilder_test();
 		run_endian_test();
 		run_hex_test();
-		run_stream_test();
 		run_cbor_test();
 		run_base58_test();
 		run_hash_test();

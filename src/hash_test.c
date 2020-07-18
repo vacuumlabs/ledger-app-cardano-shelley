@@ -3,7 +3,6 @@
 #include "cbor.h"
 #include "test_utils.h"
 #include "hex_utils.h"
-#include "stream.h"
 #include <os.h>
 #include <string.h>
 #include "hash.h"
