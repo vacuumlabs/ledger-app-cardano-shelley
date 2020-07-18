@@ -44,6 +44,10 @@ typedef struct {
 } sign_tx_witness_data_t;
 
 typedef struct {
+	uint8_t metadataHash[METADATA_HASH_LENGTH];
+} sign_tx_metadata_data_t;
+
+typedef struct {
 	sign_tx_stage_t stage;
 
 	uint64_t fee;
@@ -74,7 +78,7 @@ typedef struct {
 		size_t size;
 	} currentAddress;
 	addressParams_t currentAddressParams;
-	uint8_t metadataHash[METADATA_HASH_LENGTH];
+		sign_tx_metadata_data_t metadata;
 		sign_tx_certificate_data_t certificate;
 		sign_tx_witness_data_t witness;
 	} stageData;

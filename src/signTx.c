@@ -963,7 +963,7 @@ static void signTx_handleMetadata_ui_runStep()
 
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY) {
 		char metadataHashHex[100];
-		str_formatMetadata(ctx->metadataHash, SIZEOF(ctx->metadataHash), metadataHashHex, SIZEOF(metadataHashHex));
+		str_formatMetadata(ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash), metadataHashHex, SIZEOF(metadataHashHex));
 		ui_displayPaginatedText(
 		        "Transaction metadata",
 		        metadataHashHex,
@@ -988,12 +988,14 @@ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
+	os_memset(&ctx->stageData.metadata, 0, SIZEOF(ctx->stageData.metadata));
+
 	{
 		// parse data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		VALIDATE(wireDataSize == METADATA_HASH_LENGTH, ERR_INVALID_DATA);
-		os_memmove(ctx->metadataHash, wireDataBuffer, METADATA_HASH_LENGTH);
+		os_memmove(ctx->stageData.metadata.metadataHash, wireDataBuffer, SIZEOF(ctx->stageData.metadata.metadataHash));
 	}
 
 	security_policy_t policy = policyForSignTxMetadata();
@@ -1013,7 +1015,7 @@ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 	{
 		// add metadata to tx
 		TRACE("Adding metadata hash to tx hash");
-		txHashBuilder_addMetadata(&ctx->txHashBuilder, ctx->metadataHash, SIZEOF(ctx->metadataHash));
+		txHashBuilder_addMetadata(&ctx->txHashBuilder, ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash));
 		TRACE();
 	}
 
