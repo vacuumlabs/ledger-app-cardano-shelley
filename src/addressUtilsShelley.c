@@ -63,34 +63,32 @@ bool isValidStakingChoice(uint8_t stakingChoice)
 
 bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams)
 {
-#define INCONSISTENT_WITH(STAKING_CHOICE) if (addressParams->stakingChoice == (STAKING_CHOICE)) return false
-#define CONSISTENT_ONLY_WITH(STAKING_CHOICE) if (addressParams->stakingChoice != (STAKING_CHOICE)) return false
+#define CONSISTENT_WITH(STAKING_CHOICE) if (addressParams->stakingChoice == (STAKING_CHOICE)) return true
 
 	switch (addressParams->type) {
 
 	case BASE:
-		INCONSISTENT_WITH(NO_STAKING);
-		INCONSISTENT_WITH(BLOCKCHAIN_POINTER);
+		CONSISTENT_WITH(STAKING_KEY_HASH);
+		CONSISTENT_WITH(STAKING_KEY_PATH);
 		break;
 
 	case POINTER:
-		CONSISTENT_ONLY_WITH(BLOCKCHAIN_POINTER);
+		CONSISTENT_WITH(BLOCKCHAIN_POINTER);
 		break;
 
 	case ENTERPRISE:
 	case BYRON:
 	case REWARD:
-		CONSISTENT_ONLY_WITH(NO_STAKING);
+		CONSISTENT_WITH(NO_STAKING);
 		break;
 
 	default:
 		ASSERT(false);
 	}
 
-	return true;
+	return false;
 
-#undef INCONSISTENT_WITH
-#undef CONSISTENT_ONLY_WITH
+#undef CONSISTENT_WITH
 }
 
 // TODO perhaps move elsewhere? bip44?
