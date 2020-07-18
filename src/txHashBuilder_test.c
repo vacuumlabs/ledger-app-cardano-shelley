@@ -238,9 +238,9 @@ void run_txHashBuilder_test()
 	const size_t numCertificates = ARRAY_LEN(registrationCertificates) +
 	                               ARRAY_LEN(deregistrationCertificates) + ARRAY_LEN(delegationCertificates);
 
-	txHashBuilder_init(&builder, numCertificates, ARRAY_LEN(withdrawals), false);
+	txHashBuilder_init(&builder, ARRAY_LEN(inputs), ARRAY_LEN(outputs), numCertificates, ARRAY_LEN(withdrawals), false);
 
-	txHashBuilder_enterInputs(&builder, ARRAY_LEN(inputs));
+	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {
 		uint8_t tmp[TX_HASH_LENGTH];
 		size_t tmpSize = decode_hex(PTR_PIC(it->txHashHex), tmp, SIZEOF(tmp));
@@ -251,7 +251,7 @@ void run_txHashBuilder_test()
 		);
 	}
 
-	txHashBuilder_enterOutputs(&builder, ARRAY_LEN(outputs));
+	txHashBuilder_enterOutputs(&builder);
 	ITERATE(it, outputs) {
 		uint8_t tmp[70];
 		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));

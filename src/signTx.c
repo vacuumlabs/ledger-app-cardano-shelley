@@ -44,14 +44,14 @@ static inline void advanceStage()
 	switch (ctx->stage) {
 
 	case SIGN_STAGE_INIT:
-		txHashBuilder_enterInputs(&ctx->txHashBuilder, ctx->numInputs);
+		txHashBuilder_enterInputs(&ctx->txHashBuilder);
 		ctx->stage = SIGN_STAGE_INPUTS;
 		break;
 
 	case SIGN_STAGE_INPUTS:
 		// we should have received all inputs
 		ASSERT(ctx->currentInput == ctx->numInputs);
-		txHashBuilder_enterOutputs(&ctx->txHashBuilder, ctx->numOutputs);
+		txHashBuilder_enterOutputs(&ctx->txHashBuilder);
 		ctx->stage = SIGN_STAGE_OUTPUTS;
 		break;
 
@@ -284,7 +284,11 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	// Note: make sure that everything in ctx is initialized properly
 	txHashBuilder_init(
 	        &ctx->txHashBuilder,
-	        ctx->numCertificates, ctx->numWithdrawals, ctx->includeMetadata
+	        ctx->numInputs,
+	        ctx->numOutputs,
+	        ctx->numCertificates,
+	        ctx->numWithdrawals,
+	        ctx->includeMetadata
 	);
 
 	security_policy_t policy = policyForSignTxInit();

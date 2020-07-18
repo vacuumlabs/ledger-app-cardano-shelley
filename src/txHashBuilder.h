@@ -34,8 +34,10 @@ typedef enum {
 } tx_hash_builder_state_t;
 
 typedef struct {
-	uint16_t numWithdrawals;
-	uint16_t numCertificates;
+	uint16_t remainingInputs;
+	uint16_t remainingOutputs;
+	uint16_t remainingWithdrawals;
+	uint16_t remainingCertificates;
 	bool includeMetadata;
 
 	tx_hash_builder_state_t state;
@@ -45,17 +47,21 @@ typedef struct {
 
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
-        uint16_t numCertificates, uint16_t numWithdrawals, bool includeMetadata
+        uint16_t numInputs,
+        uint16_t numOutputs,
+        uint16_t numCertificates,
+        uint16_t numWithdrawals,
+        bool includeMetadata
 );
 
-void txHashBuilder_enterInputs(tx_hash_builder_t* builder, uint16_t numInputs);
+void txHashBuilder_enterInputs(tx_hash_builder_t* builder);
 void txHashBuilder_addInput(
         tx_hash_builder_t* builder,
         const uint8_t* utxoHashBuffer, size_t utxoHashSize,
         uint32_t utxoIndex
 );
 
-void txHashBuilder_enterOutputs(tx_hash_builder_t* builder, uint16_t numOutputs);
+void txHashBuilder_enterOutputs(tx_hash_builder_t* builder);
 void txHashBuilder_addOutput(
         tx_hash_builder_t* builder,
         const uint8_t* addressBuffer, size_t addressSize,
