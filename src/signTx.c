@@ -694,7 +694,7 @@ static void signTx_handleCertificate_ui_runStep()
 		char details[200];
 		os_memset(details, 0, SIZEOF(details));
 
-		switch (ctx->certificateType) {
+		switch (ctx->currentCertificateData.type) {
 		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 			snprintf(title, SIZEOF(title), "Register");
 			snprintf(details, SIZEOF(details), "staking key");
@@ -708,7 +708,7 @@ static void signTx_handleCertificate_ui_runStep()
 		case CERTIFICATE_TYPE_STAKE_DELEGATION:
 			snprintf(title, SIZEOF(title), "Delegate stake to pool");
 			encode_hex(
-			        ctx->certificatePoolKeyHash, SIZEOF(ctx->certificatePoolKeyHash),
+			        ctx->currentCertificateData.poolKeyHash, SIZEOF(ctx->currentCertificateData.poolKeyHash),
 			        details, SIZEOF(details)
 			);
 			break;
@@ -727,7 +727,7 @@ static void signTx_handleCertificate_ui_runStep()
 		char key[100];
 		os_memset(key, 0, SIZEOF(key));
 
-		bip44_printToStr(&ctx->certificateKeyPath, key, SIZEOF(key));
+		bip44_printToStr(&ctx->currentCertificateData.keyPath, key, SIZEOF(key));
 
 		ui_displayPaginatedText(
 		        "Staking key",
@@ -739,7 +739,7 @@ static void signTx_handleCertificate_ui_runStep()
 		char description[50];
 		os_memset(description, 0, SIZEOF(description));
 
-		switch (ctx->certificateType) {
+		switch (ctx->currentCertificateData.type) {
 		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 			snprintf(description, SIZEOF(description), "registration?");
 			break;
@@ -775,34 +775,95 @@ static void signTx_handleCertificate_ui_runStep()
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
 
-static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, sign_tx_certificate_data_t* certificateData)
 {
-	CHECK_STAGE(SIGN_STAGE_CERTIFICATES);
-	ASSERT(ctx->currentCertificate < ctx->numCertificates);
-
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-	ctx->certificateType = parse_u1be(&view);
-	TRACE("Certificate type: %d\n", ctx->certificateType);
+	certificateData->type = parse_u1be(&view);
+	TRACE("Certificate type: %d\n", certificateData->type);
 	VALIDATE(
-	        (ctx->certificateType == CERTIFICATE_TYPE_STAKE_REGISTRATION) ||
-	        (ctx->certificateType == CERTIFICATE_TYPE_STAKE_DEREGISTRATION) ||
-	        (ctx->certificateType == CERTIFICATE_TYPE_STAKE_DELEGATION),
+	        (certificateData->type == CERTIFICATE_TYPE_STAKE_REGISTRATION) ||
+	        (certificateData->type == CERTIFICATE_TYPE_STAKE_DEREGISTRATION) ||
+	        (certificateData->type == CERTIFICATE_TYPE_STAKE_DELEGATION),
 	        ERR_INVALID_DATA
 	);
 
 	// staking key derivation path
-	view_skipBytes(&view, bip44_parseFromWire(&ctx->certificateKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
+	view_skipBytes(&view, bip44_parseFromWire(&certificateData->keyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
 	TRACE();
-	bip44_PRINTF(&ctx->certificateKeyPath);
+	bip44_PRINTF(&certificateData->keyPath);
 
-	security_policy_t policy = policyForSignTxCertificate(ctx->certificateType, &ctx->certificateKeyPath);
+	TRACE("Remaining bytes: %d", view_remainingSize(&view));
+
+	switch (certificateData->type) {
+
+	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+
+		break;
+	}
+	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
+		VALIDATE(view_remainingSize(&view) == POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
+		ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH);
+		os_memmove(certificateData->poolKeyHash, view.ptr, POOL_KEY_HASH_LENGTH);
+		break;
+	}
+	default:
+		THROW(ERR_INVALID_DATA);
+	}
+}
+
+static void _addCertificateDataToTx(sign_tx_certificate_data_t* certificateData, tx_hash_builder_t* txHashBuilder)
+{
+	// compute staking key hash
+	uint8_t stakingKeyHash[ADDRESS_KEY_HASH_LENGTH];
+	{
+		write_view_t stakingKeyHashView = make_write_view(stakingKeyHash, stakingKeyHash + SIZEOF(stakingKeyHash));
+		size_t keyHashLength = view_appendPublicKeyHash(&stakingKeyHashView, &ctx->currentCertificateData.keyPath);
+		ASSERT(keyHashLength == ADDRESS_KEY_HASH_LENGTH);
+	}
+
+	switch (ctx->currentCertificateData.type) {
+
+	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
+		TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
+		txHashBuilder_addCertificate_stakingKey(
+		        txHashBuilder, certificateData->type,
+		        stakingKeyHash, SIZEOF(stakingKeyHash));
+		break;
+	}
+	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
+		TRACE("Adding delegation certificate to tx hash");
+		txHashBuilder_addCertificate_delegation(
+		        txHashBuilder,
+		        stakingKeyHash, SIZEOF(stakingKeyHash),
+		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
+		);
+		break;
+	}
+	default:
+		ASSERT(false);
+	}
+}
+
+static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	CHECK_STAGE(SIGN_STAGE_CERTIFICATES);
+	ASSERT(ctx->currentCertificate < ctx->numCertificates);
+
+	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+
+	_parseCertificateData(wireDataBuffer, wireDataSize, &ctx->currentCertificateData);
+
+	security_policy_t policy = policyForSignTxCertificate(ctx->currentCertificateData.type, &ctx->currentCertificateData.keyPath);
 	ENSURE_NOT_DENIED(policy);
+
 	switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION);
@@ -812,42 +873,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
 
-	// compute staking key hash
-	uint8_t stakingKeyHash[ADDRESS_KEY_HASH_LENGTH];
-	{
-		write_view_t stakingKeyHashView = make_write_view(stakingKeyHash, stakingKeyHash + SIZEOF(stakingKeyHash));
-		size_t keyHashLength = view_appendPublicKeyHash(&stakingKeyHashView, &ctx->certificateKeyPath);
-		ASSERT(keyHashLength == ADDRESS_KEY_HASH_LENGTH);
-	}
-	TRACE("Remaining bytes: %d", view_remainingSize(&view));
-
-	switch (ctx->certificateType) {
-
-	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
-	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
-		TRACE("Adding certificate (type %d) to tx hash", ctx->certificateType);
-		txHashBuilder_addCertificate_stakingKey(
-		        &ctx->txHashBuilder, ctx->certificateType,
-		        stakingKeyHash, ADDRESS_KEY_HASH_LENGTH);
-		break;
-	}
-	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		VALIDATE(view_remainingSize(&view) == POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
-		ASSERT(SIZEOF(ctx->certificatePoolKeyHash) == POOL_KEY_HASH_LENGTH);
-		os_memmove(ctx->certificatePoolKeyHash, view.ptr, POOL_KEY_HASH_LENGTH);
-
-		TRACE("Adding delegation certificate to tx hash");
-		txHashBuilder_addCertificate_delegation(
-		        &ctx->txHashBuilder,
-		        stakingKeyHash, ADDRESS_KEY_HASH_LENGTH,
-		        ctx->certificatePoolKeyHash, POOL_KEY_HASH_LENGTH
-		);
-		break;
-	}
-	default:
-		THROW(ERR_INVALID_DATA);
-	}
+	_addCertificateDataToTx(&ctx->currentCertificateData, &ctx->txHashBuilder);
 
 	signTx_handleCertificate_ui_runStep();
 }
