@@ -91,6 +91,7 @@ bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
 }
 
 // ChainType
+
 bool bip44_containsChainType(const bip44_path_t* pathSpec)
 {
 	return pathSpec->length > BIP44_I_CHAIN;
@@ -137,7 +138,7 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 	if (bip44_containsMoreThanAddress(pathSpec)) return false;
 	if (!bip44_hasShelleyPrefix(pathSpec)) return false;
 
-	// TODO should check for reasonable account number?
+	if (!bip44_hasReasonableAccount(pathSpec)) return false;
 
 	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
 	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
@@ -190,7 +191,7 @@ void bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 			WRITE("/%d", (int) value);
 		}
 	}
-
+#undef WRITE
 	ASSERT(ptr < end);
 }
 

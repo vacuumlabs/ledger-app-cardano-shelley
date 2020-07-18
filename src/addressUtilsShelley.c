@@ -48,7 +48,7 @@ bool isValidNetworkId(uint8_t networkId)
 	return networkId <= 0b1111;
 }
 
-bool isValidStakingChoice(uint8_t stakingChoice)
+bool isValidStakingChoice(staking_choice_t stakingChoice)
 {
 	switch (stakingChoice) {
 	case NO_STAKING:
@@ -63,34 +63,32 @@ bool isValidStakingChoice(uint8_t stakingChoice)
 
 bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams)
 {
-#define INCONSISTENT_WITH(STAKING_CHOICE) if (addressParams->stakingChoice == (STAKING_CHOICE)) return false
-#define CONSISTENT_ONLY_WITH(STAKING_CHOICE) if (addressParams->stakingChoice != (STAKING_CHOICE)) return false
+#define CONSISTENT_WITH(STAKING_CHOICE) if (addressParams->stakingChoice == (STAKING_CHOICE)) return true
 
 	switch (addressParams->type) {
 
 	case BASE:
-		INCONSISTENT_WITH(NO_STAKING);
-		INCONSISTENT_WITH(BLOCKCHAIN_POINTER);
+		CONSISTENT_WITH(STAKING_KEY_HASH);
+		CONSISTENT_WITH(STAKING_KEY_PATH);
 		break;
 
 	case POINTER:
-		CONSISTENT_ONLY_WITH(BLOCKCHAIN_POINTER);
+		CONSISTENT_WITH(BLOCKCHAIN_POINTER);
 		break;
 
 	case ENTERPRISE:
 	case BYRON:
 	case REWARD:
-		CONSISTENT_ONLY_WITH(NO_STAKING);
+		CONSISTENT_WITH(NO_STAKING);
 		break;
 
 	default:
 		ASSERT(false);
 	}
 
-	return true;
+	return false;
 
-#undef INCONSISTENT_WITH
-#undef CONSISTENT_ONLY_WITH
+#undef CONSISTENT_WITH
 }
 
 // TODO perhaps move elsewhere? bip44?
@@ -198,7 +196,7 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 
 static size_t view_appendVariableLengthUInt(write_view_t* view, uint64_t value)
 {
-	ASSERT((value & (1llu << 63)) == 0); // avoid accidental cast from negative signed value
+	ASSERT(value  < (1llu << 63)); // avoid accidental cast from negative signed value
 
 	if (value == 0) {
 		uint8_t byte = 0;
@@ -446,7 +444,7 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 	// staking choice
 	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 	params->stakingChoice = parse_u1be(&view);
-	TRACE("Staking choice: 0x%x", params->stakingChoice);
+	TRACE("Staking choice: 0x%x", (unsigned int) params->stakingChoice);
 	VALIDATE(isValidStakingChoice(params->stakingChoice), ERR_INVALID_DATA);
 
 	// staking choice determines what to parse next
@@ -461,8 +459,8 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 		break;
 
 	case STAKING_KEY_HASH:
-		VALIDATE(view_remainingSize(&view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
-		ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH);
+		VALIDATE(view_remainingSize(&view) >= ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
+		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
 		os_memmove(params->stakingKeyHash, view.ptr, ADDRESS_KEY_HASH_LENGTH);
 		view_skipBytes(&view, ADDRESS_KEY_HASH_LENGTH);
 		TRACE("Staking key hash: ");
@@ -470,12 +468,15 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 		break;
 
 	case BLOCKCHAIN_POINTER:
-		VALIDATE(view_remainingSize(&view) == 12, ERR_INVALID_DATA);
+		VALIDATE(view_remainingSize(&view) >= 12, ERR_INVALID_DATA);
 		params->stakingKeyBlockchainPointer.blockIndex = parse_u4be(&view);
 		params->stakingKeyBlockchainPointer.txIndex = parse_u4be(&view);
 		params->stakingKeyBlockchainPointer.certificateIndex = parse_u4be(&view);
-		TRACE("Staking pointer: [%d, %d, %d]\n", params->stakingKeyBlockchainPointer.blockIndex,
-		      params->stakingKeyBlockchainPointer.txIndex, params->stakingKeyBlockchainPointer.certificateIndex);
+		TRACE("Staking pointer: [%d, %d, %d]\n",
+		      params->stakingKeyBlockchainPointer.blockIndex,
+		      params->stakingKeyBlockchainPointer.txIndex,
+		      params->stakingKeyBlockchainPointer.certificateIndex
+		     );
 		break;
 
 	default:

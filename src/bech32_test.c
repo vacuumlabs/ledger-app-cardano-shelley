@@ -12,10 +12,23 @@ void testcase_bech32(const char* hrp, const char* inputBytesHex, const char* exp
 	uint8_t inputBuffer[100];
 	size_t inputSize;
 	inputSize = decode_hex(inputBytesHex, inputBuffer, SIZEOF(inputBuffer));
-	char outputStr[300];
-	size_t outputLen = bech32_encode(hrp, inputBuffer, inputSize, outputStr, 300);
-	EXPECT_EQ(outputLen, strlen(expectedStr));
-	EXPECT_EQ_BYTES(expectedStr, outputStr, outputLen + 1);
+
+	{
+		// check encoding
+		char outputStr[300];
+		size_t outputLen = bech32_encode(hrp, inputBuffer, inputSize, outputStr, 300);
+		EXPECT_EQ(outputLen, strlen(expectedStr));
+		EXPECT_EQ_BYTES(expectedStr, outputStr, outputLen + 1);
+	}
+
+	{
+		// check for buffer overflows
+		const size_t expectedLen = strlen(expectedStr); // not enough to fit ending '\0'
+		char outputStr[300];
+		outputStr[expectedLen] = '$'; // sentinel
+		EXPECT_THROWS(bech32_encode(hrp, inputBuffer, inputSize, outputStr, expectedLen), ERR_ASSERT);
+		EXPECT_EQ(outputStr[expectedLen], '$');
+	}
 }
 
 void run_bech32_test()
