@@ -1027,28 +1027,42 @@ static void signTx_handleConfirm_ui_runStep()
 
 static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_CONFIRM);
+	{
+		//sanity checks
+		CHECK_STAGE(SIGN_STAGE_CONFIRM);
 
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
 
-	VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-	TRACE("Finalizing tx hash");
-	txHashBuilder_finalize(
-	        &ctx->txHashBuilder,
-	        ctx->txHash, SIZEOF(ctx->txHash)
-	);
+		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
+	}
+
+	{
+		// compute txHash
+		TRACE("Finalizing tx hash");
+		txHashBuilder_finalize(
+		        &ctx->txHashBuilder,
+		        ctx->txHash, SIZEOF(ctx->txHash)
+		);
+	}
 
 	security_policy_t policy = policyForSignTxConfirm();
-	switch (policy) {
+
+	{
+		// select UI step
+		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
 #	undef   CASE
-	default:
-		THROW(ERR_NOT_IMPLEMENTED);
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
 	}
 
 	signTx_handleConfirm_ui_runStep();
