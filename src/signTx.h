@@ -32,6 +32,15 @@ enum { // TODO enum with the same values?
 #define METADATA_HASH_LENGTH 32
 
 typedef struct {
+	uint64_t amount;
+	uint8_t addressBuffer[MAX_ADDRESS_SIZE];
+	size_t addressSize;
+
+	uint8_t outputType;
+	addressParams_t params;
+} sign_tx_output_data_t;
+
+typedef struct {
 	uint8_t type;
 	bip44_path_t keyPath;
 	// only for specific types
@@ -77,12 +86,7 @@ typedef struct {
 	uint8_t txHash[TX_HASH_LENGTH];
 
 	union {
-	uint64_t currentAmount;
-	struct {
-		uint8_t buffer[MAX_ADDRESS_SIZE];
-		size_t size;
-	} currentAddress;
-	addressParams_t currentAddressParams;
+		sign_tx_output_data_t output;
 		sign_tx_metadata_data_t metadata;
 		sign_tx_withdrawal_data_t withdrawal;
 		sign_tx_certificate_data_t certificate;

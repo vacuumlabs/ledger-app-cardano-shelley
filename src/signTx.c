@@ -409,7 +409,7 @@ static void signTx_handleOutput_ui_runStep()
 
 	UI_STEP(HANDLE_OUTPUT_STEP_DISPLAY_AMOUNT) {
 		char adaAmountStr[50];
-		str_formatAdaAmount( ctx->currentAmount, adaAmountStr, SIZEOF(adaAmountStr));
+		str_formatAdaAmount(ctx->stageData.output.amount, adaAmountStr, SIZEOF(adaAmountStr));
 		ui_displayPaginatedText(
 		        "Send ADA",
 		        adaAmountStr,
@@ -418,10 +418,10 @@ static void signTx_handleOutput_ui_runStep()
 	}
 	UI_STEP(HANDLE_OUTPUT_STEP_DISPLAY_ADDRESS) {
 		char addressStr[200];
-		ASSERT(ctx->currentAddress.size <= SIZEOF(ctx->currentAddress.buffer));
+		ASSERT(ctx->stageData.output.addressSize <= SIZEOF(ctx->stageData.output.addressBuffer));
 		humanReadableAddress(
-		        ctx->currentAddress.buffer,
-		        ctx->currentAddress.size,
+		        ctx->stageData.output.addressBuffer,
+		        ctx->stageData.output.addressSize,
 		        addressStr,
 		        SIZEOF(addressStr)
 		);
@@ -446,80 +446,115 @@ static void signTx_handleOutput_ui_runStep()
 
 static void signTx_handleOutputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_OUTPUTS);
-	ASSERT(ctx->currentOutput < ctx->numOutputs);
+	{
+		// safety checks
+		CHECK_STAGE(SIGN_STAGE_OUTPUTS);
+		ASSERT(ctx->currentOutput < ctx->numOutputs);
 
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
 
-	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-	// Read data preamble
-	VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
-	uint64_t amount = parse_u8be(&view);
-	ctx->currentAmount = amount;
-	TRACE("Amount: %u.%06u", (unsigned) (amount / 1000000), (unsigned)(amount % 1000000));
+	os_memset(&ctx->stageData.output, 0, SIZEOF(ctx->stageData.output));
 
-	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-	uint8_t outputType = parse_u1be(&view);
-	TRACE("Output type %d", (int) outputType);
+	{
+		// parse input
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+
+		// Read data preamble
+		VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
+		uint64_t amount = parse_u8be(&view);
+		ctx->stageData.output.amount = amount;
+		TRACE("Amount: %u.%06u", (unsigned) (amount / 1000000), (unsigned)(amount % 1000000));
+
+		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
+		ctx->stageData.output.outputType = parse_u1be(&view);
+		TRACE("Output type %d", (int) ctx->stageData.output.outputType);
+
+		switch(ctx->stageData.output.outputType) {
+		case SIGN_TX_OUTPUT_TYPE_ADDRESS: {
+			// Rest of input is all address
+			ASSERT(view_remainingSize(&view) <= SIZEOF(ctx->stageData.output.addressBuffer));
+			ctx->stageData.output.addressSize = view_remainingSize(&view);
+			os_memmove(ctx->stageData.output.addressBuffer, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
+			break;
+		}
+		case SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS: {
+			parseAddressParams(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view), &ctx->stageData.output.params);
+			break;
+		}
+		default:
+			THROW(ERR_INVALID_DATA);
+		};
+	}
 
 	security_policy_t policy = POLICY_DENY;
 
-	switch(outputType) {
-	case SIGN_TX_OUTPUT_TYPE_ADDRESS: {
-		// Rest of input is all address
-		ASSERT(view_remainingSize(&view) <= SIZEOF(ctx->currentAddress.buffer));
-		ctx->currentAddress.size = view_remainingSize(&view);
-		os_memmove(ctx->currentAddress.buffer, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
-
-		policy = policyForSignTxOutputAddress(
-		                 ctx->currentAddress.buffer, ctx->currentAddress.size,
-		                 ctx->networkId, ctx->protocolMagic
-		         );
+	{
+		// get security policy
+		switch(ctx->stageData.output.outputType) {
+		case SIGN_TX_OUTPUT_TYPE_ADDRESS: {
+			policy = policyForSignTxOutputAddress(
+			                 ctx->stageData.output.addressBuffer, ctx->stageData.output.addressSize,
+			                 ctx->networkId, ctx->protocolMagic
+			         );
+			break;
+		}
+		case SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS: {
+			policy = policyForSignTxOutputAddressParams(
+			                 &ctx->stageData.output.params,
+			                 ctx->networkId, ctx->protocolMagic
+			         );
+			break;
+		}
+		default:
+			ASSERT(false);
+		};
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
-		break;
 	}
-	case SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS: {
-		parseAddressParams(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view), &ctx->currentAddressParams);
 
-		policy = policyForSignTxOutputAddressParams(
-		                 &ctx->currentAddressParams,
-		                 ctx->networkId, ctx->protocolMagic
-		         );
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
+	{
+		// add to tx
+		switch(ctx->stageData.output.outputType) {
+		case SIGN_TX_OUTPUT_TYPE_ADDRESS: {
+			break;
+		}
+		case SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS: {
+			ctx->stageData.output.addressSize = deriveAddress(
+			        &ctx->stageData.output.params,
+			        ctx->stageData.output.addressBuffer, SIZEOF(ctx->stageData.output.addressBuffer));
+			break;
+		}
+		default:
+			ASSERT(false);
+		};
 
-		ctx->currentAddress.size = deriveAddress(
-		                                   &ctx->currentAddressParams,
-		                                   ctx->currentAddress.buffer, SIZEOF(ctx->currentAddress.buffer));
-		break;
+		ASSERT(ctx->stageData.output.addressSize > 0);
+		ASSERT(ctx->stageData.output.addressSize < BUFFER_SIZE_PARANOIA);
+
+		txHashBuilder_addOutput(
+		        &ctx->txHashBuilder,
+		        ctx->stageData.output.addressBuffer,
+		        ctx->stageData.output.addressSize,
+		        ctx->stageData.output.amount
+		);
 	}
-	default:
-		THROW(ERR_INVALID_DATA);
-	};
 
-	ASSERT(ctx->currentAddress.size > 0);
-	ASSERT(ctx->currentAddress.size < BUFFER_SIZE_PARANOIA);
-
-	txHashBuilder_addOutput(
-	        &ctx->txHashBuilder,
-	        ctx->currentAddress.buffer,
-	        ctx->currentAddress.size,
-	        ctx->currentAmount
-	);
-
-	switch (policy) {
+	{
+		// select UI steps
+		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_STEP_DISPLAY_AMOUNT);
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_STEP_DISPLAY_AMOUNT);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_STEP_RESPOND);
 #	undef   CASE
-	default:
-		THROW(ERR_NOT_IMPLEMENTED);
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
 	}
-
 	signTx_handleOutput_ui_runStep();
 }
 
