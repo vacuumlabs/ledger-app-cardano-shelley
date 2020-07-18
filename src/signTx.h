@@ -44,6 +44,11 @@ typedef struct {
 } sign_tx_witness_data_t;
 
 typedef struct {
+	bip44_path_t path;
+	uint64_t amount;
+} sign_tx_withdrawal_data_t;
+
+typedef struct {
 	uint8_t metadataHash[METADATA_HASH_LENGTH];
 } sign_tx_metadata_data_t;
 
@@ -79,6 +84,7 @@ typedef struct {
 	} currentAddress;
 	addressParams_t currentAddressParams;
 		sign_tx_metadata_data_t metadata;
+		sign_tx_withdrawal_data_t withdrawal;
 		sign_tx_certificate_data_t certificate;
 		sign_tx_witness_data_t witness;
 	} stageData;

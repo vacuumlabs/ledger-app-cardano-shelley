@@ -907,32 +907,46 @@ static void signTx_handleWithdrawal_ui_runStep()
 
 static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_WITHDRAWALS);
-	ASSERT(ctx->currentWithdrawal < ctx->numWithdrawals);
-
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
-	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
-	VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
-	uint64_t amount = parse_u8be(&view);
-
-	uint8_t rewardAccount[ADDRESS_KEY_HASH_LENGTH];  // TODO --- what exactly is reward account?
 	{
-		// the rest is path
-		bip44_path_t path;
-		view_skipBytes(&view, bip44_parseFromWire(&path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
-		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
-		VALIDATE(bip44_isValidStakingKeyPath(&path), ERR_INVALID_DATA);
-		{
-			write_view_t out = make_write_view(rewardAccount, rewardAccount + SIZEOF(rewardAccount));
-			view_appendPublicKeyHash(&out, &path);
-		}
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_WITHDRAWALS);
+		ASSERT(ctx->currentWithdrawal < ctx->numWithdrawals);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	TRACE("Adding withdrawal to tx hash");
-	txHashBuilder_addWithdrawal(&ctx->txHashBuilder, rewardAccount, SIZEOF(rewardAccount), amount);
+	os_memset(&ctx->stageData.withdrawal, 0, SIZEOF(ctx->stageData.withdrawal));
+
+	{
+		// parse input
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+		VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
+		ctx->stageData.withdrawal.amount = parse_u8be(&view);
+		// the rest is path
+
+		view_skipBytes(&view, bip44_parseFromWire(&ctx->stageData.withdrawal.path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
+
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+
+	}
+
+	{
+		// add to tx
+		uint8_t rewardAccount[ADDRESS_KEY_HASH_LENGTH];  // TODO --- what exactly is reward account?
+		{
+			VALIDATE(bip44_isValidStakingKeyPath(&ctx->stageData.withdrawal.path), ERR_INVALID_DATA);
+			{
+				write_view_t out = make_write_view(rewardAccount, rewardAccount + SIZEOF(rewardAccount));
+				view_appendPublicKeyHash(&out, &ctx->stageData.withdrawal.path);
+			}
+		}
+
+		TRACE("Adding withdrawal to tx hash");
+		txHashBuilder_addWithdrawal(&ctx->txHashBuilder, rewardAccount, SIZEOF(rewardAccount), ctx->stageData.withdrawal.amount);
+	}
 
 	security_policy_t policy = policyForSignTxWithdrawal();
 	switch (policy) {
