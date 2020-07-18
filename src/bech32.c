@@ -50,7 +50,11 @@ static const char *charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 void bech32_encode_5bit(const char *hrp, const uint8_t *data,
                         size_t data_len, char *output, size_t maxOutputSize)
 {
+	ASSERT(maxOutputSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(maxOutputSize >= strlen(hrp) + data_len + 8);
+	const char* outputLimit = output + maxOutputSize;
+
+#define APPEND_OUT(value) {ASSERT(output < outputLimit); *(output++) = (value);}
 
 	uint32_t chk = 1;
 	{
@@ -65,43 +69,45 @@ void bech32_encode_5bit(const char *hrp, const uint8_t *data,
 	chk = bech32_polymod_step(chk);
 	while (*hrp != 0) {
 		chk = bech32_polymod_step(chk) ^ (*hrp & 0x1f);
-		*(output++) = *(hrp++);
+		APPEND_OUT(*(hrp++));
 	}
-	*(output++) = '1';
+
+	APPEND_OUT('1');
+
 	for (size_t i = 0; i < data_len; ++i) {
 		ASSERT((*data >> 5) == 0);
 		chk = bech32_polymod_step(chk) ^ (*data);
-		*(output++) = charset[*(data++)];
+		APPEND_OUT(charset[*(data++)]);
 	}
 	for (size_t i = 0; i < 6; ++i) {
 		chk = bech32_polymod_step(chk);
 	}
 	chk ^= 1;
 	for (size_t i = 0; i < 6; ++i) {
-		*(output++) = charset[(chk >> ((5 - i) * 5)) & 0x1f];
+		APPEND_OUT(charset[(chk >> ((5 - i) * 5)) & 0x1f]);
 	}
-	*output = 0;
+	APPEND_OUT(0);
 }
 
-size_t bech32_encode(const char *hrp, const uint8_t *bytes, size_t bytesLen,
+size_t bech32_encode(const char *hrp, const uint8_t *bytes, size_t bytesSize,
                      char *output, size_t maxOutputSize)
 {
 	// we are not supposed to use more for Cardano Shelley
 	// WARNING: increasing this would take more stack space, see data5bit definition below
-	const size_t MAX_BYTES_LEN = 65;
+	const size_t MAX_BYTES = 65;
 
-	ASSERT(bytesLen <= MAX_BYTES_LEN);
+	ASSERT(bytesSize <= MAX_BYTES);
 	ASSERT(strlen(hrp) >= 1); // not allowed for bech32
 
 	const size_t SEPARATOR_LEN = 1;
 	const size_t CHECKSUM_LEN = 6;
-	size_t ceiling = (8 * bytesLen + 4) / 5; // ceiling of 8/5 * bytesLen (base32 encoding with padding)
+	size_t ceiling = (8 * bytesSize + 4) / 5; // ceiling of 8/5 * bytesLen (base32 encoding with padding)
 	size_t supposedOutputLength = strlen(hrp) + SEPARATOR_LEN + ceiling + CHECKSUM_LEN;
 	ASSERT(maxOutputSize >= supposedOutputLength + 1);
 	ASSERT(maxOutputSize < BUFFER_SIZE_PARANOIA);
-	ASSERT(bytesLen < BUFFER_SIZE_PARANOIA);
+	ASSERT(bytesSize < BUFFER_SIZE_PARANOIA);
 
-	uint8_t data5bit[(8 * MAX_BYTES_LEN + 4) / 5]; // ceiling of (8/5 * MAX_BYTES_LEN) = 104
+	uint8_t data5bit[(8 * MAX_BYTES + 4) / 5]; // ceiling of (8/5 * MAX_BYTES_LEN) = 104
 	size_t data5bitLength = 0;
 	{
 		const int OUTBITS = 5;
@@ -111,7 +117,7 @@ size_t bech32_encode(const char *hrp, const uint8_t *bytes, size_t bytesLen,
 		uint32_t val = 0;
 		int bits = 0;
 		uint32_t maxv = (((uint32_t)1) << OUTBITS) - 1;
-		while (bytesLen--) {
+		while (bytesSize--) {
 			val = (val << INBITS) | *(bytes++);
 			bits += INBITS;
 			while (bits >= OUTBITS) {
