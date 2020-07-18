@@ -91,6 +91,7 @@ bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
 }
 
 // ChainType
+
 bool bip44_containsChainType(const bip44_path_t* pathSpec)
 {
 	return pathSpec->length > BIP44_I_CHAIN;
@@ -190,7 +191,7 @@ void bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 			WRITE("/%d", (int) value);
 		}
 	}
-
+#undef WRITE
 	ASSERT(ptr < end);
 }
 

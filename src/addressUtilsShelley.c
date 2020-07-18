@@ -196,7 +196,7 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 
 static size_t view_appendVariableLengthUInt(write_view_t* view, uint64_t value)
 {
-	ASSERT((value & (1llu << 63)) == 0); // avoid accidental cast from negative signed value
+	ASSERT(value  < (1llu << 63)); // avoid accidental cast from negative signed value
 
 	if (value == 0) {
 		uint8_t byte = 0;
@@ -459,8 +459,8 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 		break;
 
 	case STAKING_KEY_HASH:
-		VALIDATE(view_remainingSize(&view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
-		ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH);
+		VALIDATE(view_remainingSize(&view) >= ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
+		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
 		os_memmove(params->stakingKeyHash, view.ptr, ADDRESS_KEY_HASH_LENGTH);
 		view_skipBytes(&view, ADDRESS_KEY_HASH_LENGTH);
 		TRACE("Staking key hash: ");
@@ -468,12 +468,15 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 		break;
 
 	case BLOCKCHAIN_POINTER:
-		VALIDATE(view_remainingSize(&view) == 12, ERR_INVALID_DATA);
+		VALIDATE(view_remainingSize(&view) >= 12, ERR_INVALID_DATA);
 		params->stakingKeyBlockchainPointer.blockIndex = parse_u4be(&view);
 		params->stakingKeyBlockchainPointer.txIndex = parse_u4be(&view);
 		params->stakingKeyBlockchainPointer.certificateIndex = parse_u4be(&view);
-		TRACE("Staking pointer: [%d, %d, %d]\n", params->stakingKeyBlockchainPointer.blockIndex,
-		      params->stakingKeyBlockchainPointer.txIndex, params->stakingKeyBlockchainPointer.certificateIndex);
+		TRACE("Staking pointer: [%d, %d, %d]\n",
+		      params->stakingKeyBlockchainPointer.blockIndex,
+		      params->stakingKeyBlockchainPointer.txIndex,
+		      params->stakingKeyBlockchainPointer.certificateIndex
+		     );
 		break;
 
 	default:
