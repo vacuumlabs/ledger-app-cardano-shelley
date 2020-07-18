@@ -5,10 +5,8 @@
 #include "keyDerivation.h"
 #include "test_utils.h"
 #include "hex_utils.h"
-#include "stream.h"
 #include "errors.h"
 #include "utils.h"
-#include "state.h"
 #include "bip44.h"
 
 

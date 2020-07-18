@@ -2,7 +2,6 @@
 #define H_CARDANO_APP_CBOR
 
 #include "common.h"
-#include "stream.h"
 
 // temporary handy values
 enum {
@@ -49,25 +48,10 @@ typedef struct {
 
 typedef cbor_token_t token_t; // legacy
 
-cbor_token_t cbor_peekToken(const stream_t* s);
-void cbor_advanceToken(stream_t* s);
-
-void cbor_appendToken(stream_t* stream, uint8_t type, uint64_t value);
-
 // Serializes token into buffer, returning number of written bytes
 size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t bufferSize);
 
-// Expect & consume CBOR token with specific type and value
-void cbor_takeTokenWithValue(stream_t* stream, uint8_t expectedType, uint64_t expectedValue);
-
-// Expect & consume CBOR token with specific type, return value
-uint64_t cbor_takeToken(stream_t* stream, uint8_t expectedType);
-
-// Is next CBOR token indefinite array/map end?
-bool cbor_peekNextIsIndefEnd(stream_t* stream);
-
 cbor_token_t cbor_parseToken(const uint8_t* buf, size_t size);
-
 
 void run_cbor_test();
 #endif

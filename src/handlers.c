@@ -7,7 +7,6 @@
 #include "getVersion.h"
 #include "getExtendedPublicKey.h"
 #include "runTests.h"
-#include "state.h"
 #include "errors.h"
 #include "deriveAddress.h"
 #include "signTx.h"
