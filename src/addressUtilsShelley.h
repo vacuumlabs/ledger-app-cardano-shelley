@@ -25,14 +25,14 @@ bool isValidNetworkId(uint8_t networkId);
 
 // describes which staking info should be incorporated into address
 // (see stakingChoice in addressParams_t)
-enum {
+typedef enum {
 	NO_STAKING = 0x11,
 	STAKING_KEY_PATH = 0x22,
 	STAKING_KEY_HASH = 0x33,
 	BLOCKCHAIN_POINTER = 0x44
-};
+} staking_choice_t;
 
-bool isValidStakingChoice(uint8_t stakingChoice);
+bool isValidStakingChoice(staking_choice_t stakingChoice);
 
 
 typedef uint32_t blockchainIndex_t; // must be unsigned
@@ -50,7 +50,7 @@ typedef struct {
 		uint8_t networkId; // all the other types (i.e. Shelley)
 	};
 	bip44_path_t spendingKeyPath;
-	uint8_t stakingChoice;
+	staking_choice_t stakingChoice;
 	union {
 		bip44_path_t stakingKeyPath;
 		uint8_t stakingKeyHash[ADDRESS_KEY_HASH_LENGTH];

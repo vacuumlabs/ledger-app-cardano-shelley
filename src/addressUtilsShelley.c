@@ -48,7 +48,7 @@ bool isValidNetworkId(uint8_t networkId)
 	return networkId <= 0b1111;
 }
 
-bool isValidStakingChoice(uint8_t stakingChoice)
+bool isValidStakingChoice(staking_choice_t stakingChoice)
 {
 	switch (stakingChoice) {
 	case NO_STAKING:
@@ -444,7 +444,7 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 	// staking choice
 	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 	params->stakingChoice = parse_u1be(&view);
-	TRACE("Staking choice: 0x%x", params->stakingChoice);
+	TRACE("Staking choice: 0x%x", (unsigned int) params->stakingChoice);
 	VALIDATE(isValidStakingChoice(params->stakingChoice), ERR_INVALID_DATA);
 
 	// staking choice determines what to parse next
