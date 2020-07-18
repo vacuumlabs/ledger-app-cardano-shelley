@@ -339,36 +339,54 @@ static void signTx_handleInput_ui_runStep()
 
 static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_INPUTS);
-	ASSERT(ctx->currentInput < ctx->numInputs);
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_INPUTS);
+		ASSERT(ctx->currentInput < ctx->numInputs);
 
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
-	struct {
-		uint8_t txHash[TX_HASH_LENGTH];
-		uint8_t index[4];
-	}* wireUtxo = (void*) wireDataBuffer;
-
-	VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
-
-	uint8_t* txHashBuffer = wireUtxo->txHash;
-	size_t txHashSize = SIZEOF(wireUtxo->txHash);
-	uint32_t parsedIndex = u4be_read(wireUtxo->index);
-
-	TRACE("Adding input to tx hash");
-	txHashBuilder_addInput(&ctx->txHashBuilder, txHashBuffer, txHashSize, parsedIndex);
-
-	security_policy_t policy = policyForSignTxInput();
-	switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_INPUT_STEP_RESPOND);
-#	undef   CASE
-	default:
-		THROW(ERR_NOT_IMPLEMENTED);
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
+	// parsed data
+	struct {
+		uint8_t txHashBuffer[TX_HASH_LENGTH];
+		uint32_t parsedIndex;
+	} input;
+
+	{
+		// parse input
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		struct {
+			uint8_t txHash[TX_HASH_LENGTH];
+			uint8_t index[4];
+		}* wireUtxo = (void*) wireDataBuffer;
+
+		VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
+
+		os_memmove(input.txHashBuffer, wireUtxo->txHash, SIZEOF(input.txHashBuffer));
+		input.parsedIndex =  u4be_read(wireUtxo->index);
+	}
+
+	{
+		// add to tx
+		TRACE("Adding input to tx hash");
+		txHashBuilder_addInput(&ctx->txHashBuilder, input.txHashBuffer, SIZEOF(input.txHashBuffer), input.parsedIndex);
+	}
+
+	security_policy_t policy = policyForSignTxInput();
+
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_INPUT_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
 	signTx_handleInput_ui_runStep();
 }
 
