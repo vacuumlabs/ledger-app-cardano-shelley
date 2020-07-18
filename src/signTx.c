@@ -631,26 +631,40 @@ static void signTx_handleTtl_ui_runStep()
 
 static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_TTL);
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_TTL);
 
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
 
-	VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
-	ctx->ttl = u8be_read(wireDataBuffer);
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-	TRACE("Adding ttl to tx hash");
-	txHashBuilder_addTtl(&ctx->txHashBuilder, ctx->ttl);
+		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
+		ctx->ttl = u8be_read(wireDataBuffer);
+	}
+
+	{
+		// add to tx
+		TRACE("Adding ttl to tx hash");
+		txHashBuilder_addTtl(&ctx->txHashBuilder, ctx->ttl);
+	}
 
 	security_policy_t policy = policyForSignTxTtl(ctx->ttl);
-	switch (policy) {
+
+	{
+		// select UI steps
+		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TTL_STEP_DISPLAY);
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TTL_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TTL_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TTL_STEP_RESPOND);
 #	undef   CASE
-	default:
-		THROW(ERR_NOT_IMPLEMENTED);
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
 	}
 
 	signTx_handleTtl_ui_runStep();
