@@ -70,41 +70,39 @@ static inline void advanceStage()
 	case SIGN_STAGE_TTL:
 		// check if ttl was received
 		ASSERT(ctx->ttl > 0);
+
+		ctx->stage = SIGN_STAGE_CERTIFICATES;
 		if (ctx->numCertificates > 0) {
 			txHashBuilder_enterCertificates(&ctx->txHashBuilder);
-			ctx->stage = SIGN_STAGE_CERTIFICATES;
-		} else if (ctx->numWithdrawals > 0) {
-			txHashBuilder_enterWithdrawals(&ctx->txHashBuilder);
-			ctx->stage = SIGN_STAGE_WITHDRAWALS;
-		} else if (ctx->includeMetadata) {
-			ctx->stage = SIGN_STAGE_METADATA;
-		} else {
-			ctx->stage = SIGN_STAGE_CONFIRM;
+			break;
 		}
-		break;
+
+	// intentional fallthrough
 
 	case SIGN_STAGE_CERTIFICATES:
 		// we should have received all certificates
 		ASSERT(ctx->currentCertificate == ctx->numCertificates);
+
+		ctx->stage = SIGN_STAGE_WITHDRAWALS;
+
 		if (ctx->numWithdrawals > 0) {
 			txHashBuilder_enterWithdrawals(&ctx->txHashBuilder);
-			ctx->stage = SIGN_STAGE_WITHDRAWALS;
-		} else if (ctx->includeMetadata) {
-			ctx->stage = SIGN_STAGE_METADATA;
-		} else {
-			ctx->stage = SIGN_STAGE_CONFIRM;
+			break;
 		}
-		break;
+
+	// intentional fallthough
 
 	case SIGN_STAGE_WITHDRAWALS:
 		// we should have received all withdrawals
 		ASSERT(ctx->currentWithdrawal == ctx->numWithdrawals);
+
+		ctx->stage = SIGN_STAGE_METADATA;
+
 		if (ctx->includeMetadata) {
-			ctx->stage = SIGN_STAGE_METADATA;
-		} else {
-			ctx->stage = SIGN_STAGE_CONFIRM;
+			break;
 		}
-		break;
+
+	// intentional fallthrough
 
 	case SIGN_STAGE_METADATA:
 		ctx->stage = SIGN_STAGE_CONFIRM;
