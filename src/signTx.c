@@ -149,10 +149,9 @@ static void signTx_handleInit_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleInit_ui_runStep;
-	int nextStep = HANDLE_INIT_STEP_INVALID;
 
-	switch(ctx->ui_step) {
-	case HANDLE_INIT_STEP_DISPLAY_DETAILS: {
+	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
 		char networkParams[100];
 		// TODO does not work if protocolMagic is too big because of the conversion to int
 		// note(JM): it seems snprintf does not support %u, only PRINTF does
@@ -163,30 +162,22 @@ static void signTx_handleInit_ui_runStep()
 		        networkParams,
 		        this_fn
 		);
-		nextStep = HANDLE_INIT_STEP_CONFIRM;
-		break;
 	}
-	case HANDLE_INIT_STEP_CONFIRM: {
+	UI_STEP(HANDLE_INIT_STEP_CONFIRM) {
 		ui_displayPrompt(
 		        "Start new",
 		        "transaction?",
 		        this_fn,
 		        respond_with_user_reject
 		);
-		nextStep = HANDLE_INIT_STEP_RESPOND;
-		break;
 	}
-	case HANDLE_INIT_STEP_RESPOND: {
+	UI_STEP(HANDLE_INIT_STEP_RESPOND) {
 		TRACE();
 		advanceStage();
 		respondSuccessEmptyMsg();
-		nextStep = HANDLE_INIT_STEP_INVALID;
-		break;
+
 	}
-	default:
-		ASSERT(false);
-	}
-	ctx->ui_step = nextStep;
+	UI_STEP_END(HANDLE_INIT_STEP_INVALID);
 }
 
 static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -276,9 +267,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	// This tries to lessen potential pubkey privacy leaks because
 	// in WITNESS stage we do not verify whether the witness belongs
 	// to a given utxo.
-	const size_t maxNumWitnesses = ctx->numInputs +
-	                               ctx->numCertificates +
-	                               ctx->numWithdrawals;
+	const size_t maxNumWitnesses = (size_t) ctx->numInputs +
+	                               (size_t) ctx->numCertificates +
+	                               (size_t) ctx->numWithdrawals;
 	VALIDATE(ctx->numWitnesses <= maxNumWitnesses, ERR_INVALID_DATA);
 
 	// Note: make sure that everything in ctx is initialized properly
@@ -322,8 +313,9 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP(HANDLE_INPUT_STEP_RESPOND) {
 		// Advance state to next input
 		ctx->currentInput++;
-		if (ctx->currentInput == ctx->numInputs)
+		if (ctx->currentInput == ctx->numInputs) {
 			advanceStage();
+		}
 
 		respondSuccessEmptyMsg();
 	}
@@ -410,8 +402,9 @@ static void signTx_handleOutput_ui_runStep()
 	UI_STEP(HANDLE_OUTPUT_STEP_RESPOND) {
 		// Advance state to next output
 		ctx->currentOutput++;
-		if (ctx->currentOutput == ctx->numOutputs)
+		if (ctx->currentOutput == ctx->numOutputs) {
 			advanceStage();
+		}
 
 		respondSuccessEmptyMsg();
 	}
@@ -712,8 +705,9 @@ static void signTx_handleCertificate_ui_runStep()
 	UI_STEP(HANDLE_CERTIFICATE_STEP_RESPOND) {
 		// Advance state to next certificate
 		ctx->currentCertificate++;
-		if (ctx->currentCertificate == ctx->numCertificates)
+		if (ctx->currentCertificate == ctx->numCertificates) {
 			advanceStage();
+		}
 
 		respondSuccessEmptyMsg();
 	}
@@ -813,8 +807,9 @@ static void signTx_handleWithdrawal_ui_runStep()
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_RESPOND) {
 		// Advance state to next withdrawal
 		ctx->currentWithdrawal++;
-		if (ctx->currentWithdrawal == ctx->numWithdrawals)
+		if (ctx->currentWithdrawal == ctx->numWithdrawals) {
 			advanceStage();
+		}
 
 		respondSuccessEmptyMsg();
 	}
@@ -1028,20 +1023,24 @@ static void signTx_handleWitness_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_RESPOND) {
+		ctx->currentWitness++;
+		if (ctx->currentWitness == ctx->numWitnesses) {
+			advanceStage();
+		}
+
 		TRACE("Sending witness data");
 		TRACE_BUFFER(ctx->currentWitnessData, SIZEOF(ctx->currentWitnessData));
 		io_send_buf(SUCCESS, ctx->currentWitnessData, SIZEOF(ctx->currentWitnessData));
 		ui_displayBusy(); // needs to happen after I/O
 
-		ctx->currentWitness++;
-		if (ctx->currentWitness == ctx->numWitnesses)
-			advanceStage();
 	}
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
 
 static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	CHECK_STAGE(SIGN_STAGE_WITNESSES);
+
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	TRACE_BUFFER(wireDataBuffer, wireDataSize);
