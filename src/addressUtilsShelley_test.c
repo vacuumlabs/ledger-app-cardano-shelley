@@ -46,13 +46,13 @@ static void testcase_deriveAddressShelley(
 	addressParams_t params;
 
 	if (type == BYRON) {
-		params = (addressParams_t){
+		params = (addressParams_t) {
 			.type = type,
 			.protocolMagic = networkIdOrProtocolMagic,
 			.stakingChoice = stakingChoice
 		};
 	} else {
-		params = (addressParams_t){
+		params = (addressParams_t) {
 			.type = type,
 			.networkId = (uint8_t) networkIdOrProtocolMagic,
 			.stakingChoice = stakingChoice

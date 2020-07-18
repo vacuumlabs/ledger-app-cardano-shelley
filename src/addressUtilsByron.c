@@ -152,7 +152,8 @@ static void parseTokenWithValue(read_view_t* view, uint8_t type, uint64_t value)
 	VALIDATE(token.value  == value, ERR_INVALID_DATA);
 }
 
-static size_t parseBytesSizeToken(read_view_t* view) {
+static size_t parseBytesSizeToken(read_view_t* view)
+{
 	uint64_t parsedSize = parseToken(view, CBOR_TYPE_BYTES);
 	// Validate that we can down-cast
 	STATIC_ASSERT(sizeof(parsedSize) >= sizeof(SIZE_MAX), "bad int size");
@@ -214,12 +215,12 @@ uint32_t extractProtocolMagic(
 
 						if (currentKey == (uint64_t) PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY) {
 							VALIDATE(protocolMagicFound == false, ERR_INVALID_DATA);
-							
+
 							uint64_t parsedProtocolMagic = parseToken(&view, CBOR_TYPE_UNSIGNED);
 							// ensure the parsed protocol magic can be downcasted to uint32 (its size by spec)
 							STATIC_ASSERT(sizeof(parsedProtocolMagic) >= sizeof(SIZE_MAX), "bad int size");
 							VALIDATE(parsedProtocolMagic < (uint32_t) SIZE_MAX, ERR_INVALID_DATA);
-							
+
 							protocolMagic = (uint32_t) parsedProtocolMagic;
 							// mainnet addresses are not supposed to explicitly contain protocol magic at all
 							VALIDATE(protocolMagic != MAINNET_PROTOCOL_MAGIC, ERR_INVALID_DATA);
