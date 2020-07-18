@@ -64,8 +64,6 @@ typedef struct {
 typedef struct {
 	sign_tx_stage_t stage;
 
-	uint64_t fee;
-	uint64_t ttl;
 	uint8_t networkId; // part of Shelley address
 	uint32_t protocolMagic; // part of Byron address
 
@@ -92,6 +90,10 @@ typedef struct {
 		sign_tx_certificate_data_t certificate;
 		sign_tx_witness_data_t witness;
 	} stageData;
+
+	// these two cannot be part of stageData because we make advaceStage decision based on it
+	uint64_t fee;
+	uint64_t ttl;
 
 
 	int ui_step;
