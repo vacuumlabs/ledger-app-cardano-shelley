@@ -694,7 +694,7 @@ static void signTx_handleCertificate_ui_runStep()
 		char details[200];
 		os_memset(details, 0, SIZEOF(details));
 
-		switch (ctx->currentCertificateData.type) {
+		switch (ctx->stageData.certificate.type) {
 		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 			snprintf(title, SIZEOF(title), "Register");
 			snprintf(details, SIZEOF(details), "staking key");
@@ -708,7 +708,7 @@ static void signTx_handleCertificate_ui_runStep()
 		case CERTIFICATE_TYPE_STAKE_DELEGATION:
 			snprintf(title, SIZEOF(title), "Delegate stake to pool");
 			encode_hex(
-			        ctx->currentCertificateData.poolKeyHash, SIZEOF(ctx->currentCertificateData.poolKeyHash),
+			        ctx->stageData.certificate.poolKeyHash, SIZEOF(ctx->stageData.certificate.poolKeyHash),
 			        details, SIZEOF(details)
 			);
 			break;
@@ -727,7 +727,7 @@ static void signTx_handleCertificate_ui_runStep()
 		char key[100];
 		os_memset(key, 0, SIZEOF(key));
 
-		bip44_printToStr(&ctx->currentCertificateData.keyPath, key, SIZEOF(key));
+		bip44_printToStr(&ctx->stageData.certificate.keyPath, key, SIZEOF(key));
 
 		ui_displayPaginatedText(
 		        "Staking key",
@@ -739,7 +739,7 @@ static void signTx_handleCertificate_ui_runStep()
 		char description[50];
 		os_memset(description, 0, SIZEOF(description));
 
-		switch (ctx->currentCertificateData.type) {
+		switch (ctx->stageData.certificate.type) {
 		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 			snprintf(description, SIZEOF(description), "registration?");
 			break;
@@ -824,11 +824,11 @@ static void _addCertificateDataToTx(sign_tx_certificate_data_t* certificateData,
 	uint8_t stakingKeyHash[ADDRESS_KEY_HASH_LENGTH];
 	{
 		write_view_t stakingKeyHashView = make_write_view(stakingKeyHash, stakingKeyHash + SIZEOF(stakingKeyHash));
-		size_t keyHashLength = view_appendPublicKeyHash(&stakingKeyHashView, &ctx->currentCertificateData.keyPath);
+		size_t keyHashLength = view_appendPublicKeyHash(&stakingKeyHashView, &ctx->stageData.certificate.keyPath);
 		ASSERT(keyHashLength == ADDRESS_KEY_HASH_LENGTH);
 	}
 
-	switch (ctx->currentCertificateData.type) {
+	switch (ctx->stageData.certificate.type) {
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
@@ -859,9 +859,11 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 
-	_parseCertificateData(wireDataBuffer, wireDataSize, &ctx->currentCertificateData);
+	os_memset(&ctx->stageData.certificate, 0, SIZEOF(ctx->stageData.certificate));
 
-	security_policy_t policy = policyForSignTxCertificate(ctx->currentCertificateData.type, &ctx->currentCertificateData.keyPath);
+	_parseCertificateData(wireDataBuffer, wireDataSize, &ctx->stageData.certificate);
+
+	security_policy_t policy = policyForSignTxCertificate(ctx->stageData.certificate.type, &ctx->stageData.certificate.keyPath);
 	ENSURE_NOT_DENIED(policy);
 
 	switch (policy) {
@@ -873,7 +875,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
 
-	_addCertificateDataToTx(&ctx->currentCertificateData, &ctx->txHashBuilder);
+	_addCertificateDataToTx(&ctx->stageData.certificate, &ctx->txHashBuilder);
 
 	signTx_handleCertificate_ui_runStep();
 }
@@ -1121,7 +1123,7 @@ static void signTx_handleWitness_ui_runStep()
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_DISPLAY) {
 		char pathStr[100];
-		bip44_printToStr(&ctx->currentWitnessData.path, pathStr, SIZEOF(pathStr));
+		bip44_printToStr(&ctx->stageData.witness.path, pathStr, SIZEOF(pathStr));
 		ui_displayPaginatedText(
 		        "Witness path",
 		        pathStr,
@@ -1143,8 +1145,8 @@ static void signTx_handleWitness_ui_runStep()
 		}
 
 		TRACE("Sending witness data");
-		TRACE_BUFFER(ctx->currentWitnessData.signature, SIZEOF(ctx->currentWitnessData.signature));
-		io_send_buf(SUCCESS, ctx->currentWitnessData.signature, SIZEOF(ctx->currentWitnessData.signature));
+		TRACE_BUFFER(ctx->stageData.witness.signature, SIZEOF(ctx->stageData.witness.signature));
+		io_send_buf(SUCCESS, ctx->stageData.witness.signature, SIZEOF(ctx->stageData.witness.signature));
 		ui_displayBusy(); // needs to happen after I/O
 
 	}
@@ -1163,11 +1165,13 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		ASSERT(ctx->currentWitness < ctx->numWitnesses);
 	}
 
+	os_memset(&ctx->stageData.witness, 0, SIZEOF(ctx->stageData.witness));
+
 	{
 		// parse
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-		size_t parsedSize = bip44_parseFromWire(&ctx->currentWitnessData.path, wireDataBuffer, wireDataSize);
+		size_t parsedSize = bip44_parseFromWire(&ctx->stageData.witness.path, wireDataBuffer, wireDataSize);
 		VALIDATE(parsedSize == wireDataSize, ERR_INVALID_DATA);
 	}
 
@@ -1175,7 +1179,7 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 
 	{
 		// get policy
-		policy = policyForSignTxWitness(&ctx->currentWitnessData.path);
+		policy = policyForSignTxWitness(&ctx->stageData.witness.path);
 		TRACE("policy %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
 	}
@@ -1188,9 +1192,9 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		TRACE("END TX HASH");
 
 		getTxWitness(
-		        &ctx->currentWitnessData.path,
+		        &ctx->stageData.witness.path,
 		        ctx->txHash, SIZEOF(ctx->txHash),
-		        ctx->currentWitnessData.signature, SIZEOF(ctx->currentWitnessData.signature)
+		        ctx->stageData.witness.signature, SIZEOF(ctx->stageData.witness.signature)
 		);
 	}
 

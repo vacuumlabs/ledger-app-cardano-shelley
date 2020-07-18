@@ -67,6 +67,7 @@ typedef struct {
 	tx_hash_builder_t txHashBuilder;
 	uint8_t txHash[TX_HASH_LENGTH];
 
+	union {
 	uint64_t currentAmount;
 	struct {
 		uint8_t buffer[MAX_ADDRESS_SIZE];
@@ -74,9 +75,10 @@ typedef struct {
 	} currentAddress;
 	addressParams_t currentAddressParams;
 	uint8_t metadataHash[METADATA_HASH_LENGTH];
+		sign_tx_certificate_data_t certificate;
+		sign_tx_witness_data_t witness;
+	} stageData;
 
-	sign_tx_certificate_data_t currentCertificateData;
-	sign_tx_witness_data_t currentWitnessData;
 
 	int ui_step;
 } ins_sign_tx_context_t;
