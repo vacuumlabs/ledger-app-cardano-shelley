@@ -180,95 +180,107 @@ static void signTx_handleInit_ui_runStep()
 
 static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_INIT);
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_INIT);
 
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
-	ctx->fee = LOVELACE_MAX_SUPPLY + 1;
-	ctx->ttl = 0; // ttl is absolute slot, so 0 is supposed to be invalid for our purpose
-
-	ctx->currentInput = 0;
-	ctx->currentOutput = 0;
-	ctx->currentCertificate = 0;
-	ctx->currentWithdrawal = 0;
-	ctx->currentWitness = 0;
-
-	struct {
-		uint8_t networkId;
-		uint8_t protocolMagic[4];
-
-		uint8_t includeMetadata;
-
-		uint8_t numInputs[4];
-		uint8_t numOutputs[4];
-		uint8_t numCertificates[4];
-		uint8_t numWithdrawals[4];
-		uint8_t numWitnesses[4];
-	}* wireHeader = (void*) wireDataBuffer;
-
-	VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
-
-	ASSERT_TYPE(ctx->networkId, uint8_t);
-	ctx->networkId = wireHeader->networkId;
-	TRACE("network id %d", ctx->networkId);
-	VALIDATE(isValidNetworkId(ctx->networkId), ERR_INVALID_DATA);
-
-	ASSERT_TYPE(ctx->protocolMagic, uint32_t);
-	ctx->protocolMagic = u4be_read(wireHeader->protocolMagic);
-	TRACE("protocol magic %d", ctx->protocolMagic);
-	// TODO validate that protocol magic is consistent with mainnet network id?
-
-	switch (wireHeader->includeMetadata) {
-	case SIGN_TX_METADATA_YES:
-		ctx->includeMetadata = true;
-		break;
-
-	case SIGN_TX_METADATA_NO:
-		ctx->includeMetadata = false;
-		break;
-
-	default:
-		THROW(ERR_INVALID_DATA);
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	ASSERT_TYPE(ctx->numInputs, uint16_t);
-	ASSERT_TYPE(ctx->numOutputs, uint16_t);
-	ASSERT_TYPE(ctx->numCertificates, uint16_t);
-	ASSERT_TYPE(ctx->numWithdrawals, uint16_t);
-	ASSERT_TYPE(ctx->numWitnesses, uint16_t);
-	ctx->numInputs            = (uint16_t) u4be_read(wireHeader->numInputs);
-	ctx->numOutputs           = (uint16_t) u4be_read(wireHeader->numOutputs);
-	ctx->numCertificates      = (uint16_t) u4be_read(wireHeader->numCertificates);
-	ctx->numWithdrawals       = (uint16_t) u4be_read(wireHeader->numWithdrawals);
-	ctx->numWitnesses         = (uint16_t) u4be_read(wireHeader->numWitnesses);
+	{
+		// initialization
 
-	TRACE(
-	        "num inputs, outputs, certificates, withdrawals, witnesses: %d %d %d %d %d",
-	        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals, ctx->numWitnesses
-	);
-	VALIDATE(ctx->numInputs < SIGN_MAX_INPUTS, ERR_INVALID_DATA);
-	VALIDATE(ctx->numOutputs < SIGN_MAX_OUTPUTS, ERR_INVALID_DATA);
-	VALIDATE(ctx->numCertificates < SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
-	VALIDATE(ctx->numWithdrawals < SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
+		ctx->fee = LOVELACE_MAX_SUPPLY + 1;
+		ctx->ttl = 0; // ttl is absolute slot, so 0 is supposed to be invalid for our purpose
 
-	// Current code design assumes at least one input and at least one output.
-	// If this is to be relaxed, stage switching logic needs to be re-visited.
-	// An input is needed for certificate replay protection (enforced by node).
-	// An output is needed to make sure the tx is signed for the correct
-	// network id and cannot be used on a different network by an adversary.
-	VALIDATE(ctx->numInputs > 0, ERR_INVALID_DATA);
-	VALIDATE(ctx->numOutputs > 0, ERR_INVALID_DATA);
+		ctx->currentInput = 0;
+		ctx->currentOutput = 0;
+		ctx->currentCertificate = 0;
+		ctx->currentWithdrawal = 0;
+		ctx->currentWitness = 0;
+	}
 
-	// Note(ppershing): do not allow more witnesses than necessary.
-	// This tries to lessen potential pubkey privacy leaks because
-	// in WITNESS stage we do not verify whether the witness belongs
-	// to a given utxo.
-	const size_t maxNumWitnesses = (size_t) ctx->numInputs +
-	                               (size_t) ctx->numCertificates +
-	                               (size_t) ctx->numWithdrawals;
-	VALIDATE(ctx->numWitnesses <= maxNumWitnesses, ERR_INVALID_DATA);
+	{
+		// parse data
+
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		struct {
+			uint8_t networkId;
+			uint8_t protocolMagic[4];
+
+			uint8_t includeMetadata;
+
+			uint8_t numInputs[4];
+			uint8_t numOutputs[4];
+			uint8_t numCertificates[4];
+			uint8_t numWithdrawals[4];
+			uint8_t numWitnesses[4];
+		}* wireHeader = (void*) wireDataBuffer;
+
+		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
+
+		ASSERT_TYPE(ctx->networkId, uint8_t);
+		ctx->networkId = wireHeader->networkId;
+		TRACE("network id %d", ctx->networkId);
+		VALIDATE(isValidNetworkId(ctx->networkId), ERR_INVALID_DATA);
+
+		ASSERT_TYPE(ctx->protocolMagic, uint32_t);
+		ctx->protocolMagic = u4be_read(wireHeader->protocolMagic);
+		TRACE("protocol magic %d", ctx->protocolMagic);
+		// TODO validate that protocol magic is consistent with mainnet network id?
+
+		switch (wireHeader->includeMetadata) {
+		case SIGN_TX_METADATA_YES:
+			ctx->includeMetadata = true;
+			break;
+
+		case SIGN_TX_METADATA_NO:
+			ctx->includeMetadata = false;
+			break;
+
+		default:
+			THROW(ERR_INVALID_DATA);
+		}
+
+		ASSERT_TYPE(ctx->numInputs, uint16_t);
+		ASSERT_TYPE(ctx->numOutputs, uint16_t);
+		ASSERT_TYPE(ctx->numCertificates, uint16_t);
+		ASSERT_TYPE(ctx->numWithdrawals, uint16_t);
+		ASSERT_TYPE(ctx->numWitnesses, uint16_t);
+		ctx->numInputs            = (uint16_t) u4be_read(wireHeader->numInputs);
+		ctx->numOutputs           = (uint16_t) u4be_read(wireHeader->numOutputs);
+		ctx->numCertificates      = (uint16_t) u4be_read(wireHeader->numCertificates);
+		ctx->numWithdrawals       = (uint16_t) u4be_read(wireHeader->numWithdrawals);
+		ctx->numWitnesses         = (uint16_t) u4be_read(wireHeader->numWitnesses);
+
+		TRACE(
+		        "num inputs, outputs, certificates, withdrawals, witnesses: %d %d %d %d %d",
+		        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals, ctx->numWitnesses
+		);
+		VALIDATE(ctx->numInputs < SIGN_MAX_INPUTS, ERR_INVALID_DATA);
+		VALIDATE(ctx->numOutputs < SIGN_MAX_OUTPUTS, ERR_INVALID_DATA);
+		VALIDATE(ctx->numCertificates < SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
+		VALIDATE(ctx->numWithdrawals < SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
+
+		// Current code design assumes at least one input and at least one output.
+		// If this is to be relaxed, stage switching logic needs to be re-visited.
+		// An input is needed for certificate replay protection (enforced by node).
+		// An output is needed to make sure the tx is signed for the correct
+		// network id and cannot be used on a different network by an adversary.
+		VALIDATE(ctx->numInputs > 0, ERR_INVALID_DATA);
+		VALIDATE(ctx->numOutputs > 0, ERR_INVALID_DATA);
+
+		// Note(ppershing): do not allow more witnesses than necessary.
+		// This tries to lessen potential pubkey privacy leaks because
+		// in WITNESS stage we do not verify whether the witness belongs
+		// to a given utxo.
+		const size_t maxNumWitnesses = (size_t) ctx->numInputs +
+		                               (size_t) ctx->numCertificates +
+		                               (size_t) ctx->numWithdrawals;
+		VALIDATE(ctx->numWitnesses <= maxNumWitnesses, ERR_INVALID_DATA);
+	}
 
 	// Note: make sure that everything in ctx is initialized properly
 	txHashBuilder_init(
@@ -281,15 +293,20 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	);
 
 	security_policy_t policy = policyForSignTxInit();
-	switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_STEP_DISPLAY_DETAILS);
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   HANDLE_INIT_STEP_RESPOND);
-#	undef   CASE
-	default:
-		THROW(ERR_NOT_IMPLEMENTED);
-	}
 	// TODO if network id and protocol magic are not suspicious, we should skip HANDLE_INIT_STEP_DISPLAY_DETAILS
+
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_STEP_DISPLAY_DETAILS);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT,   HANDLE_INIT_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
 
 	signTx_handleInit_ui_runStep();
 }
