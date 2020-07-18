@@ -951,30 +951,43 @@ static void signTx_handleMetadata_ui_runStep()
 
 static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_METADATA);
-	ASSERT(ctx->includeMetadata == true);
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_METADATA);
+		ASSERT(ctx->includeMetadata == true);
 
-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
-	VALIDATE(wireDataSize == METADATA_HASH_LENGTH, ERR_INVALID_DATA);
-	os_memmove(ctx->metadataHash, wireDataBuffer, METADATA_HASH_LENGTH);
-
-	security_policy_t policy = policyForSignTxMetadata();
-	switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_METADATA_STEP_DISPLAY);
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_METADATA_STEP_RESPOND);
-#	undef   CASE
-	default:
-		THROW(ERR_NOT_IMPLEMENTED);
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	TRACE("Adding metadata hash to tx hash");
-	txHashBuilder_addMetadata(&ctx->txHashBuilder, ctx->metadataHash, SIZEOF(ctx->metadataHash));
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-	TRACE();
+		VALIDATE(wireDataSize == METADATA_HASH_LENGTH, ERR_INVALID_DATA);
+		os_memmove(ctx->metadataHash, wireDataBuffer, METADATA_HASH_LENGTH);
+	}
+
+	security_policy_t policy = policyForSignTxMetadata();
+
+	{
+		// select UI step
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_METADATA_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_METADATA_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
+	{
+		// add metadata to tx
+		TRACE("Adding metadata hash to tx hash");
+		txHashBuilder_addMetadata(&ctx->txHashBuilder, ctx->metadataHash, SIZEOF(ctx->metadataHash));
+		TRACE();
+	}
 
 	signTx_handleMetadata_ui_runStep();
 }
