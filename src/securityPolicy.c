@@ -112,8 +112,14 @@ security_policy_t policyForShowDeriveAddress(addressParams_t* addressParams)
 
 
 // Initiate transaction signing
-security_policy_t policyForSignTxInit()
+security_policy_t policyForSignTxInit(uint8_t networkId, uint32_t protocolMagic)
 {
+	// Deny shelley mainnet with weird byron protocol magic
+	DENY_IF(networkId == MAINNET_NETWORK_ID && protocolMagic != MAINNET_PROTOCOL_MAGIC);
+	// Note: testnets can still use byron mainnet protocol magic so we can't deny the opposite direction
+
+	WARN_IF(networkId != MAINNET_NETWORK_ID);
+	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
 	PROMPT_IF(true);
 }

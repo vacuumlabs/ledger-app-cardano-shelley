@@ -19,7 +19,7 @@ security_policy_t policyForShowDeriveAddress(addressParams_t* addressParams);
 security_policy_t policyForReturnDeriveAddress(addressParams_t* addressParams);
 
 
-security_policy_t policyForSignTxInit();
+security_policy_t policyForSignTxInit(uint8_t networkId, uint32_t protocolMagic);
 
 security_policy_t policyForSignTxInput();
 

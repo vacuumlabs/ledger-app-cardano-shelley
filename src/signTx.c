@@ -295,14 +295,15 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	        ctx->includeMetadata
 	);
 
-	security_policy_t policy = policyForSignTxInit();
+	security_policy_t policy = policyForSignTxInit(ctx->networkId, ctx->protocolMagic);
 	// TODO if network id and protocol magic are not suspicious, we should skip HANDLE_INIT_STEP_DISPLAY_DETAILS
 
 	{
 		// select UI steps
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_STEP_DISPLAY_DETAILS);
+			CASE(POLICY_PROMPT_WARN_UNUSUAL,    HANDLE_INIT_STEP_DISPLAY_DETAILS);
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_STEP_CONFIRM);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT,   HANDLE_INIT_STEP_RESPOND);
 #	undef   CASE
 		default:
