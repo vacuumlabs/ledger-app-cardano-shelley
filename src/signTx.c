@@ -151,10 +151,13 @@ static void signTx_handleInit_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step);
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
 		char networkParams[100];
-		// TODO does not work if protocolMagic is too big because of the conversion to int
-		// note(JM): it seems snprintf does not support %u, only PRINTF does
-		// TODO display protocol magic as hex?
-		snprintf(networkParams, SIZEOF(networkParams), "network id %d / protocol magic %d", ctx->networkId, ctx->protocolMagic);
+		snprintf(
+		        networkParams, SIZEOF(networkParams),
+		        "network id %d / protocol magic %u",
+		        (int) ctx->networkId, (unsigned) ctx->protocolMagic
+		);
+		ASSERT(strlen(networkParams) + 1 < SIZEOF(networkParams));
+
 		ui_displayPaginatedText(
 		        "New transaction",
 		        networkParams,
