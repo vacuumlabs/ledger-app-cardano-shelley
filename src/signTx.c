@@ -330,13 +330,13 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step);
 
 	UI_STEP(HANDLE_INPUT_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
 		// Advance state to next input
 		ctx->currentInput++;
 		if (ctx->currentInput == ctx->numInputs) {
 			advanceStage();
 		}
-
-		respondSuccessEmptyMsg();
 	}
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
@@ -437,13 +437,13 @@ static void signTx_handleOutput_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_OUTPUT_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
 		// Advance state to next output
 		ctx->currentOutput++;
 		if (ctx->currentOutput == ctx->numOutputs) {
 			advanceStage();
 		}
-
-		respondSuccessEmptyMsg();
 	}
 	UI_STEP_END(HANDLE_OUTPUT_STEP_INVALID);
 }
@@ -589,8 +589,9 @@ static void signTx_handleFee_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_FEE_STEP_RESPOND) {
-		advanceStage();
 		respondSuccessEmptyMsg();
+
+		advanceStage();
 	}
 	UI_STEP_END(HANDLE_FEE_STEP_INVALID);
 }
@@ -662,8 +663,9 @@ static void signTx_handleTtl_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_TTL_STEP_RESPOND) {
-		advanceStage();
 		respondSuccessEmptyMsg();
+
+		advanceStage();
 	}
 	UI_STEP_END(HANDLE_TTL_STEP_INVALID);
 }
@@ -803,13 +805,14 @@ static void signTx_handleCertificate_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
 		// Advance state to next certificate
 		ctx->currentCertificate++;
 		if (ctx->currentCertificate == ctx->numCertificates) {
 			advanceStage();
 		}
 
-		respondSuccessEmptyMsg();
 	}
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
@@ -933,13 +936,13 @@ static void signTx_handleWithdrawal_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step);
 
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
 		// Advance state to next withdrawal
 		ctx->currentWithdrawal++;
 		if (ctx->currentWithdrawal == ctx->numWithdrawals) {
 			advanceStage();
 		}
-
-		respondSuccessEmptyMsg();
 	}
 	UI_STEP_END(HANDLE_WITHDRAWAL_STEP_INVALID);
 }
@@ -1024,8 +1027,9 @@ static void signTx_handleMetadata_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_METADATA_STEP_RESPOND) {
-		advanceStage();
 		respondSuccessEmptyMsg();
+
+		advanceStage();
 	}
 	UI_STEP_END(HANDLE_METADATA_STEP_INVALID);
 }
@@ -1099,11 +1103,11 @@ static void signTx_handleConfirm_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
-		advanceStage();
-
 		// respond
 		io_send_buf(SUCCESS, ctx->txHash, SIZEOF(ctx->txHash));
 		ui_displayBusy();
+
+		advanceStage();
 	}
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
@@ -1194,16 +1198,15 @@ static void signTx_handleWitness_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_RESPOND) {
-		ctx->currentWitness++;
-		if (ctx->currentWitness == ctx->numWitnesses) {
-			advanceStage();
-		}
-
 		TRACE("Sending witness data");
 		TRACE_BUFFER(ctx->stageData.witness.signature, SIZEOF(ctx->stageData.witness.signature));
 		io_send_buf(SUCCESS, ctx->stageData.witness.signature, SIZEOF(ctx->stageData.witness.signature));
 		ui_displayBusy(); // needs to happen after I/O
 
+		ctx->currentWitness++;
+		if (ctx->currentWitness == ctx->numWitnesses) {
+			advanceStage();
+		}
 	}
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
