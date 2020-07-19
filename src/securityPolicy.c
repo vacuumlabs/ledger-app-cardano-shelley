@@ -209,7 +209,7 @@ security_policy_t policyForSignTxCertificate(const uint8_t certificateType, cons
 security_policy_t policyForSignTxWithdrawal()
 {
 	// No need to check withdrawals
-	ALLOW_IF(true);
+	SHOW_IF(true);
 }
 
 // For each transaction witness
