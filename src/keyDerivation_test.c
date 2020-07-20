@@ -125,6 +125,8 @@ void testPublicKeyDerivation()
 		testcase_derivePublicKey(path, ARRAY_LEN(path), expectedHex_); \
 	}
 
+	// byron
+
 	TESTCASE(
 	        (HD + 44, HD + 1815, HD + 1),
 	        "eb6e933ce45516ac7b0e023de700efae5e212ccc6bf0fcb33ba9243b9d832827"
@@ -147,7 +149,17 @@ void testPublicKeyDerivation()
 	        "3aba387352d588040e33046bfd5d856210e5324f91cb5d6b710b23e65a096400"
 	);
 
-	// TODO: some test cases for Shelley derivation
+	// shelley
+
+	TESTCASE(
+	        (HD + 1852, HD + 1815, HD + 1),
+	        "c9d624c493e269271980bc5e89bcd913719137f3b20c11339f28875951124c82"
+	);
+
+	TESTCASE(
+	        (HD + 1852, HD + 1815, HD + 1, HD + 23, 189),
+	        "e5bf32e096f786209b5f53906c6eaa7ac36b2a9859370379c0b46e0cd9d56e6f"
+	);
 
 #undef TESTCASE
 }

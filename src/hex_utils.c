@@ -51,7 +51,6 @@ size_t encode_hex(const uint8_t* bytes, size_t bytesLength, char* out, size_t ou
 
 	size_t i = 0;
 	for (; i < bytesLength; i++) {
-		// TODO upper or lowercase?
 		out[2 * i]     = HEX_ALPHABET[bytes[i] >> 4];
 		out[2 * i + 1] = HEX_ALPHABET[bytes[i] & 0x0F];
 	}

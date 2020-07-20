@@ -61,7 +61,6 @@ static void ui_displayStakingInfo(addressParams_t* addressParams, ui_callback_fn
 
 	case STAKING_KEY_PATH:
 		heading = STAKING_HEADING_PATH;
-		// TODO avoid displaying anything if staking key belongs to spending account?
 		bip44_printToStr(&addressParams->stakingKeyPath, stakingInfo, SIZEOF(stakingInfo));
 		break;
 
