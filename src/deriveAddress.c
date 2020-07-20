@@ -42,13 +42,17 @@ static void ui_displayStakingInfo(addressParams_t* addressParams, ui_callback_fn
 	switch (addressParams->stakingChoice) {
 
 	case NO_STAKING:
-		if (addressParams->type == ENTERPRISE) {
+		if (addressParams->type == BYRON) {
+			heading = STAKING_HEADING_WARNING;
+			strncpy(stakingInfo, "legacy Byron address (no staking rewards)", SIZEOF(stakingInfo));
+
+		} else if (addressParams->type == ENTERPRISE) {
 			heading = STAKING_HEADING_WARNING;
 			strncpy(stakingInfo, "no staking rewards", SIZEOF(stakingInfo));
 
-		} else if (addressParams->type == BYRON) {
+		} else if (addressParams->type == REWARD) {
 			heading = STAKING_HEADING_WARNING;
-			strncpy(stakingInfo, "legacy Byron address (no staking rewards)", SIZEOF(stakingInfo));
+			strncpy(stakingInfo, "reward account", SIZEOF(stakingInfo));
 
 		} else {
 			ASSERT(false);
