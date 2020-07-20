@@ -92,7 +92,7 @@ size_t cborEncodePubkeyAddressInner(
 					view_appendToken(&out, CBOR_TYPE_UNSIGNED, PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY); /* map key for protocol magic */
 
 					// Protocol magic itself is bytes with cbor-encoded content
-					char scratch[10];
+					uint8_t scratch[10];
 					size_t scratchSize = cbor_writeToken(CBOR_TYPE_UNSIGNED, protocolMagic, scratch, SIZEOF(scratch));
 					view_appendToken(&out, CBOR_TYPE_BYTES, scratchSize);
 					view_appendData(&out, scratch, scratchSize);
