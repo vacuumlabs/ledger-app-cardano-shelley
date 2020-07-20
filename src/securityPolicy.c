@@ -162,7 +162,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 	DENY_UNLESS(has_valid_change_and_any_address(&params->spendingKeyPath));
 
 	if (params->type == BYRON) {
-		// TODO deny if protocol magic is inconsistent with the given one
+		DENY_IF(params->protocolMagic != protocolMagic);
 	} else { // shelley
 		DENY_IF(params->networkId != networkId);
 	}
@@ -178,7 +178,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 }
 
 // For transaction fee
-security_policy_t policyForSignTxFee(uint64_t fee)
+security_policy_t policyForSignTxFee(uint64_t fee MARK_UNUSED)
 {
 	// always show the fee
 	SHOW_IF(true);
@@ -198,7 +198,7 @@ security_policy_t policyForSignTxTtl(uint32_t ttl)
 }
 
 // For each certificate
-security_policy_t policyForSignTxCertificate(const uint8_t certificateType, const bip44_path_t* stakingKeyPath)
+security_policy_t policyForSignTxCertificate(const uint8_t certificateType MARK_UNUSED, const bip44_path_t* stakingKeyPath)
 {
 	DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
 
