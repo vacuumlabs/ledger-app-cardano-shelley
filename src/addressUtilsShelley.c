@@ -415,7 +415,6 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 		params->protocolMagic = parse_u4be(&view);
 		TRACE("Protocol magic: 0x%x", params->protocolMagic);
-		// TODO is there something to validate?
 	} else {
 		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 		params->networkId = parse_u1be(&view);

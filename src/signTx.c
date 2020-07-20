@@ -232,7 +232,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		ASSERT_TYPE(ctx->protocolMagic, uint32_t);
 		ctx->protocolMagic = u4be_read(wireHeader->protocolMagic);
 		TRACE("protocol magic %d", ctx->protocolMagic);
-		// TODO validate that protocol magic is consistent with mainnet network id?
 
 		switch (wireHeader->includeMetadata) {
 		case SIGN_TX_METADATA_YES:
@@ -296,7 +295,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	);
 
 	security_policy_t policy = policyForSignTxInit(ctx->networkId, ctx->protocolMagic);
-	// TODO if network id and protocol magic are not suspicious, we should skip HANDLE_INIT_STEP_DISPLAY_DETAILS
 
 	{
 		// select UI steps
