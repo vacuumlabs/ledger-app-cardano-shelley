@@ -367,13 +367,24 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 	ASSERT(addressSize > 0);
 	const uint8_t addressType = getAddressType(address[0]);
 	ASSERT(isSupportedAddressType(addressType));
+	const uint8_t networkId = getNetworkId(address[0]);
+	ASSERT(isValidNetworkId(networkId));
 
 	switch (addressType) {
 	case BYRON:
 		return base58_encode(address, addressSize, out, outSize);
 
-	default: // shelley addresses
-		return bech32_encode("addr", address, addressSize, out, outSize);
+	case REWARD:
+		if (networkId == TESTNET_NETWORK_ID)
+			return bech32_encode("stake_test", address, addressSize, out, outSize);
+		else
+			return bech32_encode("stake", address, addressSize, out, outSize);
+
+	default: // all other shelley addresses
+		if (networkId == TESTNET_NETWORK_ID)
+			return bech32_encode("addr_test", address, addressSize, out, outSize);
+		else
+			return bech32_encode("addr", address, addressSize, out, outSize);
 	}
 }
 
