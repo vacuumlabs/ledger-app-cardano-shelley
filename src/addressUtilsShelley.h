@@ -5,6 +5,7 @@
 #include "cardano.h"
 #include "bip44.h"
 #include "bufView.h"
+#include "uiHelpers.h"
 
 // supported address types
 // (we avoid all types related to scripts)
@@ -71,5 +72,7 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addressParams_t* params);
 
 void run_addressUtilsShelley_test();
+
+void ui_displayStakingInfo(addressParams_t* addressParams, ui_callback_fn_t callback);
 
 #endif

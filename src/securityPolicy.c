@@ -109,7 +109,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 }
 
 // Derive address and return it to the host
-security_policy_t policyForReturnDeriveAddress(addressParams_t* addressParams)
+security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams)
 {
 	DENY_UNLESS(spending_path_is_consistent_with_address_type(addressParams->type, &addressParams->spendingKeyPath));
 	DENY_UNLESS(staking_info_is_valid(addressParams));
@@ -121,7 +121,7 @@ security_policy_t policyForReturnDeriveAddress(addressParams_t* addressParams)
 }
 
 // Derive address and show it to the user
-security_policy_t policyForShowDeriveAddress(addressParams_t* addressParams)
+security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams)
 {
 	DENY_UNLESS(spending_path_is_consistent_with_address_type(addressParams->type, &addressParams->spendingKeyPath));
 	DENY_UNLESS(staking_info_is_valid(addressParams));

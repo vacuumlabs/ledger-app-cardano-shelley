@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "securityPolicy.h"
+#include <stdbool.h>
 
 typedef void ui_callback_fn_t();
 

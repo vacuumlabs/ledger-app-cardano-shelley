@@ -3,6 +3,7 @@
 
 #include <os_io_seproxyhal.h>
 #include "uiHelpers.h"
+#include "ux.h"
 
 #ifdef HEADLESS
 #define HEADLESS_UI_ELEMENT() \
