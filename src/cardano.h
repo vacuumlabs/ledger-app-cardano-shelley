@@ -3,12 +3,6 @@
 
 #include "common.h"
 
-enum {
-	CARDANO_INPUT_TYPE_UTXO = 0,
-	// No other known input types
-};
-
-
 // Just a trick to make the numbers readable
 #define __CONCAT4(A,B,C,D) A ## B ## C ## D
 

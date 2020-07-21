@@ -61,14 +61,6 @@ void ui_displayPrompt(
         ui_callback_fn_t* reject
 );
 
-void ui_checkUserConsent(
-        security_policy_t policy,
-        const char* headerStr,
-        const char* bodyStr,
-        ui_callback_fn_t* confirm,
-        ui_callback_fn_t* reject
-);
-
 void ui_displayBusy();
 void ui_displayPrompt_run();
 void ui_displayPaginatedText_run();
