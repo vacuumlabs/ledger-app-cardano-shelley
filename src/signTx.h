@@ -22,7 +22,7 @@ typedef enum {
 	SIGN_STAGE_WITNESSES = 32,
 } sign_tx_stage_t;
 
-enum { // TODO enum with the same values?
+enum {
 	SIGN_MAX_INPUTS = 1000,
 	SIGN_MAX_OUTPUTS = 1000,
 	SIGN_MAX_CERTIFICATES = 1000,

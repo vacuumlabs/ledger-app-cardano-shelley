@@ -2,7 +2,7 @@
 #include "signTx.h"
 #include "cbor.h"
 #include "state.h"
-#include "cardano.h" // TODO revise & update
+#include "cardano.h"
 #include "keyDerivation.h"
 #include "ux.h"
 #include "endian.h"
