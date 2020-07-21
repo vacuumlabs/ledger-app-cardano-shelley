@@ -39,6 +39,7 @@ bool bip44_hasValidCardanoPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
 bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec);
+uint32_t bip44_getAccount(const bip44_path_t* pathSpec);
 
 bool bip44_containsChainType(const bip44_path_t* pathSpec);
 bool bip44_hasValidChainTypeForAddress(const bip44_path_t* pathSpec);
