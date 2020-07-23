@@ -179,7 +179,6 @@ static struct {
 	},
 };
 
-// TODO use meaningful data of correct length for certificates
 static struct {
 	const char* stakingKeyHash;
 } registrationCertificates[] = {
