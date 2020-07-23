@@ -1,13 +1,9 @@
 #ifdef DEVEL
 
-#include <os.h>
-#include <stdbool.h>
-#include "assert.h"
-#include "test_utils.h"
-#include "hex_utils.h"
 #include "base58.h"
-#include <string.h>
-#include "utils.h"
+#include "assert.h"
+#include "hexUtils.h"
+#include "test_utils.h"
 
 void testcase_base58(const char* inputHex, const char* expectedStr)
 {

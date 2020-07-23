@@ -1,10 +1,5 @@
-#include "cardano.h"
-#include "hex_utils.h"
-#include "utils.h"
-#include "assert.h"
 #include "messageSigning.h"
-#include "endian.h"
-#include "bip44.h"
+#include "cardano.h"
 #include "keyDerivation.h"
 
 void signRawMessage(privateKey_t* privateKey,

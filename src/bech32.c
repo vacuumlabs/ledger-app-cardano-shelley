@@ -21,11 +21,6 @@
 
 // modified by Vacuumlabs
 
-#include <stdlib.h>
-#include <stdint.h>
-#include <stddef.h>
-#include <string.h>
-
 #include "bech32.h"
 #include "utils.h"
 

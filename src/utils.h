@@ -1,7 +1,6 @@
 #ifndef H_CARDANO_APP_UTILS
 #define H_CARDANO_APP_UTILS
 
-#include <os.h>
 #include "assert.h"
 
 

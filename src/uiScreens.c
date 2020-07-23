@@ -1,5 +1,5 @@
 #include "uiScreens.h"
-#include "hex_utils.h"
+#include "hexUtils.h"
 #include "textUtils.h"
 
 void ui_displayPathScreen(

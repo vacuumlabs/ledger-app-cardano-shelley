@@ -1,7 +1,5 @@
-#include <string.h>
-
 #include "textUtils.h"
-#include "hex_utils.h"
+#include "hexUtils.h"
 
 #define WRITE_CHAR(ptr, end, c) \
 	{ \

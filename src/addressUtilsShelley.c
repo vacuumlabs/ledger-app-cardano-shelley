@@ -6,7 +6,6 @@
 #include "bip44.h"
 #include "base58.h"
 #include "bech32.h"
-#include "hex_utils.h"
 
 address_type_t getAddressType(uint8_t addressHeader)
 {

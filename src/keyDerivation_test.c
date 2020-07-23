@@ -1,14 +1,8 @@
 #ifdef DEVEL
 
-#include <string.h>
-
 #include "keyDerivation.h"
+#include "hexUtils.h"
 #include "test_utils.h"
-#include "hex_utils.h"
-#include "errors.h"
-#include "utils.h"
-#include "bip44.h"
-
 
 // Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
 #define UNWRAP(...) __VA_ARGS__

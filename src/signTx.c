@@ -1,4 +1,4 @@
-#include "common.h"
+#include "signTx.h"
 #include "state.h"
 #include "cardano.h"
 #include "addressUtilsByron.h"
@@ -7,11 +7,10 @@
 #include "uiScreens.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
-#include "hex_utils.h"
+#include "hexUtils.h"
 #include "messageSigning.h"
 #include "bufView.h"
 #include "securityPolicy.h"
-#include "signTx.h"
 
 enum {
 	SIGN_TX_OUTPUT_TYPE_ADDRESS = 1,

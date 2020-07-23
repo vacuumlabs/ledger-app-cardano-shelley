@@ -1,10 +1,5 @@
 #include "cbor.h"
-#include "assert.h"
-#include "errors.h"
-#include <os.h>
-#include <stdbool.h>
 #include "endian.h"
-#include "utils.h"
 
 // Note(ppershing): consume functions should either
 // a) *consume* expected value, or
