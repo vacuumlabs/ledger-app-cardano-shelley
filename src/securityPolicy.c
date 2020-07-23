@@ -89,6 +89,7 @@ static inline bool is_too_deep(const bip44_path_t* pathSpec)
 #define DENY_IF(expr)      if (expr)    return POLICY_DENY;
 #define DENY_UNLESS(expr)  if (!(expr)) return POLICY_DENY;
 #define WARN_IF(expr)      if (expr)    return POLICY_PROMPT_WARN_UNUSUAL;
+#define WARN_UNLESS(expr)  if (!(expr)) return POLICY_PROMPT_WARN_UNUSUAL;
 #define PROMPT_IF(expr)    if (expr)    return POLICY_PROMPT_BEFORE_RESPONSE;
 #define ALLOW_IF(expr)     if (expr)    return POLICY_ALLOW_WITHOUT_PROMPT;
 #define SHOW_IF(expr)      if (expr)    return POLICY_SHOW_BEFORE_RESPONSE;
@@ -99,7 +100,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 {
 	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
 
-	WARN_IF(!bip44_hasReasonableAccount(pathSpec));
+	WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
 	// Normally extPubKey is asked only for an account
 	WARN_IF(bip44_containsChainType(pathSpec));
 
@@ -113,7 +114,7 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 	DENY_UNLESS(staking_info_is_valid(addressParams));
 	DENY_IF(is_too_deep(&addressParams->spendingKeyPath));
 
-	WARN_IF(!has_reasonable_account_and_address(&addressParams->spendingKeyPath));
+	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
 
 	PROMPT_IF(true);
 }
@@ -125,7 +126,7 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 	DENY_UNLESS(staking_info_is_valid(addressParams));
 	DENY_IF(is_too_deep(&addressParams->spendingKeyPath));
 
-	WARN_IF(!has_reasonable_account_and_address(&addressParams->spendingKeyPath));
+	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
 
 	SHOW_IF(true);
 }
@@ -237,7 +238,7 @@ security_policy_t policyForSignTxWitness(const bip44_path_t* pathSpec)
 	DENY_UNLESS(is_valid_witness(pathSpec));
 
 	// TODO Perhaps we can relax this?
-	WARN_IF(!has_reasonable_account_and_address(pathSpec))
+	WARN_UNLESS(has_reasonable_account_and_address(pathSpec))
 
 	// TODO deny this? or check for depth in is_valid_witness?
 	WARN_IF(is_too_deep(pathSpec));
