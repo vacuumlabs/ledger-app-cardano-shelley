@@ -21,9 +21,7 @@ static inline bool spending_path_is_consistent_with_address_type(address_type_t 
 	if (addressType == REWARD) {
 		CHECK(bip44_isValidStakingKeyPath(spendingPath));
 	} else {
-		// for all non-reward addresses, we check chain type and length
-		CHECK(bip44_hasValidChainTypeForAddress(spendingPath));
-		CHECK(bip44_containsAddress(spendingPath));
+		CHECK(bip44_isValidAddressPath(spendingPath));
 	}
 
 	return true;
@@ -73,7 +71,7 @@ static inline bool is_valid_witness(const bip44_path_t* pathSpec)
 	if (bip44_isValidStakingKeyPath(pathSpec))
 		return true;
 
-	return bip44_hasValidChainTypeForAddress(pathSpec) && bip44_containsAddress(pathSpec);
+	return bip44_isValidAddressPath(pathSpec);
 }
 
 // Both account and address are from small brute-forcable range
