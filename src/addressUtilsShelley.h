@@ -73,6 +73,4 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 
 void run_addressUtilsShelley_test();
 
-void ui_displayStakingInfo(addressParams_t* addressParams, ui_callback_fn_t callback);
-
 #endif

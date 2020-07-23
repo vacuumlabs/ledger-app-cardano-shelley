@@ -1,0 +1,38 @@
+#ifndef H_CARDANO_APP_UI_SCREENS
+#define H_CARDANO_APP_UI_SCREENS
+
+#include "uiHelpers.h"
+#include "addressUtilsShelley.h"
+
+void ui_displayPathScreen(
+        const char* screenHeader,
+        const bip44_path_t* path,
+        ui_callback_fn_t callback
+);
+
+void ui_displayAddressScreen(
+        const char* screenHeader,
+        const uint8_t* addressBuffer, size_t addressSize,
+        ui_callback_fn_t callback
+);
+
+void ui_displayStakingInfoScreen(
+        const addressParams_t* addressParams,
+        ui_callback_fn_t callback
+);
+
+void ui_displayAmountScreen(
+        const char* screenHeader,
+        uint64_t amount,
+        ui_callback_fn_t callback
+);
+
+void ui_displayNetworkParamsScreen(
+        const char* screenHeader,
+        uint8_t networkId,
+        uint32_t protocolMagic,
+        ui_callback_fn_t callback
+);
+
+
+#endif
