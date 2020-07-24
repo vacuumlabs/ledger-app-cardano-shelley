@@ -1048,11 +1048,13 @@ static void signTx_handleMetadata_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step);
 
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY) {
-		char metadataHashHex[100];
-		str_formatMetadata(
-		        ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash),
-		        metadataHashHex, SIZEOF(metadataHashHex)
-		);
+		char metadataHashHex[1 + 2 * METADATA_HASH_LENGTH];
+		size_t len = str_formatMetadata(
+		                     ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash),
+		                     metadataHashHex, SIZEOF(metadataHashHex)
+		             );
+		ASSERT(len == SIZEOF(metadataHashHex));
+
 		ui_displayPaginatedText(
 		        "Transaction metadata",
 		        metadataHashHex,
