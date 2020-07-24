@@ -4,6 +4,7 @@
 #include "addressUtilsByron.h"
 #include "addressUtilsShelley.h"
 #include "uiHelpers.h"
+#include "uiScreens.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
 #include "hex_utils.h"
@@ -122,6 +123,7 @@ static inline void advanceStage()
 
 void respondSuccessEmptyMsg()
 {
+	TRACE();
 	io_send_buf(SUCCESS, NULL, 0);
 	ui_displayBusy(); // needs to happen after I/O
 }
@@ -143,17 +145,9 @@ static void signTx_handleInit_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step);
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
-		char networkParams[100];
-		snprintf(
-		        networkParams, SIZEOF(networkParams),
-		        "network id %d / protocol magic %u",
-		        (int) ctx->networkId, (unsigned) ctx->protocolMagic
-		);
-		ASSERT(strlen(networkParams) + 1 < SIZEOF(networkParams));
-
-		ui_displayPaginatedText(
+		ui_displayNetworkParamsScreen(
 		        "New transaction",
-		        networkParams,
+		        ctx->networkId, ctx->protocolMagic,
 		        this_fn
 		);
 	}
@@ -166,10 +160,8 @@ static void signTx_handleInit_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_INIT_STEP_RESPOND) {
-		TRACE();
-		advanceStage();
 		respondSuccessEmptyMsg();
-
+		advanceStage();
 	}
 	UI_STEP_END(HANDLE_INIT_STEP_INVALID);
 }
@@ -302,7 +294,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		}
 	}
 
-
 	signTx_handleInit_ui_runStep();
 }
 
@@ -367,7 +358,11 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 	{
 		// add to tx
 		TRACE("Adding input to tx hash");
-		txHashBuilder_addInput(&ctx->txHashBuilder, input.txHashBuffer, SIZEOF(input.txHashBuffer), input.parsedIndex);
+		txHashBuilder_addInput(
+		        &ctx->txHashBuilder,
+		        input.txHashBuffer, SIZEOF(input.txHashBuffer),
+		        input.parsedIndex
+		);
 	}
 
 	security_policy_t policy = policyForSignTxInput();
@@ -388,17 +383,6 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 
 // ============================== OUTPUTS ==============================
 
-static void ui_displayAmount(uint64_t amount, ui_callback_fn_t callback)
-{
-	char adaAmountStr[50];
-	str_formatAdaAmount(amount, adaAmountStr, SIZEOF(adaAmountStr));
-	ui_displayPaginatedText(
-	        "Send ADA",
-	        adaAmountStr,
-	        callback
-	);
-}
-
 enum {
 	HANDLE_OUTPUT_ADDRESS_STEP_DISPLAY_AMOUNT = 300,
 	HANDLE_OUTPUT_ADDRESS_STEP_DISPLAY_ADDRESS,
@@ -414,21 +398,14 @@ static void signTx_handleOutput_address_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step);
 
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_STEP_DISPLAY_AMOUNT) {
-		ui_displayAmount(ctx->stageData.output.amount, this_fn);
+		ui_displayAmountScreen("Send ADA", ctx->stageData.output.amount, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_STEP_DISPLAY_ADDRESS) {
-		char addressStr[MAX_HUMAN_ADDRESS_SIZE];
 		ASSERT(ctx->stageData.output.addressSize <= SIZEOF(ctx->stageData.output.addressBuffer));
-		humanReadableAddress(
+		ui_displayAddressScreen(
+		        "To address",
 		        ctx->stageData.output.addressBuffer,
 		        ctx->stageData.output.addressSize,
-		        addressStr,
-		        SIZEOF(addressStr)
-		);
-
-		ui_displayPaginatedText(
-		        "To address",
-		        addressStr,
 		        this_fn
 		);
 	}
@@ -498,27 +475,13 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step);
 
 	UI_STEP(HANDLE_OUTPUT_ADDRESSPARAMS_STEP_DISPLAY_AMOUNT) {
-		ui_displayAmount(ctx->stageData.output.amount, this_fn);
+		ui_displayAmountScreen("Send ADA", ctx->stageData.output.amount, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESSPARAMS_STEP_DISPLAY_SPENDING_PATH) {
-		char pathStr[100];
-		{
-			const char* prefix = "Path: ";
-			size_t len = strlen(prefix);
-			os_memcpy(pathStr, prefix, len); // Note: not null-terminated yet
-			bip44_printToStr(
-			        &ctx->stageData.output.params.spendingKeyPath,
-			        pathStr + len, SIZEOF(pathStr) - len
-			);
-		}
-		ui_displayPaginatedText(
-		        "To address",
-		        pathStr,
-		        this_fn
-		);
+		ui_displayPathScreen("To address", &ctx->stageData.output.params.spendingKeyPath, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESSPARAMS_STEP_DISPLAY_STAKING_INFO) {
-		ui_displayStakingInfo(&ctx->stageData.output.params, this_fn);
+		ui_displayStakingInfoScreen(&ctx->stageData.output.params, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESSPARAMS_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -643,17 +606,10 @@ static void signTx_handleFee_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step);
 
 	UI_STEP(HANDLE_FEE_STEP_DISPLAY) {
-		char adaAmount[50];
-		str_formatAdaAmount(ctx->fee, adaAmount, SIZEOF(adaAmount));
-		ui_displayPaginatedText(
-		        "Transaction fee",
-		        adaAmount,
-		        this_fn
-		);
+		ui_displayAmountScreen("Transaction fee", ctx->fee, this_fn);
 	}
 	UI_STEP(HANDLE_FEE_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceStage();
 	}
 	UI_STEP_END(HANDLE_FEE_STEP_INVALID);
@@ -727,7 +683,6 @@ static void signTx_handleTtl_ui_runStep()
 	}
 	UI_STEP(HANDLE_TTL_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceStage();
 	}
 	UI_STEP_END(HANDLE_TTL_STEP_INVALID);
@@ -828,14 +783,9 @@ static void signTx_handleCertificate_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_STAKING_KEY) {
-		char key[100];
-		os_memset(key, 0, SIZEOF(key));
-
-		bip44_printToStr(&ctx->stageData.certificate.keyPath, key, SIZEOF(key));
-
-		ui_displayPaginatedText(
+		ui_displayPathScreen(
 		        "Staking key",
-		        key,
+		        &ctx->stageData.certificate.keyPath,
 		        this_fn
 		);
 	}
@@ -1001,13 +951,7 @@ static void signTx_handleWithdrawal_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step);
 
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY) {
-		char adaAmount[50];
-		str_formatAdaAmount(ctx->stageData.withdrawal.amount, adaAmount, SIZEOF(adaAmount));
-		ui_displayPaginatedText(
-		        "Withdrawing rewards",
-		        adaAmount,
-		        this_fn
-		);
+		ui_displayAmountScreen("Withdrawing rewards", ctx->stageData.withdrawal.amount, this_fn);
 	}
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -1043,7 +987,10 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 		ctx->stageData.withdrawal.amount = parse_u8be(&view);
 		// the rest is path
 
-		view_skipBytes(&view, bip44_parseFromWire(&ctx->stageData.withdrawal.path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
+		view_skipBytes(
+		        &view,
+		        bip44_parseFromWire(&ctx->stageData.withdrawal.path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view))
+		);
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
@@ -1061,7 +1008,11 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 		}
 
 		TRACE("Adding withdrawal to tx hash");
-		txHashBuilder_addWithdrawal(&ctx->txHashBuilder, rewardAccount, SIZEOF(rewardAccount), ctx->stageData.withdrawal.amount);
+		txHashBuilder_addWithdrawal(
+		        &ctx->txHashBuilder,
+		        rewardAccount, SIZEOF(rewardAccount),
+		        ctx->stageData.withdrawal.amount
+		);
 	}
 
 	security_policy_t policy = policyForSignTxWithdrawal();
@@ -1098,7 +1049,10 @@ static void signTx_handleMetadata_ui_runStep()
 
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY) {
 		char metadataHashHex[100];
-		str_formatMetadata(ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash), metadataHashHex, SIZEOF(metadataHashHex));
+		str_formatMetadata(
+		        ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash),
+		        metadataHashHex, SIZEOF(metadataHashHex)
+		);
 		ui_displayPaginatedText(
 		        "Transaction metadata",
 		        metadataHashHex,
@@ -1107,7 +1061,6 @@ static void signTx_handleMetadata_ui_runStep()
 	}
 	UI_STEP(HANDLE_METADATA_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceStage();
 	}
 	UI_STEP_END(HANDLE_METADATA_STEP_INVALID);
@@ -1151,7 +1104,10 @@ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 	{
 		// add metadata to tx
 		TRACE("Adding metadata hash to tx hash");
-		txHashBuilder_addMetadata(&ctx->txHashBuilder, ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash));
+		txHashBuilder_addMetadata(
+		        &ctx->txHashBuilder,
+		        ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash)
+		);
 		TRACE();
 	}
 
@@ -1260,13 +1216,7 @@ static void signTx_handleWitness_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_DISPLAY) {
-		char pathStr[100];
-		bip44_printToStr(&ctx->stageData.witness.path, pathStr, SIZEOF(pathStr));
-		ui_displayPaginatedText(
-		        "Witness path",
-		        pathStr,
-		        this_fn
-		);
+		ui_displayPathScreen("Witness path", &ctx->stageData.witness.path, this_fn);
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_CONFIRM) {
 		ui_displayPrompt(
