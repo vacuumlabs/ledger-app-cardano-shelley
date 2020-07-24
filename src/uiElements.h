@@ -1,7 +1,7 @@
-#ifndef H_CARDANO_APP_UX
-#define H_CARDANO_APP_UX
+#ifndef H_CARDANO_APP_UI_ELEMENTS
+#define H_CARDANO_APP_UI_ELEMENTS
 
-#include "common.h"
+#include <bagl.h>
 
 // These are helper macros for defining UI elements. There are four basic UI
 // elements: the background, which is a black rectangle that fills the whole

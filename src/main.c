@@ -25,7 +25,6 @@
 #include <os_io_seproxyhal.h>
 #include <os.h>
 
-#include "ux.h"
 #include "getVersion.h"
 #include "handlers.h"
 #include "state.h"

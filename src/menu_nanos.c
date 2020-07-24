@@ -1,7 +1,8 @@
 #include <bolos_target.h> // we need target definitions
-#if defined(TARGET_NANOS)
+#ifdef TARGET_NANOS
 
 #include <os_io_seproxyhal.h>
+
 #include "menu.h"
 #include "getVersion.h"
 #include "glyphs.h"

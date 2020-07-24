@@ -12,5 +12,4 @@
 #include "utils.h"
 #include "assert.h"
 #include "io.h"
-#include "ux.h"
 #include "errors.h"
