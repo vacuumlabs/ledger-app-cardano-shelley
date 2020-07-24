@@ -6,6 +6,7 @@
 #include "bip44.h"
 #include "base58.h"
 #include "bech32.h"
+#include "hex_utils.h"
 
 address_type_t getAddressType(uint8_t addressHeader)
 {
@@ -91,7 +92,6 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 #undef CONSISTENT_WITH
 }
 
-// TODO perhaps move elsewhere? bip44?
 size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath)
 {
 	extendedPublicKey_t extPubKey;
@@ -367,13 +367,24 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 	ASSERT(addressSize > 0);
 	const uint8_t addressType = getAddressType(address[0]);
 	ASSERT(isSupportedAddressType(addressType));
+	const uint8_t networkId = getNetworkId(address[0]);
+	ASSERT(isValidNetworkId(networkId));
 
 	switch (addressType) {
 	case BYRON:
 		return base58_encode(address, addressSize, out, outSize);
 
-	default: // shelley addresses
-		return bech32_encode("addr", address, addressSize, out, outSize);
+	case REWARD:
+		if (networkId == TESTNET_NETWORK_ID)
+			return bech32_encode("stake_test", address, addressSize, out, outSize);
+		else
+			return bech32_encode("stake", address, addressSize, out, outSize);
+
+	default: // all other shelley addresses
+		if (networkId == TESTNET_NETWORK_ID)
+			return bech32_encode("addr_test", address, addressSize, out, outSize);
+		else
+			return bech32_encode("addr", address, addressSize, out, outSize);
 	}
 }
 
@@ -415,7 +426,6 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 		params->protocolMagic = parse_u4be(&view);
 		TRACE("Protocol magic: 0x%x", params->protocolMagic);
-		// TODO is there something to validate?
 	} else {
 		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 		params->networkId = parse_u1be(&view);

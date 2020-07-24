@@ -5,6 +5,7 @@
 #include "state.h"
 #include "securityPolicy.h"
 #include "uiHelpers.h"
+#include "uiScreens.h"
 #include "addressUtilsByron.h"
 #include "addressUtilsShelley.h"
 #include "base58.h"
@@ -23,69 +24,11 @@ enum {
 
 static void prepareResponse()
 {
-	ctx->address.size = deriveAddress(&ctx->addressParams, ctx->address.buffer, SIZEOF(ctx->address.buffer));
+	ctx->address.size = deriveAddress(
+	                            &ctx->addressParams,
+	                            ctx->address.buffer, SIZEOF(ctx->address.buffer)
+	                    );
 	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
-}
-
-
-static const char STAKING_HEADING_PATH[]    = "Staking key path: ";
-static const char STAKING_HEADING_HASH[]    = "Staking key hash: ";
-static const char STAKING_HEADING_POINTER[] = "Staking key pointer: ";
-static const char STAKING_HEADING_WARNING[] = "WARNING: ";
-
-static void ui_displayStakingInfo(addressParams_t* addressParams, ui_callback_fn_t callback)
-{
-	const char *heading = NULL;
-	char stakingInfo[120];
-	os_memset(stakingInfo, 0, SIZEOF(stakingInfo));
-
-	switch (addressParams->stakingChoice) {
-
-	case NO_STAKING:
-		if (addressParams->type == ENTERPRISE) {
-			heading = STAKING_HEADING_WARNING;
-			strncpy(stakingInfo, "no staking rewards", SIZEOF(stakingInfo));
-
-		} else if (addressParams->type == BYRON) {
-			heading = STAKING_HEADING_WARNING;
-			strncpy(stakingInfo, "legacy Byron address (no staking rewards)", SIZEOF(stakingInfo));
-
-		} else {
-			ASSERT(false);
-		}
-		break;
-
-	case STAKING_KEY_PATH:
-		heading = STAKING_HEADING_PATH;
-		// TODO avoid displaying anything if staking key belongs to spending account?
-		bip44_printToStr(&addressParams->stakingKeyPath, stakingInfo, SIZEOF(stakingInfo));
-		break;
-
-	case STAKING_KEY_HASH:
-		heading = STAKING_HEADING_HASH;
-		encode_hex(
-		        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
-		        stakingInfo, SIZEOF(stakingInfo)
-		);
-		break;
-
-	case BLOCKCHAIN_POINTER:
-		heading = STAKING_HEADING_POINTER;
-		printBlockchainPointerToStr(addressParams->stakingKeyBlockchainPointer, stakingInfo, SIZEOF(stakingInfo));
-		break;
-
-	default:
-		ASSERT(false);
-	}
-
-	ASSERT(heading != NULL);
-	ASSERT(strlen(stakingInfo) > 0);
-
-	ui_displayPaginatedText(
-	        heading,
-	        stakingInfo,
-	        callback
-	);
 }
 
 
@@ -135,21 +78,14 @@ static void deriveAddress_return_ui_runStep()
 		);
 	}
 	UI_STEP(RETURN_UI_STEP_SPENDING_PATH) {
-		char pathStr[100];
-		{
-			const char* prefix = "Path: ";
-			size_t len = strlen(prefix);
-			os_memcpy(pathStr, prefix, len); // Note: not null-terminated yet
-			bip44_printToStr(&ctx->addressParams.spendingKeyPath, pathStr + len, SIZEOF(pathStr) - len);
-		}
-		ui_displayPaginatedText(
+		ui_displayPathScreen(
 		        "Export address",
-		        pathStr,
+		        &ctx->addressParams.spendingKeyPath,
 		        this_fn
 		);
 	}
 	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
-		ui_displayStakingInfo(&ctx->addressParams, this_fn);
+		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
 	}
 	UI_STEP(RETURN_UI_STEP_CONFIRM) {
 		ui_displayPrompt(
@@ -224,33 +160,20 @@ static void deriveAddress_display_ui_runStep()
 		);
 	}
 	UI_STEP(DISPLAY_UI_STEP_PATH) {
-		// Response
-		char pathStr[100];
-		bip44_printToStr(&ctx->addressParams.spendingKeyPath, pathStr, SIZEOF(pathStr));
-		ui_displayPaginatedText(
+		ui_displayPathScreen(
 		        "Address path",
-		        pathStr,
+		        &ctx->addressParams.spendingKeyPath,
 		        this_fn
 		);
 	}
 	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
-		ui_displayStakingInfo(&ctx->addressParams, this_fn);
+		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
 	}
 	UI_STEP(DISPLAY_UI_STEP_ADDRESS) {
-		char humanAddress[MAX_HUMAN_ADDRESS_LENGTH];
-		os_memset(humanAddress, 0, SIZEOF(humanAddress));
-
 		ASSERT(ctx->address.size <= SIZEOF(ctx->address.buffer));
-		size_t length = humanReadableAddress(
-		                        ctx->address.buffer, ctx->address.size,
-		                        humanAddress, SIZEOF(humanAddress)
-		                );
-		ASSERT(length > 0);
-		ASSERT(strlen(humanAddress) == length);
-
-		ui_displayPaginatedText(
+		ui_displayAddressScreen(
 		        "Address",
-		        humanAddress,
+		        ctx->address.buffer, ctx->address.size,
 		        this_fn
 		);
 	}

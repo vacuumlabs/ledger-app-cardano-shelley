@@ -27,7 +27,7 @@ WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon
 PIN = 5555
 
 APPNAME = "Cardano ADA"
-APPVERSION = "1.2.0"
+APPVERSION = "2.0.0"
 
 APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'"
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
@@ -47,7 +47,7 @@ all: default
 # Platform #
 ############
 DEFINES += OS_IO_SEPROXYHAL
-DEFINES += HAVE_BAGL HAVE_SPRINTF
+DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 DEFINES += APPVERSION=\"$(APPVERSION)\"
 
 ## USB HID?

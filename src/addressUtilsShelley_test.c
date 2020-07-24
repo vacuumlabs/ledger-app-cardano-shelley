@@ -4,6 +4,7 @@
 #include "test_utils.h"
 #include "hex_utils.h"
 #include "bip44.h"
+#include "cardano.h"
 
 // Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
 #define UNWRAP(...) __VA_ARGS__
@@ -17,6 +18,7 @@ static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uin
 	os_memmove(pathSpec->path, pathArray, pathLength * 4);
 }
 
+// networkIdOrProtocolMagic is used as networkId for Shelley addresses and as protocol magic for Byron addresses
 static void testcase_deriveAddressShelley(
         uint8_t type, uint32_t networkIdOrProtocolMagic, const uint32_t* spendingPathArray, size_t spendingPathLen,
         uint8_t stakingChoice, const uint32_t* stakingPathArray, size_t stakingPathLen,
@@ -41,16 +43,21 @@ static void testcase_deriveAddressShelley(
 		ASSERT(false);
 	}
 
-	addressParams_t params = {
-		.type = type,
-		.stakingChoice = stakingChoice
-	}; // the rest is initialized to zero
+	addressParams_t params;
 
 	if (type == BYRON) {
-		params.protocolMagic = networkIdOrProtocolMagic;
+		params = (addressParams_t) {
+			.type = type,
+			.protocolMagic = networkIdOrProtocolMagic,
+			.stakingChoice = stakingChoice
+		};
 	} else {
-		params.networkId = networkIdOrProtocolMagic;
-	}
+		params = (addressParams_t) {
+			.type = type,
+			.networkId = (uint8_t) networkIdOrProtocolMagic,
+			.stakingChoice = stakingChoice
+		};
+	}  // the rest of params is initialized to zero
 
 	pathSpec_init(&params.spendingKeyPath, spendingPathArray, spendingPathLen);
 	if (stakingPathLen > 0)
@@ -63,7 +70,11 @@ static void testcase_deriveAddressShelley(
 		params.stakingKeyBlockchainPointer = *stakingKeyBlockchainPointer;
 	}
 
-	PRINTF("testcase_deriveAddressShelley 0x%02x ", constructShelleyAddressHeader(type, networkIdOrProtocolMagic));
+	if (type == BYRON) {
+		PRINTF("testcase_deriveAddressShelley (byron) %d ", networkIdOrProtocolMagic);
+	} else {
+		PRINTF("testcase_deriveAddressShelley 0x%02x ", constructShelleyAddressHeader(type, (uint8_t) networkIdOrProtocolMagic));
+	}
 	bip44_PRINTF(&params.spendingKeyPath);
 	if (params.stakingKeyPath.length > 0) {
 		bip44_PRINTF(&params.stakingKeyPath);
@@ -97,11 +108,11 @@ static void testAddressDerivation()
 {
 #define NO_STAKING_KEY_PATH ()
 #define NO_STAKING_KEY_HASH NULL
-#define TESTCASE(type_, networkId_, spendingPath_, stakingChoice_, stakingPath_, stakingKeyHashHex_, expected_) \
+#define TESTCASE(type_, networkIdOrProtocolMagic_, spendingPath_, stakingChoice_, stakingPath_, stakingKeyHashHex_, expected_) \
 	{ \
 		uint32_t spendingPath[] = { UNWRAP spendingPath_ }; \
 		uint32_t stakingPath[] = { UNWRAP stakingPath_ }; \
-		testcase_deriveAddressShelley(type_, networkId_, spendingPath, ARRAY_LEN(spendingPath), stakingChoice_, stakingPath, ARRAY_LEN(stakingPath), stakingKeyHashHex_, NULL, expected_); \
+		testcase_deriveAddressShelley(type_, networkIdOrProtocolMagic_, spendingPath, ARRAY_LEN(spendingPath), stakingChoice_, stakingPath, ARRAY_LEN(stakingPath), stakingKeyHashHex_, NULL, expected_); \
 	}
 
 	TESTCASE(
@@ -146,7 +157,16 @@ static void testAddressDerivation()
 	        // bech32: addr1vdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vc9wh7em
 	);
 
-	// TODO add more for REWARD etc.
+	TESTCASE(
+	        REWARD, 0x03, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
+	        "e31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
+	        // bech32: stake1uvwjy7h05jmhx9y3wzy94td6xz4txynuccgam0zfn800v8qqucf2t
+	);
+	TESTCASE(
+	        REWARD, 0x00, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
+	        "e01d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
+	        // bech32: stake_test1uqwjy7h05jmhx9y3wzy94td6xz4txynuccgam0zfn800v8q8mmqwc
+	);
 
 #undef TESTCASE
 #undef NO_STAKING_KEY_PATH

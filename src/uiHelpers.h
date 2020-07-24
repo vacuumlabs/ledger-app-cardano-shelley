@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "securityPolicy.h"
+#include <stdbool.h>
 
 typedef void ui_callback_fn_t();
 
@@ -55,14 +55,6 @@ void ui_displayPaginatedText(
         ui_callback_fn_t* callback);
 
 void ui_displayPrompt(
-        const char* headerStr,
-        const char* bodyStr,
-        ui_callback_fn_t* confirm,
-        ui_callback_fn_t* reject
-);
-
-void ui_checkUserConsent(
-        security_policy_t policy,
         const char* headerStr,
         const char* bodyStr,
         ui_callback_fn_t* confirm,

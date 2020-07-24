@@ -5,6 +5,7 @@
 #include "endian.h"
 #include "state.h"
 #include "uiHelpers.h"
+#include "uiScreens.h"
 #include "securityPolicy.h"
 
 static ins_get_ext_pubkey_context_t* ctx = &(instructionState.extPubKeyContext);
@@ -84,15 +85,7 @@ static void getExtendedPublicKey_ui_runStep()
 		);
 	}
 	UI_STEP(UI_STEP_DISPLAY_PATH) {
-		// Response
-		char pathStr[100];
-		bip44_printToStr(&ctx->pathSpec, pathStr, SIZEOF(pathStr) );
-
-		ui_displayPaginatedText(
-		        "Export public key",
-		        pathStr,
-		        this_fn
-		);
+		ui_displayPathScreen("Export public key", &ctx->pathSpec, this_fn);
 	}
 	UI_STEP(UI_STEP_CONFIRM) {
 		ui_displayPrompt(
