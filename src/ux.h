@@ -19,8 +19,4 @@
 #define UI_ICON_RIGHT(userid, glyph) {{BAGL_ICON,userid,117,13,8,6,0,0,0,0xFFFFFF,0,0,glyph},NULL}
 #define UI_TEXT(userid, x, y, w, text) {{BAGL_LABELINE,userid,x,y,w,12,0,0,0,0xFFFFFF,0,BAGL_FONT_OPEN_SANS_REGULAR_11px|BAGL_FONT_ALIGNMENT_CENTER,0},(char *)text}
 
-// ui_idle displays the main menu screen. Command handlers should call ui_idle
-// when they finish.
-void ui_idle(void);
-
 #endif

@@ -13,6 +13,7 @@
 #include "crc32.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
+#include "uiHelpers.h"
 
 void handleRunTests(
         uint8_t p1 MARK_UNUSED,
