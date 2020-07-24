@@ -103,7 +103,7 @@ uint32_t bip44_getChainTypeValue(const bip44_path_t* pathSpec)
 	return pathSpec->path[BIP44_I_CHAIN];
 }
 
-bool bip44_hasValidChainTypeForAddress(const bip44_path_t* pathSpec)
+static bool bip44_hasValidChainTypeForAddress(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsChainType(pathSpec)) return false;
 	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
@@ -129,6 +129,12 @@ bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec)
 	if (!bip44_containsAddress(pathSpec)) return false;
 	const uint32_t address = bip44_getAddressValue(pathSpec);
 	return (address <= MAX_REASONABLE_ADDRESS);
+}
+
+// path is valid as the spending path in all addresses except REWARD
+bool bip44_isValidAddressPath(const bip44_path_t* pathSpec)
+{
+	return bip44_hasValidChainTypeForAddress(pathSpec) && bip44_containsAddress(pathSpec);
 }
 
 // Staking keys (one per account, should end with /2/0 after account)

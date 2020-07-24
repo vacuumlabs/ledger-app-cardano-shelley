@@ -28,70 +28,6 @@ static void prepareResponse()
 }
 
 
-static const char STAKING_HEADING_PATH[]    = "Staking key path: ";
-static const char STAKING_HEADING_HASH[]    = "Staking key hash: ";
-static const char STAKING_HEADING_POINTER[] = "Staking key pointer: ";
-static const char STAKING_HEADING_WARNING[] = "WARNING: ";
-
-static void ui_displayStakingInfo(addressParams_t* addressParams, ui_callback_fn_t callback)
-{
-	const char *heading = NULL;
-	char stakingInfo[120];
-	os_memset(stakingInfo, 0, SIZEOF(stakingInfo));
-
-	switch (addressParams->stakingChoice) {
-
-	case NO_STAKING:
-		if (addressParams->type == BYRON) {
-			heading = STAKING_HEADING_WARNING;
-			strncpy(stakingInfo, "legacy Byron address (no staking rewards)", SIZEOF(stakingInfo));
-
-		} else if (addressParams->type == ENTERPRISE) {
-			heading = STAKING_HEADING_WARNING;
-			strncpy(stakingInfo, "no staking rewards", SIZEOF(stakingInfo));
-
-		} else if (addressParams->type == REWARD) {
-			heading = STAKING_HEADING_WARNING;
-			strncpy(stakingInfo, "reward account", SIZEOF(stakingInfo));
-
-		} else {
-			ASSERT(false);
-		}
-		break;
-
-	case STAKING_KEY_PATH:
-		heading = STAKING_HEADING_PATH;
-		bip44_printToStr(&addressParams->stakingKeyPath, stakingInfo, SIZEOF(stakingInfo));
-		break;
-
-	case STAKING_KEY_HASH:
-		heading = STAKING_HEADING_HASH;
-		encode_hex(
-		        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
-		        stakingInfo, SIZEOF(stakingInfo)
-		);
-		break;
-
-	case BLOCKCHAIN_POINTER:
-		heading = STAKING_HEADING_POINTER;
-		printBlockchainPointerToStr(addressParams->stakingKeyBlockchainPointer, stakingInfo, SIZEOF(stakingInfo));
-		break;
-
-	default:
-		ASSERT(false);
-	}
-
-	ASSERT(heading != NULL);
-	ASSERT(strlen(stakingInfo) > 0);
-
-	ui_displayPaginatedText(
-	        heading,
-	        stakingInfo,
-	        callback
-	);
-}
-
-
 static void deriveAddress_return_ui_runStep();
 enum {
 	RETURN_UI_STEP_WARNING = 100,
@@ -240,7 +176,7 @@ static void deriveAddress_display_ui_runStep()
 		ui_displayStakingInfo(&ctx->addressParams, this_fn);
 	}
 	UI_STEP(DISPLAY_UI_STEP_ADDRESS) {
-		char humanAddress[MAX_HUMAN_ADDRESS_LENGTH];
+		char humanAddress[MAX_HUMAN_ADDRESS_SIZE];
 		os_memset(humanAddress, 0, SIZEOF(humanAddress));
 
 		ASSERT(ctx->address.size <= SIZEOF(ctx->address.buffer));

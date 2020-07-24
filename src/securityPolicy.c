@@ -21,10 +21,26 @@ static inline bool spending_path_is_consistent_with_address_type(address_type_t 
 	if (addressType == REWARD) {
 		CHECK(bip44_isValidStakingKeyPath(spendingPath));
 	} else {
-		// for all non-reward addresses, we check chain type and length
-		CHECK(bip44_hasValidChainTypeForAddress(spendingPath));
-		CHECK(bip44_containsAddress(spendingPath));
+		CHECK(bip44_isValidAddressPath(spendingPath));
 	}
+
+	return true;
+#undef CHECK
+}
+
+// staking key path has the same account as the spending key path
+// assumes that the given address params are valid
+static inline bool is_standard_base_address(const addressParams_t* addressParams)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(addressParams->type == BASE);
+	CHECK(addressParams->stakingChoice == STAKING_KEY_PATH);
+	ASSERT(bip44_containsAccount(&addressParams->stakingKeyPath));
+	ASSERT(bip44_containsAccount(&addressParams->spendingKeyPath));
+	CHECK(
+	        bip44_getAccount(&addressParams->stakingKeyPath) ==
+	        bip44_getAccount(&addressParams->spendingKeyPath)
+	);
 
 	return true;
 #undef CHECK
@@ -47,10 +63,15 @@ static inline bool has_cardano_prefix_and_any_account(const bip44_path_t* pathSp
 	       bip44_containsAccount(pathSpec);
 }
 
-static inline bool has_valid_change_and_any_address(const bip44_path_t* pathSpec)
+static inline bool is_valid_witness(const bip44_path_t* pathSpec)
 {
-	return bip44_hasValidChainTypeForAddress(pathSpec) &&
-	       bip44_containsAddress(pathSpec);
+	if (!bip44_hasValidCardanoPrefix(pathSpec))
+		return false;
+
+	if (bip44_isValidStakingKeyPath(pathSpec))
+		return true;
+
+	return bip44_isValidAddressPath(pathSpec);
 }
 
 // Both account and address are from small brute-forcable range
@@ -68,16 +89,18 @@ static inline bool is_too_deep(const bip44_path_t* pathSpec)
 #define DENY_IF(expr)      if (expr)    return POLICY_DENY;
 #define DENY_UNLESS(expr)  if (!(expr)) return POLICY_DENY;
 #define WARN_IF(expr)      if (expr)    return POLICY_PROMPT_WARN_UNUSUAL;
+#define WARN_UNLESS(expr)  if (!(expr)) return POLICY_PROMPT_WARN_UNUSUAL;
 #define PROMPT_IF(expr)    if (expr)    return POLICY_PROMPT_BEFORE_RESPONSE;
 #define ALLOW_IF(expr)     if (expr)    return POLICY_ALLOW_WITHOUT_PROMPT;
 #define SHOW_IF(expr)      if (expr)    return POLICY_SHOW_BEFORE_RESPONSE;
+#define SHOW_UNLESS(expr)  if (!(expr)) return POLICY_SHOW_BEFORE_RESPONSE;
 
 // Get extended public key and return it to the host
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 {
 	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
 
-	WARN_IF(!bip44_hasReasonableAccount(pathSpec));
+	WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
 	// Normally extPubKey is asked only for an account
 	WARN_IF(bip44_containsChainType(pathSpec));
 
@@ -85,27 +108,25 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 }
 
 // Derive address and return it to the host
-security_policy_t policyForReturnDeriveAddress(addressParams_t* addressParams)
+security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams)
 {
-	DENY_UNLESS(has_cardano_prefix_and_any_account(&addressParams->spendingKeyPath));
 	DENY_UNLESS(spending_path_is_consistent_with_address_type(addressParams->type, &addressParams->spendingKeyPath));
 	DENY_UNLESS(staking_info_is_valid(addressParams));
+	DENY_IF(is_too_deep(&addressParams->spendingKeyPath));
 
-	WARN_IF(!has_reasonable_account_and_address(&addressParams->spendingKeyPath));
-	WARN_IF(is_too_deep(&addressParams->spendingKeyPath)); // TODO change to DENY?
+	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
 
 	PROMPT_IF(true);
 }
 
 // Derive address and show it to the user
-security_policy_t policyForShowDeriveAddress(addressParams_t* addressParams)
+security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams)
 {
-	DENY_UNLESS(has_cardano_prefix_and_any_account(&addressParams->spendingKeyPath));
 	DENY_UNLESS(spending_path_is_consistent_with_address_type(addressParams->type, &addressParams->spendingKeyPath));
 	DENY_UNLESS(staking_info_is_valid(addressParams));
+	DENY_IF(is_too_deep(&addressParams->spendingKeyPath));
 
-	WARN_IF(!has_reasonable_account_and_address(&addressParams->spendingKeyPath));
-	WARN_IF(is_too_deep(&addressParams->spendingKeyPath)); // TODO change to DENY?
+	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
 
 	SHOW_IF(true);
 }
@@ -158,8 +179,9 @@ security_policy_t policyForSignTxOutputAddressParams(
         const uint8_t networkId, const uint32_t protocolMagic
 )
 {
-	DENY_UNLESS(has_cardano_prefix_and_any_account(&params->spendingKeyPath));
-	DENY_UNLESS(has_valid_change_and_any_address(&params->spendingKeyPath));
+	DENY_UNLESS(spending_path_is_consistent_with_address_type(params->type, &params->spendingKeyPath));
+	DENY_UNLESS(staking_info_is_valid(params));
+	DENY_IF(is_too_deep(&params->spendingKeyPath));
 
 	if (params->type == BYRON) {
 		DENY_IF(params->protocolMagic != protocolMagic);
@@ -167,12 +189,8 @@ security_policy_t policyForSignTxOutputAddressParams(
 		DENY_IF(params->networkId != networkId);
 	}
 
-	// TODO should we allow these at all?
-	SHOW_IF(!has_reasonable_account_and_address(&params->spendingKeyPath))
-	SHOW_IF(is_too_deep(&params->spendingKeyPath));
-
-	// TODO checks for staking info?
-	// TODO determine what is a change output (not to be shown)?
+	SHOW_UNLESS(has_reasonable_account_and_address(&params->spendingKeyPath));
+	SHOW_UNLESS(is_standard_base_address(params));
 
 	ALLOW_IF(true);
 }
@@ -217,11 +235,12 @@ security_policy_t policyForSignTxWithdrawal()
 // and Ledger *does not* check whether they correspond to previously declared UTxOs
 security_policy_t policyForSignTxWitness(const bip44_path_t* pathSpec)
 {
-	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
-	DENY_UNLESS(has_valid_change_and_any_address(pathSpec));
+	DENY_UNLESS(is_valid_witness(pathSpec));
 
-	// Perhaps we can relax these?
-	WARN_IF(!has_reasonable_account_and_address(pathSpec))
+	// TODO Perhaps we can relax this?
+	WARN_UNLESS(has_reasonable_account_and_address(pathSpec))
+
+	// TODO deny this? or check for depth in is_valid_witness?
 	WARN_IF(is_too_deep(pathSpec));
 
 	ALLOW_IF(true);
