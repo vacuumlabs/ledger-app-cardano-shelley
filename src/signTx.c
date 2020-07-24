@@ -998,7 +998,7 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 
 	{
 		// add to tx
-		uint8_t rewardAccount[ADDRESS_KEY_HASH_LENGTH];  // TODO --- what exactly is reward account?
+		uint8_t rewardAccount[ADDRESS_KEY_HASH_LENGTH];
 		{
 			VALIDATE(bip44_isValidStakingKeyPath(&ctx->stageData.withdrawal.path), ERR_INVALID_DATA);
 			{

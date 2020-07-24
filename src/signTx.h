@@ -29,8 +29,6 @@ enum {
 	SIGN_MAX_REWARD_WITHDRAWALS = 1000
 };
 
-#define METADATA_HASH_LENGTH 32
-
 typedef struct {
 	uint64_t amount;
 	uint8_t addressBuffer[MAX_ADDRESS_SIZE];

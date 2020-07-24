@@ -92,7 +92,6 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 #undef CONSISTENT_WITH
 }
 
-// TODO perhaps move elsewhere? bip44?
 size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath)
 {
 	extendedPublicKey_t extPubKey;

@@ -179,7 +179,6 @@ static struct {
 	},
 };
 
-// TODO use meaningful data of correct length for certificates
 static struct {
 	const char* stakingKeyHash;
 } registrationCertificates[] = {
@@ -227,7 +226,7 @@ static struct {
 	}
 };
 
-static const char* expectedHex = "f38bb9a2b8dde8065135028181af57fd337df900b468603ff90f1f1d17a3192b";
+static const char* expectedHex = "5B347674B1A9C26E3CB25AC5644FAA7702A43B0187EF91391AE8EC02C214A0A4";
 
 
 void run_txHashBuilder_test()
@@ -238,7 +237,7 @@ void run_txHashBuilder_test()
 	const size_t numCertificates = ARRAY_LEN(registrationCertificates) +
 	                               ARRAY_LEN(deregistrationCertificates) + ARRAY_LEN(delegationCertificates);
 
-	txHashBuilder_init(&builder, ARRAY_LEN(inputs), ARRAY_LEN(outputs), numCertificates, ARRAY_LEN(withdrawals), false);
+	txHashBuilder_init(&builder, ARRAY_LEN(inputs), ARRAY_LEN(outputs), numCertificates, ARRAY_LEN(withdrawals), true);
 
 	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {
@@ -316,13 +315,11 @@ void run_txHashBuilder_test()
 	}
 
 	{
-		/* TODO add some metadata, and modify the argument to txHashBuilder_init() and the expected result
-
-		const char metadataHashHex[] = "AA"; // TODO replace
-		uint8_t tmp[70]; // TODO fix size?
+		const char metadataHashHex[] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+		uint8_t tmp[METADATA_HASH_LENGTH];
 		size_t tmpSize = decode_hex(metadataHashHex, tmp, SIZEOF(tmp));
+		ASSERT(tmpSize == METADATA_HASH_LENGTH);
 		txHashBuilder_addMetadata(&builder, tmp, tmpSize);
-		*/
 	}
 
 	uint8_t result[TX_HASH_LENGTH];
@@ -330,7 +327,6 @@ void run_txHashBuilder_test()
 
 	uint8_t expected[TX_HASH_LENGTH];
 	decode_hex(expectedHex, expected, SIZEOF(expected));
-
 
 	PRINTF("result\n");
 	PRINTF("%.*H\n", 32, result);
