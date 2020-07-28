@@ -850,7 +850,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	// staking key derivation path
 	view_skipBytes(&view, bip44_parseFromWire(&certificateData->keyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
 	TRACE();
-	bip44_PRINTF(&certificateData->keyPath);
+	BIP44_PRINTF(&certificateData->keyPath);
 
 	TRACE("Remaining bytes: %d", view_remainingSize(&view));
 

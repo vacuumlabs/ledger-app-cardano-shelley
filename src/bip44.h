@@ -58,6 +58,9 @@ void bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
 
 #ifdef DEVEL
 void bip44_PRINTF(const bip44_path_t* pathSpec);
+#define BIP44_PRINTF(PATH) bip44_PRINTF(PATH)
+#else
+#define BIP44_PRINTF(PATH)
 #endif
 
 

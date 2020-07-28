@@ -435,7 +435,7 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 
 	// spending public key derivation path
 	view_skipBytes(&view, bip44_parseFromWire(&params->spendingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
-	bip44_PRINTF(&params->spendingKeyPath);
+	BIP44_PRINTF(&params->spendingKeyPath);
 
 	// staking choice
 	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
@@ -451,7 +451,7 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 
 	case STAKING_KEY_PATH:
 		view_skipBytes(&view, bip44_parseFromWire(&params->stakingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
-		bip44_PRINTF(&params->stakingKeyPath);
+		BIP44_PRINTF(&params->stakingKeyPath);
 		break;
 
 	case STAKING_KEY_HASH:
