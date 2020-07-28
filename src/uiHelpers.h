@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <stdbool.h>
+#include <ux.h>
 
 typedef void ui_callback_fn_t();
 
