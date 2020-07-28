@@ -33,7 +33,7 @@ void getExtendedPublicKey_handleAPDU(
 {
 	// Initialize state
 	if (isNewCall) {
-		os_memset(ctx, 0, SIZEOF(*ctx));
+		explicit_bzero(ctx, SIZEOF(*ctx));
 	}
 	ctx->responseReadyMagic = 0;
 

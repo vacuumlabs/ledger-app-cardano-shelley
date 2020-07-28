@@ -58,8 +58,8 @@ void getTxWitness(bip44_path_t* pathSpec,
 			);
 		}
 		FINALLY {
-			os_memset(&privateKey, 0, SIZEOF(privateKey));
-			os_memset(&chainCode, 0, SIZEOF(chainCode));
+			explicit_bzero(&privateKey, SIZEOF(privateKey));
+			explicit_bzero(&chainCode, SIZEOF(chainCode));
 		}
 	} END_TRY;
 }

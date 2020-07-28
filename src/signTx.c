@@ -549,7 +549,7 @@ static void signTx_handleOutputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	os_memset(&ctx->stageData.output, 0, SIZEOF(ctx->stageData.output));
+	explicit_bzero(&ctx->stageData.output, SIZEOF(ctx->stageData.output));
 
 	{
 		// parse all APDU data and call an appropriate handler depending on output type
@@ -749,9 +749,9 @@ static void signTx_handleCertificate_ui_runStep()
 
 	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION) {
 		char title[50];
-		os_memset(title, 0, SIZEOF(title));
+		explicit_bzero(title, SIZEOF(title));
 		char details[200];
-		os_memset(details, 0, SIZEOF(details));
+		explicit_bzero(details, SIZEOF(details));
 
 		switch (ctx->stageData.certificate.type) {
 		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
@@ -791,7 +791,7 @@ static void signTx_handleCertificate_ui_runStep()
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_CONFIRM) {
 		char description[50];
-		os_memset(description, 0, SIZEOF(description));
+		explicit_bzero(description, SIZEOF(description));
 
 		switch (ctx->stageData.certificate.type) {
 		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
@@ -914,7 +914,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 
-	os_memset(&ctx->stageData.certificate, 0, SIZEOF(ctx->stageData.certificate));
+	explicit_bzero(&ctx->stageData.certificate, SIZEOF(ctx->stageData.certificate));
 
 	_parseCertificateData(wireDataBuffer, wireDataSize, &ctx->stageData.certificate);
 
@@ -976,7 +976,7 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	os_memset(&ctx->stageData.withdrawal, 0, SIZEOF(ctx->stageData.withdrawal));
+	explicit_bzero(&ctx->stageData.withdrawal, SIZEOF(ctx->stageData.withdrawal));
 
 	{
 		// parse input
@@ -1079,7 +1079,7 @@ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	os_memset(&ctx->stageData.metadata, 0, SIZEOF(ctx->stageData.metadata));
+	explicit_bzero(&ctx->stageData.metadata, SIZEOF(ctx->stageData.metadata));
 
 	{
 		// parse data
@@ -1254,7 +1254,7 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		ASSERT(ctx->currentWitness < ctx->numWitnesses);
 	}
 
-	os_memset(&ctx->stageData.witness, 0, SIZEOF(ctx->stageData.witness));
+	explicit_bzero(&ctx->stageData.witness, SIZEOF(ctx->stageData.witness));
 
 	{
 		// parse
@@ -1336,7 +1336,7 @@ void signTx_handleAPDU(
 )
 {
 	if (isNewCall) {
-		os_memset(ctx, 0, SIZEOF(*ctx));
+		explicit_bzero(ctx, SIZEOF(*ctx));
 		ctx->stage = SIGN_STAGE_INIT;
 	}
 	subhandler_fn_t* subhandler = lookup_subhandler(p1);
