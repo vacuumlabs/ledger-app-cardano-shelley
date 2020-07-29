@@ -1,14 +1,11 @@
 #ifdef DEVEL
 
-#include "common.h"
-
 #include "runTests.h"
 #include "cbor.h"
-#include "endian.h"
 #include "base58.h"
 #include "bech32.h"
 #include "test_utils.h"
-#include "hex_utils.h"
+#include "hexUtils.h"
 #include "hash.h"
 #include "keyDerivation.h"
 #include "addressUtilsByron.h"
@@ -16,6 +13,7 @@
 #include "crc32.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
+#include "uiHelpers.h"
 
 void handleRunTests(
         uint8_t p1 MARK_UNUSED,

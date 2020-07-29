@@ -1,7 +1,4 @@
-#include "common.h"
 #include "deriveAddress.h"
-#include "keyDerivation.h"
-#include "endian.h"
 #include "state.h"
 #include "securityPolicy.h"
 #include "uiHelpers.h"
@@ -11,7 +8,6 @@
 #include "base58.h"
 #include "bech32.h"
 #include "bufView.h"
-#include "hex_utils.h"
 
 static uint16_t RESPONSE_READY_MAGIC = 11223;
 

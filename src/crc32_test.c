@@ -1,10 +1,8 @@
 #ifdef DEVEL
 
 #include "crc32.h"
+#include "hexUtils.h"
 #include "test_utils.h"
-#include "utils.h"
-#include "hex_utils.h"
-
 
 void run_crc32_test()
 {

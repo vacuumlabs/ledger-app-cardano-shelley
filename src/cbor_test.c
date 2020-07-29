@@ -1,11 +1,8 @@
 #ifdef DEVEL
 
 #include "cbor.h"
+#include "hexUtils.h"
 #include "test_utils.h"
-#include "hex_utils.h"
-#include <os.h>
-#include <string.h>
-#include "utils.h"
 
 // Test vectors are taken from
 // https://tools.ietf.org/html/rfc7049#appendix-A

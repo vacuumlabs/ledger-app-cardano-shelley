@@ -1,7 +1,8 @@
-#ifndef H_CARANO_APP_ENDIAN
-#define H_CARANO_APP_ENDIAN
+#ifndef H_CARDANO_APP_ENDIAN
+#define H_CARDANO_APP_ENDIAN
 
 #include <stdint.h>
+
 #include "assert.h"
 
 inline void u1be_write(uint8_t* outBuffer, uint8_t value)
@@ -54,4 +55,5 @@ inline uint64_t u8be_read(const uint8_t* inBuffer)
 }
 
 void run_endian_test();
-#endif
+
+#endif // H_CARDANO_APP_ENDIAN

@@ -1,8 +1,9 @@
 #ifndef H_CARDANO_APP_IO
 #define H_CARDANO_APP_IO
 
-#include <os_io_seproxyhal.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include <os_io_seproxyhal.h>
 
 // `io_send_*` are helper functions for sending response APDUs.
 // Note that the IO_RETURN_AFTER_TX flag is set so that the function

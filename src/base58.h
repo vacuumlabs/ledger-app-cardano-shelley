@@ -10,4 +10,5 @@ size_t base58_encode(
 );
 
 void run_base58_test();
+
 #endif

@@ -1,6 +1,7 @@
 #include <os_io_seproxyhal.h>
+
 #include "uiHelpers.h"
-#include "ux.h"
+#include "uiElements.h"
 #include "assert.h"
 #include "io.h"
 #include "utils.h"

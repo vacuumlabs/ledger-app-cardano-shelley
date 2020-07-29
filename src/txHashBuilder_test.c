@@ -1,9 +1,8 @@
 #ifdef DEVEL
 
-#include "common.h"
-#include "cardano.h"
 #include "txHashBuilder.h"
-#include "hex_utils.h"
+#include "cardano.h"
+#include "hexUtils.h"
 #include "test_utils.h"
 
 /* original data from trezor
