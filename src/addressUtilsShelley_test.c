@@ -1,10 +1,10 @@
 #ifdef DEVEL
 
 #include "addressUtilsShelley.h"
-#include "test_utils.h"
-#include "hex_utils.h"
-#include "bip44.h"
 #include "cardano.h"
+#include "bip44.h"
+#include "hexUtils.h"
+#include "test_utils.h"
 
 // Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
 #define UNWRAP(...) __VA_ARGS__

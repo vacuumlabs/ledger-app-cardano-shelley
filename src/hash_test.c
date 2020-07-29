@@ -1,13 +1,8 @@
 #ifdef DEVEL
 
-#include "cbor.h"
-#include "test_utils.h"
-#include "hex_utils.h"
-#include <os.h>
-#include <string.h>
 #include "hash.h"
-#include "utils.h"
-
+#include "hexUtils.h"
+#include "test_utils.h"
 
 void testcase_chunks_blake2b_512(
         const char* chunksHex[],

@@ -1,9 +1,9 @@
 #ifdef DEVEL
 
 #include "addressUtilsByron.h"
-#include "test_utils.h"
-#include "hex_utils.h"
 #include "cardano.h"
+#include "hexUtils.h"
+#include "test_utils.h"
 
 // Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
 #define UNWRAP(...) __VA_ARGS__

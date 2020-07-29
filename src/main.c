@@ -24,7 +24,6 @@
 #include <stdbool.h>
 #include <os_io_seproxyhal.h>
 #include <os.h>
-#include "ux.h"
 
 #include "getVersion.h"
 #include "handlers.h"
@@ -33,7 +32,6 @@
 #include "menu.h"
 #include "assert.h"
 #include "io.h"
-#include "endian.h"
 
 // The whole app is designed for a specific api level.
 // In case there is an api change, first *verify* changes
@@ -139,7 +137,7 @@ static void cardano_main(void)
 				bool isNewCall = false;
 				if (currentInstruction == INS_NONE)
 				{
-					os_memset(&instructionState, 0, SIZEOF(instructionState));
+					explicit_bzero(&instructionState, SIZEOF(instructionState));
 					isNewCall = true;
 					currentInstruction = header->ins;
 				} else

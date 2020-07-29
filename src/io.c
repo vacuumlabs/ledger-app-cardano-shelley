@@ -1,7 +1,5 @@
-#include <os_io_seproxyhal.h>
 #include "io.h"
-#include "assert.h"
-#include "errors.h"
+#include "common.h"
 
 io_state_t io_state;
 

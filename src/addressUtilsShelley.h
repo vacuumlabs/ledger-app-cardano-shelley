@@ -5,7 +5,6 @@
 #include "cardano.h"
 #include "bip44.h"
 #include "bufView.h"
-#include "uiHelpers.h"
 
 // supported address types
 // (we avoid all types related to scripts)

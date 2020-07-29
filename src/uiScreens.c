@@ -1,5 +1,5 @@
 #include "uiScreens.h"
-#include "hex_utils.h"
+#include "hexUtils.h"
 #include "textUtils.h"
 
 void ui_displayPathScreen(
@@ -33,7 +33,7 @@ void ui_displayAddressScreen(
 	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 
 	char humanAddress[MAX_HUMAN_ADDRESS_SIZE];
-	os_memset(humanAddress, 0, SIZEOF(humanAddress));
+	explicit_bzero(humanAddress, SIZEOF(humanAddress));
 
 	size_t length = humanReadableAddress(
 	                        addressBuffer, addressSize,
@@ -61,7 +61,7 @@ void ui_displayStakingInfoScreen(
 {
 	const char *heading = NULL;
 	char stakingInfo[120];
-	os_memset(stakingInfo, 0, SIZEOF(stakingInfo));
+	explicit_bzero(stakingInfo, SIZEOF(stakingInfo));
 
 	switch (addressParams->stakingChoice) {
 

@@ -1,10 +1,5 @@
-#include "cardano.h"
-#include "hex_utils.h"
-#include "utils.h"
-#include "assert.h"
 #include "messageSigning.h"
-#include "endian.h"
-#include "bip44.h"
+#include "cardano.h"
 #include "keyDerivation.h"
 
 void signRawMessage(privateKey_t* privateKey,
@@ -44,13 +39,22 @@ void getTxWitness(bip44_path_t* pathSpec,
 
 	// TODO is this the proper key for both Byron and Shelley?
 	TRACE("derive private key");
-	derivePrivateKey(pathSpec, &chainCode, &privateKey);
 
-	ASSERT(txHashSize == TX_HASH_LENGTH);
+	BEGIN_TRY {
+		TRY {
+			derivePrivateKey(pathSpec, &chainCode, &privateKey);
 
-	signRawMessage(
-	        &privateKey,
-	        txHashBuffer, txHashSize,
-	        outBuffer, outSize
-	);
+			ASSERT(txHashSize == TX_HASH_LENGTH);
+
+			signRawMessage(
+			        &privateKey,
+			        txHashBuffer, txHashSize,
+			        outBuffer, outSize
+			);
+		}
+		FINALLY {
+			explicit_bzero(&privateKey, SIZEOF(privateKey));
+			explicit_bzero(&chainCode, SIZEOF(chainCode));
+		}
+	} END_TRY;
 }
