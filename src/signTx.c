@@ -1148,7 +1148,7 @@ static void signTx_handleConfirm_ui_runStep()
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
-static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	{
 		//sanity checks
@@ -1159,9 +1159,7 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 	}
 
 	{
-		// parse data
-		TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
+		// no data to receive
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
