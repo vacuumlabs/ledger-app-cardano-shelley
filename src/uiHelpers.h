@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <ux.h>
 
+#include "utils.h"
+
 typedef void ui_callback_fn_t();
 
 typedef enum {
