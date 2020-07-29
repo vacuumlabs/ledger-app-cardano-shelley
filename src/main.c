@@ -139,7 +139,7 @@ static void cardano_main(void)
 				bool isNewCall = false;
 				if (currentInstruction == INS_NONE)
 				{
-					os_memset(&instructionState, 0, SIZEOF(instructionState));
+					explicit_bzero(&instructionState, SIZEOF(instructionState));
 					isNewCall = true;
 					currentInstruction = header->ins;
 				} else

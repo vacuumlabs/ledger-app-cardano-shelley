@@ -34,24 +34,6 @@
 	               "Wrong type" \
 	             )
 
-// Given that memset is root of many problems, a bit of paranoia is good.
-// If you don't believe, just check out https://www.viva64.com/en/b/0360/
-//
-// TL;DR; We want to avoid cases such as:
-//
-// int[10] x; void fn(int* ptr) { memset(ptr, 0, sizeof(ptr)); }
-// int[10][20] x; memset(x, 0, sizeof(x));
-// struct_t* ptr; memset(ptr, 0, sizeof(ptr));
-// int[10] x; memset(x, 0, 10);
-//
-// The best way is to provide an expected type and make sure expected and
-// inferred type have the same size.
-#define MEMCLEAR(ptr, expected_type) \
-	do { \
-		STATIC_ASSERT(sizeof(expected_type) == sizeof(*(ptr)), "bad memclear parameters"); \
-		os_memset(ptr, 0, sizeof(expected_type)); \
-	} while(0)
-
 // Helper function to check APDU request parameters
 #define VALIDATE(cond, error) \
 	do {\
