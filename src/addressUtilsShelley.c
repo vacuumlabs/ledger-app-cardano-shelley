@@ -37,8 +37,6 @@ uint8_t constructShelleyAddressHeader(address_type_t type, uint8_t networkId)
 
 uint8_t getNetworkId(uint8_t addressHeader)
 {
-	ASSERT(isSupportedAddressType(getAddressType(addressHeader)));
-
 	const uint8_t NETWORK_ID_MASK = 0b00001111;
 	return addressHeader & NETWORK_ID_MASK;
 }
@@ -365,7 +363,6 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 {
 	ASSERT(addressSize > 0);
 	const uint8_t addressType = getAddressType(address[0]);
-	ASSERT(isSupportedAddressType(addressType));
 	const uint8_t networkId = getNetworkId(address[0]);
 	ASSERT(isValidNetworkId(networkId));
 
