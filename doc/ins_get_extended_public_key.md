@@ -19,14 +19,14 @@ Note: Unlike BTC app, this call does not return nor display addresses. See [](in
 
 **Data**
 
-| Field                             | Length | Comments                  |
-| --------------------------------- | ------ | ------------------------- |
-| BIP32 path len                    | 1      | min 2, max 10             |
-| First derivation index            | 4      | Big endian. Must be 44'   |
-| Second derivation index           | 4      | Big endian. Must be 1815' |
-| (optional) Third derivation index | 4      | Big endian                |
-| ...                               | ...    | ...                       |
-| (optional) Last derivation index  | 4      | Big endian                |
+| Field                             | Length | Comments                           |
+| --------------------------------- | ------ | ---------------------------------- |
+| BIP32 path len                    | 1      | min 2, max 10                      |
+| First derivation index            | 4      | Big endian. Must be 44' or 1852'   |
+| Second derivation index           | 4      | Big endian. Must be 1815'          |
+| (optional) Third derivation index | 4      | Big endian                         |
+| ...                               | ...    | ...                                |
+| (optional) Last derivation index  | 4      | Big endian                         |
 
 **Response**
 
@@ -35,7 +35,7 @@ Note: Unlike BTC app, this call does not return nor display addresses. See [](in
 | pub_key    | 32     |
 | chain_code | 32     |
 
-Concatenation of `pub_key` and `chain_code` represents extended public key.
+Concatenation of `pub_key` and `chain_code` representing the extended public key.
 
 **Errors (SW codes)**
 
@@ -57,7 +57,7 @@ Concatenation of `pub_key` and `chain_code` represents extended public key.
   - check derivation path is valid and within Cardano BIP32 space
     - `path_len >= 3`
     - `path_len <= 10`
-    - `path[0] == 44'` (' means hardened)
+    - `path[0] == 44'` or `path[0] == 1852'` (' means hardened)
     - `path[1] == 1815'`
     - `path[2] is hardened` (`path[2]` is account number)
     - Ledger might impose more restrictions, see implementation of `policyForGetExtendedPublicKey` in [src/securityPolicy.c](../src/securityPolicy.c) for details
@@ -68,4 +68,3 @@ Concatenation of `pub_key` and `chain_code` represents extended public key.
 - ❓(IOHK): Should we also support BTC app like token validation? (Note: Token validation is to prevent concurrent access to the Ledger by two different host apps which could confuse user into performing wrong actions)
 - ❓(IOHK): Should we support permanent app setting where Ledger forces user to acknowledge public key retrieval before sending it to host? (Note: probably not in the first version of the app)
 - ❓(IOHK): Should there be an option to show the public key on display? Is it useful in any way? (Note: probably not)
-
