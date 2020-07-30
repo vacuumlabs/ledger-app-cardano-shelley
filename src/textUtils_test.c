@@ -65,9 +65,17 @@ void testcase_formatTtl(
 
 void test_formatTtl()
 {
-	testcase_formatTtl(                     123, "epoch 0 / slot 123");
-	testcase_formatTtl(         5 * 21600 + 124, "epoch 5 / slot 124");
-	testcase_formatTtl(1000001llu * 21600 + 124, "epoch more than 1000000");
+	// Byron
+	testcase_formatTtl( 		    123, "epoch 0 / slot 123");
+	testcase_formatTtl( 5 * 21600 + 124, "epoch 5 / slot 124");
+	// Shelley
+	testcase_formatTtl( 4492800, "epoch 208 / slot 0");
+	testcase_formatTtl( 4924799, "epoch 208 / slot 431999");
+	testcase_formatTtl( 4924800, "epoch 209 / slot 0");
+	// Wrong
+	testcase_formatTtl(1000001llu * 432000 + 124, "epoch more than 1000000");
+	testcase_formatTtl( -1ll, "epoch more than 1000000");
+
 }
 
 void run_textUtils_test()
