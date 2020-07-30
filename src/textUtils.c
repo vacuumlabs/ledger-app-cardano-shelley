@@ -53,13 +53,35 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	return rawSize;
 }
 
+
+// TODO: This is valid only for mainnet
+static struct {
+	uint64_t startBlockNumber;
+	uint64_t startEpoch;
+	uint64_t slotsInEpoch;
+} EPOCH_SLOTS_CONFIG[] = {
+	{4492800, 208, 432000},
+	{0, 0, 21600}
+};
+
 size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	const uint64_t SLOTS_IN_EPOCH = 21600;
-	uint64_t epoch = ttl / SLOTS_IN_EPOCH;
-	uint64_t slotInEpoch = ttl % SLOTS_IN_EPOCH;
+	unsigned i = 0;
+	while (ttl < EPOCH_SLOTS_CONFIG[i].startBlockNumber) {
+		i++;
+		ASSERT(i < ARRAY_LEN(EPOCH_SLOTS_CONFIG));
+	}
+
+	ASSERT(ttl >= EPOCH_SLOTS_CONFIG[i].startBlockNumber);
+
+	uint64_t startBlockNumber = EPOCH_SLOTS_CONFIG[i].startBlockNumber;
+	uint64_t startEpoch = EPOCH_SLOTS_CONFIG[i].startEpoch;
+	uint64_t slotsInEpoch = EPOCH_SLOTS_CONFIG[i].slotsInEpoch;
+
+	uint64_t epoch = startEpoch + (ttl - startBlockNumber) / slotsInEpoch;
+	uint64_t slotInEpoch = (ttl - startBlockNumber) % slotsInEpoch;
 
 	ASSERT(sizeof(int) >= sizeof(uint32_t));
 
