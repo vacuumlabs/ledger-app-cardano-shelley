@@ -3,13 +3,13 @@
 **Description**
 
 Gets the version of the app running on Ledger. 
-Could be called at any time
+Could be called at any time.
 
 **Command**
 
 |Field|Value|
 |-----|-----|
-| INS | `0x01` |
+| INS | `0x00` |
 | P1 | unused |
 | P2 | unused |
 | Lc | 0 |
@@ -39,5 +39,3 @@ Flag meanings could be found in [src/getVersion.c](../src/getVersion.c)
   - Check `P2 == 0`
   - Check `Lc == 0`
 - Respond with app version
-
-
