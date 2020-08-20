@@ -322,6 +322,7 @@ void txHashBuilder_addWithdrawal(
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_WITHDRAWALS);
 	ASSERT(builder->remainingWithdrawals > 0);
+	ASSERT(rewardAddressSize == 1 + ADDRESS_KEY_HASH_LENGTH);
 	builder->remainingWithdrawals--;
 
 	// map entry
