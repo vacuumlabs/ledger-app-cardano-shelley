@@ -996,20 +996,26 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	}
 
 	{
-		// add to tx
-		uint8_t rewardAccount[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t rewardAddress[1 + ADDRESS_KEY_HASH_LENGTH];
 		{
-			VALIDATE(bip44_isValidStakingKeyPath(&ctx->stageData.withdrawal.path), ERR_INVALID_DATA);
-			{
-				write_view_t out = make_write_view(rewardAccount, rewardAccount + SIZEOF(rewardAccount));
-				view_appendPublicKeyHash(&out, &ctx->stageData.withdrawal.path);
-			}
+			addressParams_t rewardAddressParams = {
+				.type = REWARD,
+				.networkId = ctx->networkId,
+				.spendingKeyPath = ctx->stageData.withdrawal.path,
+				.stakingChoice = NO_STAKING,
+			};
+
+			deriveAddress(
+				&rewardAddressParams,
+				rewardAddress,
+				SIZEOF(rewardAddress)
+			);
 		}
 
 		TRACE("Adding withdrawal to tx hash");
 		txHashBuilder_addWithdrawal(
 		        &ctx->txHashBuilder,
-		        rewardAccount, SIZEOF(rewardAccount),
+		        rewardAddress, SIZEOF(rewardAddress),
 		        ctx->stageData.withdrawal.amount
 		);
 	}

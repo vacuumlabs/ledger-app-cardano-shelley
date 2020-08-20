@@ -316,7 +316,7 @@ void txHashBuilder_enterWithdrawals(tx_hash_builder_t* builder)
 
 void txHashBuilder_addWithdrawal(
         tx_hash_builder_t* builder,
-        const uint8_t* rewardAccountBuffer, size_t rewardAccountSize,
+        const uint8_t* rewardAddressBuffer, size_t rewardAddressSize,
         uint64_t amount
 )
 {
@@ -328,8 +328,8 @@ void txHashBuilder_addWithdrawal(
 	//   Bytes[address]
 	//   Unsigned[amount]
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, rewardAccountSize);
-		BUILDER_APPEND_DATA(rewardAccountBuffer, rewardAccountSize);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, rewardAddressSize);
+		BUILDER_APPEND_DATA(rewardAddressBuffer, rewardAddressSize);
 	}
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
