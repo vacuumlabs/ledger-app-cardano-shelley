@@ -216,7 +216,7 @@ static struct {
 };
 
 static struct {
-	const char* rewardAccount;
+	const char* rewardAddress;
 	uint64_t amount;
 } withdrawals[] = {
 	{
@@ -305,7 +305,7 @@ void run_txHashBuilder_test()
 
 	ITERATE(it, withdrawals) {
 		uint8_t tmp[70];
-		size_t tmpSize = decode_hex(PTR_PIC(it->rewardAccount), tmp, SIZEOF(tmp));
+		size_t tmpSize = decode_hex(PTR_PIC(it->rewardAddress), tmp, SIZEOF(tmp));
 		txHashBuilder_addWithdrawal(
 		        &builder,
 		        tmp, tmpSize,
