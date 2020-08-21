@@ -27,7 +27,7 @@ WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon
 PIN = 5555
 
 APPNAME = "Cardano ADA"
-APPVERSION = "2.0.3"
+APPVERSION = "2.0.4"
 
 APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'"
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
