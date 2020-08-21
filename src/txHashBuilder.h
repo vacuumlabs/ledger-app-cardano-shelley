@@ -87,7 +87,7 @@ void txHashBuilder_addCertificate_delegation(
 void txHashBuilder_enterWithdrawals(tx_hash_builder_t* builder);
 void txHashBuilder_addWithdrawal(
         tx_hash_builder_t* builder,
-        const uint8_t* rewardAccountBuffer, size_t rewardAccountSize,
+        const uint8_t* rewardAddressBuffer, size_t rewardAddressSize,
         uint64_t amount
 );
 
