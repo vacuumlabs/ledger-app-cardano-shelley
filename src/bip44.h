@@ -38,8 +38,9 @@ bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasValidCardanoPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
-bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec);
 uint32_t bip44_getAccount(const bip44_path_t* pathSpec);
+bool bip44_containsMoreThanAccount(const bip44_path_t* pathSpec);
+bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec);
 
 bool bip44_containsChainType(const bip44_path_t* pathSpec);
 
@@ -52,6 +53,7 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec);
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
 
 bool isHardened(uint32_t value);
+uint32_t unharden(uint32_t value);
 
 void bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
 

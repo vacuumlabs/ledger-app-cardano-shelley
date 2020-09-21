@@ -10,6 +10,12 @@ void ui_displayPathScreen(
         ui_callback_fn_t callback
 );
 
+void ui_displayAccountScreen(
+        const char* screenHeader,
+        const bip44_path_t* path,
+        ui_callback_fn_t callback
+);
+
 void ui_displayAddressScreen(
         const char* screenHeader,
         const uint8_t* addressBuffer, size_t addressSize,

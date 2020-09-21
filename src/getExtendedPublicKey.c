@@ -85,7 +85,7 @@ static void getExtendedPublicKey_ui_runStep()
 		);
 	}
 	UI_STEP(UI_STEP_DISPLAY_PATH) {
-		ui_displayPathScreen("Export public key", &ctx->pathSpec, this_fn);
+		ui_displayAccountScreen("Export public key", &ctx->pathSpec, this_fn);
 	}
 	UI_STEP(UI_STEP_CONFIRM) {
 		ui_displayPrompt(

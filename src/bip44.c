@@ -6,7 +6,7 @@ static const uint32_t CARDANO_CHAIN_EXTERNAL = 0;
 static const uint32_t CARDANO_CHAIN_INTERNAL = 1;
 static const uint32_t CARDANO_CHAIN_STAKING_KEY = 2;
 
-static const uint32_t MAX_REASONABLE_ACCOUNT = 20;
+static const uint32_t MAX_REASONABLE_ACCOUNT = 100;
 static const uint32_t MAX_REASONABLE_ADDRESS = 1000000;
 
 size_t bip44_parseFromWire(
@@ -39,6 +39,11 @@ bool isHardened(uint32_t value)
 	return value == (value | HARDENED_BIP32);
 }
 
+uint32_t unharden(uint32_t value)
+{
+	ASSERT(isHardened(value));
+	return value & (~HARDENED_BIP32);
+}
 
 // Byron: /44'/1815'
 bool bip44_hasByronPrefix(const bip44_path_t* pathSpec)
@@ -80,14 +85,17 @@ uint32_t bip44_getAccount(const bip44_path_t* pathSpec)
 	return pathSpec->path[BIP44_I_ACCOUNT];
 }
 
+bool bip44_containsMoreThanAccount(const bip44_path_t* pathSpec)
+{
+	return (pathSpec->length > BIP44_I_ACCOUNT + 1);
+}
+
 bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsAccount(pathSpec)) return false;
 	uint32_t account = bip44_getAccount(pathSpec);
 	if (!isHardened(account)) return false;
-	// Un-harden
-	account = account & (~HARDENED_BIP32);
-	return account < MAX_REASONABLE_ACCOUNT;
+	return unharden(account) <= MAX_REASONABLE_ACCOUNT;
 }
 
 // ChainType
@@ -155,7 +163,7 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 // Futher
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 {
-	return (pathSpec->length > BIP44_I_REST);
+	return (pathSpec->length > BIP44_I_ADDRESS + 1);
 }
 
 

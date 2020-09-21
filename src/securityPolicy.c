@@ -102,7 +102,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 
 	WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
 	// Normally extPubKey is asked only for an account
-	WARN_IF(bip44_containsChainType(pathSpec));
+	WARN_IF(bip44_containsMoreThanAccount(pathSpec));
 
 	PROMPT_IF(true);
 }

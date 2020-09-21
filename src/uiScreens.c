@@ -21,6 +21,60 @@ void ui_displayPathScreen(
 	);
 }
 
+// the given path typically corresponds to an account
+// if it contains anything more, we display just the whole path
+void ui_displayAccountScreen(
+        const char* screenHeader,
+        const bip44_path_t* path,
+        ui_callback_fn_t callback
+)
+{
+	ASSERT(strlen(screenHeader) > 0);
+	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+
+	ASSERT(bip44_hasValidCardanoPrefix(path));
+	ASSERT(bip44_containsAccount(path));
+
+	char accountDescription[160];
+	explicit_bzero(accountDescription, SIZEOF(accountDescription));
+
+	if (bip44_hasReasonableAccount(path) && !bip44_containsMoreThanAccount(path)) {
+		uint32_t account = unharden(bip44_getAccount(path));
+		if (bip44_hasByronPrefix(path)) {
+			snprintf(
+			        accountDescription, SIZEOF(accountDescription),
+			        "Byron account %u  ", account
+			);
+		} else if (bip44_hasShelleyPrefix(path)) {
+			snprintf(
+			        accountDescription, SIZEOF(accountDescription),
+			        "Account %u  ", account
+			);
+		} else {
+			ASSERT(false);
+		}
+	}
+
+	{
+		size_t len = strlen(accountDescription);
+		ASSERT(len + 1 < SIZEOF(accountDescription));
+
+		bip44_printToStr(path, accountDescription + len, SIZEOF(accountDescription) - len);
+	}
+
+	{
+		size_t len = strlen(accountDescription);
+		ASSERT(len > 0);
+		ASSERT(len + 1 < SIZEOF(accountDescription));
+	}
+
+	ui_displayPaginatedText(
+	        screenHeader,
+	        accountDescription,
+	        callback
+	);
+}
+
 void ui_displayAddressScreen(
         const char* screenHeader,
         const uint8_t* addressBuffer, size_t addressSize,
@@ -146,6 +200,8 @@ void ui_displayNetworkParamsScreen(
 	ASSERT(isValidNetworkId(networkId));
 
 	char networkParams[100];
+	explicit_bzero(networkParams, SIZEOF(networkParams));
+
 	snprintf(
 	        networkParams, SIZEOF(networkParams),
 	        "network id %d / protocol magic %u",

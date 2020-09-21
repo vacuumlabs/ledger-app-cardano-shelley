@@ -1006,9 +1006,9 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 			};
 
 			deriveAddress(
-				&rewardAddressParams,
-				rewardAddress,
-				SIZEOF(rewardAddress)
+			        &rewardAddressParams,
+			        rewardAddress,
+			        SIZEOF(rewardAddress)
 			);
 		}
 
