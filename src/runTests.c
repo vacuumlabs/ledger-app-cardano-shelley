@@ -23,6 +23,8 @@ void handleRunTests(
         bool isNewCall MARK_UNUSED
 )
 {
+	// Note: Make sure to have RESET_ON_CRASH flag disabled
+	// as it interferes with tests verifying assertions
 	BEGIN_ASSERT_NOEXCEPT {
 		PRINTF("Running tests\n");
 		run_hex_test();
