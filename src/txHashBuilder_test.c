@@ -3,9 +3,10 @@
 #include "txHashBuilder.h"
 #include "cardano.h"
 #include "hexUtils.h"
+#include "textUtils.h"
 #include "test_utils.h"
 
-/* original data from trezor
+/* original data from trezor; we added one stake pool registration certificate
 
 {
   "inputs": [
@@ -123,11 +124,12 @@
 }
 
 tx_body:
-83a600848258200b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7008258201b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7018258202b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7028258203b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b703018582582b82d818582183581c6ee5bb111c8771ce03278e624056a12c9cfb353eb112e8abf21fa4fea0001a74eee4081864825839009493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc18c8825823409493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e87688f50973819012c82581d609493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e19019082581d609493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e1901f402182a031a000395f8048682008200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc82018200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc82018200581c337b62cfff6403a06a3acbc34f8c46003c69fe79a3628cefa9c4725183028200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc581c0d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e283028200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc581c1d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e283028200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc581c2d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e205a1581de032c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc19029aa1008382582073fea80d424276ad0978d4fe5310e8bc2d485f5f6bb3bf87612989f112ad5a7d58404466e5f2dae2e79498e68f617db7c9309255e3d8d8c2a2934a010cd055b07cdefb843527f180467adac25568c3c2f8b26067c0695ddf425cbefa94c89df6f00e8258202c041c9c6a676ac54d25e2fdce44c56581e316ae43adc4c7bf17f23214d8d8925840840c52ed5f330f806825d42a5e7d9a13c65df65a33834768f45116771a8753daf793da32c3e812fa9dfb30d32c3d9784c2307b2eadc3af2400879dab175bf90482582009ab278d49b7b86a055185c474c4942281ddfa05a54684c7e8a6f230625aee57584031d44911d9f848bfd0bd92530ca15804a33d958d91a052948ba2da0695aa061d5ac2d98a7af00aa395f659497150ba579f26401794fa2e830c57a09dfc097702f6
+a700848258200b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7008258201b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7018258202b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7028258203b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b703018582582b82d818582183581c6ee5bb111c8771ce03278e624056a12c9cfb353eb112e8abf21fa4fea0001a74eee4081864825839009493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc18c8825823409493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e87688f50973819012c82581d609493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e19019082581d609493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e1901f402182a031a000395f8048782008200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc82018200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc82018200581c337b62cfff6403a06a3acbc34f8c46003c69fe79a3628cefa9c472518a03581c5631ede662cfb10fd5fd69b4667101dd289568e12bcf5f64d1c406fc5820198890ad6c92e80fbdab554dda02da9fb49d001bbd96181f3e07f7a6ab0d06401a1dcd65001a1443fd00d81e820101581de03a7f09d3df4cf66a7399c2b05bfa234d5a29560c311fc5db4c49071181581c3a7f09d3df4cf66a7399c2b05bfa234d5a29560c311fc5db4c4907118184001904d24408080808f682781968747470733a2f2f746573747374616b65706f6f6c2e636f6d5820914c57c1f12bbf4a82b12d977d4f274674856a11ed4b9b95bd70f5d41c5064a683028200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc581c0d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e283028200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc581c1d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e283028200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc581c2d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e205a1581de032c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc19029a075820deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
 
 tx_hash:
-f38bb9a2b8dde8065135028181af57fd337df900b468603ff90f1f1d17a3192b
+1479328F9E250697AD1E987E0566B48265720D627BB107B3856C40C84CC22D19
 */
+
 
 
 static struct {
@@ -225,8 +227,56 @@ static struct {
 	}
 };
 
-static const char* expectedHex = "5B347674B1A9C26E3CB25AC5644FAA7702A43B0187EF91391AE8EC02C214A0A4";
+static const char* expectedHex = "1479328F9E250697AD1E987E0566B48265720D627BB107B3856C40C84CC22D19";
 
+void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
+{
+	uint8_t poolKeyHash[28];
+	size_t poolKeyHashSize = decode_hex("5631EDE662CFB10FD5FD69B4667101DD289568E12BCF5F64D1C406FC", poolKeyHash, SIZEOF(poolKeyHash));
+	ASSERT(poolKeyHashSize == SIZEOF(poolKeyHash));
+
+	uint8_t vrfKeyHash[32];
+	size_t vrfKeyHashSize = decode_hex("198890AD6C92E80FBDAB554DDA02DA9FB49D001BBD96181F3E07F7A6AB0D0640", vrfKeyHash, SIZEOF(vrfKeyHash));
+	ASSERT(vrfKeyHashSize == SIZEOF(vrfKeyHash));
+
+	uint8_t rewardAccount[29];
+	size_t rewardAccountSize = decode_hex("E03A7F09D3DF4CF66A7399C2B05BFA234D5A29560C311FC5DB4C490711", rewardAccount, SIZEOF(rewardAccount));
+	ASSERT(rewardAccountSize == SIZEOF(rewardAccount));
+
+	txHashBuilder_addPoolRegistrationCertificate(
+	        builder, poolKeyHash, poolKeyHashSize, vrfKeyHash, vrfKeyHashSize,
+	        500000000, 340000000, 1, 1, rewardAccount, rewardAccountSize,
+	        1, 1
+	);
+
+	txHashBuilder_addPoolRegistrationCertificate_enterOwners(builder);
+
+	uint8_t owner1[28];
+	size_t owner1Size = decode_hex("3A7F09D3DF4CF66A7399C2B05BFA234D5A29560C311FC5DB4C490711", owner1, SIZEOF(owner1));
+	ASSERT(owner1Size == SIZEOF(owner1));
+
+	txHashBuilder_addPoolRegistrationCertificate_addOwner(builder, owner1, owner1Size);
+
+	txHashBuilder_addPoolRegistrationCertificate_enterRelays(builder);
+
+	uint8_t ipv4[5]; // TODO should be 4, but then SIZEOF(ipv4) does not compile
+	size_t ipv4Size = decode_hex("08080808", ipv4, SIZEOF(ipv4));
+	ASSERT(ipv4Size == 4); // TODO should be SIZEOF(ipv4), see above
+	uint16_t port = 1234;
+
+	txHashBuilder_addPoolRegistrationCertificate_addRelay0(builder, &port, ipv4, ipv4Size, NULL, 0);
+
+	uint8_t metadataHash[32];
+	size_t metadataHashSize = decode_hex("914C57C1F12BBF4A82B12D977D4F274674856A11ED4B9B95BD70F5D41C5064A6", metadataHash, SIZEOF(metadataHash));
+	ASSERT(metadataHashSize == SIZEOF(metadataHash));
+
+	const char* metadataUrl = "https://teststakepool.com";
+	uint8_t urlBuffer[64];
+	size_t urlSize = urlToBuffer(metadataUrl, urlBuffer, SIZEOF(urlBuffer));
+	ASSERT(urlSize <= SIZEOF(urlBuffer));
+
+	txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(builder, urlBuffer, urlSize, metadataHash, metadataHashSize);
+}
 
 void run_txHashBuilder_test()
 {
@@ -234,7 +284,9 @@ void run_txHashBuilder_test()
 	tx_hash_builder_t builder;
 
 	const size_t numCertificates = ARRAY_LEN(registrationCertificates) +
-	                               ARRAY_LEN(deregistrationCertificates) + ARRAY_LEN(delegationCertificates);
+	                               ARRAY_LEN(deregistrationCertificates) +
+	                               ARRAY_LEN(delegationCertificates) +
+	                               1; // stake pool registration certificate
 
 	txHashBuilder_init(&builder, ARRAY_LEN(inputs), ARRAY_LEN(outputs), numCertificates, ARRAY_LEN(withdrawals), true);
 
@@ -285,6 +337,8 @@ void run_txHashBuilder_test()
 		        tmp, tmpSize
 		);
 	}
+
+	addPoolRegistrationCertificate(&builder);
 
 	ITERATE(it, delegationCertificates) {
 		uint8_t tmp_credential[70];

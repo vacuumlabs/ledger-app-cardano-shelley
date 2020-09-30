@@ -47,7 +47,7 @@ void txHashBuilder_init(
 	TRACE("numInputs = %u", numInputs);
 	TRACE("numOutputs = %u", numOutputs);
 	TRACE("numCertificates = %u", numCertificates);
-	TRACE("numWithdrawals  = %u", numCertificates);
+	TRACE("numWithdrawals  = %u", numWithdrawals);
 	TRACE("includeMetadata = %u", includeMetadata);
 
 	blake2b_256_init(&builder->txHash);
@@ -73,7 +73,7 @@ void txHashBuilder_init(
 	builder->state = TX_HASH_BUILDER_INIT;
 }
 
-void txHashBuilder_assertCanLeaveInit(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveInit(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_INIT);
 }
@@ -115,7 +115,7 @@ void txHashBuilder_addInput(
 	}
 }
 
-void txHashBuilder_assertCanLeaveInputs(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveInputs(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_INPUTS);
 	ASSERT(builder->remainingInputs == 0);
@@ -158,7 +158,7 @@ void txHashBuilder_addOutput(
 	}
 }
 
-void txHashBuilder_assertCanLeaveOutputs(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveOutputs(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
 	ASSERT(builder->remainingOutputs == 0);
@@ -175,7 +175,7 @@ void txHashBuilder_addFee(tx_hash_builder_t* builder, uint64_t fee)
 	builder->state = TX_HASH_BUILDER_IN_FEE;
 }
 
-void txHashBuilder_assertCanLeaveFee(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveFee(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_FEE);
 }
@@ -190,7 +190,7 @@ void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl)
 	builder->state = TX_HASH_BUILDER_IN_TTL;
 }
 
-void txHashBuilder_assertCanLeaveTtl(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveTtl(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_TTL);
 }
@@ -206,6 +206,9 @@ void txHashBuilder_enterCertificates(tx_hash_builder_t* builder)
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_CERTIFICATES);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingCertificates);
 	}
+
+	builder->poolCertificateData.remainingOwners = 0;
+	builder->poolCertificateData.remainingRelays = 0;
 
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES;
 }
@@ -288,20 +291,352 @@ void txHashBuilder_addCertificate_delegation(
 	}
 }
 
-void txHashBuilder_assertCanLeaveCertificates(tx_hash_builder_t* builder)
+void txHashBuilder_addPoolRegistrationCertificate(
+        tx_hash_builder_t* builder,
+        const uint8_t* poolKeyHash, size_t poolKeyHashSize,
+        const uint8_t* vrfKeyHash, size_t vrfKeyHashSize,
+        uint64_t pledge, uint64_t cost,
+        uint64_t marginNumerator, uint64_t marginDenominator,
+        const uint8_t* rewardAccount, size_t rewardAccountSize,
+        uint16_t numOwners, uint16_t numRelays
+)
 {
-	ASSERT(builder->state <= TX_HASH_BUILDER_IN_CERTIFICATES);
+	TRACE("txHashBuilder_addPoolRegistrationCertificate: %d", builder->state);
 
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES);
+	ASSERT(builder->remainingCertificates > 0);
+	builder->remainingCertificates--;
+
+	ASSERT(builder->poolCertificateData.remainingOwners == 0);
+	builder->poolCertificateData.remainingOwners = numOwners;
+	ASSERT(builder->poolCertificateData.remainingRelays == 0);
+	builder->poolCertificateData.remainingRelays = numRelays;
+
+	// Array(10)[
+	//   Unsigned[3]
+	//   Bytes[pool_keyhash]
+	//   Bytes[vrf_keyhash]
+	//   Unsigned[pledge]
+	//   Unsigned[cost]
+	//   Tag(30) Array(2)[
+	//     Unsigned[marginDenominator]
+	//     Unsigned[marginNumerator]
+	//   ]
+	//   Bytes[rewardAccount]
+
+	// the array is not closed yet, we need to add owners, relays, pool metadata
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 10);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 3);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, poolKeyHashSize);
+			BUILDER_APPEND_DATA(poolKeyHash, poolKeyHashSize);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, vrfKeyHashSize);
+			BUILDER_APPEND_DATA(vrfKeyHash, vrfKeyHashSize);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, pledge);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, cost);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_TAG, 30);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, marginNumerator);
+			}
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, marginDenominator);
+			}
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, rewardAccountSize);
+			BUILDER_APPEND_DATA(rewardAccount, rewardAccountSize);
+		}
+	}
+
+	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL;
+}
+
+void txHashBuilder_addPoolRegistrationCertificate_enterOwners(tx_hash_builder_t* builder)
+{
+	TRACE("txHashBuilder_addPoolRegistrationCertificate_enterOwners: %d", builder->state);
+
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL);
+
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->poolCertificateData.remainingOwners);
+	}
+
+	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS;
+}
+
+void txHashBuilder_addPoolRegistrationCertificate_addOwner(
+        tx_hash_builder_t* builder,
+        const uint8_t* stakingKeyHash, size_t stakingKeyHashSize
+)
+{
+	TRACE("txHashBuilder_addPoolRegistrationCertificate_addOwner: %d", builder->state);
+
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS);
+	ASSERT(builder->poolCertificateData.remainingOwners > 0);
+	builder->poolCertificateData.remainingOwners--;
+
+	// Bytes[poolKeyHash]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingKeyHashSize);
+		BUILDER_APPEND_DATA(stakingKeyHash, stakingKeyHashSize);
+	}
+}
+
+void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t* builder)
+{
+	TRACE("txHashBuilder_addPoolRegistrationCertificate_addOwner: %d", builder->state);
+
+	// enter empty owners if none were received
+	if (builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL)
+		txHashBuilder_addPoolRegistrationCertificate_enterOwners(builder);
+
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS);
+	ASSERT(builder->poolCertificateData.remainingOwners == 0);
+
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->poolCertificateData.remainingRelays);
+	}
+
+	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS;
+}
+
+static void addRelay_updateState(tx_hash_builder_t* builder)
+{
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL:
+	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS:
+		txHashBuilder_addPoolRegistrationCertificate_enterRelays(builder);
+		break;
+
+	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS:
+		break; // we want to be here
+
+	default:
+		ASSERT(false);
+	}
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
+}
+
+void txHashBuilder_addPoolRegistrationCertificate_addRelay0(
+        tx_hash_builder_t* builder,
+        const uint16_t* port,
+        const uint8_t* ipv4, size_t ipv4Size,
+        const uint8_t* ipv6, size_t ipv6Size
+)
+{
+	TRACE("txHashBuilder_addPoolRegistrationCertificate_addRelay0: %d", builder->state);
+
+	addRelay_updateState(builder);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
+	ASSERT(builder->poolCertificateData.remainingRelays > 0);
+	builder->poolCertificateData.remainingRelays--;
+
+	ASSERT(ipv4Size < BUFFER_SIZE_PARANOIA);
+	ASSERT(ipv6Size < BUFFER_SIZE_PARANOIA);
+
+	// Array(4)[
+	//   Unsigned[0]
+	//   Unsigned[port] / Null
+	//   Bytes[ipv4] / Null
+	//   Bytes[ipv6] / Null
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 4);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 0);
+		}
+		{
+			if (port != NULL) {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, *port);
+			} else {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+			}
+		}
+		{
+			if (ipv4 != NULL) {
+				ASSERT(ipv4Size > 0);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, ipv4Size);
+				BUILDER_APPEND_DATA(ipv4, ipv4Size);
+			} else {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+			}
+		}
+		{
+			if (ipv6 != NULL) {
+				ASSERT(ipv6Size > 0);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, ipv6Size);
+				BUILDER_APPEND_DATA(ipv6, ipv6Size);
+			} else {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+			}
+		}
+	}
+}
+
+void txHashBuilder_addPoolRegistrationCertificate_addRelay1(
+        tx_hash_builder_t* builder,
+        const uint16_t* port,
+        const uint8_t* dnsName, size_t dnsNameSize
+)
+{
+	TRACE("txHashBuilder_addPoolRegistrationCertificate_addRelay1: %d", builder->state);
+
+	addRelay_updateState(builder);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
+	ASSERT(builder->poolCertificateData.remainingRelays > 0);
+	builder->poolCertificateData.remainingRelays--;
+
+	ASSERT(dnsName != NULL);
+	ASSERT(dnsNameSize > 0);
+	ASSERT(dnsNameSize < BUFFER_SIZE_PARANOIA);
+
+	// Array(3)[
+	//   Unsigned[1]
+	//   Unsigned[port] / Null
+	//   Text[dnsName]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 1);
+		}
+		{
+			if (port != NULL) {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, *port);
+			} else {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+			}
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_TEXT, dnsNameSize);
+			BUILDER_APPEND_DATA(dnsName, dnsNameSize);
+		}
+	}
+}
+
+void txHashBuilder_addPoolRegistrationCertificate_addRelay2(
+        tx_hash_builder_t* builder,
+        const uint8_t* dnsName, size_t dnsNameSize
+)
+{
+	TRACE("txHashBuilder_addPoolRegistrationCertificate_addRelay2: %d", builder->state);
+
+	addRelay_updateState(builder);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
+	ASSERT(builder->poolCertificateData.remainingRelays > 0);
+	builder->poolCertificateData.remainingRelays--;
+
+	ASSERT(dnsName != NULL);
+	ASSERT(dnsNameSize > 0);
+	ASSERT(dnsNameSize < BUFFER_SIZE_PARANOIA);
+
+	// Array(2)[
+	//   Unsigned[2]
+	//   Text[dnsName]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 1);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_TEXT, dnsNameSize);
+			BUILDER_APPEND_DATA(dnsName, dnsNameSize);
+		}
+	}
+}
+
+// enter empty owners or relays if none were received
+static void addPoolMetadata_updateState(tx_hash_builder_t* builder)
+{
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL:
+	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS:
+		txHashBuilder_addPoolRegistrationCertificate_enterRelays(builder);
+	// intentional fallthrough
+
+	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS:
+		ASSERT(builder->poolCertificateData.remainingRelays == 0);
+		break; // we want to be here
+
+	default:
+		ASSERT(false);
+	}
+
+	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA;
+}
+
+void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
+        tx_hash_builder_t* builder,
+        const uint8_t* url, size_t urlSize,
+        const uint8_t* metadataHash, size_t metadataHashSize
+)
+{
+	TRACE("txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata: %d", builder->state);
+
+	addPoolMetadata_updateState(builder);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA);
+
+	// Array(2)[
+	//   Tstr[url]
+	//   Bytes[metadataHash]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_TEXT, urlSize);
+			BUILDER_APPEND_DATA(url, urlSize);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, metadataHashSize);
+			BUILDER_APPEND_DATA(metadataHash, metadataHashSize);
+		}
+	}
+	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES;
+}
+
+void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(
+        tx_hash_builder_t* builder
+)
+{
+	TRACE("txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null: %d", builder->state);
+
+	addPoolMetadata_updateState(builder);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA);
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+	}
+	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES;
+}
+
+static void txHashBuilder_assertCanLeaveCertificates(tx_hash_builder_t* builder)
+{
 	if (builder->state == TX_HASH_BUILDER_IN_CERTIFICATES) {
 		ASSERT(builder->remainingCertificates == 0);
-	} else {
+	} else if (builder->state == TX_HASH_BUILDER_IN_TTL) {
 		txHashBuilder_assertCanLeaveTtl(builder);
 		ASSERT(builder->remainingCertificates == 0);
+	} else {
+		ASSERT(false);
 	}
 }
 
 void txHashBuilder_enterWithdrawals(tx_hash_builder_t* builder)
 {
+	TRACE("txHashBuilder_enterWithdrawals: %d", builder->state);
+
 	txHashBuilder_assertCanLeaveCertificates(builder);
 	ASSERT(builder->remainingWithdrawals > 0);
 
@@ -337,7 +672,7 @@ void txHashBuilder_addWithdrawal(
 	}
 }
 
-void txHashBuilder_assertCanLeaveWithdrawals(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveWithdrawals(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state <= TX_HASH_BUILDER_IN_WITHDRAWALS);
 
@@ -362,7 +697,7 @@ void txHashBuilder_addMetadata(tx_hash_builder_t* builder, const uint8_t* metada
 	builder->state = TX_HASH_BUILDER_IN_METADATA;
 }
 
-void txHashBuilder_assertCanLeaveMetadata(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveMetadata(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state <= TX_HASH_BUILDER_IN_METADATA);
 

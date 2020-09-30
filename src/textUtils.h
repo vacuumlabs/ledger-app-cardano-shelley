@@ -9,6 +9,8 @@ size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize);
 
 size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, char* out, size_t outSize);
 
+size_t urlToBuffer(const char* url, uint8_t* buffer, size_t bufferSize);
+
 void run_textUtils_test();
 
 #endif

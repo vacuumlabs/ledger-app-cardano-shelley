@@ -83,7 +83,7 @@ static inline void advanceStage()
 			break;
 		}
 
-	// intentional fallthough
+	// intentional fallthrough
 
 	case SIGN_STAGE_WITHDRAWALS:
 		// we should have received all withdrawals

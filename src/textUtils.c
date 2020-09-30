@@ -105,3 +105,30 @@ size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, 
 {
 	return encode_hex(metadataHash, metadataHashSize, out, outSize);
 }
+
+// TODO improve this
+size_t urlToBuffer(const char* url, uint8_t* buffer, size_t bufferSize)
+{
+	size_t urlLength = strlen(url);
+	ASSERT(urlLength < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize >= urlLength);
+
+	const char* validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~:/?#[]@!$&'()*+,;%=";
+	size_t validCharsLength = strlen(validChars);
+	for (size_t i = 0; i < urlLength; i++) {
+		bool valid = false;
+		for (size_t j = 0; j < validCharsLength; j++) {
+			if (url[i] == validChars[j]) {
+				valid = true;
+				break;
+			}
+		}
+		if (!valid)
+			THROW(ERR_INVALID_DATA);
+
+		buffer[i] = url[i];
+	}
+
+	return urlLength;
+}

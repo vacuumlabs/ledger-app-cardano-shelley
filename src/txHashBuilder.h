@@ -18,9 +18,20 @@ enum {
 enum {
 	CERTIFICATE_TYPE_STAKE_REGISTRATION = 0,
 	CERTIFICATE_TYPE_STAKE_DEREGISTRATION = 1,
-	CERTIFICATE_TYPE_STAKE_DELEGATION = 2
+	CERTIFICATE_TYPE_STAKE_DELEGATION = 2,
+	CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3
 };
 
+/* The state machine of the tx hash builder is driven by user calls.
+ * E.g., when the user calls txHashBuilder_addInput(), the input is only
+ * added and the state is not advanced to outputs even if all inputs have been added
+ * --- only after calling txHashBuilder_enterOutputs()
+ * is the state advanced to TX_HASH_BUILDER_IN_OUTPUTS.
+ *
+ * Pool registration certificates have an inner state loop which is implemented
+ * in a similar fashion with the exception that when all pool certificate data
+ * have been entered, the state is changed to TX_HASH_BUILDER_IN_CERTIFICATES.
+ */
 typedef enum {
 	TX_HASH_BUILDER_INIT = 1,
 	TX_HASH_BUILDER_IN_INPUTS = 2,
@@ -28,6 +39,10 @@ typedef enum {
 	TX_HASH_BUILDER_IN_FEE = 4,
 	TX_HASH_BUILDER_IN_TTL = 5,
 	TX_HASH_BUILDER_IN_CERTIFICATES = 6,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL = 6010,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS = 6020,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS = 6030,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA = 6040,
 	TX_HASH_BUILDER_IN_WITHDRAWALS = 7,
 	TX_HASH_BUILDER_IN_METADATA = 8,
 	TX_HASH_BUILDER_FINISHED = 9,
@@ -39,6 +54,11 @@ typedef struct {
 	uint16_t remainingWithdrawals;
 	uint16_t remainingCertificates;
 	bool includeMetadata;
+
+	struct {
+		uint16_t remainingOwners;
+		uint16_t remainingRelays;
+	} poolCertificateData;
 
 	tx_hash_builder_state_t state;
 	blake2b_256_context_t txHash;
@@ -82,6 +102,44 @@ void txHashBuilder_addCertificate_delegation(
         tx_hash_builder_t* builder,
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
+);
+void txHashBuilder_addPoolRegistrationCertificate(
+        tx_hash_builder_t* builder,
+        const uint8_t* poolKeyHash, size_t poolKeyHashSize,
+        const uint8_t* vrfKeyHash, size_t vrfKeyHashSize,
+        uint64_t pledge, uint64_t cost,
+        uint64_t marginNumerator, uint64_t marginDenominator,
+        const uint8_t* rewardAccount, size_t rewardAccountSize,
+        uint16_t numOwners, uint16_t numRelays
+);
+void txHashBuilder_addPoolRegistrationCertificate_enterOwners(tx_hash_builder_t* builder);
+void txHashBuilder_addPoolRegistrationCertificate_addOwner(
+        tx_hash_builder_t* builder,
+        const uint8_t* stakingKeyHash, size_t stakingKeyHashSize
+);
+void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t* builder);
+void txHashBuilder_addPoolRegistrationCertificate_addRelay0(
+        tx_hash_builder_t* builder,
+        const uint16_t* port,
+        const uint8_t* ipv4, size_t ipv4Size,
+        const uint8_t* ipv6, size_t ipv6Size
+);
+void txHashBuilder_addPoolRegistrationCertificate_addRelay1(
+        tx_hash_builder_t* builder,
+        const uint16_t* port,
+        const uint8_t* dnsName, size_t dnsNameSize
+);
+void txHashBuilder_addPoolRegistrationCertificate_addRelay2(
+        tx_hash_builder_t* builder,
+        const uint8_t* dnsName, size_t dnsNameSize
+);
+void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
+        tx_hash_builder_t* builder,
+        const uint8_t* url, size_t urlSize,
+        const uint8_t* metadataHash, size_t metadataHashSize
+);
+void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(
+        tx_hash_builder_t* builder
 );
 
 void txHashBuilder_enterWithdrawals(tx_hash_builder_t* builder);
