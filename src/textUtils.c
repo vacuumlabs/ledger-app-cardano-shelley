@@ -132,3 +132,21 @@ size_t urlToBuffer(const char* url, uint8_t* buffer, size_t bufferSize)
 
 	return urlLength;
 }
+
+// TODO improve this?
+size_t dnsNameToBuffer(const char* dnsName, uint8_t* buffer, size_t bufferSize)
+{
+	size_t dnsNameLength = strlen(dnsName);
+	ASSERT(dnsNameLength < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize >= dnsNameLength);
+
+	for (size_t i = 0; i < dnsNameLength; i++) {
+		if (dnsName[i] > 127)
+			THROW(ERR_INVALID_DATA);
+
+		buffer[i] = dnsName[i];
+	}
+
+	return dnsNameLength;
+}
