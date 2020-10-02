@@ -4,6 +4,7 @@
 #include "addressUtilsByron.h"
 #include "addressUtilsShelley.h"
 #include "uiHelpers.h"
+#include "signTxUtils.h"
 #include "uiScreens.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
@@ -118,13 +119,6 @@ static inline void advanceStage()
 	}
 
 	TRACE("Advancing sign tx stage to: %d", ctx->stage);
-}
-
-void respondSuccessEmptyMsg()
-{
-	TRACE();
-	io_send_buf(SUCCESS, NULL, 0);
-	ui_displayBusy(); // needs to happen after I/O
 }
 
 

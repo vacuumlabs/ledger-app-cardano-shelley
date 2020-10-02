@@ -5,6 +5,11 @@
 #include <stdbool.h>
 #include <os_io_seproxyhal.h>
 
+enum  {
+	P1_UNUSED = 0,
+	P2_UNUSED = 0
+};
+
 // `io_send_*` are helper functions for sending response APDUs.
 // Note that the IO_RETURN_AFTER_TX flag is set so that the function
 // does not receive next APDU.
@@ -48,10 +53,5 @@ void nanos_clear_timer();
 // which causes other callbacks (i.e. ours) to be ignored in UX_TICKER_EVENT, so set_timer
 // does not actually work anymore in Nano X
 #endif
-
-enum  {
-	P1_UNUSED = 0,
-	P2_UNUSED = 0
-};
 
 #endif
