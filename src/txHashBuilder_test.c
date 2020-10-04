@@ -2,6 +2,7 @@
 
 #include "txHashBuilder.h"
 #include "cardano.h"
+#include "cardanoCertificates.h"
 #include "hexUtils.h"
 #include "textUtils.h"
 #include "test_utils.h"
@@ -231,21 +232,34 @@ static const char* expectedHex = "378B60224E51EB566F3BF5FF62EDB18BFCD89B5F3E3B84
 
 void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 {
-	uint8_t poolKeyHash[28];
-	size_t poolKeyHashSize = decode_hex("5631EDE662CFB10FD5FD69B4667101DD289568E12BCF5F64D1C406FC", poolKeyHash, SIZEOF(poolKeyHash));
-	ASSERT(poolKeyHashSize == SIZEOF(poolKeyHash));
+	pool_registration_params_t poolParams = {};
 
-	uint8_t vrfKeyHash[32];
-	size_t vrfKeyHashSize = decode_hex("198890AD6C92E80FBDAB554DDA02DA9FB49D001BBD96181F3E07F7A6AB0D0640", vrfKeyHash, SIZEOF(vrfKeyHash));
-	ASSERT(vrfKeyHashSize == SIZEOF(vrfKeyHash));
+	size_t poolKeyHashSize = decode_hex(
+	                                 "5631EDE662CFB10FD5FD69B4667101DD289568E12BCF5F64D1C406FC",
+	                                 poolParams.operatorHash, SIZEOF(poolParams.operatorHash)
+	                         );
+	ASSERT(poolKeyHashSize == SIZEOF(poolParams.operatorHash));
 
-	uint8_t rewardAccount[29];
-	size_t rewardAccountSize = decode_hex("E03A7F09D3DF4CF66A7399C2B05BFA234D5A29560C311FC5DB4C490711", rewardAccount, SIZEOF(rewardAccount));
-	ASSERT(rewardAccountSize == SIZEOF(rewardAccount));
+	size_t vrfKeyHashSize = decode_hex(
+	                                "198890AD6C92E80FBDAB554DDA02DA9FB49D001BBD96181F3E07F7A6AB0D0640",
+	                                poolParams.vrfKeyHash, SIZEOF(poolParams.vrfKeyHash)
+	                        );
+	ASSERT(vrfKeyHashSize == SIZEOF(poolParams.vrfKeyHash));
+
+	size_t rewardAccountSize = decode_hex(
+	                                   "E03A7F09D3DF4CF66A7399C2B05BFA234D5A29560C311FC5DB4C490711",
+	                                   poolParams.rewardAccount, SIZEOF(poolParams.rewardAccount)
+	                           );
+	ASSERT(rewardAccountSize == SIZEOF(poolParams.rewardAccount));
+
+	poolParams.pledge = 500000000;
+	poolParams.cost = 340000000;
+	poolParams.marginNumerator = 1;
+	poolParams.marginDenominator = 1;
 
 	txHashBuilder_addPoolRegistrationCertificate(
-	        builder, poolKeyHash, poolKeyHashSize, vrfKeyHash, vrfKeyHashSize,
-	        500000000, 340000000, 1, 1, rewardAccount, rewardAccountSize,
+	        builder,
+	        &poolParams,
 	        1, 3
 	);
 

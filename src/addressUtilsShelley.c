@@ -7,6 +7,12 @@
 #include "base58.h"
 #include "bech32.h"
 
+uint8_t getAddressHeader(uint8_t* addressBuffer, size_t addressSize)
+{
+	ASSERT(addressSize > 0);
+	return addressBuffer[0];
+}
+
 address_type_t getAddressType(uint8_t addressHeader)
 {
 	const uint8_t ADDRESS_TYPE_MASK = 0b11110000;

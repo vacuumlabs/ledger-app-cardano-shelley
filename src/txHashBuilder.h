@@ -1,6 +1,7 @@
 #ifndef H_CARDANO_APP_TX_HASH_BUILDER
 #define H_CARDANO_APP_TX_HASH_BUILDER
 
+#include "cardanoCertificates.h"
 #include "hash.h"
 
 enum {
@@ -12,14 +13,6 @@ enum {
 	TX_BODY_KEY_WITHDRAWALS = 5,
 	// TX_BODY_KEY_UPDATE = 6, // not used
 	TX_BODY_KEY_METADATA = 7
-};
-
-// there are other types we do not support
-enum {
-	CERTIFICATE_TYPE_STAKE_REGISTRATION = 0,
-	CERTIFICATE_TYPE_STAKE_DEREGISTRATION = 1,
-	CERTIFICATE_TYPE_STAKE_DELEGATION = 2,
-	CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3
 };
 
 /* The state machine of the tx hash builder is driven by user calls.
@@ -107,11 +100,7 @@ void txHashBuilder_addCertificate_delegation(
 );
 void txHashBuilder_addPoolRegistrationCertificate(
         tx_hash_builder_t* builder,
-        const uint8_t* poolKeyHash, size_t poolKeyHashSize,
-        const uint8_t* vrfKeyHash, size_t vrfKeyHashSize,
-        uint64_t pledge, uint64_t cost,
-        uint64_t marginNumerator, uint64_t marginDenominator,
-        const uint8_t* rewardAccount, size_t rewardAccountSize,
+        const pool_registration_params_t* params,
         uint16_t numOwners, uint16_t numRelays
 );
 void txHashBuilder_addPoolRegistrationCertificate_enterOwners(tx_hash_builder_t* builder);
@@ -120,6 +109,7 @@ void txHashBuilder_addPoolRegistrationCertificate_addOwner(
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize
 );
 void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t* builder);
+// three possible relay formats, serialized as 0, 1, 2
 void txHashBuilder_addPoolRegistrationCertificate_addRelay0(
         tx_hash_builder_t* builder,
         const uint16_t* port,

@@ -7,6 +7,7 @@
 #include "txHashBuilder.h"
 #include "bip44.h"
 #include "addressUtilsShelley.h"
+#include "signTxPoolRegistration.h"
 
 typedef enum {
 	SIGN_STAGE_NONE = 0,
@@ -16,10 +17,11 @@ typedef enum {
 	SIGN_STAGE_FEE = 26,
 	SIGN_STAGE_TTL = 27,
 	SIGN_STAGE_CERTIFICATES = 28,
-	SIGN_STAGE_WITHDRAWALS = 29,
-	SIGN_STAGE_METADATA = 30,
-	SIGN_STAGE_CONFIRM = 31,
-	SIGN_STAGE_WITNESSES = 32,
+	SIGN_STAGE_CERTIFICATES_PRC = 29, // pool registration certificate sub-machine
+	SIGN_STAGE_WITHDRAWALS = 30,
+	SIGN_STAGE_METADATA = 31,
+	SIGN_STAGE_CONFIRM = 32,
+	SIGN_STAGE_WITNESSES = 33,
 } sign_tx_stage_t;
 
 enum {
@@ -28,6 +30,11 @@ enum {
 	SIGN_MAX_CERTIFICATES = 1000,
 	SIGN_MAX_REWARD_WITHDRAWALS = 1000
 };
+
+typedef struct {
+	uint8_t networkId; // part of Shelley address
+	uint32_t protocolMagic; // part of Byron address
+} common_tx_data_t;
 
 typedef struct {
 	uint64_t amount;
@@ -62,8 +69,14 @@ typedef struct {
 typedef struct {
 	sign_tx_stage_t stage;
 
-	uint8_t networkId; // part of Shelley address
-	uint32_t protocolMagic; // part of Byron address
+	// the presence of a stake pool registration certificate
+	// significantly affects restrictions on the whole tx
+	bool isSigningPoolRegistrationAsOwner;
+
+	// TODO FIXME add variables for receivedFee, receivedTtl, (receivedMetadata?) and move fee and ttl to stagedata ?
+	// these two cannot be part of stageData because we make advanceStage decision based on it
+	uint64_t fee;
+	uint64_t ttl;
 
 	uint16_t numInputs;
 	uint16_t numOutputs;
@@ -81,18 +94,19 @@ typedef struct {
 	tx_hash_builder_t txHashBuilder;
 	uint8_t txHash[TX_HASH_LENGTH];
 
+	common_tx_data_t commonTxData;
+
 	union {
 		sign_tx_output_data_t output;
-		sign_tx_metadata_data_t metadata;
-		sign_tx_withdrawal_data_t withdrawal;
 		sign_tx_certificate_data_t certificate;
+		sign_tx_withdrawal_data_t withdrawal;
+		sign_tx_metadata_data_t metadata;
 		sign_tx_witness_data_t witness;
 	} stageData;
 
-	// these two cannot be part of stageData because we make advaceStage decision based on it
-	uint64_t fee;
-	uint64_t ttl;
-
+	union {
+		pool_registration_context_t pool_registration_subctx;
+	} stageContext;
 
 	int ui_step;
 } ins_sign_tx_context_t;

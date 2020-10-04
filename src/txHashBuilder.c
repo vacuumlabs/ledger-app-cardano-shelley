@@ -3,6 +3,7 @@
 #include "hash.h"
 #include "cbor.h"
 #include "cardano.h"
+#include "cardanoCertificates.h"
 #include "crc32.h"
 #include "bufView.h"
 
@@ -293,11 +294,7 @@ void txHashBuilder_addCertificate_delegation(
 
 void txHashBuilder_addPoolRegistrationCertificate(
         tx_hash_builder_t* builder,
-        const uint8_t* poolKeyHash, size_t poolKeyHashSize,
-        const uint8_t* vrfKeyHash, size_t vrfKeyHashSize,
-        uint64_t pledge, uint64_t cost,
-        uint64_t marginNumerator, uint64_t marginDenominator,
-        const uint8_t* rewardAccount, size_t rewardAccountSize,
+        const pool_registration_params_t* params,
         uint16_t numOwners, uint16_t numRelays
 )
 {
@@ -326,37 +323,38 @@ void txHashBuilder_addPoolRegistrationCertificate(
 
 	// the array is not closed yet, we need to add owners, relays, pool metadata
 	{
+		const pool_registration_params_t* p = params;
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 10);
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 3);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, poolKeyHashSize);
-			BUILDER_APPEND_DATA(poolKeyHash, poolKeyHashSize);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(p->operatorHash));
+			BUILDER_APPEND_DATA(p->operatorHash, SIZEOF(p->operatorHash));
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, vrfKeyHashSize);
-			BUILDER_APPEND_DATA(vrfKeyHash, vrfKeyHashSize);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(p->vrfKeyHash));
+			BUILDER_APPEND_DATA(p->vrfKeyHash, SIZEOF(p->vrfKeyHash));
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, pledge);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, p->pledge);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, cost);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, p->cost);
 		}
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_TAG, 30);
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, marginNumerator);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, p->marginNumerator);
 			}
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, marginDenominator);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, p->marginDenominator);
 			}
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, rewardAccountSize);
-			BUILDER_APPEND_DATA(rewardAccount, rewardAccountSize);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(p->rewardAccount));
+			BUILDER_APPEND_DATA(p->rewardAccount, SIZEOF(p->rewardAccount));
 		}
 	}
 
@@ -540,16 +538,16 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay2(
 
 	ASSERT(dnsName != NULL);
 	ASSERT(dnsNameSize > 0);
-	ASSERT(dnsNameSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(dnsNameSize <= 64);
 
 	// Array(2)[
 	//   Unsigned[2]
 	//   Text[dnsName]
 	// ]
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 1);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 2);
 		}
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_TEXT, dnsNameSize);

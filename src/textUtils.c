@@ -53,6 +53,21 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	return rawSize;
 }
 
+#ifdef DEVEL
+void str_traceAdaAmount(const char* prefix, uint64_t amount)
+{
+	char adaAmountStr[100];
+
+	const size_t prefixLen = strlen(prefix);
+	ASSERT(prefixLen <= 50);
+	snprintf(adaAmountStr, SIZEOF(adaAmountStr), "%s", prefix);
+	ASSERT(strlen(adaAmountStr) == prefixLen);
+
+	str_formatAdaAmount(amount, adaAmountStr + prefixLen, SIZEOF(adaAmountStr) - prefixLen);
+	TRACE("%s", adaAmountStr);
+}
+#endif
+
 
 // TODO: This is valid only for mainnet
 static struct {
@@ -101,12 +116,25 @@ size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize)
 	return strlen(out);
 }
 
+// returns length of the resulting string
 size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, char* out, size_t outSize)
 {
 	return encode_hex(metadataHash, metadataHashSize, out, outSize);
 }
 
-// TODO improve this
+// we only check if it is non-zero ASCII
+void str_validateText(const uint8_t* url, size_t urlSize)
+{
+	ASSERT(urlSize < BUFFER_SIZE_PARANOIA);
+
+	for (size_t i = 0; i < urlSize; i++) {
+		VALIDATE(url[i] <= 127, ERR_INVALID_DATA);
+		VALIDATE(url[i] > 0, ERR_INVALID_DATA);
+	}
+}
+
+#ifdef DEVEL
+// only used in internal device tests
 size_t urlToBuffer(const char* url, uint8_t* buffer, size_t bufferSize)
 {
 	size_t urlLength = strlen(url);
@@ -133,7 +161,6 @@ size_t urlToBuffer(const char* url, uint8_t* buffer, size_t bufferSize)
 	return urlLength;
 }
 
-// TODO improve this?
 size_t dnsNameToBuffer(const char* dnsName, uint8_t* buffer, size_t bufferSize)
 {
 	size_t dnsNameLength = strlen(dnsName);
@@ -142,7 +169,7 @@ size_t dnsNameToBuffer(const char* dnsName, uint8_t* buffer, size_t bufferSize)
 	ASSERT(bufferSize >= dnsNameLength);
 
 	for (size_t i = 0; i < dnsNameLength; i++) {
-		if (dnsName[i] > 127)
+		if (dnsName[i] > 127 || dnsName[i] == 0)
 			THROW(ERR_INVALID_DATA);
 
 		buffer[i] = dnsName[i];
@@ -150,3 +177,4 @@ size_t dnsNameToBuffer(const char* dnsName, uint8_t* buffer, size_t bufferSize)
 
 	return dnsNameLength;
 }
+#endif
