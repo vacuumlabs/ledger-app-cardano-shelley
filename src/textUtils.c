@@ -101,7 +101,65 @@ size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize)
 	return strlen(out);
 }
 
+// returns length of the resulting string
 size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, char* out, size_t outSize)
 {
 	return encode_hex(metadataHash, metadataHashSize, out, outSize);
 }
+
+// we only check if it is non-zero ASCII
+void str_validateText(const uint8_t* url, size_t urlSize)
+{
+	ASSERT(urlSize < BUFFER_SIZE_PARANOIA);
+
+	for (size_t i = 0; i < urlSize; i++) {
+		VALIDATE(url[i] <= 127, ERR_INVALID_DATA);
+		VALIDATE(url[i] > 0, ERR_INVALID_DATA);
+	}
+}
+
+#ifdef DEVEL
+// only used in internal device tests
+size_t urlToBuffer(const char* url, uint8_t* buffer, size_t bufferSize)
+{
+	size_t urlLength = strlen(url);
+	ASSERT(urlLength < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize >= urlLength);
+
+	const char* validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~:/?#[]@!$&'()*+,;%=";
+	size_t validCharsLength = strlen(validChars);
+	for (size_t i = 0; i < urlLength; i++) {
+		bool valid = false;
+		for (size_t j = 0; j < validCharsLength; j++) {
+			if (url[i] == validChars[j]) {
+				valid = true;
+				break;
+			}
+		}
+		if (!valid)
+			THROW(ERR_INVALID_DATA);
+
+		buffer[i] = url[i];
+	}
+
+	return urlLength;
+}
+
+size_t dnsNameToBuffer(const char* dnsName, uint8_t* buffer, size_t bufferSize)
+{
+	size_t dnsNameLength = strlen(dnsName);
+	ASSERT(dnsNameLength < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize >= dnsNameLength);
+
+	for (size_t i = 0; i < dnsNameLength; i++) {
+		if (dnsName[i] > 127 || dnsName[i] == 0)
+			THROW(ERR_INVALID_DATA);
+
+		buffer[i] = dnsName[i];
+	}
+
+	return dnsNameLength;
+}
+#endif

@@ -99,7 +99,7 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
 
 #define CHECK_BUF_LEN(requiredSize) if ((size_t) requiredSize > bufferSize) THROW(ERR_DATA_TOO_LARGE);
-	if (type == CBOR_TYPE_ARRAY_INDEF || type == CBOR_TYPE_INDEF_END) {
+	if (type == CBOR_TYPE_ARRAY_INDEF || type == CBOR_TYPE_INDEF_END || type == CBOR_TYPE_NULL) {
 		CHECK_BUF_LEN(1);
 		buffer[0] = type;
 		return 1;
@@ -114,6 +114,7 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 	switch (type) {
 	case CBOR_TYPE_UNSIGNED:
 	case CBOR_TYPE_BYTES:
+	case CBOR_TYPE_TEXT:
 	case CBOR_TYPE_ARRAY:
 	case CBOR_TYPE_MAP:
 	case CBOR_TYPE_TAG:
