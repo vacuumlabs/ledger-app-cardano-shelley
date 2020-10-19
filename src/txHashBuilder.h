@@ -25,7 +25,8 @@ enum {
  * in a similar fashion with the exception that when all pool certificate data
  * have been entered, the state is changed to TX_HASH_BUILDER_IN_CERTIFICATES.
  *
- * WARNING: the state machine relies on inequality comparisons between states in certain places.
+ * WARNING: the state machine relies on inequality comparisons between states
+ * in certain places, so be careful when changing the enum values.
  */
 typedef enum {
 	TX_HASH_BUILDER_INIT = 100,
@@ -34,7 +35,7 @@ typedef enum {
 	TX_HASH_BUILDER_IN_FEE = 400,
 	TX_HASH_BUILDER_IN_TTL = 500,
 	TX_HASH_BUILDER_IN_CERTIFICATES = 600,
-	TX_HASH_BUILDER_IN_CERTIFICATES_POOL = 610,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_PARAMS = 610,
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS = 611,
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS = 612,
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA = 613,
@@ -113,8 +114,8 @@ void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t*
 void txHashBuilder_addPoolRegistrationCertificate_addRelay0(
         tx_hash_builder_t* builder,
         const uint16_t* port,
-        const uint8_t* ipv4, size_t ipv4Size,
-        const uint8_t* ipv6, size_t ipv6Size
+        const ipv4_t* ipv4,
+        const ipv6_t* ipv6
 );
 void txHashBuilder_addPoolRegistrationCertificate_addRelay1(
         tx_hash_builder_t* builder,
@@ -151,6 +152,9 @@ void txHashBuilder_finalize(
         uint8_t* outBuffer, size_t outSize
 );
 
+
+#ifdef DEVEL
 void run_txHashBuilder_test();
+#endif
 
 #endif // H_CARDANO_APP_TX_HASH_BUILDER

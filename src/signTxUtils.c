@@ -1,6 +1,7 @@
 #include "io.h"
 #include "errors.h"
 #include "uiHelpers.h"
+#include "utils.h"
 #include "signTxUtils.h"
 
 void respondSuccessEmptyMsg()

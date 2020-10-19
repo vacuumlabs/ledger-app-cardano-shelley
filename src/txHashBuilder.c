@@ -311,7 +311,7 @@ void txHashBuilder_addPoolRegistrationCertificate(
 
 	// Array(10)[
 	//   Unsigned[3]
-	//   Bytes[pool_keyhash]
+	//   Bytes[pool_keyhash]          // also called operator in CDDL specs
 	//   Bytes[vrf_keyhash]
 	//   Unsigned[pledge]
 	//   Unsigned[cost]
@@ -329,8 +329,8 @@ void txHashBuilder_addPoolRegistrationCertificate(
 			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 3);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(p->operatorHash));
-			BUILDER_APPEND_DATA(p->operatorHash, SIZEOF(p->operatorHash));
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(p->poolKeyHash));
+			BUILDER_APPEND_DATA(p->poolKeyHash, SIZEOF(p->poolKeyHash));
 		}
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(p->vrfKeyHash));
@@ -358,14 +358,14 @@ void txHashBuilder_addPoolRegistrationCertificate(
 		}
 	}
 
-	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL;
+	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL_PARAMS;
 }
 
 void txHashBuilder_addPoolRegistrationCertificate_enterOwners(tx_hash_builder_t* builder)
 {
 	TRACE("txHashBuilder_addPoolRegistrationCertificate_enterOwners: %d", builder->state);
 
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_PARAMS);
 
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->poolCertificateData.remainingOwners);
@@ -394,11 +394,13 @@ void txHashBuilder_addPoolRegistrationCertificate_addOwner(
 
 void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t* builder)
 {
-	TRACE("txHashBuilder_addPoolRegistrationCertificate_addOwner: %d", builder->state);
+	TRACE("txHashBuilder_addPoolRegistrationCertificate_enterRelays: %d", builder->state);
 
-	// enter empty owners if none were received
-	if (builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL)
+	// enter empty owners if none were received (and none were expected)
+	if (builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_PARAMS) {
+		ASSERT(builder->poolCertificateData.remainingOwners == 0);
 		txHashBuilder_addPoolRegistrationCertificate_enterOwners(builder);
+	}
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS);
 	ASSERT(builder->poolCertificateData.remainingOwners == 0);
@@ -410,39 +412,18 @@ void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t*
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS;
 }
 
-static void addRelay_updateState(tx_hash_builder_t* builder)
-{
-	switch (builder->state) {
-	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL:
-	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS:
-		txHashBuilder_addPoolRegistrationCertificate_enterRelays(builder);
-		break;
-
-	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS:
-		break; // we want to be here
-
-	default:
-		ASSERT(false);
-	}
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
-}
-
 void txHashBuilder_addPoolRegistrationCertificate_addRelay0(
         tx_hash_builder_t* builder,
         const uint16_t* port,
-        const uint8_t* ipv4, size_t ipv4Size,
-        const uint8_t* ipv6, size_t ipv6Size
+        const ipv4_t* ipv4,
+        const ipv6_t* ipv6
 )
 {
 	TRACE("txHashBuilder_addPoolRegistrationCertificate_addRelay0: %d", builder->state);
 
-	addRelay_updateState(builder);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
 	ASSERT(builder->poolCertificateData.remainingRelays > 0);
 	builder->poolCertificateData.remainingRelays--;
-
-	ASSERT(ipv4Size < BUFFER_SIZE_PARANOIA);
-	ASSERT(ipv6Size < BUFFER_SIZE_PARANOIA);
 
 	// Array(4)[
 	//   Unsigned[0]
@@ -464,18 +445,25 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay0(
 		}
 		{
 			if (ipv4 != NULL) {
-				ASSERT(ipv4Size > 0);
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, ipv4Size);
-				BUILDER_APPEND_DATA(ipv4, ipv4Size);
+				ASSERT(sizeof(ipv4->ip) == IPV4_SIZE); // SIZEOF does not work for 4-byte buffers
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, IPV4_SIZE);
+				BUILDER_APPEND_DATA(ipv4->ip, IPV4_SIZE);
 			} else {
 				BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
 			}
 		}
 		{
 			if (ipv6 != NULL) {
-				ASSERT(ipv6Size > 0);
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, ipv6Size);
-				BUILDER_APPEND_DATA(ipv6, ipv6Size);
+				ASSERT(sizeof(ipv6->ip) == IPV6_SIZE); // SIZEOF does not work for 4-byte buffers
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, IPV6_SIZE);
+
+				// serialized as 4 big-endian uint32
+				for (size_t i = 0; i < 4; i++) {
+					uint8_t chunk[4];
+					uint32_t* valuePtr = (uint32_t *)(ipv6->ip + 4 * i);
+					u4be_write(chunk, *valuePtr);
+					BUILDER_APPEND_DATA(chunk, 4);
+				}
 			} else {
 				BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
 			}
@@ -491,14 +479,13 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay1(
 {
 	TRACE("txHashBuilder_addPoolRegistrationCertificate_addRelay1: %d", builder->state);
 
-	addRelay_updateState(builder);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
 	ASSERT(builder->poolCertificateData.remainingRelays > 0);
 	builder->poolCertificateData.remainingRelays--;
 
 	ASSERT(dnsName != NULL);
 	ASSERT(dnsNameSize > 0);
-	ASSERT(dnsNameSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(dnsNameSize <= DNS_NAME_MAX_LENGTH);
 
 	// Array(3)[
 	//   Unsigned[1]
@@ -531,14 +518,13 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay2(
 {
 	TRACE("txHashBuilder_addPoolRegistrationCertificate_addRelay2: %d", builder->state);
 
-	addRelay_updateState(builder);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
 	ASSERT(builder->poolCertificateData.remainingRelays > 0);
 	builder->poolCertificateData.remainingRelays--;
 
 	ASSERT(dnsName != NULL);
 	ASSERT(dnsNameSize > 0);
-	ASSERT(dnsNameSize <= 64);
+	ASSERT(dnsNameSize <= DNS_NAME_MAX_LENGTH);
 
 	// Array(2)[
 	//   Unsigned[2]
@@ -560,12 +546,22 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay2(
 static void addPoolMetadata_updateState(tx_hash_builder_t* builder)
 {
 	switch (builder->state) {
-	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL:
+	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_PARAMS:
+		// skipping owners is only possible if none were expected
+		ASSERT(builder->poolCertificateData.remainingOwners == 0);
+		txHashBuilder_addPoolRegistrationCertificate_enterOwners(builder);
+
+	// intentional fallthrough
+
 	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS:
+		// skipping relays is only possible if none were expected
+		ASSERT(builder->poolCertificateData.remainingRelays == 0);
 		txHashBuilder_addPoolRegistrationCertificate_enterRelays(builder);
+
 	// intentional fallthrough
 
 	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS:
+		// all relays should have been received
 		ASSERT(builder->poolCertificateData.remainingRelays == 0);
 		break; // we want to be here
 
@@ -584,6 +580,8 @@ void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
 {
 	TRACE("txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata: %d", builder->state);
 
+	// we allow this to be called immediately after pool params have been added
+	// if there are no owners or relays in the tx
 	addPoolMetadata_updateState(builder);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA);
 

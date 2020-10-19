@@ -9,6 +9,9 @@ size_t base58_encode(
         char *outStr, size_t outMaxSize
 );
 
+
+#ifdef DEVEL
 void run_base58_test();
+#endif
 
 #endif

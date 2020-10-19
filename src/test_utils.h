@@ -60,5 +60,7 @@
 	} END_TRY; \
 	}
 
+// Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
+#define UNWRAP(...) __VA_ARGS__
 
 #endif

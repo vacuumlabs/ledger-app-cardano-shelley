@@ -7,6 +7,7 @@
 #include "test_utils.h"
 #include "hexUtils.h"
 #include "hash.h"
+#include "bip44.h"
 #include "keyDerivation.h"
 #include "addressUtilsByron.h"
 #include "addressUtilsShelley.h"
@@ -35,6 +36,7 @@ void handleRunTests(
 		run_textUtils_test();
 		run_hash_test();
 		run_cbor_test();
+		run_bip44_test();
 		run_key_derivation_test();
 		run_addressUtilsByron_test();
 		run_addressUtilsShelley_test();

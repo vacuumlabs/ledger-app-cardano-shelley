@@ -169,7 +169,8 @@ bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 
 // TODO(ppershing): this function needs to be thoroughly tested
 // on small outputSize
-void bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
+// returns the length of the resulting string
+size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 	// We have to have space for terminating null
@@ -187,8 +188,10 @@ void bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 		/* Go figure out ... */ \
 		snprintf(ptr, availableSize, fmt, ##__VA_ARGS__); \
 		size_t res = strlen(ptr); \
-		/* TODO(better error handling) */ \
-		ASSERT(res + 1 < availableSize); \
+		/* if snprintf filled all the remaining space, there is no space for '\0', */ \
+		/* i.e. outSize is insufficient, we messed something up */ \
+		/* usually, outSize >= 1 + BIP44_MAX_PATH_STRING_LENGTH */ \
+		ASSERT(res + 1 <= availableSize); \
 		ptr += res; \
 	}
 
@@ -207,12 +210,15 @@ void bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 	}
 #undef WRITE
 	ASSERT(ptr < end);
+	ASSERT(ptr >= out);
+
+	return ptr - out;
 }
 
 #ifdef DEVEL
 void bip44_PRINTF(const bip44_path_t* pathSpec)
 {
-	char tmp[100];
+	char tmp[1 + BIP44_MAX_PATH_STRING_LENGTH];
 	SIZEOF(*pathSpec);
 	bip44_printToStr(pathSpec, tmp, SIZEOF(tmp));
 	PRINTF("%s", tmp);

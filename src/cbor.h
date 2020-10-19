@@ -55,5 +55,9 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 
 cbor_token_t cbor_parseToken(const uint8_t* buf, size_t size);
 
+
+#ifdef DEVEL
 void run_cbor_test();
 #endif
+
+#endif // H_CARDANO_APP_CBOR

@@ -3,6 +3,7 @@
 
 #include "bip44.h"
 #include "addressUtilsShelley.h"
+#include "signTxPoolRegistration.h"
 
 typedef enum {
 	POLICY_DENY = 1,
@@ -24,27 +25,43 @@ security_policy_t policyForSignTxInit(uint8_t networkId, uint32_t protocolMagic)
 security_policy_t policyForSignTxInput();
 
 security_policy_t policyForSignTxOutputAddress(
+        bool isSigningPoolRegistrationAsOwner,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
 );
 security_policy_t policyForSignTxOutputAddressParams(
+        bool isSigningPoolRegistrationAsOwner,
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic
 );
 
-security_policy_t policyForSignTxFee(uint64_t fee);
+security_policy_t policyForSignTxFee(bool isSigningPoolRegistrationAsOwner, uint64_t fee);
 
 security_policy_t policyForSignTxTtl(uint32_t ttl);
 
 security_policy_t policyForSignTxCertificate(
-        const uint8_t certificateType, const bip44_path_t* stakingKeyPath
+        const bool includeStakePoolRegistrationCertificate,
+        const uint8_t certificateType
 );
+security_policy_t policyForSignTxCertificateStaking(
+        const uint8_t certificateType,
+        const bip44_path_t* stakingKeyPath
+);
+security_policy_t policyForSignTxCertificateStakePoolRegistration(
+);
+security_policy_t policyForSignTxStakePoolRegistrationOwner(pool_owner_t* owner);
+security_policy_t policyForSignTxStakePoolRegistrationMetadata();
+security_policy_t policyForSignTxStakePoolRegistrationNoMetadata();
+security_policy_t policyForSignTxStakePoolRegistrationConfirm();
 
 security_policy_t policyForSignTxWithdrawal();
 
 security_policy_t policyForSignTxMetadata();
 
-security_policy_t policyForSignTxWitness(const bip44_path_t* pathSpec);
+security_policy_t policyForSignTxWitness(
+        bool isSigningPoolRegistrationAsOwner,
+        const bip44_path_t* pathSpec
+);
 
 security_policy_t policyForSignTxConfirm();
 

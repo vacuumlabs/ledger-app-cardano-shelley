@@ -5,24 +5,13 @@
 #include "hexUtils.h"
 #include "test_utils.h"
 
-// Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
-#define UNWRAP(...) __VA_ARGS__
-
 #define HD HARDENED_BIP32
 
-static void pathSpec_init(bip44_path_t* pathSpec, uint32_t* pathArray, uint32_t pathLength)
+static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
 {
 	pathSpec->length = pathLength;
 	os_memmove(pathSpec->path, pathArray, pathLength * 4);
 }
-
-static void PRINTF_bip44(const bip44_path_t* pathSpec)
-{
-	char tmp[100];
-	SIZEOF(*pathSpec);
-	bip44_printToStr(pathSpec, tmp, SIZEOF(tmp));
-	PRINTF("%s", tmp);
-};
 
 void testcase_deriveAddress_byron(uint32_t* path, uint32_t pathLen, uint32_t protocolMagic, const char* expectedHex)
 {
@@ -31,7 +20,7 @@ void testcase_deriveAddress_byron(uint32_t* path, uint32_t pathLen, uint32_t pro
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	PRINTF_bip44(&pathSpec);
+	bip44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	uint8_t address[128];

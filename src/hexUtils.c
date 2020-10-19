@@ -38,7 +38,7 @@ size_t decode_hex(const char* inStr, uint8_t* outBuffer, size_t outMaxSize)
 
 static const char HEX_ALPHABET[] = "0123456789abcdef";
 
-// returns length of the string written to out
+// returns the length of the string written to out
 size_t encode_hex(const uint8_t* bytes, size_t bytesLength, char* out, size_t outMaxSize)
 {
 	ASSERT(bytesLength < BUFFER_SIZE_PARANOIA);
@@ -53,7 +53,7 @@ size_t encode_hex(const uint8_t* bytes, size_t bytesLength, char* out, size_t ou
 	ASSERT(i == bytesLength);
 	out[2 * i] = '\0';
 
-	return 2 * bytesLength + 1;
+	return 2 * bytesLength;
 }
 
 

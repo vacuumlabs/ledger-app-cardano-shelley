@@ -37,7 +37,6 @@ void getTxWitness(bip44_path_t* pathSpec,
 	chain_code_t chainCode;
 	privateKey_t privateKey;
 
-	// TODO is this the proper key for both Byron and Shelley?
 	TRACE("derive private key");
 
 	BEGIN_TRY {

@@ -40,7 +40,10 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	STATIC_ASSERT(sizeof(ptr - scratchBuffer) == sizeof(size_t), "bad size_t size");
 	size_t rawSize = (size_t) (ptr - scratchBuffer);
 
-	if (rawSize + 1 > outSize) {
+	const char *suffix = " ADA";
+	const size_t suffixLength = strlen(suffix);
+
+	if (rawSize + suffixLength + 1 > outSize) {
 		THROW(ERR_DATA_TOO_LARGE);
 	}
 
@@ -50,8 +53,26 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	}
 	out[rawSize] = 0;
 
-	return rawSize;
+	snprintf(out + rawSize, outSize - rawSize, "%s", suffix);
+	ASSERT(strlen(out) == rawSize + suffixLength);
+
+	return rawSize + suffixLength;
 }
+
+#ifdef DEVEL
+void str_traceAdaAmount(const char* prefix, uint64_t amount)
+{
+	char adaAmountStr[100];
+
+	const size_t prefixLen = strlen(prefix);
+	ASSERT(prefixLen <= 50);
+	snprintf(adaAmountStr, SIZEOF(adaAmountStr), "%s", prefix);
+	ASSERT(strlen(adaAmountStr) == prefixLen);
+
+	str_formatAdaAmount(amount, adaAmountStr + prefixLen, SIZEOF(adaAmountStr) - prefixLen);
+	TRACE("%s", adaAmountStr);
+}
+#endif
 
 
 // TODO: This is valid only for mainnet
@@ -107,59 +128,34 @@ size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, 
 	return encode_hex(metadataHash, metadataHashSize, out, outSize);
 }
 
-// we only check if it is non-zero ASCII
-void str_validateText(const uint8_t* url, size_t urlSize)
+// check if it is ASCII between 32 and 126
+void str_validateTextBuffer(const uint8_t* text, size_t textSize)
 {
-	ASSERT(urlSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(textSize < BUFFER_SIZE_PARANOIA);
 
-	for (size_t i = 0; i < urlSize; i++) {
-		VALIDATE(url[i] <= 127, ERR_INVALID_DATA);
-		VALIDATE(url[i] > 0, ERR_INVALID_DATA);
+	for (size_t i = 0; i < textSize; i++) {
+		VALIDATE(text[i] <= 126, ERR_INVALID_DATA);
+		VALIDATE(text[i] >= 32, ERR_INVALID_DATA);
 	}
 }
 
 #ifdef DEVEL
-// only used in internal device tests
-size_t urlToBuffer(const char* url, uint8_t* buffer, size_t bufferSize)
+
+// converts a text to bytes (suitable for CBORization) and validates if chars are allowed
+size_t str_textToBuffer(const char* text, uint8_t* buffer, size_t bufferSize)
 {
-	size_t urlLength = strlen(url);
-	ASSERT(urlLength < BUFFER_SIZE_PARANOIA);
+	size_t textLength = strlen(text);
+	ASSERT(textLength < BUFFER_SIZE_PARANOIA);
 	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
-	ASSERT(bufferSize >= urlLength);
+	ASSERT(bufferSize >= textLength);
 
-	const char* validChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._~:/?#[]@!$&'()*+,;%=";
-	size_t validCharsLength = strlen(validChars);
-	for (size_t i = 0; i < urlLength; i++) {
-		bool valid = false;
-		for (size_t j = 0; j < validCharsLength; j++) {
-			if (url[i] == validChars[j]) {
-				valid = true;
-				break;
-			}
-		}
-		if (!valid)
-			THROW(ERR_INVALID_DATA);
-
-		buffer[i] = url[i];
+	for (size_t i = 0; i < textLength; i++) {
+		buffer[i] = text[i];
 	}
 
-	return urlLength;
+	str_validateTextBuffer(buffer, textLength);
+
+	return textLength;
 }
 
-size_t dnsNameToBuffer(const char* dnsName, uint8_t* buffer, size_t bufferSize)
-{
-	size_t dnsNameLength = strlen(dnsName);
-	ASSERT(dnsNameLength < BUFFER_SIZE_PARANOIA);
-	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
-	ASSERT(bufferSize >= dnsNameLength);
-
-	for (size_t i = 0; i < dnsNameLength; i++) {
-		if (dnsName[i] > 127 || dnsName[i] == 0)
-			THROW(ERR_INVALID_DATA);
-
-		buffer[i] = dnsName[i];
-	}
-
-	return dnsNameLength;
-}
 #endif

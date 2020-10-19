@@ -16,6 +16,8 @@ typedef enum {
 	REWARD     = 0b1110,  // 0xE
 } address_type_t;
 
+uint8_t getAddressHeader(uint8_t* addressBuffer, size_t addressSize);
+
 address_type_t getAddressType(uint8_t addressHeader);
 bool isSupportedAddressType(uint8_t addressHeader);
 uint8_t constructShelleyAddressHeader(address_type_t type, uint8_t networkId);
@@ -64,12 +66,21 @@ size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDeriv
 
 size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize);
 
+size_t constructRewardAddress(
+        uint8_t networkId,
+        const uint8_t* stakingKeyHashBuffer, size_t stakingKeyHashSize,
+        uint8_t* outBuffer, size_t outSize
+);
+
 void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* out, size_t outSize);
 
 size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* out, size_t outSize);
 
 void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addressParams_t* params);
 
-void run_addressUtilsShelley_test();
 
+#ifdef DEVEL
+void run_addressUtilsShelley_test();
 #endif
+
+#endif // H_CARDANO_APP_ADDRESS_UTILS_SHELLEY

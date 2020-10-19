@@ -18,27 +18,27 @@ void testcase_formatAda(
 
 void test_formatAda()
 {
-	testcase_formatAda(0,       "0.000000");
-	testcase_formatAda(1,       "0.000001");
-	testcase_formatAda(10,      "0.000010");
-	testcase_formatAda(123456,  "0.123456");
-	testcase_formatAda(1000000, "1.000000");
+	testcase_formatAda(0,       "0.000000 ADA");
+	testcase_formatAda(1,       "0.000001 ADA");
+	testcase_formatAda(10,      "0.000010 ADA");
+	testcase_formatAda(123456,  "0.123456 ADA");
+	testcase_formatAda(1000000, "1.000000 ADA");
 	testcase_formatAda(
 	        12345678901234567890u,
-	        "12,345,678,901,234.567890"
+	        "12,345,678,901,234.567890 ADA"
 	);
 
 	{
 		PRINTF("test_formatAda edge cases");
-		char tmp[12];
+		char tmp[16];
 		os_memset(tmp, 'X', SIZEOF(tmp));
-		str_formatAdaAmount(0, tmp, 9);
-		EXPECT_EQ(tmp[8], 0);
-		EXPECT_EQ(tmp[9], 'X');
+		str_formatAdaAmount(0, tmp, 13);
+		EXPECT_EQ(tmp[12], 0);
+		EXPECT_EQ(tmp[13], 'X');
 
-		EXPECT_THROWS(str_formatAdaAmount(10000000, tmp, 9),
+		EXPECT_THROWS(str_formatAdaAmount(10000000, tmp, 13),
 		              ERR_DATA_TOO_LARGE);
-		EXPECT_EQ(tmp[9], 'X');
+		EXPECT_EQ(tmp[13], 'X');
 	}
 }
 

@@ -1,6 +1,7 @@
 #include "uiScreens.h"
 #include "hexUtils.h"
 #include "textUtils.h"
+#include "cardanoCertificates.h"
 
 void ui_displayPathScreen(
         const char* screenHeader,
@@ -11,7 +12,7 @@ void ui_displayPathScreen(
 	ASSERT(strlen(screenHeader) > 0);
 	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
 
-	char pathStr[120];
+	char pathStr[1 + BIP44_MAX_PATH_STRING_LENGTH];
 	bip44_printToStr(path, pathStr, SIZEOF(pathStr));
 
 	ui_displayPaginatedText(
@@ -144,10 +145,12 @@ void ui_displayStakingInfoScreen(
 
 	case STAKING_KEY_HASH:
 		heading = STAKING_HEADING_HASH;
-		encode_hex(
-		        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
-		        stakingInfo, SIZEOF(stakingInfo)
-		);
+		size_t length = encode_hex(
+		                        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
+		                        stakingInfo, SIZEOF(stakingInfo)
+		                );
+		ASSERT(length == strlen(stakingInfo));
+		ASSERT(length == 2 * SIZEOF(addressParams->stakingKeyHash));
 		break;
 
 	case BLOCKCHAIN_POINTER:
@@ -212,6 +215,164 @@ void ui_displayNetworkParamsScreen(
 	ui_displayPaginatedText(
 	        screenHeader,
 	        networkParams,
+	        callback
+	);
+}
+
+void ui_displayHexBufferScreen(
+        const char* screenHeader,
+        const uint8_t* buffer, size_t bufferSize,
+        ui_callback_fn_t callback
+)
+{
+	ASSERT(strlen(screenHeader) > 0);
+	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize > 0);
+	ASSERT(bufferSize <= 32); // this is used for hashes, all are <= 32 bytes
+
+	char bufferHex[2 * 32 + 1];
+	explicit_bzero(bufferHex, SIZEOF(bufferHex));
+
+	size_t length = encode_hex(
+	                        buffer, bufferSize,
+	                        bufferHex, SIZEOF(bufferHex)
+	                );
+	ASSERT(length == strlen(bufferHex));
+	ASSERT(length == 2 * bufferSize);
+
+	ui_displayPaginatedText(
+	        screenHeader,
+	        bufferHex,
+	        callback
+	);
+}
+
+void ui_displayMarginScreen(
+        uint64_t marginNumerator, uint64_t marginDenominator,
+        ui_callback_fn_t callback
+)
+{
+	TRACE("%d %d", marginNumerator, marginDenominator);
+	TRACE_BUFFER((uint8_t *) &marginNumerator, 8);
+	TRACE_BUFFER((uint8_t *) &marginDenominator, 8);
+
+	ASSERT(marginDenominator != 0);
+	ASSERT(marginNumerator <= marginDenominator);
+	ASSERT(marginDenominator <= MARGIN_DENOMINATOR_MAX);
+
+	char marginStr[20];
+	explicit_bzero(marginStr, SIZEOF(marginStr));
+
+	{
+		// marginPercentage is a multiple of 1/100th of 1%, i.e. the fractional part of the percentage has two digits
+		// adding marginDenominator / 2 to have a rounded result
+		uint64_t marginPercentage = (10000 * marginNumerator + (marginDenominator / 2)) / marginDenominator;
+		ASSERT(marginPercentage <= 10000);
+
+		unsigned int percentage = (unsigned int) marginPercentage;
+
+		snprintf(marginStr, SIZEOF(marginStr), "%u.%u %%", percentage / 100, percentage % 100);
+		ASSERT(strlen(marginStr) + 1 < SIZEOF(marginStr));
+	}
+
+	TRACE("%s", marginStr);
+
+	ui_displayPaginatedText(
+	        "Profit margin",
+	        marginStr,
+	        callback
+	);
+}
+
+void ui_displayOwnerScreen(
+        const pool_owner_t* owner,
+        uint32_t ownerIndex,
+        uint8_t networkId,
+        ui_callback_fn_t callback
+)
+{
+	{
+		// assert inputs
+		ASSERT(isValidNetworkId(networkId));
+		ASSERT(ownerIndex < POOL_MAX_OWNERS);
+
+		switch (owner->ownerType) {
+
+		case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
+			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
+			break;
+
+		case SIGN_TX_POOL_OWNER_TYPE_PATH:
+			ASSERT(bip44_isValidStakingKeyPath(&owner->path));
+			break;
+
+		default:
+			ASSERT(false);
+		}
+	}
+
+	// we display the owner as bech32-encoded reward address for his staking key
+	uint8_t rewardAddress[1 + ADDRESS_KEY_HASH_LENGTH];
+	{
+		if (owner->ownerType == SIGN_TX_POOL_OWNER_TYPE_PATH) {
+			addressParams_t rewardAddressParams = {
+				.type = REWARD,
+				.networkId = networkId,
+				.spendingKeyPath = owner->path,
+				.stakingChoice = NO_STAKING,
+			};
+
+			deriveAddress(
+			        &rewardAddressParams,
+			        rewardAddress,
+			        SIZEOF(rewardAddress)
+			);
+		} else {
+			constructRewardAddress(
+			        networkId,
+			        owner->keyHash, SIZEOF(owner->keyHash),
+			        rewardAddress, SIZEOF(rewardAddress)
+			);
+		}
+	}
+
+	char firstLine[20];
+	explicit_bzero(firstLine, SIZEOF(firstLine));
+	{
+		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
+	}
+
+	char ownerDescription[BIP44_MAX_PATH_STRING_LENGTH + MAX_HUMAN_ADDRESS_SIZE + 1];
+	explicit_bzero(ownerDescription, SIZEOF(ownerDescription));
+	size_t descLen = 0; // owner description length
+
+	if (owner->ownerType == SIGN_TX_POOL_OWNER_TYPE_PATH) {
+		descLen += bip44_printToStr(&owner->path, ownerDescription, SIZEOF(ownerDescription));
+	}
+
+	{
+		// add owner (represented as bech32-encoded reward account for owner's staking key)
+		ASSERT(descLen <= BIP44_MAX_PATH_STRING_LENGTH);
+		ASSERT(descLen + 1 <= SIZEOF(ownerDescription));
+
+		if (descLen > 0) {
+			// add a space after path if the path is present
+			ASSERT(descLen + 2 <= SIZEOF(ownerDescription));
+			ownerDescription[descLen++] = ' ';
+			ownerDescription[descLen] = '\0';
+		}
+
+		descLen += humanReadableAddress(
+		                   rewardAddress, SIZEOF(rewardAddress),
+		                   ownerDescription + descLen, SIZEOF(ownerDescription) - descLen
+		           );
+		ASSERT(descLen == strlen(ownerDescription));
+		ASSERT(descLen + 1 <= SIZEOF(ownerDescription));
+	}
+
+	ui_displayPaginatedText(
+	        firstLine,
+	        ownerDescription,
 	        callback
 	);
 }

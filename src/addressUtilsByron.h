@@ -32,6 +32,9 @@ uint32_t extractProtocolMagic(
         const uint8_t* addressBuffer, size_t addressSize
 );
 
-void run_addressUtilsByron_test();
 
+#ifdef DEVEL
+void run_addressUtilsByron_test();
 #endif
+
+#endif // H_CARDANO_APP_ADDRESS_UTILS_BYRON

@@ -4,10 +4,7 @@
 #include "hexUtils.h"
 #include "test_utils.h"
 
-// Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
-#define UNWRAP(...) __VA_ARGS__
-
-static void pathSpec_init(bip44_path_t* pathSpec, uint32_t* pathArray, uint32_t pathLength)
+static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
 {
 	pathSpec->length = pathLength;
 	os_memmove(pathSpec->path, pathArray, pathLength * 4);
