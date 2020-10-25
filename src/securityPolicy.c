@@ -106,8 +106,8 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
 
 	WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
-	// Normally extPubKey is asked only for an account
-	WARN_IF(bip44_containsMoreThanAccount(pathSpec));
+
+	WARN_IF(bip44_containsMoreThanAddress(pathSpec));
 
 	PROMPT_IF(true);
 }
