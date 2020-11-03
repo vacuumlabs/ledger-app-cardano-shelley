@@ -445,7 +445,7 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay0(
 		}
 		{
 			if (ipv4 != NULL) {
-				ASSERT(sizeof(ipv4->ip) == IPV4_SIZE); // SIZEOF does not work for 4-byte buffers
+				STATIC_ASSERT(sizeof(ipv4->ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, IPV4_SIZE);
 				BUILDER_APPEND_DATA(ipv4->ip, IPV4_SIZE);
 			} else {
@@ -454,14 +454,15 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay0(
 		}
 		{
 			if (ipv6 != NULL) {
-				ASSERT(sizeof(ipv6->ip) == IPV6_SIZE); // SIZEOF does not work for 4-byte buffers
+				STATIC_ASSERT(SIZEOF(ipv6->ip) == IPV6_SIZE, "wrong ipv6 size");
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, IPV6_SIZE);
 
 				// serialized as 4 big-endian uint32
+				STATIC_ASSERT(SIZEOF(ipv6->ip) == 16, "wrong ipv6 size");
+				uint32_t* as_uint32 = (uint32_t*) ipv6->ip;
 				for (size_t i = 0; i < 4; i++) {
 					uint8_t chunk[4];
-					uint32_t* valuePtr = (uint32_t *)(ipv6->ip + 4 * i);
-					u4be_write(chunk, *valuePtr);
+					u4be_write(chunk, as_uint32[i]);
 					BUILDER_APPEND_DATA(chunk, 4);
 				}
 			} else {
@@ -619,12 +620,18 @@ void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(
 
 static void txHashBuilder_assertCanLeaveCertificates(tx_hash_builder_t* builder)
 {
-	if (builder->state == TX_HASH_BUILDER_IN_CERTIFICATES) {
+	switch (builder->state) {
+
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
 		ASSERT(builder->remainingCertificates == 0);
-	} else if (builder->state == TX_HASH_BUILDER_IN_TTL) {
+		break;
+
+	case TX_HASH_BUILDER_IN_TTL:
 		txHashBuilder_assertCanLeaveTtl(builder);
 		ASSERT(builder->remainingCertificates == 0);
-	} else {
+		break;
+
+	default:
 		ASSERT(false);
 	}
 }

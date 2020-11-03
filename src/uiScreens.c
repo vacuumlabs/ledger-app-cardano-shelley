@@ -324,8 +324,7 @@ void ui_displayOwnerScreen(
 
 			deriveAddress(
 			        &rewardAddressParams,
-			        rewardAddress,
-			        SIZEOF(rewardAddress)
+			        rewardAddress, SIZEOF(rewardAddress)
 			);
 		} else {
 			constructRewardAddress(

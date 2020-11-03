@@ -128,7 +128,9 @@ static inline void advanceCertificatesStateIfAppropriate()
 {
 	TRACE("%u", ctx->stage);
 
-	if (ctx->stage == SIGN_STAGE_CERTIFICATES) {
+	switch (ctx->stage) {
+
+	case SIGN_STAGE_CERTIFICATES:
 		ASSERT(ctx->currentCertificate < ctx->numCertificates);
 
 		// Advance state to the next certificate
@@ -136,7 +138,9 @@ static inline void advanceCertificatesStateIfAppropriate()
 		if (ctx->currentCertificate == ctx->numCertificates) {
 			advanceStage();
 		}
-	} else {
+		break;
+
+	default:
 		ASSERT(ctx->stage == SIGN_STAGE_CERTIFICATES_POOL);
 	}
 }
@@ -953,7 +957,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	}
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
 		VALIDATE(view_remainingSize(&view) == POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
-		ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH);
+		STATIC_ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
 		os_memmove(certificateData->poolKeyHash, view.ptr, POOL_KEY_HASH_LENGTH);
 		break;
 	}

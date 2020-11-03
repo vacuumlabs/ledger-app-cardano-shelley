@@ -210,12 +210,12 @@ static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer,
 			pool_registration_params_t* p = &subctx->poolParams;
 
 			TRACE_BUFFER(wireHeader->poolKeyHash, SIZEOF(wireHeader->poolKeyHash));
-			ASSERT(SIZEOF(wireHeader->poolKeyHash) == SIZEOF(p->poolKeyHash));
+			STATIC_ASSERT(SIZEOF(wireHeader->poolKeyHash) == SIZEOF(p->poolKeyHash), "wrong poolKeyHash size");
 			os_memmove(p->poolKeyHash, wireHeader->poolKeyHash, SIZEOF(p->poolKeyHash));
 			// nothing to validate, all values are valid
 
 			TRACE_BUFFER(wireHeader->vrfKeyHash, SIZEOF(wireHeader->vrfKeyHash));
-			ASSERT(SIZEOF(wireHeader->vrfKeyHash) == SIZEOF(p->vrfKeyHash));
+			STATIC_ASSERT(SIZEOF(wireHeader->vrfKeyHash) == SIZEOF(p->vrfKeyHash), "wrong vrfKeyHash size");
 			os_memmove(p->vrfKeyHash, wireHeader->vrfKeyHash, SIZEOF(p->vrfKeyHash));
 			// nothing to validate, all values are valid
 
@@ -242,7 +242,7 @@ static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer,
 			VALIDATE(p->marginNumerator <= p->marginDenominator, ERR_INVALID_DATA);
 
 			TRACE_BUFFER(wireHeader->rewardAccount, SIZEOF(wireHeader->rewardAccount));
-			ASSERT(SIZEOF(wireHeader->rewardAccount) == SIZEOF(p->rewardAccount));
+			STATIC_ASSERT(SIZEOF(wireHeader->rewardAccount) == SIZEOF(p->rewardAccount), "wrong reward account size");
 			os_memmove(p->rewardAccount, wireHeader->rewardAccount, SIZEOF(p->rewardAccount));
 			const uint8_t header = getAddressHeader(p->rewardAccount, SIZEOF(p->rewardAccount));
 			VALIDATE(getAddressType(header) == REWARD, ERR_INVALID_DATA);
@@ -344,7 +344,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 
 		case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
 			VALIDATE(view_remainingSize(&view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
-			ASSERT(SIZEOF(subctx->owner.keyHash) == ADDRESS_KEY_HASH_LENGTH);
+			STATIC_ASSERT(SIZEOF(subctx->owner.keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong owner.keyHash size");
 			os_memmove(subctx->owner.keyHash, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
 			TRACE_BUFFER(subctx->owner.keyHash, SIZEOF(subctx->owner.keyHash));
 			break;
@@ -472,7 +472,7 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 				uint8_t includeIpv4 = parse_u1be(&view);
 				if (includeIpv4 == RELAY_YES) {
 					VALIDATE(view_remainingSize(&view) >= IPV4_SIZE, ERR_INVALID_DATA);
-					ASSERT(sizeof(ipv4.ip) >= IPV4_SIZE); // SIZEOF does not work for 4-byte buffers
+					STATIC_ASSERT(sizeof(ipv4.ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
 					os_memmove(ipv4.ip, view.ptr, IPV4_SIZE);
 					view_skipBytes(&view, IPV4_SIZE);
 					TRACE("ipv4");
@@ -490,7 +490,7 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 				uint8_t includeIpv6 = parse_u1be(&view);
 				if (includeIpv6 == RELAY_YES) {
 					VALIDATE(view_remainingSize(&view) >= IPV6_SIZE, ERR_INVALID_DATA);
-					ASSERT(sizeof(ipv6.ip) >= IPV6_SIZE); // SIZEOF does not work for 4-byte buffers
+					STATIC_ASSERT(sizeof(ipv6.ip) == IPV6_SIZE, "wrong ipv6 size"); // SIZEOF does not work for 4-byte buffers
 					os_memmove(ipv6.ip, view.ptr, IPV6_SIZE);
 					view_skipBytes(&view, IPV6_SIZE);
 					TRACE("ipv6");
