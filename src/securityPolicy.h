@@ -13,7 +13,9 @@ typedef enum {
 	POLICY_SHOW_BEFORE_RESPONSE = 5, // Show on display but do not ask for explicit confirmation
 } security_policy_t;
 
+security_policy_t policyForGetPublicKeysInit(size_t remainingKeys);
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec);
+security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec);
 
 
 security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams);

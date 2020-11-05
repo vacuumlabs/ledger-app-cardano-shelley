@@ -3,7 +3,6 @@
 
 #include "uiHelpers.h"
 #include "getVersion.h"
-#include "getExtendedPublicKey.h"
 
 
 enum {

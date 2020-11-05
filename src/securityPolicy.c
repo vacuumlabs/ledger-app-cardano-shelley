@@ -100,6 +100,14 @@ static inline bool is_too_deep(const bip44_path_t* pathSpec)
 #define SHOW_IF(expr)      if (expr)    return POLICY_SHOW_BEFORE_RESPONSE;
 #define SHOW_UNLESS(expr)  if (!(expr)) return POLICY_SHOW_BEFORE_RESPONSE;
 
+
+security_policy_t policyForGetPublicKeysInit(size_t remainingKeys)
+{
+	ASSERT(remainingKeys > 0);
+
+	PROMPT_IF(true);
+}
+
 // Get extended public key and return it to the host
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 {
@@ -110,6 +118,33 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 	WARN_IF(bip44_containsMoreThanAddress(pathSpec));
 
 	PROMPT_IF(true);
+}
+
+// Get extended public key and return it to the host within bulk key export
+security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec)
+{
+	// the expected values that need not to be confirmed start with
+	// m/1852'/1815'/account' or m/44'/1815'/account', where account is not too big
+
+	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
+
+	WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
+
+	// if they contain more than account, then the suffix after account
+	// has to be one of 2/0, 0/index, 1/index
+	if (bip44_containsMoreThanAccount(pathSpec)) {
+		WARN_IF(bip44_containsMoreThanAddress(pathSpec));
+		WARN_IF(bip44_containsChainType(pathSpec) && !bip44_containsAddress(pathSpec));
+
+		// we are left with paths of length 5
+		ALLOW_IF(bip44_isValidStakingKeyPath(pathSpec));
+
+		// only ordinary address paths remain
+		WARN_UNLESS(bip44_isValidAddressPath(pathSpec));
+		WARN_UNLESS(bip44_hasReasonableAddress(pathSpec));
+	}
+
+	ALLOW_IF(true);
 }
 
 // Derive address and return it to the host

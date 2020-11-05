@@ -9,7 +9,7 @@ The derivation scheme is BIP44 for Byron `v2` addresses and an analogous scheme 
 We expect this call to be used for the address verification purposes (i.e., matching address on Ledger with the one on the screen).
 
 Note: Unlike BTC Ledger app which returns both public key and the corresponding address in the same instruction call, we split these two functionalities as they serve different purposes. Notably:
-- `DeriveAddress` is weaker than `GetExtendedPublicKey` (an extended public key allow deriving non-hardened child keys; an address does not, since it only contains hashes of public keys). As such, (in the future) the app might apply more restrictions/user confirmations to get the public key.
+- `DeriveAddress` is weaker than `GetPublicKeys` (an extended public key allows deriving non-hardened child keys; an address does not, since it only contains hashes of public keys). As such, (in the future) the app might apply more restrictions/user confirmations to get the public key.
 - `GetAddress` is typically called only for the purpose of address verification. As such, it should belong to a valid address BIP32 path.
 - Note that implementations would typically call `GetAddress` with `P1_DISPLAY` to display the address to the user and `P1_RETURN` is usually not needed because the wallet anyway requested account's extended public key which enables it to derive all addresses. `P1_RETURN` can be used by paranoid users that do not want to expose account public key to the host yet they still want to be able to export individual addresses.
 
