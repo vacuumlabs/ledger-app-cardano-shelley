@@ -166,9 +166,6 @@ bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 	return (pathSpec->length > BIP44_I_ADDRESS + 1);
 }
 
-
-// TODO(ppershing): this function needs to be thoroughly tested
-// on small outputSize
 // returns the length of the resulting string
 size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 {

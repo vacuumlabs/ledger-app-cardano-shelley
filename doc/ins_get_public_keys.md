@@ -1,23 +1,31 @@
-# Get Extended Public Key
+# Get Public Keys
 
 **Description**
 
-Get extended public key (i.e., public key + chain code) for a given BIP32 path.
+Get an extended public key (i.e., public key + chain code) for a given BIP32 path. 
+
+It is also possible to ask for a confirmation for exporting several keys (if the paths describing the keys are not suspicious, they won't be shown to the user and no further confirmation is required).
 
 Note: Unlike BTC app, this call does not return nor display addresses. See [](ins_derive_address.md) for details.
 
 
 **Command**
 
+For the initial APDU message, use
+
 | Field | Value    |
 | ----- | -------- |
 | CLA   | `0xD7`   |
 | INS   | `0x10`   |
-| P1    | unused   |
+| P1    | `0x00`   |
 | P2    | unused   |
 | Lc    | variable |
 
+For each of the following messages (one for each of the remaining keys), use `0x01` for P1.
+
 **Data**
+
+For the initial APDU message, use
 
 | Field                             | Length | Comments                           |
 | --------------------------------- | ------ | ---------------------------------- |
@@ -27,8 +35,13 @@ Note: Unlike BTC app, this call does not return nor display addresses. See [](in
 | (optional) Third derivation index | 4      | Big endian                         |
 | ...                               | ...    | ...                                |
 | (optional) Last derivation index  | 4      | Big endian                         |
+| (optional) No. of remaining keys  | 4      | Big endian                         |
+
+For each of the following messages (one for each of the remaining keys), the last field (No. of remaining keys) must not be included.
 
 **Response**
+
+This format applies to both the initial APDU message and each of the following messages.
 
 | Field      | Length |
 | ---------- | ------ |
