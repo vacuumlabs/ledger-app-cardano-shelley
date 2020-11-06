@@ -37,7 +37,7 @@
 // In case there is an api change, first *verify* changes
 // (especially potential security implications) before bumping
 // the API level!
-STATIC_ASSERT(CX_APILEVEL == 9 || CX_APILEVEL == 10, "bad api level");
+STATIC_ASSERT(CX_APILEVEL >= 9, "bad api level");
 
 static const int INS_NONE = -1;
 
