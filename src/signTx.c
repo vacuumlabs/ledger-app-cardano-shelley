@@ -363,6 +363,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	                                   ctx->commonTxData.networkId,
 	                                   ctx->commonTxData.protocolMagic
 	                           );
+	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 	{
 		// select UI steps
@@ -449,6 +450,8 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 	}
 
 	security_policy_t policy = policyForSignTxInput();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -726,6 +729,8 @@ static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 	}
 
 	security_policy_t policy = policyForSignTxFee(ctx->isSigningPoolRegistrationAsOwner, ctx->stageData.fee);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -800,6 +805,8 @@ static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 	}
 
 	security_policy_t policy = policyForSignTxTtl(ctx->stageData.ttl);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -1167,6 +1174,8 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	}
 
 	security_policy_t policy = policyForSignTxWithdrawal();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -1241,6 +1250,8 @@ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 	}
 
 	security_policy_t policy = policyForSignTxMetadata();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI step
@@ -1325,6 +1336,8 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UN
 	}
 
 	security_policy_t policy = policyForSignTxConfirm();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI step
@@ -1414,7 +1427,6 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 	}
 
 	security_policy_t policy = POLICY_DENY;
-
 	{
 		// get policy
 		policy = policyForSignTxWitness(

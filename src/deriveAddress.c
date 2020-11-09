@@ -42,6 +42,7 @@ static void deriveAddress_handleReturn()
 {
 	// Check security policy
 	security_policy_t policy = policyForReturnDeriveAddress(&ctx->addressParams);
+	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	prepareResponse();
@@ -119,6 +120,7 @@ static void deriveAddress_handleDisplay()
 {
 	// Check security policy
 	security_policy_t policy = policyForShowDeriveAddress(&ctx->addressParams);
+	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	prepareResponse();
