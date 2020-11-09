@@ -61,7 +61,7 @@ static void getPublicKeys_getOneKey_ui_runStep()
 		io_send_buf(SUCCESS, (uint8_t*) &ctx->extPubKey, SIZEOF(ctx->extPubKey));
 		ctx->responseReadyMagic = 0; // just for safety
 
-		if (ctx->remainingKeys > 0) {
+		if (ctx->remainingPaths > 0) {
 			ui_displayBusy(); // waiting for another APDU
 		} else {
 			ui_idle(); // we are done, display the main app screen
@@ -121,7 +121,7 @@ static void getPublicKeys_handleInit_ui_runStep()
 	UI_STEP(HANDLE_INIT_UI_STEP_CONFIRM) {
 		char secondLine[100];
 		explicit_bzero(secondLine, SIZEOF(secondLine));
-		snprintf(secondLine, SIZEOF(secondLine), "%u public keys?", ctx->remainingKeys);
+		snprintf(secondLine, SIZEOF(secondLine), "%u public keys?", ctx->remainingPaths);
 		ASSERT(strlen(secondLine) < SIZEOF(secondLine));
 
 		ui_displayPrompt(
@@ -132,7 +132,7 @@ static void getPublicKeys_handleInit_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_INIT_UI_STEP_RESPOND) {
-		ASSERT(ctx->remainingKeys > 0);
+		ASSERT(ctx->remainingPaths > 0);
 		returnOneKey(false); // runs another UI state machine
 
 		ctx->stage = GET_KEYS_STAGE_GET_KEYS;
@@ -159,19 +159,19 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		switch (remaining) {
 		case 0: {
 			TRACE();
-			ctx->remainingKeys = 0;
+			ctx->remainingPaths = 0;
 			break;
 		}
 		case 4: {
 			// read the number of remaining keys
-			uint32_t remainingKeys = parse_u4be(&view);
+			uint32_t remainingPaths = parse_u4be(&view);
 			ASSERT(view_remainingSize(&view) == 0);
-			TRACE("num keys: %d", remainingKeys);
-			VALIDATE(remainingKeys <= MAX_PUBLIC_KEYS, ERR_INVALID_DATA);
+			TRACE("num keys: %d", remainingPaths);
+			VALIDATE(remainingPaths <= MAX_PUBLIC_KEYS, ERR_INVALID_DATA);
 
-			ASSERT_TYPE(ctx->remainingKeys, uint16_t);
-			ASSERT(remainingKeys <= UINT16_MAX);
-			ctx->remainingKeys = (uint16_t) remainingKeys;
+			ASSERT_TYPE(ctx->remainingPaths, uint16_t);
+			ASSERT(remainingPaths <= UINT16_MAX);
+			ctx->remainingPaths = (uint16_t) remainingPaths;
 			break;
 		}
 		default: {
@@ -180,14 +180,14 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		}
 	}
 
-	if (ctx->remainingKeys == 0) {
+	if (ctx->remainingPaths == 0) {
 		// no more keys follow, we are done
 		returnOneKey(true);
 		return;
 	}
 
 	// we ask for confirmation for export of the given number of public keys
-	security_policy_t policy = policyForGetPublicKeysInit(ctx->remainingKeys);
+	security_policy_t policy = policyForGetPublicKeysInit(ctx->remainingPaths);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 	{
@@ -218,8 +218,8 @@ void getPublicKeys_handleGetNextKeyAPDU(
 
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
-	VALIDATE(ctx->remainingKeys >= 1, ERR_INVALID_STATE);
-	ctx->remainingKeys--;
+	VALIDATE(ctx->remainingPaths >= 1, ERR_INVALID_STATE);
+	ctx->remainingPaths--;
 
 	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 	parsePath(&view);

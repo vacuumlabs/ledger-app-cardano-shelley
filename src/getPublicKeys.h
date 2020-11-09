@@ -17,7 +17,7 @@ typedef enum {
 typedef struct {
 	get_keys_stage_t stage;
 
-	uint16_t remainingKeys;
+	uint16_t remainingPaths;
 
 	bip44_path_t pathSpec;
 	extendedPublicKey_t extPubKey;
