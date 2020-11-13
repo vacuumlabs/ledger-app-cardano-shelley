@@ -8,6 +8,10 @@ static int16_t RESPONSE_READY_MAGIC = 23456;
 
 static ins_get_keys_context_t* ctx = &(instructionState.getKeysContext);
 
+// ctx->ui_state is shared between the intertwined UI state machines below
+// it should be set to this value at the beginning and after a UI state machine is finished
+static int UI_STEP_NONE = 0;
+
 static inline void CHECK_STAGE(get_keys_stage_t expected)
 {
 	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
@@ -30,7 +34,7 @@ static void advanceStage()
 	case GET_KEYS_STAGE_INIT:
 		ctx->stage = GET_KEYS_STAGE_GET_KEYS;
 
-		if (ctx->currentPath < ctx->numPaths) {
+		if (ctx->numPaths > 1) {
 			// there are more paths to be received
 			// so we don't want to advance beyond GET_KEYS_STAGE_GET_KEYS
 			break;
@@ -50,26 +54,6 @@ static void advanceStage()
 	}
 }
 
-static void advanceStageIfAppropriate()
-{
-	switch (ctx->stage) {
-
-	case GET_KEYS_STAGE_INIT:
-		advanceStage();
-		break;
-
-	case GET_KEYS_STAGE_GET_KEYS:
-		if (ctx->currentPath == ctx->numPaths) {
-			advanceStage();
-		}
-		break;
-
-	case SIGN_STAGE_NONE:
-	default:
-		ASSERT(false);
-	}
-}
-
 // ============================== derivation and UI state machine for one key ==============================
 
 enum {
@@ -77,7 +61,6 @@ enum {
 	GET_KEY_UI_STEP_DISPLAY,
 	GET_KEY_UI_STEP_CONFIRM,
 	GET_KEY_UI_STEP_RESPOND,
-	GET_KEY_UI_STEP_INVALID,
 } ;
 
 static void getPublicKeys_respondOneKey_ui_runStep()
@@ -114,14 +97,17 @@ static void getPublicKeys_respondOneKey_ui_runStep()
 		ctx->currentPath++;
 		TRACE("Current path: %u / %u", ctx->currentPath, ctx->numPaths);
 
-		advanceStageIfAppropriate();
+		if (ctx->currentPath == 1 || ctx->currentPath == ctx->numPaths)
+			advanceStage();
 	}
-	UI_STEP_END(GET_KEY_UI_STEP_INVALID);
+	UI_STEP_END(UI_STEP_NONE);
 }
 
 // derive the key described by ctx->pathSpec and run the ui state machine accordingly
-static void promptAndRespondOneKey()
+static void runGetOnePublicKeyUIFlow()
 {
+	ASSERT(ctx->ui_step == UI_STEP_NONE); // make sure no ui state machine is running
+
 	ctx->responseReadyMagic = 0;
 
 	// Check security policy
@@ -158,7 +144,6 @@ static void promptAndRespondOneKey()
 enum {
 	HANDLE_INIT_UI_STEP_CONFIRM = 100,
 	HANDLE_INIT_UI_STEP_RESPOND, // WARNING: this must be the last valid step, see below
-	HANDLE_INIT_UI_STEP_INVALID,
 } ;
 
 static void getPublicKeys_handleInit_ui_runStep()
@@ -181,18 +166,22 @@ static void getPublicKeys_handleInit_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_INIT_UI_STEP_RESPOND) {
-		promptAndRespondOneKey(); // runs another UI state machine
+		ctx->ui_step = UI_STEP_NONE; // we are finished with this UI state machine
+
+		runGetOnePublicKeyUIFlow(); // run another UI state machine
 
 		// This return statement is needed to bail out from this UI state machine
 		// which would otherwise be in conflict with the (async) UI state
 		// machine triggered by promptAndRespondOneKey.
+
 		// Those two machines share the ctx->ui_state variable.
+		// Without the return statement, UI_STEP_END would overwrite it.
 
 		// WARNING: This works under the assumption that HANDLE_INIT_UI_STEP_RESPOND
 		// is a terminal state of this UI state machine!
 		return;
 	}
-	UI_STEP_END(HANDLE_INIT_UI_STEP_INVALID);
+	UI_STEP_END(UI_STEP_NONE);
 }
 
 static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -277,7 +266,7 @@ void getPublicKeys_handleGetNextKeyAPDU(
 	parsePath(&view);
 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
-	promptAndRespondOneKey();
+	runGetOnePublicKeyUIFlow();
 }
 
 // ============================== MAIN HANDLER ==============================
@@ -308,6 +297,7 @@ void getPublicKeys_handleAPDU(
 	if (isNewCall) {
 		explicit_bzero(ctx, SIZEOF(*ctx));
 		ctx->stage = GET_KEYS_STAGE_INIT;
+		ctx->ui_step = UI_STEP_NONE;
 	}
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 
