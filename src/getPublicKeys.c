@@ -61,7 +61,7 @@ static void getPublicKeys_getOneKey_ui_runStep()
 		io_send_buf(SUCCESS, (uint8_t*) &ctx->extPubKey, SIZEOF(ctx->extPubKey));
 		ctx->responseReadyMagic = 0; // just for safety
 
-		if (ctx->remainingPaths > 0) {
+		if (ctx->currentPath < ctx->numPaths) {
 			ui_displayBusy(); // waiting for another APDU
 		} else {
 			ui_idle(); // we are done, display the main app screen
@@ -71,15 +71,15 @@ static void getPublicKeys_getOneKey_ui_runStep()
 }
 
 // derive the key described by ctx->pathSpec and run the ui state machine accordingly
-// if isSingleKeyExport is true, more restrictive security policy is applied
-static void returnOneKey(bool isSingleKeyExport)
+static void returnOneKey()
 {
 	ctx->responseReadyMagic = 0;
 
 	// Check security policy
-	security_policy_t policy = (isSingleKeyExport) ?
+	security_policy_t policy = (ctx->numPaths == 1) ?
 	                           policyForGetExtendedPublicKey(&ctx->pathSpec) :
 	                           policyForGetExtendedPublicKeyBulkExport(&ctx->pathSpec);
+
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -90,6 +90,7 @@ static void returnOneKey(bool isSingleKeyExport)
 		        & ctx->extPubKey
 		);
 		ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
+		ctx->currentPath++;
 	}
 
 	switch (policy) {
@@ -121,7 +122,7 @@ static void getPublicKeys_handleInit_ui_runStep()
 	UI_STEP(HANDLE_INIT_UI_STEP_CONFIRM) {
 		char secondLine[100];
 		explicit_bzero(secondLine, SIZEOF(secondLine));
-		snprintf(secondLine, SIZEOF(secondLine), "%u public keys?", ctx->remainingPaths);
+		snprintf(secondLine, SIZEOF(secondLine), "%u public keys?", ctx->numPaths);
 		ASSERT(strlen(secondLine) < SIZEOF(secondLine));
 
 		ui_displayPrompt(
@@ -132,10 +133,20 @@ static void getPublicKeys_handleInit_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_INIT_UI_STEP_RESPOND) {
-		ASSERT(ctx->remainingPaths > 0);
-		returnOneKey(false); // runs another UI state machine
 
-		ctx->stage = GET_KEYS_STAGE_GET_KEYS;
+		returnOneKey(); // runs another UI state machine
+
+		TRACE("current path index %d", ctx->currentPath);
+		if (ctx->currentPath < ctx->numPaths) {
+			ctx->stage = GET_KEYS_STAGE_GET_KEYS;
+		}
+
+		// This return statement is needed to bail out from this UI state machine
+		// which would otherwise be in conflict with the (async) UI state
+		// machine triggered by returnOneKey. This works on the assumption
+		// that HANDLE_INIT_UI_STEP_RESPOND is a terminal state of this
+		// UI state machine!
+		return;
 	}
 	UI_STEP_END(HANDLE_INIT_UI_STEP_INVALID);
 }
@@ -159,19 +170,18 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		switch (remaining) {
 		case 0: {
 			TRACE();
-			ctx->remainingPaths = 0;
+			ctx->numPaths = 1;
 			break;
 		}
 		case 4: {
 			// read the number of remaining keys
 			uint32_t remainingPaths = parse_u4be(&view);
 			ASSERT(view_remainingSize(&view) == 0);
-			TRACE("num keys: %d", remainingPaths);
-			VALIDATE(remainingPaths <= MAX_PUBLIC_KEYS, ERR_INVALID_DATA);
+			VALIDATE(remainingPaths < MAX_PUBLIC_KEYS, ERR_INVALID_DATA);
+			ASSERT_TYPE(ctx->numPaths, uint16_t);
+			ASSERT(remainingPaths < UINT16_MAX);
 
-			ASSERT_TYPE(ctx->remainingPaths, uint16_t);
-			ASSERT(remainingPaths <= UINT16_MAX);
-			ctx->remainingPaths = (uint16_t) remainingPaths;
+			ctx->numPaths = (uint16_t) (remainingPaths + 1);
 			break;
 		}
 		default: {
@@ -180,14 +190,8 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		}
 	}
 
-	if (ctx->remainingPaths == 0) {
-		// no more keys follow, we are done
-		returnOneKey(true);
-		return;
-	}
-
 	// we ask for confirmation for export of the given number of public keys
-	security_policy_t policy = policyForGetPublicKeysInit(ctx->remainingPaths);
+	security_policy_t policy = policyForGetPublicKeysInit(ctx->numPaths);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 	{
@@ -218,14 +222,13 @@ void getPublicKeys_handleGetNextKeyAPDU(
 
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
-	VALIDATE(ctx->remainingPaths >= 1, ERR_INVALID_STATE);
-	ctx->remainingPaths--;
+	VALIDATE(ctx->currentPath < ctx->numPaths, ERR_INVALID_STATE);
 
 	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 	parsePath(&view);
 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
-	returnOneKey(false);
+	returnOneKey();
 }
 
 // ============================== MAIN HANDLER ==============================

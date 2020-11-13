@@ -101,11 +101,11 @@ static inline bool is_too_deep(const bip44_path_t* pathSpec)
 #define SHOW_UNLESS(expr)  if (!(expr)) return POLICY_SHOW_BEFORE_RESPONSE;
 
 
-security_policy_t policyForGetPublicKeysInit(size_t remainingPaths)
+security_policy_t policyForGetPublicKeysInit(size_t numPaths)
 {
-	ASSERT(remainingPaths > 0);
+	PROMPT_IF(numPaths > 1);
 
-	PROMPT_IF(true);
+	ALLOW_IF(true);
 }
 
 // Get extended public key and return it to the host
