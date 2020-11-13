@@ -21,6 +21,55 @@ static void parsePath(read_view_t* view)
 	BIP44_PRINTF(&ctx->pathSpec);
 }
 
+static void advanceStage()
+{
+	TRACE("Advancing from stage: %d", ctx->stage);
+
+	switch (ctx->stage) {
+
+	case GET_KEYS_STAGE_INIT:
+		ctx->stage = GET_KEYS_STAGE_GET_KEYS;
+
+		if (ctx->currentPath < ctx->numPaths) {
+			// there are more paths to be received
+			// so we don't want to advance beyond GET_KEYS_STAGE_GET_KEYS
+			break;
+		}
+
+	// intentional fallthrough
+
+	case GET_KEYS_STAGE_GET_KEYS:
+		ASSERT(ctx->currentPath == ctx->numPaths);
+		ctx->stage = GET_KEYS_STAGE_NONE;
+		ui_idle(); // we are done with this key export
+		break;
+
+	case SIGN_STAGE_NONE:
+	default:
+		ASSERT(false);
+	}
+}
+
+static void advanceStageIfAppropriate()
+{
+	switch (ctx->stage) {
+
+	case GET_KEYS_STAGE_INIT:
+		advanceStage();
+		break;
+
+	case GET_KEYS_STAGE_GET_KEYS:
+		if (ctx->currentPath == ctx->numPaths) {
+			advanceStage();
+		}
+		break;
+
+	case SIGN_STAGE_NONE:
+	default:
+		ASSERT(false);
+	}
+}
+
 // ============================== derivation and UI state machine for one key ==============================
 
 enum {
@@ -31,10 +80,10 @@ enum {
 	GET_KEY_UI_STEP_INVALID,
 } ;
 
-static void getPublicKeys_getOneKey_ui_runStep()
+static void getPublicKeys_respondOneKey_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
-	ui_callback_fn_t* this_fn = getPublicKeys_getOneKey_ui_runStep;
+	ui_callback_fn_t* this_fn = getPublicKeys_respondOneKey_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step);
 	UI_STEP(GET_KEY_UI_STEP_WARNING) {
@@ -60,18 +109,18 @@ static void getPublicKeys_getOneKey_ui_runStep()
 
 		io_send_buf(SUCCESS, (uint8_t*) &ctx->extPubKey, SIZEOF(ctx->extPubKey));
 		ctx->responseReadyMagic = 0; // just for safety
+		ui_displayBusy(); // needs to happen after I/O
 
-		if (ctx->currentPath < ctx->numPaths) {
-			ui_displayBusy(); // waiting for another APDU
-		} else {
-			ui_idle(); // we are done, display the main app screen
-		}
+		ctx->currentPath++;
+		TRACE("Current path: %u / %u", ctx->currentPath, ctx->numPaths);
+
+		advanceStageIfAppropriate();
 	}
 	UI_STEP_END(GET_KEY_UI_STEP_INVALID);
 }
 
 // derive the key described by ctx->pathSpec and run the ui state machine accordingly
-static void returnOneKey()
+static void promptAndRespondOneKey()
 {
 	ctx->responseReadyMagic = 0;
 
@@ -79,7 +128,6 @@ static void returnOneKey()
 	security_policy_t policy = (ctx->numPaths == 1) ?
 	                           policyForGetExtendedPublicKey(&ctx->pathSpec) :
 	                           policyForGetExtendedPublicKeyBulkExport(&ctx->pathSpec);
-
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -90,7 +138,6 @@ static void returnOneKey()
 		        & ctx->extPubKey
 		);
 		ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
-		ctx->currentPath++;
 	}
 
 	switch (policy) {
@@ -102,14 +149,15 @@ static void returnOneKey()
 	default:
 		ASSERT(false);
 	}
-	getPublicKeys_getOneKey_ui_runStep();
+
+	getPublicKeys_respondOneKey_ui_runStep();
 }
 
 // ============================== INIT ==============================
 
 enum {
 	HANDLE_INIT_UI_STEP_CONFIRM = 100,
-	HANDLE_INIT_UI_STEP_RESPOND,
+	HANDLE_INIT_UI_STEP_RESPOND, // WARNING: this must be the last valid step, see below
 	HANDLE_INIT_UI_STEP_INVALID,
 } ;
 
@@ -133,17 +181,11 @@ static void getPublicKeys_handleInit_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_INIT_UI_STEP_RESPOND) {
-
-		returnOneKey(); // runs another UI state machine
-
-		TRACE("current path index %d", ctx->currentPath);
-		if (ctx->currentPath < ctx->numPaths) {
-			ctx->stage = GET_KEYS_STAGE_GET_KEYS;
-		}
+		promptAndRespondOneKey(); // runs another UI state machine
 
 		// This return statement is needed to bail out from this UI state machine
 		// which would otherwise be in conflict with the (async) UI state
-		// machine triggered by returnOneKey. This works on the assumption
+		// machine triggered by promptAndRespondOneKey. This works on the assumption
 		// that HANDLE_INIT_UI_STEP_RESPOND is a terminal state of this
 		// UI state machine!
 		return;
@@ -169,12 +211,13 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		size_t remaining = view_remainingSize(&view);
 		switch (remaining) {
 		case 0: {
+			// number of remaining paths not given, we default to 0
 			TRACE();
 			ctx->numPaths = 1;
 			break;
 		}
 		case 4: {
-			// read the number of remaining keys
+			// read the number of remaining paths
 			uint32_t remainingPaths = parse_u4be(&view);
 			ASSERT(view_remainingSize(&view) == 0);
 			VALIDATE(remainingPaths < MAX_PUBLIC_KEYS, ERR_INVALID_DATA);
@@ -188,6 +231,9 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 			THROW(ERR_INVALID_DATA);
 		}
 		}
+
+		ASSERT(ctx->numPaths > 0);
+		ctx->currentPath = 0;
 	}
 
 	// we ask for confirmation for export of the given number of public keys
@@ -206,6 +252,7 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		}
 	}
 
+	// this UI machine is responsible for returning a key and advancing state
 	getPublicKeys_handleInit_ui_runStep();
 }
 
@@ -228,7 +275,7 @@ void getPublicKeys_handleGetNextKeyAPDU(
 	parsePath(&view);
 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
-	returnOneKey();
+	promptAndRespondOneKey();
 }
 
 // ============================== MAIN HANDLER ==============================
