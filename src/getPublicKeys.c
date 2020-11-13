@@ -185,9 +185,11 @@ static void getPublicKeys_handleInit_ui_runStep()
 
 		// This return statement is needed to bail out from this UI state machine
 		// which would otherwise be in conflict with the (async) UI state
-		// machine triggered by promptAndRespondOneKey. This works on the assumption
-		// that HANDLE_INIT_UI_STEP_RESPOND is a terminal state of this
-		// UI state machine!
+		// machine triggered by promptAndRespondOneKey.
+		// Those two machines share the ctx->ui_state variable.
+
+		// WARNING: This works under the assumption that HANDLE_INIT_UI_STEP_RESPOND
+		// is a terminal state of this UI state machine!
 		return;
 	}
 	UI_STEP_END(HANDLE_INIT_UI_STEP_INVALID);
