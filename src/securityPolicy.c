@@ -71,12 +71,21 @@ static inline bool is_too_deep(const bip44_path_t* pathSpec)
 	return bip44_containsMoreThanAddress(pathSpec);
 }
 
+
+#define DENY()                          return POLICY_DENY;
 #define DENY_IF(expr)      if (expr)    return POLICY_DENY;
 #define DENY_UNLESS(expr)  if (!(expr)) return POLICY_DENY;
+
 #define WARN_IF(expr)      if (expr)    return POLICY_PROMPT_WARN_UNUSUAL;
 #define WARN_UNLESS(expr)  if (!(expr)) return POLICY_PROMPT_WARN_UNUSUAL;
+
+#define PROMPT()                        return POLICY_PROMPT_BEFORE_RESPONSE;
 #define PROMPT_IF(expr)    if (expr)    return POLICY_PROMPT_BEFORE_RESPONSE;
+
+#define ALLOW()                         return POLICY_ALLOW_WITHOUT_PROMPT;
 #define ALLOW_IF(expr)     if (expr)    return POLICY_ALLOW_WITHOUT_PROMPT;
+
+#define SHOW()                          return POLICY_SHOW_BEFORE_RESPONSE;
 #define SHOW_IF(expr)      if (expr)    return POLICY_SHOW_BEFORE_RESPONSE;
 #define SHOW_UNLESS(expr)  if (!(expr)) return POLICY_SHOW_BEFORE_RESPONSE;
 
@@ -97,7 +106,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 
 	WARN_IF(is_too_deep(pathSpec));
 
-	PROMPT_IF(true);
+	PROMPT();
 }
 
 // Get extended public key and return it to the host within bulk key export
@@ -126,7 +135,7 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 		WARN_UNLESS(has_reasonable_address(pathSpec));
 	}
 
-	ALLOW_IF(true);
+	ALLOW();
 }
 
 // Derive address and return it to the host
@@ -138,7 +147,7 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 
 	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
 
-	PROMPT_IF(true);
+	PROMPT();
 }
 
 // Derive address and show it to the user
@@ -150,7 +159,7 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 
 	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
 
-	SHOW_IF(true);
+	SHOW();
 }
 
 
@@ -317,17 +326,17 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(pool_owner_t* owner)
 
 security_policy_t policyForSignTxStakePoolRegistrationMetadata()
 {
-	SHOW_IF(true);
+	SHOW();
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationNoMetadata()
 {
-	SHOW_IF(true);
+	SHOW();
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationConfirm()
 {
-	ALLOW_IF(true);
+	ALLOW();
 }
 
 // For each withdrawal
@@ -361,10 +370,10 @@ security_policy_t policyForSignTxWitness(
 
 security_policy_t policyForSignTxMetadata()
 {
-	SHOW_IF(true);
+	SHOW();
 }
 
 security_policy_t policyForSignTxConfirm()
 {
-	PROMPT_IF(true);
+	PROMPT();
 }
