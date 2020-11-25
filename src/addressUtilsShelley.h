@@ -78,6 +78,8 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 
 void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addressParams_t* params);
 
+bool isValidAddressParams(const addressParams_t* addressParams);
+
 
 #ifdef DEVEL
 void run_addressUtilsShelley_test();

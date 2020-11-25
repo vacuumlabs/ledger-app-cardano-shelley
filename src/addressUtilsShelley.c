@@ -507,3 +507,41 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 
 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 }
+
+static inline bool isSpendingPathConsistentWithAddressType(const address_type_t addressType, const bip44_path_t* spendingPath)
+{
+#define CHECK(cond) if (!(cond)) return false
+	// Byron derivation path is only valid for a Byron address
+	// the rest should be Shelley derivation scheme
+	if (addressType == BYRON) {
+		CHECK(bip44_hasByronPrefix(spendingPath));
+	} else {
+		CHECK(bip44_hasShelleyPrefix(spendingPath));
+	}
+
+	if (addressType == REWARD) {
+		CHECK(bip44_isValidStakingKeyPath(spendingPath));
+	} else {
+		CHECK(bip44_isValidAddressPath(spendingPath));
+	}
+
+	return true;
+#undef CHECK
+}
+
+static inline bool isValidStakingInfo(const addressParams_t* addressParams)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(isStakingInfoConsistentWithAddressType(addressParams));
+	if (addressParams->stakingChoice == STAKING_KEY_PATH) {
+		CHECK(bip44_isValidStakingKeyPath(&addressParams->stakingKeyPath));
+	}
+	return true;
+#undef CHECK
+}
+
+bool isValidAddressParams(const addressParams_t* addressParams)
+{
+	return isSpendingPathConsistentWithAddressType(addressParams->type, &addressParams->spendingKeyPath) &&
+	       isValidStakingInfo(addressParams);
+}
