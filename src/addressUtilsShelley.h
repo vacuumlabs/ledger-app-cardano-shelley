@@ -78,6 +78,8 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 
 void view_parseAddressParams(read_view_t* view, addressParams_t* params);
 
+bool isValidAddressParams(const addressParams_t* addressParams);
+
 
 #ifdef DEVEL
 void run_addressUtilsShelley_test();
