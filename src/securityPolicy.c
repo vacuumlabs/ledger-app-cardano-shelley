@@ -324,7 +324,7 @@ security_policy_t policyForSignTxTtl(uint32_t ttl)
 // does not evaluate all aspects for specific certificates
 security_policy_t policyForSignTxCertificate(
         const bool includeStakePoolRegistrationCertificate,
-        const uint8_t certificateType
+        const certificate_type_t certificateType
 )
 {
 	if (includeStakePoolRegistrationCertificate) {
@@ -340,7 +340,7 @@ security_policy_t policyForSignTxCertificate(
 
 // for certificates concerning staking keys and stake delegation
 security_policy_t policyForSignTxCertificateStaking(
-        const uint8_t certificateType,
+        const certificate_type_t certificateType,
         const bip44_path_t* stakingKeyPath
 )
 {

@@ -118,7 +118,7 @@ void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl);
 void txHashBuilder_enterCertificates(tx_hash_builder_t* builder);
 void txHashBuilder_addCertificate_stakingKey(
         tx_hash_builder_t* builder,
-        const int certificateType,
+        const certificate_type_t certificateType,
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize
 );
 void txHashBuilder_addCertificate_delegation(
