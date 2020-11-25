@@ -6,31 +6,11 @@
 
 // Helper macros
 
-static inline bool spending_path_is_consistent_with_address_type(address_type_t addressType, const bip44_path_t* spendingPath)
-{
-#define CHECK(cond) if (!(cond)) return false
-	// Byron derivation path is only valid for a Byron address
-	// the rest should be Shelley derivation scheme
-	if (addressType == BYRON) {
-		CHECK(bip44_hasByronPrefix(spendingPath));
-	} else {
-		CHECK(bip44_hasShelleyPrefix(spendingPath));
-	}
-
-	if (addressType == REWARD) {
-		CHECK(bip44_isValidStakingKeyPath(spendingPath));
-	} else {
-		CHECK(bip44_isValidAddressPath(spendingPath));
-	}
-
-	return true;
-#undef CHECK
-}
-
 // staking key path has the same account as the spending key path
-// assumes that the given address params are valid
 static inline bool is_standard_base_address(const addressParams_t* addressParams)
 {
+	ASSERT(isValidAddressParams(addressParams));
+
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(addressParams->type == BASE);
 	CHECK(addressParams->stakingChoice == STAKING_KEY_PATH);
@@ -41,17 +21,6 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 	        bip44_getAccount(&addressParams->spendingKeyPath)
 	);
 
-	return true;
-#undef CHECK
-}
-
-static inline bool staking_info_is_valid(const addressParams_t* addressParams)
-{
-#define CHECK(cond) if (!(cond)) return false
-	CHECK(isStakingInfoConsistentWithAddressType(addressParams));
-	if (addressParams->stakingChoice == STAKING_KEY_PATH) {
-		CHECK(bip44_isValidStakingKeyPath(&addressParams->stakingKeyPath));
-	}
 	return true;
 #undef CHECK
 }
@@ -79,11 +48,22 @@ static inline bool is_valid_witness(const bip44_path_t* pathSpec)
 	return bip44_isValidAddressPath(pathSpec);
 }
 
-// Both account and address are from small brute-forcable range
+// account is from a small brute-forcable range
+static inline bool has_reasonable_account(const bip44_path_t* pathSpec)
+{
+	return bip44_hasReasonableAccount(pathSpec);
+}
+
+// address is from a small brute-forcable range
+static inline bool has_reasonable_address(const bip44_path_t* pathSpec)
+{
+	return bip44_hasReasonableAddress(pathSpec);
+}
+
+// both account and address are from a small brute-forcable range
 static inline bool has_reasonable_account_and_address(const bip44_path_t* pathSpec)
 {
-	return bip44_hasReasonableAccount(pathSpec) &&
-	       bip44_hasReasonableAddress(pathSpec);
+	return has_reasonable_account(pathSpec) && has_reasonable_address(pathSpec);
 }
 
 static inline bool is_too_deep(const bip44_path_t* pathSpec)
@@ -131,9 +111,9 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 {
 	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
 
-	WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
+	WARN_UNLESS(has_reasonable_account(pathSpec));
 
-	WARN_IF(bip44_containsMoreThanAddress(pathSpec));
+	WARN_IF(is_too_deep(pathSpec));
 
 	PROMPT();
 }
@@ -146,23 +126,22 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 
 	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
 
-	WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
+	WARN_UNLESS(has_reasonable_account(pathSpec));
+
+	WARN_IF(is_too_deep(pathSpec));
 
 	// if they contain more than account, then the suffix after account
 	// has to be one of 2/0, 0/index, 1/index
 	if (bip44_containsMoreThanAccount(pathSpec)) {
-		WARN_IF(bip44_containsMoreThanAddress(pathSpec));
 		WARN_IF(bip44_containsChainType(pathSpec) && !bip44_containsAddress(pathSpec));
 
 		// we are left with paths of length 5
-		WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
 
-		// staking paths for reasonable accounts are OK
 		ALLOW_IF(bip44_isValidStakingKeyPath(pathSpec));
 
 		// only ordinary address paths remain
 		WARN_UNLESS(bip44_isValidAddressPath(pathSpec));
-		WARN_UNLESS(bip44_hasReasonableAddress(pathSpec));
+		WARN_UNLESS(has_reasonable_address(pathSpec));
 	}
 
 	ALLOW();
@@ -171,8 +150,8 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 // Derive address and return it to the host
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams)
 {
-	DENY_UNLESS(spending_path_is_consistent_with_address_type(addressParams->type, &addressParams->spendingKeyPath));
-	DENY_UNLESS(staking_info_is_valid(addressParams));
+	DENY_UNLESS(isValidAddressParams(addressParams));
+
 	DENY_IF(is_too_deep(&addressParams->spendingKeyPath));
 
 	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
@@ -183,8 +162,8 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 // Derive address and show it to the user
 security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams)
 {
-	DENY_UNLESS(spending_path_is_consistent_with_address_type(addressParams->type, &addressParams->spendingKeyPath));
-	DENY_UNLESS(staking_info_is_valid(addressParams));
+	DENY_UNLESS(isValidAddressParams(addressParams));
+
 	DENY_IF(is_too_deep(&addressParams->spendingKeyPath));
 
 	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
@@ -233,6 +212,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 
 	ALLOW_IF(isSigningPoolRegistrationAsOwner);
 
+	// network identification should be consistent across tx
 	ASSERT(rawAddressSize >= 1);
 	address_type_t addressType = getAddressType(rawAddressBuffer[0]);
 	if (addressType == BYRON) {
@@ -260,10 +240,11 @@ security_policy_t policyForSignTxOutputAddressParams(
 	// it also makes the tx signing faster if all outputs are given as addresses
 	DENY_IF(isSigningPoolRegistrationAsOwner);
 
-	DENY_UNLESS(spending_path_is_consistent_with_address_type(params->type, &params->spendingKeyPath));
-	DENY_UNLESS(staking_info_is_valid(params));
+	DENY_UNLESS(isValidAddressParams(params));
+
 	DENY_IF(is_too_deep(&params->spendingKeyPath));
 
+	// network identification should be consistent across tx
 	if (params->type == BYRON) {
 		DENY_IF(params->protocolMagic != protocolMagic);
 	} else { // shelley
