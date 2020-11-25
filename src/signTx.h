@@ -7,6 +7,7 @@
 #include "txHashBuilder.h"
 #include "bip44.h"
 #include "addressUtilsShelley.h"
+#include "signTxTypes.h"
 #include "signTxPoolRegistration.h"
 
 typedef enum {
@@ -69,9 +70,8 @@ typedef struct {
 typedef struct {
 	sign_tx_stage_t stage;
 
-	// the presence of a stake pool registration certificate
-	// significantly affects restrictions on the whole tx
-	bool isSigningPoolRegistrationAsOwner;
+	// significantly affects restrictions on the tx
+	sign_tx_usecase_t signTxUsecase;
 
 	uint16_t numInputs;
 	uint16_t numOutputs;

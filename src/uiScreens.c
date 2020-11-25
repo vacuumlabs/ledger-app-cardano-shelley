@@ -2,6 +2,8 @@
 #include "hexUtils.h"
 #include "textUtils.h"
 #include "cardanoCertificates.h"
+#include "signTxTypes.h"
+
 
 void ui_displayPathScreen(
         const char* screenHeader,

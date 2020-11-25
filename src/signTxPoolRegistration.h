@@ -20,11 +20,6 @@ typedef enum {
 	STAKE_POOL_REGISTRATION_FINISHED = 2835
 } sign_tx_pool_registration_state_t;
 
-enum {
-	SIGN_TX_POOL_OWNER_TYPE_PATH = 1,
-	SIGN_TX_POOL_OWNER_TYPE_KEY_HASH = 2,
-};
-
 typedef struct {
 	uint8_t url[POOL_METADATA_URL_MAX_LENGTH];
 	size_t urlSize;

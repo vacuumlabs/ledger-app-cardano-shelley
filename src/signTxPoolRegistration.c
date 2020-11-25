@@ -354,6 +354,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 			// further validation of the path in security policy below
 			TRACE("Owner given by path:");
 			BIP44_PRINTF(&subctx->owner.path);
+			PRINTF("\n");
 			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
 			subctx->numOwnersGivenByPath++;
@@ -366,7 +367,19 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		}
 	}
 
-	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(&subctx->owner);
+	security_policy_t policy = POLICY_DENY;
+	switch (subctx->owner.ownerType) {
+	case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
+		policy = policyForSignTxStakePoolRegistrationOwnerByKeyHash();
+		break;
+
+	case SIGN_TX_POOL_OWNER_TYPE_PATH:
+		policy = policyForSignTxStakePoolRegistrationOwnerByPath(&subctx->owner.path);
+		break;
+
+	default:
+		ASSERT(false);
+	}
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
