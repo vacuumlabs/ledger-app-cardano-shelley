@@ -46,16 +46,11 @@ typedef struct {
 } sign_tx_output_data_t;
 
 typedef struct {
-	uint8_t type;
+	certificate_type_t type;
 	bip44_path_t keyPath;
 	// only for specific types
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
 } sign_tx_certificate_data_t;
-
-typedef struct {
-	bip44_path_t path;
-	uint8_t signature[64];
-} sign_tx_witness_data_t;
 
 typedef struct {
 	bip44_path_t path;
@@ -65,6 +60,11 @@ typedef struct {
 typedef struct {
 	uint8_t metadataHash[METADATA_HASH_LENGTH];
 } sign_tx_metadata_data_t;
+
+typedef struct {
+	bip44_path_t path;
+	uint8_t signature[64];
+} sign_tx_witness_data_t;
 
 typedef struct {
 	sign_tx_stage_t stage;

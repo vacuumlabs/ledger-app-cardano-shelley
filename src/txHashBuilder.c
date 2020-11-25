@@ -217,7 +217,7 @@ void txHashBuilder_enterCertificates(tx_hash_builder_t* builder)
 // staking key certificate registration or deregistration
 void txHashBuilder_addCertificate_stakingKey(
         tx_hash_builder_t* builder,
-        const int certificateType,
+        const certificate_type_t certificateType,
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize
 )
 {

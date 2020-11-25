@@ -43,10 +43,10 @@ security_policy_t policyForSignTxTtl(uint32_t ttl);
 
 security_policy_t policyForSignTxCertificate(
         const bool includeStakePoolRegistrationCertificate,
-        const uint8_t certificateType
+        const certificate_type_t certificateType
 );
 security_policy_t policyForSignTxCertificateStaking(
-        const uint8_t certificateType,
+        const certificate_type_t certificateType,
         const bip44_path_t* stakingKeyPath
 );
 security_policy_t policyForSignTxCertificateStakePoolRegistration(
