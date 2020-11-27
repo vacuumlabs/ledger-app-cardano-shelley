@@ -137,6 +137,9 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 		WARN_IF(bip44_containsChainType(pathSpec) && !bip44_containsAddress(pathSpec));
 
 		// we are left with paths of length 5
+		WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
+
+		// staking paths for reasonable accounts are OK
 		ALLOW_IF(bip44_isValidStakingKeyPath(pathSpec));
 
 		// only ordinary address paths remain
@@ -365,12 +368,11 @@ security_policy_t policyForSignTxWitness(
 	if (isSigningPoolRegistrationAsOwner) {
 		DENY_UNLESS(is_valid_stake_pool_owner_path(pathSpec));
 	} else {
-		// TODO Perhaps we can relax this?
-		WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
-
-		// TODO deny this? or check for depth in is_valid_witness?
-		WARN_IF(is_too_deep(pathSpec));
+		// witness for input or withdrawal
+		DENY_IF(is_too_deep(pathSpec));
 	}
+
+	WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
 
 	ALLOW_IF(true);
 }

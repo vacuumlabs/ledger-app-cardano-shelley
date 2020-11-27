@@ -152,8 +152,6 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 	if (bip44_containsMoreThanAddress(pathSpec)) return false;
 	if (!bip44_hasShelleyPrefix(pathSpec)) return false;
 
-	if (!bip44_hasReasonableAccount(pathSpec)) return false;
-
 	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
 	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
 
