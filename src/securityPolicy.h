@@ -22,7 +22,13 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams);
 
 
-security_policy_t policyForSignTxInit(uint8_t networkId, uint32_t protocolMagic);
+security_policy_t policyForSignTxInit(
+        uint8_t networkId,
+        uint32_t protocolMagic,
+        uint16_t numOutputs,
+        uint16_t numWithdrawals,
+        bool isSigningPoolRegistrationAsOwner
+);
 
 security_policy_t policyForSignTxInput();
 
@@ -66,6 +72,12 @@ security_policy_t policyForSignTxWitness(
 );
 
 security_policy_t policyForSignTxConfirm();
+
+bool is_tx_network_verifiable(
+        uint16_t numOutputs,
+        uint16_t numWithdrawals,
+        bool isSigningPoolRegistrationAsOwner
+);
 
 
 static inline void ENSURE_NOT_DENIED(security_policy_t policy)

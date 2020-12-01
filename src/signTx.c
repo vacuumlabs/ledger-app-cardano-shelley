@@ -48,7 +48,13 @@ static inline void advanceStage()
 		ASSERT(ctx->currentInput == ctx->numInputs);
 		txHashBuilder_enterOutputs(&ctx->txHashBuilder);
 		ctx->stage = SIGN_STAGE_OUTPUTS;
-		break;
+
+		if (ctx->numOutputs > 0) {
+			// wait for output APDUs
+			break;
+		}
+
+	// intentional fallthrough
 
 	case SIGN_STAGE_OUTPUTS:
 		// we should have received all outputs
@@ -198,11 +204,20 @@ static void signTx_handleInit_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step);
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
-		ui_displayNetworkParamsScreen(
-		        "New transaction",
-		        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
-		        this_fn
-		);
+		if (is_tx_network_verifiable(ctx->numOutputs, ctx->numWithdrawals, ctx->isSigningPoolRegistrationAsOwner)) {
+			ui_displayNetworkParamsScreen(
+			        "New transaction",
+			        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
+			        this_fn
+			);
+		} else {
+			// technically, no withdrawals/pool reg. certificate as well, but the UI message would be too long
+			ui_displayPaginatedText(
+			        "New transaction",
+			        "no outputs, cannot verify network id",
+			        this_fn
+			);
+		}
 	}
 	UI_STEP(HANDLE_INIT_STEP_CONFIRM) {
 		ui_displayPrompt(
@@ -323,13 +338,11 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			VALIDATE(ctx->numWithdrawals == 0, ERR_INVALID_DATA);
 		}
 
-		// Current code design assumes at least one input and at least one output.
+		// Current code design assumes at least one input.
 		// If this is to be relaxed, stage switching logic needs to be re-visited.
-		// An input is needed for certificate replay protection (enforced by node).
-		// An output is needed to make sure the tx is signed for the correct
-		// network id and cannot be used on a different network by an adversary.
+		// However, an input is needed for certificate replay protection (enforced by node),
+		// so double-check this protection is no longer necessary before allowing no inputs.
 		VALIDATE(ctx->numInputs > 0, ERR_INVALID_DATA);
-		VALIDATE(ctx->numOutputs > 0, ERR_INVALID_DATA);
 
 		{
 			// Note(ppershing): do not allow more witnesses than necessary.
@@ -361,7 +374,10 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 	security_policy_t policy = policyForSignTxInit(
 	                                   ctx->commonTxData.networkId,
-	                                   ctx->commonTxData.protocolMagic
+	                                   ctx->commonTxData.protocolMagic,
+	                                   ctx->isSigningPoolRegistrationAsOwner,
+	                                   ctx->numOutputs,
+	                                   ctx->numWithdrawals
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
