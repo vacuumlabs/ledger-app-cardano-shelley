@@ -965,7 +965,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
 		VALIDATE(view_remainingSize(&view) == POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
-		os_memmove(certificateData->poolKeyHash, view.ptr, POOL_KEY_HASH_LENGTH);
+		view_memmove(certificateData->poolKeyHash, &view, POOL_KEY_HASH_LENGTH);
 		break;
 	}
 	default:
