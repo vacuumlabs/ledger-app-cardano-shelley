@@ -8,6 +8,7 @@ static const uint32_t CARDANO_CHAIN_STAKING_KEY = 2;
 
 static const uint32_t MAX_REASONABLE_ACCOUNT = 100;
 static const uint32_t MAX_REASONABLE_ADDRESS = 1000000;
+static const uint32_t MAX_REASONABLE_COLD_KEY_INDEX = 100;
 
 size_t bip44_parseFromWire(
         bip44_path_t* pathSpec,
@@ -85,6 +86,12 @@ uint32_t bip44_getAccount(const bip44_path_t* pathSpec)
 	return pathSpec->path[BIP44_I_ACCOUNT];
 }
 
+uint32_t bip44_getColdKeyIndex(const bip44_path_t* pathSpec)
+{
+	ASSERT(pathSpec->length > BIP44_I_POOL_COLD_KEY);
+	return pathSpec->path[BIP44_I_POOL_COLD_KEY];
+}
+
 bool bip44_containsMoreThanAccount(const bip44_path_t* pathSpec)
 {
 	return (pathSpec->length > BIP44_I_ACCOUNT + 1);
@@ -96,6 +103,15 @@ bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
 	uint32_t account = bip44_getAccount(pathSpec);
 	if (!isHardened(account)) return false;
 	return unharden(account) <= MAX_REASONABLE_ACCOUNT;
+}
+
+bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec)
+{
+	if (!bip44_isValidPoolColdKeyPath(pathSpec)) return false;
+	uint32_t cold_key_index = bip44_getColdKeyIndex(pathSpec);
+
+	if (!isHardened(cold_key_index)) return false;
+	return unharden(cold_key_index) <= MAX_REASONABLE_COLD_KEY_INDEX;
 }
 
 // ChainType
@@ -156,6 +172,19 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
 
 	return (bip44_getAddressValue(pathSpec) == 0);
+}
+
+// Pool cold keys
+bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec)
+{
+	#define CHECK(cond) if (!(cond)) return false
+		CHECK(pathSpec->length == POOL_COLD_KEY_PATH_LENGTH);
+		CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_POOL_COLD_KEY | HARDENED_BIP32));
+		CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+		CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY_USECASE] == 0);
+		CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY] >= HARDENED_BIP32);
+		return true;
+	#undef CHECK
 }
 
 // Futher

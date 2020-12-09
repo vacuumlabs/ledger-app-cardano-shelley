@@ -79,6 +79,7 @@ bool is_tx_network_verifiable(
         bool isSigningPoolRegistrationAsOwner
 );
 
+security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec);
 
 static inline void ENSURE_NOT_DENIED(security_policy_t policy)
 {

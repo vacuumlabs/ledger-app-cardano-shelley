@@ -7,6 +7,7 @@
 #include "getVersion.h"
 #include "getSerial.h"
 #include "getPublicKeys.h"
+#include "getPoolColdPublicKey.h"
 #include "runTests.h"
 #include "errors.h"
 #include "deriveAddress.h"
@@ -26,6 +27,7 @@ handler_fn_t* lookupHandler(uint8_t ins)
 		// 0x1* -  public-key/address related
 		CASE(0x10, getPublicKeys_handleAPDU);
 		CASE(0x11, deriveAddress_handleAPDU);
+		CASE(0x12, getPoolColdPublicKey_handleAPDU);
 
 		// 0x2* -  signing-transaction related
 		CASE(0x21, signTx_handleAPDU);
