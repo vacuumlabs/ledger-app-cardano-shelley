@@ -720,7 +720,7 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 			md->urlSize = view_remainingSize(&view);
 			VALIDATE(md->urlSize <= POOL_METADATA_URL_MAX_LENGTH, ERR_INVALID_DATA);
 			ASSERT(SIZEOF(md->url) >= md->urlSize);
-			os_memmove(md->url, view.ptr, SIZEOF(md->url));
+			os_memmove(md->url, view.ptr, md->urlSize);
 			view_skipBytes(&view, md->urlSize);
 			str_validateTextBuffer(md->url, md->urlSize);
 		}
