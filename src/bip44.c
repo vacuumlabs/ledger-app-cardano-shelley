@@ -9,6 +9,11 @@ static const uint32_t CARDANO_CHAIN_STAKING_KEY = 2;
 static const uint32_t MAX_REASONABLE_ACCOUNT = 100;
 static const uint32_t MAX_REASONABLE_ADDRESS = 1000000;
 
+#ifdef POOL_OPERATOR_APP
+static const uint32_t MAX_REASONABLE_COLD_KEY_INDEX = 100;
+#endif // POOL_OPERATOR_APP
+
+
 size_t bip44_parseFromWire(
         bip44_path_t* pathSpec,
         const uint8_t *dataBuffer, size_t dataSize
@@ -72,6 +77,18 @@ bool bip44_hasValidCardanoPrefix(const bip44_path_t* pathSpec)
 	return bip44_hasByronPrefix(pathSpec) || bip44_hasShelleyPrefix(pathSpec);
 }
 
+#ifdef POOL_OPERATOR_APP
+bool bip44_hasValidCardanoPoolColdKeyPrefix(const bip44_path_t* pathSpec)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_POOL_COLD_KEY | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+	return true;
+#undef CHECK
+}
+#endif // POOL_OPERATOR_APP
+
 // Account
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec)
@@ -85,6 +102,14 @@ uint32_t bip44_getAccount(const bip44_path_t* pathSpec)
 	return pathSpec->path[BIP44_I_ACCOUNT];
 }
 
+#ifdef POOL_OPERATOR_APP
+uint32_t bip44_getColdKeyIndex(const bip44_path_t* pathSpec)
+{
+	ASSERT(pathSpec->length > BIP44_I_POOL_COLD_KEY);
+	return pathSpec->path[BIP44_I_POOL_COLD_KEY];
+}
+#endif // POOL_OPERATOR_APP
+
 bool bip44_containsMoreThanAccount(const bip44_path_t* pathSpec)
 {
 	return (pathSpec->length > BIP44_I_ACCOUNT + 1);
@@ -97,6 +122,17 @@ bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
 	if (!isHardened(account)) return false;
 	return unharden(account) <= MAX_REASONABLE_ACCOUNT;
 }
+
+#ifdef POOL_OPERATOR_APP
+bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec)
+{
+	if (!bip44_isValidPoolColdKeyPath(pathSpec)) return false;
+	uint32_t cold_key_index = bip44_getColdKeyIndex(pathSpec);
+
+	if (!isHardened(cold_key_index)) return false;
+	return unharden(cold_key_index) <= MAX_REASONABLE_COLD_KEY_INDEX;
+}
+#endif // POOL_OPERATOR_APP
 
 // ChainType
 
@@ -142,7 +178,7 @@ bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec)
 // path is valid as the spending path in all addresses except REWARD
 bool bip44_isValidAddressPath(const bip44_path_t* pathSpec)
 {
-	return bip44_hasValidCardanoPrefix(pathSpec) &&
+	return bip44_hasValidCardanoWalletPrefix(pathSpec) &&
 	       bip44_hasValidChainTypeForAddress(pathSpec) &&
 	       bip44_containsAddress(pathSpec);
 }
@@ -160,7 +196,20 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 	return (bip44_getAddressValue(pathSpec) == 0);
 }
 
-// Futher
+#ifdef POOL_OPERATOR_APP
+bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec)
+{
+	#define CHECK(cond) if (!(cond)) return false
+		CHECK(pathSpec->length == POOL_COLD_KEY_PATH_LENGTH);
+		CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_POOL_COLD_KEY | HARDENED_BIP32));
+		CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+		CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY_USECASE] == 0);
+		CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY] >= HARDENED_BIP32);
+		return true;
+	#undef CHECK
+}
+#endif // POOL_OPERATOR_APP
+
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 {
 	return (pathSpec->length > BIP44_I_ADDRESS + 1);

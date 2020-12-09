@@ -16,7 +16,13 @@ typedef struct {
 
 static const uint32_t PURPOSE_BYRON = 44;
 static const uint32_t PURPOSE_SHELLEY = 1852;
+
+#ifdef POOL_OPERATOR_APP
+static const uint32_t PURPOSE_POOL_COLD_KEY = 1853;
+#endif // POOL_OPERATOR_APP
+
 static const uint32_t ADA_COIN_TYPE = 1815;
+static const uint32_t POOL_COLD_KEY_PATH_LENGTH = 4;
 
 static const uint32_t HARDENED_BIP32 = ((uint32_t) 1 << 31);
 
@@ -33,12 +39,16 @@ enum {
 	BIP44_I_CHAIN = 3,
 	BIP44_I_ADDRESS = 4,
 	BIP44_I_REST = 5,
+
+	// cold key derivation path specific enums
+	BIP44_I_POOL_COLD_KEY_USECASE = 2,
+	BIP44_I_POOL_COLD_KEY = 3,
 };
 
 
 bool bip44_hasByronPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec);
-bool bip44_hasValidCardanoPrefix(const bip44_path_t* pathSpec);
+bool bip44_hasValidCardanoWalletPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
 uint32_t bip44_getAccount(const bip44_path_t* pathSpec);
@@ -54,6 +64,9 @@ bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec);
 bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
+
+bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec);
+bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec);
 
 bool isHardened(uint32_t value);
 uint32_t unharden(uint32_t value);

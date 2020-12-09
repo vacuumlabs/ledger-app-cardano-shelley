@@ -149,6 +149,16 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	ALLOW();
 }
 
+#ifdef POOL_OPERATOR_APP
+security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec)
+{
+	DENY_UNLESS(bip44_isValidPoolColdKeyPath(pathSpec));
+	WARN_UNLESS(bip44_hasReasonablePoolColdKeyIndex(pathSpec));
+
+	PROMPT_IF(true);
+}
+#endif // POOL_OPERATOR_APP
+
 // Derive address and return it to the host
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams)
 {

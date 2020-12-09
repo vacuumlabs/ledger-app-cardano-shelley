@@ -13,6 +13,9 @@ security_policy_t policyForGetPublicKeysInit(size_t numPaths);
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec);
 security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec);
 
+#ifdef POOL_OPERATOR_APP
+security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec);
+#endif // POOL_OPERATOR_APP
 
 security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams);
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams);
@@ -103,5 +106,7 @@ bool is_tx_network_verifiable(
         uint16_t numOutputs,
         uint16_t numWithdrawals
 );
+
+security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec);
 
 #endif // H_CARDANO_APP_SECURITY_POLICY
