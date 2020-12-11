@@ -439,7 +439,7 @@ void ui_displayPoolOwnerScreen(
 	}
 
 	// we display the owner as bech32-encoded reward address for his staking key
-	uint8_t rewardAddress[1 + ADDRESS_KEY_HASH_LENGTH];
+	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 	{
 		if (owner->ownerType == SIGN_TX_POOL_OWNER_TYPE_PATH) {
 			addressParams_t rewardAddressParams = {

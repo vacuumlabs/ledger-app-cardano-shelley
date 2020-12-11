@@ -25,6 +25,7 @@ uint8_t constructShelleyAddressHeader(address_type_t type, uint8_t networkId);
 uint8_t getNetworkId(uint8_t addressHeader);
 bool isValidNetworkId(uint8_t networkId);
 
+
 // describes which staking info should be incorporated into address
 // (see stakingChoice in addressParams_t)
 typedef enum {
