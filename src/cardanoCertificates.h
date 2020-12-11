@@ -21,7 +21,7 @@ typedef struct {
 	uint64_t cost;
 	uint64_t marginNumerator;
 	uint64_t marginDenominator;
-	uint8_t rewardAccount[1 + ADDRESS_KEY_HASH_LENGTH];
+	uint8_t rewardAccount[REWARD_ACCOUNT_SIZE];
 } pool_registration_params_t;
 
 typedef struct {

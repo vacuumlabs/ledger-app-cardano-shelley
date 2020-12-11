@@ -302,7 +302,7 @@ static size_t deriveAddress_reward(
 		// no staking data
 	}
 
-	const int ADDRESS_LENGTH = 1 + ADDRESS_KEY_HASH_LENGTH;
+	const int ADDRESS_LENGTH = REWARD_ACCOUNT_SIZE;
 	ASSERT(view_processedSize(&out) == ADDRESS_LENGTH);
 
 	return ADDRESS_LENGTH;
@@ -327,7 +327,7 @@ size_t constructRewardAddress(
 		view_appendData(&out, stakingKeyHashBuffer, stakingKeyHashSize);
 	}
 
-	const int ADDRESS_LENGTH = 1 + ADDRESS_KEY_HASH_LENGTH;
+	const int ADDRESS_LENGTH = REWARD_ACCOUNT_SIZE;
 	ASSERT(view_processedSize(&out) == ADDRESS_LENGTH);
 
 	return ADDRESS_LENGTH;

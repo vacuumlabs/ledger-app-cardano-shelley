@@ -20,6 +20,8 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 #define MINTING_POLICY_ID_SIZE 28
 #define ASSET_NAME_SIZE_MAX 32
 
+#define REWARD_ACCOUNT_SIZE (1 + ADDRESS_KEY_HASH_LENGTH)
+
 // for Shelley, address is at most 1 + 28 + 28 = 57 bytes,
 // encoded in bech32 as 10 (prefix) + 8/5 * 57 + 6 (checksum) = 108 chars
 

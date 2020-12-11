@@ -1020,7 +1020,7 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	}
 
 	{
-		uint8_t rewardAddress[1 + ADDRESS_KEY_HASH_LENGTH];
+		uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 		{
 			addressParams_t rewardAddressParams = {
 				.type = REWARD,
