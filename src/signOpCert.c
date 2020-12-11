@@ -50,10 +50,9 @@ void signOpCert_handleAPDU(
         TRACE_BUFFER(wireDataBuffer, wireDataSize);
         read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-        VALIDATE(view_remainingSize(&view) >= KES_PUBLIC_KEY_LENGTH, ERR_INVALID_DATA);
         STATIC_ASSERT(SIZEOF(ctx->kesPublicKey) == KES_PUBLIC_KEY_LENGTH, "wrong KES public key size");
-        os_memmove(ctx->kesPublicKey, view.ptr, KES_PUBLIC_KEY_LENGTH);
-        view_skipBytes(&view, KES_PUBLIC_KEY_LENGTH);
+		VALIDATE(view_remainingSize(&view) >= KES_PUBLIC_KEY_LENGTH, ERR_INVALID_DATA);
+        view_memmove(ctx->kesPublicKey, view.ptr, KES_PUBLIC_KEY_LENGTH);
 
         VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
         ctx->kesPeriod = parse_u8be(&view);
