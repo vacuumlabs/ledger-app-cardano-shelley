@@ -22,6 +22,8 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 
 #define REWARD_ACCOUNT_SIZE (1 + ADDRESS_KEY_HASH_LENGTH)
 
+#define OP_CERT_BODY_LENGTH 48
+
 // for Shelley, address is at most 1 + 28 + 28 = 57 bytes,
 // encoded in bech32 as 10 (prefix) + 8/5 * 57 + 6 (checksum) = 108 chars
 // reward accounts are just 1 + 28 = 29 bytes,

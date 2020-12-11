@@ -6,6 +6,7 @@
 #include "deriveAddress.h"
 #include "getPoolColdPublicKey.h"
 #include "signTx.h"
+#include "signOpCert.h"
 
 
 typedef union {
@@ -14,6 +15,10 @@ typedef union {
 	ins_get_pool_cold_pubkey_context_t getPoolColdPublicKeyContext;
 	ins_derive_address_context_t deriveAddressContext;
 	ins_sign_tx_context_t signTxContext;
+
+	#ifdef POOL_OPERATOR_APP
+	ins_sign_op_cert_context_t signOpCertContext;
+	#endif // POOL_OPERATOR_APP
 } instructionState_t;
 
 // Note(instructions are uint8_t but we have a special INS_NONE value

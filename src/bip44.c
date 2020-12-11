@@ -72,7 +72,7 @@ bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec)
 #undef CHECK
 }
 
-bool bip44_hasValidCardanoPrefix(const bip44_path_t* pathSpec)
+bool bip44_hasValidCardanoWalletPrefix(const bip44_path_t* pathSpec)
 {
 	return bip44_hasByronPrefix(pathSpec) || bip44_hasShelleyPrefix(pathSpec);
 }
@@ -199,14 +199,13 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 #ifdef POOL_OPERATOR_APP
 bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec)
 {
-	#define CHECK(cond) if (!(cond)) return false
-		CHECK(pathSpec->length == POOL_COLD_KEY_PATH_LENGTH);
-		CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_POOL_COLD_KEY | HARDENED_BIP32));
-		CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
-		CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY_USECASE] == 0);
-		CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY] >= HARDENED_BIP32);
-		return true;
-	#undef CHECK
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(pathSpec->length == BIP44_I_POOL_COLD_KEY + 1);
+	CHECK(bip44_hasValidCardanoPoolColdKeyPrefix(pathSpec));
+	CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY_USECASE] == 0);
+	CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY] >= HARDENED_BIP32);
+	return true;
+#undef CHECK
 }
 #endif // POOL_OPERATOR_APP
 

@@ -12,6 +12,7 @@
 #include "errors.h"
 #include "deriveAddress.h"
 #include "signTx.h"
+#include "signOpCert.h"
 
 // The APDU protocol uses a single-byte instruction code (INS) to specify
 // which command should be executed. We'll use this code to dispatch on a
@@ -34,6 +35,10 @@ handler_fn_t* lookupHandler(uint8_t ins)
 
 		// 0x2* -  signing related
 		CASE(0x21, signTx_handleAPDU);
+
+		#ifdef POOL_OPERATOR_APP
+		CASE(0x22, signOpCert_handleAPDU);
+		#endif // POOL_OPERATOR_APP
 
 		#ifdef DEVEL
 		// 0xF* -  debug_mode related

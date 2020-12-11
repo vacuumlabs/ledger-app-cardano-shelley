@@ -27,7 +27,7 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 
 static inline bool has_cardano_prefix_and_any_account(const bip44_path_t* pathSpec)
 {
-	return bip44_hasValidCardanoPrefix(pathSpec) &&
+	return bip44_hasValidCardanoWalletPrefix(pathSpec) &&
 	       bip44_containsAccount(pathSpec);
 }
 
@@ -634,3 +634,10 @@ security_policy_t policyForSignTxConfirm()
 {
 	PROMPT();
 }
+
+#ifdef POOL_OPERATOR_APP
+security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
+{
+	return policyForGetPoolColdPublicKey(poolColdKeyPathSpec);
+}
+#endif // POOL_OPERATOR_APP

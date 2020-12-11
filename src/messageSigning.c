@@ -1,6 +1,7 @@
 #include "messageSigning.h"
 #include "cardano.h"
 #include "keyDerivation.h"
+#include "bip44.h"
 
 void signRawMessage(privateKey_t* privateKey,
                     const uint8_t* messageBuffer, size_t messageSize,
@@ -30,9 +31,9 @@ void signRawMessage(privateKey_t* privateKey,
 	os_memmove(outBuffer, signature, signatureSize);
 }
 
-void getTxWitness(bip44_path_t* pathSpec,
-                  const uint8_t* txHashBuffer, size_t txHashSize,
-                  uint8_t* outBuffer, size_t outSize)
+void signRawMessageWithPath(bip44_path_t* pathSpec,
+                            const uint8_t* messageBuffer, size_t messageSize,
+                            uint8_t* outBuffer, size_t outSize)
 {
 	chain_code_t chainCode;
 	privateKey_t privateKey;
@@ -43,11 +44,9 @@ void getTxWitness(bip44_path_t* pathSpec,
 		TRY {
 			derivePrivateKey(pathSpec, &chainCode, &privateKey);
 
-			ASSERT(txHashSize == TX_HASH_LENGTH);
-
 			signRawMessage(
 			        &privateKey,
-			        txHashBuffer, txHashSize,
+			        messageBuffer, messageSize,
 			        outBuffer, outSize
 			);
 		}
@@ -57,3 +56,22 @@ void getTxWitness(bip44_path_t* pathSpec,
 		}
 	} END_TRY;
 }
+
+void getTxWitness(bip44_path_t* pathSpec,
+                  const uint8_t* txHashBuffer, size_t txHashSize,
+                  uint8_t* outBuffer, size_t outSize)
+{
+	ASSERT(txHashSize == TX_HASH_LENGTH);
+	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
+}
+
+#ifdef POOL_OPERATOR_APP
+void getOpCertSignature(bip44_path_t* pathSpec,
+                        const uint8_t* opCertBodyBuffer, size_t opCertBodySize,
+                        uint8_t* outBuffer, size_t outSize)
+{
+	ASSERT(opCertBodySize == OP_CERT_BODY_LENGTH);
+	ASSERT(bip44_isValidPoolColdKeyPath(pathSpec));
+	signRawMessageWithPath(pathSpec, opCertBodyBuffer, opCertBodySize, outBuffer, outSize);
+}
+#endif // POOL_OPERATOR_APP

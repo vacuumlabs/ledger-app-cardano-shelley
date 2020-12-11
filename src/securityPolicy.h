@@ -107,6 +107,9 @@ bool is_tx_network_verifiable(
         uint16_t numWithdrawals
 );
 
+#ifdef POOL_OPERATOR_APP
 security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec);
+security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec);
+#endif // POOL_OPERATOR_APP
 
 #endif // H_CARDANO_APP_SECURITY_POLICY
