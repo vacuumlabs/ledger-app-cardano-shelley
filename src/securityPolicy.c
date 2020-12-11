@@ -411,3 +411,8 @@ security_policy_t policyForSignTxConfirm()
 {
 	PROMPT_IF(true);
 }
+
+security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
+{
+	return policyForGetPoolColdPublicKey(poolColdKeyPathSpec);
+}

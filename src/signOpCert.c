@@ -1,0 +1,170 @@
+#include "common.h"
+
+#include "signOpCert.h"
+#include "keyDerivation.h"
+#include "endian.h"
+#include "state.h"
+#include "uiHelpers.h"
+#include "uiScreens.h"
+#include "securityPolicy.h"
+#include "messageSigning.h"
+
+static ins_sign_op_cert_context_t* ctx = &(instructionState.signOpCertContext);
+
+
+static int16_t RESPONSE_READY_MAGIC = 31678;
+
+// forward declaration
+static void signOpCert_ui_runStep();
+enum {
+	UI_STEP_WARNING = 100,
+    UI_STEP_CONFIRM_START,
+	UI_STEP_DISPLAY_POOL_COLD_KEY_PATH,
+    UI_STEP_DISPLAY_KES_PUBLIC_KEY,
+    UI_STEP_DISPLAY_KES_PERIOD,
+    UI_STEP_DISPLAY_ISSUE_COUNTER,
+	UI_STEP_CONFIRM,
+	UI_STEP_RESPOND,
+	UI_STEP_INVALID,
+};
+
+void signOpCert_handleAPDU(
+        uint8_t p1,
+        uint8_t p2,
+        uint8_t *wireDataBuffer,
+        size_t wireDataSize,
+        bool isNewCall
+)
+{
+	// Initialize state
+	if (isNewCall) {
+		explicit_bzero(ctx, SIZEOF(*ctx));
+	}
+	ctx->responseReadyMagic = 0;
+
+	// Validate params
+	VALIDATE(p1 == P1_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+
+    {
+        TRACE_BUFFER(wireDataBuffer, wireDataSize);
+        read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+
+        VALIDATE(view_remainingSize(&view) >= KES_PUBLIC_KEY_LENGTH, ERR_INVALID_DATA);
+        STATIC_ASSERT(SIZEOF(ctx->kesPublicKey) == KES_PUBLIC_KEY_LENGTH, "wrong KES public key size");
+        os_memmove(ctx->kesPublicKey, view.ptr, KES_PUBLIC_KEY_LENGTH);
+        view_skipBytes(&view, KES_PUBLIC_KEY_LENGTH);
+
+        VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
+        ctx->kesPeriod = parse_u8be(&view);
+
+        VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
+        ctx->issueCounter = parse_u8be(&view);
+
+        view_skipBytes(&view, bip44_parseFromWire(&ctx->poolColdKeyPathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
+
+        ASSERT(view_remainingSize(&view) == 0);
+    }
+
+	// Check security policy
+	security_policy_t policy = policyForSignOpCert(&ctx->poolColdKeyPathSpec);
+	ENSURE_NOT_DENIED(policy);
+
+    {
+        uint8_t opCertBodyBuffer[OP_CERT_BODY_LENGTH];
+        write_view_t opCertBodyBufferView = make_write_view(opCertBodyBuffer, opCertBodyBuffer + OP_CERT_BODY_LENGTH);
+
+        view_appendData(&opCertBodyBufferView, (const uint8_t*) &ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey));
+        view_appendData(&opCertBodyBufferView, (uint8_t*) &ctx->issueCounter, sizeof(ctx->issueCounter));
+        view_appendData(&opCertBodyBufferView, (uint8_t*) &ctx->kesPeriod, sizeof(ctx->kesPeriod));
+
+        ASSERT(view_processedSize(&opCertBodyBufferView) == OP_CERT_BODY_LENGTH);
+        
+        getOpCertSignature(
+	        & ctx->poolColdKeyPathSpec,
+            opCertBodyBuffer,
+            OP_CERT_BODY_LENGTH,
+            ctx->signature,
+            SIZEOF(ctx->signature)
+	    );
+    }
+	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
+
+	switch (policy) {
+#	define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
+		CASE(POLICY_PROMPT_WARN_UNUSUAL,    UI_STEP_WARNING);
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, UI_STEP_CONFIRM_START);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   UI_STEP_RESPOND);
+#	undef   CASE
+	default:
+		ASSERT(false);
+	}
+	signOpCert_ui_runStep();
+}
+
+static void signOpCert_ui_runStep()
+{
+	ui_callback_fn_t* this_fn = signOpCert_ui_runStep;
+
+	UI_STEP_BEGIN(ctx->ui_step);
+
+	UI_STEP(UI_STEP_WARNING) {
+		ui_displayPaginatedText(
+		        "Unusual request",
+		        "Proceed with care",
+		        this_fn
+		);
+	}
+    UI_STEP(UI_STEP_CONFIRM_START) {
+		ui_displayPrompt(
+		        "Start new",
+		        "operational certificate?",
+		        this_fn,
+		        respond_with_user_reject
+		);
+	}
+	UI_STEP(UI_STEP_DISPLAY_POOL_COLD_KEY_PATH) {
+		ui_displayPathScreen("Pool cold key path", &ctx->poolColdKeyPathSpec, this_fn);
+	}
+    UI_STEP(UI_STEP_DISPLAY_KES_PUBLIC_KEY) {
+		ui_displayHexBufferScreen(
+		        "KES public key",
+		        ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey),
+		        this_fn
+		);
+	}
+    UI_STEP(UI_STEP_DISPLAY_KES_PERIOD) {
+        char kesPeriodString[50];
+		snprintf(kesPeriodString, SIZEOF(kesPeriodString), "%llu", ctx->kesPeriod);
+		ui_displayPaginatedText(
+		        "KES period",
+		        kesPeriodString,
+		        this_fn
+		);
+	}
+    UI_STEP(UI_STEP_DISPLAY_ISSUE_COUNTER) {
+		char issueCounterString[50];
+		snprintf(issueCounterString, SIZEOF(issueCounterString), "%llu", ctx->kesPeriod);
+		ui_displayPaginatedText(
+		        "Issue counter",
+		        issueCounterString,
+		        this_fn
+		);
+	}
+	UI_STEP(UI_STEP_CONFIRM) {
+		ui_displayPrompt(
+		        "Confirm",
+		        "operational certificate?",
+		        this_fn,
+		        respond_with_user_reject
+		);
+	}
+	UI_STEP(UI_STEP_RESPOND) {
+		ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
+
+		io_send_buf(SUCCESS, (uint8_t*) &ctx->signature, SIZEOF(ctx->signature));
+		ui_idle();
+
+	}
+	UI_STEP_END(UI_STEP_INVALID);
+}

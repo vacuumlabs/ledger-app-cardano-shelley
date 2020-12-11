@@ -17,6 +17,7 @@ security_policy_t policyForGetPublicKeysInit(size_t numPaths);
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec);
 security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec);
 
+security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec);
 
 security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams);
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams);
@@ -80,6 +81,7 @@ bool is_tx_network_verifiable(
 );
 
 security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec);
+security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec);
 
 static inline void ENSURE_NOT_DENIED(security_policy_t policy)
 {

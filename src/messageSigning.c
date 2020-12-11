@@ -30,8 +30,8 @@ void signRawMessage(privateKey_t* privateKey,
 	os_memmove(outBuffer, signature, signatureSize);
 }
 
-void getTxWitness(bip44_path_t* pathSpec,
-                  const uint8_t* txHashBuffer, size_t txHashSize,
+void signRawMessageWithPath(bip44_path_t* pathSpec,
+                  const uint8_t* messageBuffer, size_t messageSize,
                   uint8_t* outBuffer, size_t outSize)
 {
 	chain_code_t chainCode;
@@ -43,11 +43,9 @@ void getTxWitness(bip44_path_t* pathSpec,
 		TRY {
 			derivePrivateKey(pathSpec, &chainCode, &privateKey);
 
-			ASSERT(txHashSize == TX_HASH_LENGTH);
-
 			signRawMessage(
 			        &privateKey,
-			        txHashBuffer, txHashSize,
+			        messageBuffer, messageSize,
 			        outBuffer, outSize
 			);
 		}
@@ -56,4 +54,20 @@ void getTxWitness(bip44_path_t* pathSpec,
 			explicit_bzero(&chainCode, SIZEOF(chainCode));
 		}
 	} END_TRY;
+}
+
+void getTxWitness(bip44_path_t* pathSpec,
+                  const uint8_t* txHashBuffer, size_t txHashSize,
+                  uint8_t* outBuffer, size_t outSize)
+{
+	ASSERT(txHashSize == TX_HASH_LENGTH);
+	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
+}
+
+void getOpCertSignature(bip44_path_t* pathSpec,
+                  const uint8_t* opCertBodyBuffer, size_t opCertBodySize,
+                  uint8_t* outBuffer, size_t outSize)
+{
+	ASSERT(opCertBodySize == OP_CERT_BODY_LENGTH);
+	signRawMessageWithPath(pathSpec, opCertBodyBuffer, opCertBodySize, outBuffer, outSize);
 }
