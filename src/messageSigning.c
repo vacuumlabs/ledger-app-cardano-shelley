@@ -31,8 +31,8 @@ void signRawMessage(privateKey_t* privateKey,
 }
 
 void signRawMessageWithPath(bip44_path_t* pathSpec,
-                  const uint8_t* messageBuffer, size_t messageSize,
-                  uint8_t* outBuffer, size_t outSize)
+                            const uint8_t* messageBuffer, size_t messageSize,
+                            uint8_t* outBuffer, size_t outSize)
 {
 	chain_code_t chainCode;
 	privateKey_t privateKey;
@@ -65,8 +65,8 @@ void getTxWitness(bip44_path_t* pathSpec,
 }
 
 void getOpCertSignature(bip44_path_t* pathSpec,
-                  const uint8_t* opCertBodyBuffer, size_t opCertBodySize,
-                  uint8_t* outBuffer, size_t outSize)
+                        const uint8_t* opCertBodyBuffer, size_t opCertBodySize,
+                        uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(opCertBodySize == OP_CERT_BODY_LENGTH);
 	signRawMessageWithPath(pathSpec, opCertBodyBuffer, opCertBodySize, outBuffer, outSize);

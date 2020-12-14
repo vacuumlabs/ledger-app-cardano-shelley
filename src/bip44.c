@@ -177,14 +177,14 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 // Pool cold keys
 bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec)
 {
-	#define CHECK(cond) if (!(cond)) return false
-		CHECK(pathSpec->length == POOL_COLD_KEY_PATH_LENGTH);
-		CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_POOL_COLD_KEY | HARDENED_BIP32));
-		CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
-		CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY_USECASE] == 0);
-		CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY] >= HARDENED_BIP32);
-		return true;
-	#undef CHECK
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(pathSpec->length == POOL_COLD_KEY_PATH_LENGTH);
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_POOL_COLD_KEY | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY_USECASE] == 0);
+	CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY] >= HARDENED_BIP32);
+	return true;
+#undef CHECK
 }
 
 // Futher

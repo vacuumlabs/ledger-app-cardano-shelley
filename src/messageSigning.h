@@ -5,5 +5,5 @@ void getTxWitness(bip44_path_t* pathSpec,
                   uint8_t* outBuffer, size_t outSize);
 
 void getOpCertSignature(bip44_path_t* pathSpec,
-                  const uint8_t* opCertBodyBuffer, size_t opCertBodySize,
-                  uint8_t* outBuffer, size_t outSize);
+                        const uint8_t* opCertBodyBuffer, size_t opCertBodySize,
+                        uint8_t* outBuffer, size_t outSize);
