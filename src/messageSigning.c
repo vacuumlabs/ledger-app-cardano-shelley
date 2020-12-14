@@ -62,7 +62,6 @@ void getTxWitness(bip44_path_t* pathSpec,
                   uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(txHashSize == TX_HASH_LENGTH);
-	ASSERT(bip44_hasValidCardanoWalletPrefix(pathSpec));
 	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
 }
 
