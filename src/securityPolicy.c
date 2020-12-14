@@ -58,7 +58,7 @@ static inline bool staking_info_is_valid(const addressParams_t* addressParams)
 
 static inline bool has_cardano_prefix_and_any_account(const bip44_path_t* pathSpec)
 {
-	return bip44_hasValidCardanoPrefix(pathSpec) &&
+	return bip44_hasValidCardanoWalletPrefix(pathSpec) &&
 	       bip44_containsAccount(pathSpec);
 }
 
@@ -70,7 +70,7 @@ static inline bool is_valid_stake_pool_owner_path(const bip44_path_t* pathSpec)
 // general requirements on witnesses
 static inline bool is_valid_witness(const bip44_path_t* pathSpec)
 {
-	if (!bip44_hasValidCardanoPrefix(pathSpec))
+	if (!bip44_hasValidCardanoWalletPrefix(pathSpec))
 		return false;
 
 	if (bip44_isValidStakingKeyPath(pathSpec))

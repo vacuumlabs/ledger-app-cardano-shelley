@@ -1,6 +1,7 @@
 #include "messageSigning.h"
 #include "cardano.h"
 #include "keyDerivation.h"
+#include "bip44.h"
 
 void signRawMessage(privateKey_t* privateKey,
                     const uint8_t* messageBuffer, size_t messageSize,
@@ -61,6 +62,7 @@ void getTxWitness(bip44_path_t* pathSpec,
                   uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(txHashSize == TX_HASH_LENGTH);
+	ASSERT(bip44_hasValidCardanoWalletPrefix(pathSpec));
 	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
 }
 
@@ -69,5 +71,6 @@ void getOpCertSignature(bip44_path_t* pathSpec,
                         uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(opCertBodySize == OP_CERT_BODY_LENGTH);
+	ASSERT(bip44_isValidPoolColdKeyPath(pathSpec));
 	signRawMessageWithPath(pathSpec, opCertBodyBuffer, opCertBodySize, outBuffer, outSize);
 }

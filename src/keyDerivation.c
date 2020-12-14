@@ -18,7 +18,7 @@ void derivePrivateKey(
         privateKey_t* privateKey
 )
 {
-	if (!bip44_hasValidCardanoPrefix(pathSpec) && !bip44_isValidPoolColdKeyPath(pathSpec)) {
+	if (!bip44_hasValidCardanoWalletPrefix(pathSpec) && !bip44_isValidPoolColdKeyPath(pathSpec)) {
 		THROW(ERR_INVALID_BIP44_PATH);
 	}
 	// Sanity check

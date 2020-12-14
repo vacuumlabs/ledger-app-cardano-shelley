@@ -45,7 +45,7 @@ enum {
 bool bip44_hasByronPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasPoolColdKeyPrefix(const bip44_path_t* pathSpec);
-bool bip44_hasValidCardanoPrefix(const bip44_path_t* pathSpec);
+bool bip44_hasValidCardanoWalletPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
 uint32_t bip44_getAccount(const bip44_path_t* pathSpec);

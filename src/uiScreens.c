@@ -33,7 +33,7 @@ void ui_displayAccountScreen(
 	ASSERT(strlen(screenHeader) > 0);
 	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(bip44_hasValidCardanoPrefix(path));
+	ASSERT(bip44_hasValidCardanoWalletPrefix(path));
 	ASSERT(bip44_containsAccount(path));
 
 	char accountDescription[160];
