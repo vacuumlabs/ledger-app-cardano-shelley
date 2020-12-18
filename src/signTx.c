@@ -4,10 +4,12 @@
 #include "addressUtilsByron.h"
 #include "addressUtilsShelley.h"
 #include "uiHelpers.h"
+#include "signTxUtils.h"
 #include "uiScreens.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
 #include "hexUtils.h"
+#include "utils.h"
 #include "messageSigning.h"
 #include "bufView.h"
 #include "securityPolicy.h"
@@ -22,14 +24,14 @@ enum {
 	SIGN_TX_METADATA_YES = 2
 };
 
+enum {
+	SIGN_TX_POOL_REGISTRATION_NO = 3,
+	SIGN_TX_POOL_REGISTRATION_YES = 4
+};
+
 static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 
-static inline void CHECK_STAGE(sign_tx_stage_t expected)
-{
-	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
-	VALIDATE(ctx->stage == expected, ERR_INVALID_STATE);
-}
-
+// advances the stage of the main state machine
 static inline void advanceStage()
 {
 	TRACE("Advancing sign tx stage from: %d", ctx->stage);
@@ -55,14 +57,14 @@ static inline void advanceStage()
 		break;
 
 	case SIGN_STAGE_FEE:
-		// check if fee was received (initially LOVELACE_MAX_SUPPLY + 1)
-		ASSERT(ctx->fee < LOVELACE_MAX_SUPPLY);
+		// we should have received fee
+		ASSERT(ctx->feeReceived);
 		ctx->stage = SIGN_STAGE_TTL;
 		break;
 
 	case SIGN_STAGE_TTL:
-		// check if ttl was received
-		ASSERT(ctx->ttl > 0);
+		// we should have received ttl
+		ASSERT(ctx->ttlReceived);
 
 		ctx->stage = SIGN_STAGE_CERTIFICATES;
 		if (ctx->numCertificates > 0) {
@@ -83,7 +85,7 @@ static inline void advanceStage()
 			break;
 		}
 
-	// intentional fallthough
+	// intentional fallthrough
 
 	case SIGN_STAGE_WITHDRAWALS:
 		// we should have received all withdrawals
@@ -120,11 +122,63 @@ static inline void advanceStage()
 	TRACE("Advancing sign tx stage to: %d", ctx->stage);
 }
 
-void respondSuccessEmptyMsg()
+// called from main state machine when a pool registration certificate
+// sub-machine is finished, or when other type of certificate is processed
+static inline void advanceCertificatesStateIfAppropriate()
 {
-	TRACE();
-	io_send_buf(SUCCESS, NULL, 0);
-	ui_displayBusy(); // needs to happen after I/O
+	TRACE("%u", ctx->stage);
+
+	switch (ctx->stage) {
+
+	case SIGN_STAGE_CERTIFICATES:
+		ASSERT(ctx->currentCertificate < ctx->numCertificates);
+
+		// Advance state to the next certificate
+		ctx->currentCertificate++;
+		if (ctx->currentCertificate == ctx->numCertificates) {
+			advanceStage();
+		}
+		break;
+
+	default:
+		ASSERT(ctx->stage == SIGN_STAGE_CERTIFICATES_POOL);
+	}
+}
+
+// State sub-machines, e.g. the one in signTxPoolRegistration, might finish
+// with a UI handler. The callbacks (resulting from user interaction) are run
+// only after all APDU handlers have returned, thus the sub-machine cannot
+// notify the main state machine of state changes resulting from user interaction
+// (unless it is allowed to directly mess with the state of the main machine).
+//
+// Consequently, we only find out that a state sub-machine is finished
+// when the following APDU of the main state machine arrives, and we need to
+// update the state before dealing with the APDU.
+static inline void checkForFinishedSubmachines()
+{
+	TRACE("%d", ctx->stage);
+
+	switch(ctx->stage) {
+	case SIGN_STAGE_CERTIFICATES_POOL:
+		if (signTxPoolRegistration_isFinished()) {
+			ASSERT(ctx->currentCertificate < ctx->numCertificates);
+			ctx->stage = SIGN_STAGE_CERTIFICATES;
+
+			advanceCertificatesStateIfAppropriate();
+		}
+	default:
+		break; // nothing to do otherwise
+	}
+}
+
+// this is supposed to be called at the beginning of each APDU handler
+static inline void CHECK_STAGE(sign_tx_stage_t expected)
+{
+	// advance stage if a state sub-machine has finished
+	checkForFinishedSubmachines();
+
+	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
+	VALIDATE(ctx->stage == expected, ERR_INVALID_STATE);
 }
 
 
@@ -146,7 +200,7 @@ static void signTx_handleInit_ui_runStep()
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
 		ui_displayNetworkParamsScreen(
 		        "New transaction",
-		        ctx->networkId, ctx->protocolMagic,
+		        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
 		        this_fn
 		);
 	}
@@ -177,9 +231,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 	{
 		// initialization
-
-		ctx->fee = LOVELACE_MAX_SUPPLY + 1;
-		ctx->ttl = 0; // ttl is absolute slot, so 0 is supposed to be invalid for our purpose
+		ctx->feeReceived = false;
+		ctx->ttlReceived = false;
 
 		ctx->currentInput = 0;
 		ctx->currentOutput = 0;
@@ -198,6 +251,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			uint8_t protocolMagic[4];
 
 			uint8_t includeMetadata;
+			uint8_t isSigningPoolRegistrationAsOwner;
 
 			uint8_t numInputs[4];
 			uint8_t numOutputs[4];
@@ -208,14 +262,14 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
 
-		ASSERT_TYPE(ctx->networkId, uint8_t);
-		ctx->networkId = wireHeader->networkId;
-		TRACE("network id %d", ctx->networkId);
-		VALIDATE(isValidNetworkId(ctx->networkId), ERR_INVALID_DATA);
+		ASSERT_TYPE(ctx->commonTxData.networkId, uint8_t);
+		ctx->commonTxData.networkId = wireHeader->networkId;
+		TRACE("network id %d", ctx->commonTxData.networkId);
+		VALIDATE(isValidNetworkId(ctx->commonTxData.networkId), ERR_INVALID_DATA);
 
-		ASSERT_TYPE(ctx->protocolMagic, uint32_t);
-		ctx->protocolMagic = u4be_read(wireHeader->protocolMagic);
-		TRACE("protocol magic %d", ctx->protocolMagic);
+		ASSERT_TYPE(ctx->commonTxData.protocolMagic, uint32_t);
+		ctx->commonTxData.protocolMagic = u4be_read(wireHeader->protocolMagic);
+		TRACE("protocol magic %d", ctx->commonTxData.protocolMagic);
 
 		switch (wireHeader->includeMetadata) {
 		case SIGN_TX_METADATA_YES:
@@ -224,6 +278,19 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 		case SIGN_TX_METADATA_NO:
 			ctx->includeMetadata = false;
+			break;
+
+		default:
+			THROW(ERR_INVALID_DATA);
+		}
+
+		switch (wireHeader->isSigningPoolRegistrationAsOwner) {
+		case SIGN_TX_POOL_REGISTRATION_YES:
+			ctx->isSigningPoolRegistrationAsOwner = true;
+			break;
+
+		case SIGN_TX_POOL_REGISTRATION_NO:
+			ctx->isSigningPoolRegistrationAsOwner = false;
 			break;
 
 		default:
@@ -245,10 +312,16 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		        "num inputs, outputs, certificates, withdrawals, witnesses: %d %d %d %d %d",
 		        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals, ctx->numWitnesses
 		);
-		VALIDATE(ctx->numInputs < SIGN_MAX_INPUTS, ERR_INVALID_DATA);
-		VALIDATE(ctx->numOutputs < SIGN_MAX_OUTPUTS, ERR_INVALID_DATA);
-		VALIDATE(ctx->numCertificates < SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
-		VALIDATE(ctx->numWithdrawals < SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
+		VALIDATE(ctx->numInputs <= SIGN_MAX_INPUTS, ERR_INVALID_DATA);
+		VALIDATE(ctx->numOutputs <= SIGN_MAX_OUTPUTS, ERR_INVALID_DATA);
+		VALIDATE(ctx->numCertificates <= SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
+		VALIDATE(ctx->numWithdrawals <= SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
+
+		// TODO isn't this more like a security policy?
+		if (ctx->isSigningPoolRegistrationAsOwner) {
+			VALIDATE(ctx->numCertificates == 1, ERR_INVALID_DATA);
+			VALIDATE(ctx->numWithdrawals == 0, ERR_INVALID_DATA);
+		}
 
 		// Current code design assumes at least one input and at least one output.
 		// If this is to be relaxed, stage switching logic needs to be re-visited.
@@ -258,14 +331,22 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		VALIDATE(ctx->numInputs > 0, ERR_INVALID_DATA);
 		VALIDATE(ctx->numOutputs > 0, ERR_INVALID_DATA);
 
-		// Note(ppershing): do not allow more witnesses than necessary.
-		// This tries to lessen potential pubkey privacy leaks because
-		// in WITNESS stage we do not verify whether the witness belongs
-		// to a given utxo.
-		const size_t maxNumWitnesses = (size_t) ctx->numInputs +
-		                               (size_t) ctx->numCertificates +
-		                               (size_t) ctx->numWithdrawals;
-		VALIDATE(ctx->numWitnesses <= maxNumWitnesses, ERR_INVALID_DATA);
+		{
+			// Note(ppershing): do not allow more witnesses than necessary.
+			// This tries to lessen potential pubkey privacy leaks because
+			// in WITNESS stage we do not verify whether the witness belongs
+			// to a given utxo, withdrawal or certificate.
+
+			size_t maxNumWitnesses;
+			if (ctx->isSigningPoolRegistrationAsOwner) {
+				maxNumWitnesses = 1;
+			} else {
+				maxNumWitnesses = (size_t) ctx->numInputs +
+				                  (size_t) ctx->numCertificates +
+				                  (size_t) ctx->numWithdrawals;
+			}
+			VALIDATE(ctx->numWitnesses <= maxNumWitnesses, ERR_INVALID_DATA);
+		}
 	}
 
 	// Note: make sure that everything in ctx is initialized properly
@@ -278,8 +359,12 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	        ctx->includeMetadata
 	);
 
-	security_policy_t policy = policyForSignTxInit(ctx->networkId, ctx->protocolMagic);
-
+	security_policy_t policy = policyForSignTxInit(
+	                                   ctx->commonTxData.networkId,
+	                                   ctx->commonTxData.protocolMagic
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 	{
 		// select UI steps
 		switch (policy) {
@@ -365,6 +450,8 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 	}
 
 	security_policy_t policy = policyForSignTxInput();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -425,8 +512,9 @@ static void signTx_handleOutput_address()
 	ASSERT(ctx->stageData.output.outputType == SIGN_TX_OUTPUT_TYPE_ADDRESS);
 
 	security_policy_t policy = policyForSignTxOutputAddress(
+	                                   ctx->isSigningPoolRegistrationAsOwner,
 	                                   ctx->stageData.output.addressBuffer, ctx->stageData.output.addressSize,
-	                                   ctx->networkId, ctx->protocolMagic
+	                                   ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -499,8 +587,9 @@ static void signTx_handleOutput_addressParams()
 	ASSERT(ctx->stageData.output.outputType == SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS);
 
 	security_policy_t policy = policyForSignTxOutputAddressParams(
+	                                   ctx->isSigningPoolRegistrationAsOwner,
 	                                   &ctx->stageData.output.params,
-	                                   ctx->networkId, ctx->protocolMagic
+	                                   ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -600,12 +689,12 @@ static void signTx_handleFee_ui_runStep()
 	TRACE("UI step %d", ctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleFee_ui_runStep;
 
-	TRACE("fee %d", ctx->fee);
+	TRACE_ADA_AMOUNT("fee ", ctx->stageData.fee);
 
 	UI_STEP_BEGIN(ctx->ui_step);
 
 	UI_STEP(HANDLE_FEE_STEP_DISPLAY) {
-		ui_displayAmountScreen("Transaction fee", ctx->fee, this_fn);
+		ui_displayAmountScreen("Transaction fee", ctx->stageData.fee, this_fn);
 	}
 	UI_STEP(HANDLE_FEE_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -629,16 +718,19 @@ static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
-		ctx->fee = u8be_read(wireDataBuffer);
+		ctx->stageData.fee = u8be_read(wireDataBuffer);
+		ctx->feeReceived = true;
 	}
 
 	{
 		// add to tx
 		TRACE("Adding fee to tx hash");
-		txHashBuilder_addFee(&ctx->txHashBuilder, ctx->fee);
+		txHashBuilder_addFee(&ctx->txHashBuilder, ctx->stageData.fee);
 	}
 
-	security_policy_t policy = policyForSignTxFee(ctx->fee);
+	security_policy_t policy = policyForSignTxFee(ctx->isSigningPoolRegistrationAsOwner, ctx->stageData.fee);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -673,7 +765,7 @@ static void signTx_handleTtl_ui_runStep()
 
 	UI_STEP(HANDLE_TTL_STEP_DISPLAY) {
 		char ttlString[50];
-		str_formatTtl(ctx->ttl, ttlString, SIZEOF(ttlString));
+		str_formatTtl(ctx->stageData.ttl, ttlString, SIZEOF(ttlString));
 		ui_displayPaginatedText(
 		        "Transaction TTL",
 		        ttlString,
@@ -702,16 +794,19 @@ static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
-		ctx->ttl = u8be_read(wireDataBuffer);
+		ctx->stageData.ttl = u8be_read(wireDataBuffer);
+		ctx->ttlReceived = true;
 	}
 
 	{
 		// add to tx
 		TRACE("Adding ttl to tx hash");
-		txHashBuilder_addTtl(&ctx->txHashBuilder, ctx->ttl);
+		txHashBuilder_addTtl(&ctx->txHashBuilder, ctx->stageData.ttl);
 	}
 
-	security_policy_t policy = policyForSignTxTtl(ctx->ttl);
+	security_policy_t policy = policyForSignTxTtl(ctx->stageData.ttl);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -765,13 +860,17 @@ static void signTx_handleCertificate_ui_runStep()
 
 		case CERTIFICATE_TYPE_STAKE_DELEGATION:
 			snprintf(title, SIZEOF(title), "Delegate stake to pool");
-			encode_hex(
-			        ctx->stageData.certificate.poolKeyHash, SIZEOF(ctx->stageData.certificate.poolKeyHash),
-			        details, SIZEOF(details)
-			);
+			size_t length = encode_hex(
+			                        ctx->stageData.certificate.poolKeyHash, SIZEOF(ctx->stageData.certificate.poolKeyHash),
+			                        details, SIZEOF(details)
+			                );
+			ASSERT(length == strlen(details));
+			ASSERT(length == 2 * SIZEOF(ctx->stageData.certificate.poolKeyHash));
 			break;
 
 		default:
+			// includes CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION
+			// which has separate UI; this handler must not be used
 			ASSERT(false);
 		}
 
@@ -819,12 +918,7 @@ static void signTx_handleCertificate_ui_runStep()
 	UI_STEP(HANDLE_CERTIFICATE_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 
-		// Advance state to next certificate
-		ctx->currentCertificate++;
-		if (ctx->currentCertificate == ctx->numCertificates) {
-			advanceStage();
-		}
-
+		advanceCertificatesStateIfAppropriate();
 	}
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
@@ -838,13 +932,20 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 
 	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 	certificateData->type = parse_u1be(&view);
-	TRACE("Certificate type: %d\n", certificateData->type);
+	TRACE("Certificate type: %d", certificateData->type);
 	VALIDATE(
 	        (certificateData->type == CERTIFICATE_TYPE_STAKE_REGISTRATION) ||
 	        (certificateData->type == CERTIFICATE_TYPE_STAKE_DEREGISTRATION) ||
-	        (certificateData->type == CERTIFICATE_TYPE_STAKE_DELEGATION),
+	        (certificateData->type == CERTIFICATE_TYPE_STAKE_DELEGATION) ||
+	        (certificateData->type == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION),
 	        ERR_INVALID_DATA
 	);
+
+	if (certificateData->type == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION) {
+		// nothing more to parse
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+		return;
+	}
 
 	// staking key derivation path
 	view_skipBytes(&view, bip44_parseFromWire(&certificateData->keyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
@@ -863,7 +964,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	}
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
 		VALIDATE(view_remainingSize(&view) == POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
-		ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH);
+		STATIC_ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
 		os_memmove(certificateData->poolKeyHash, view.ptr, POOL_KEY_HASH_LENGTH);
 		break;
 	}
@@ -874,6 +975,11 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 
 static void _addCertificateDataToTx(sign_tx_certificate_data_t* certificateData, tx_hash_builder_t* txHashBuilder)
 {
+	if (ctx->stageData.certificate.type == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION) {
+		// everything is added in the sub-machine, see signTxPoolRegistration.c
+		return;
+	}
+
 	// compute staking key hash
 	uint8_t stakingKeyHash[ADDRESS_KEY_HASH_LENGTH];
 	{
@@ -908,16 +1014,63 @@ static void _addCertificateDataToTx(sign_tx_certificate_data_t* certificateData,
 
 static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	CHECK_STAGE(SIGN_STAGE_CERTIFICATES);
 	ASSERT(ctx->currentCertificate < ctx->numCertificates);
 
+	TRACE("p2 = %d", p2);
+	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+	// delegate to state sub-machine for stake pool registration certificate data
+	if (signTxPoolRegistration_isValidInstruction(p2)) {
+		TRACE();
+		VALIDATE(ctx->stage == SIGN_STAGE_CERTIFICATES_POOL, ERR_INVALID_DATA);
+		signTxPoolRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
+		return;
+	}
+
+	CHECK_STAGE(SIGN_STAGE_CERTIFICATES);
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+
+	// a new certificate arrived
 
 	explicit_bzero(&ctx->stageData.certificate, SIZEOF(ctx->stageData.certificate));
 
 	_parseCertificateData(wireDataBuffer, wireDataSize, &ctx->stageData.certificate);
 
-	security_policy_t policy = policyForSignTxCertificate(ctx->stageData.certificate.type, &ctx->stageData.certificate.keyPath);
+	// basic policy that just decides if the certificate is allowed
+	security_policy_t policy = policyForSignTxCertificate(
+	                                   ctx->isSigningPoolRegistrationAsOwner,
+	                                   ctx->stageData.certificate.type
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	switch (ctx->stageData.certificate.type) {
+	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+	case CERTIFICATE_TYPE_STAKE_DELEGATION:
+		// these can be handled uniformly, see below
+		break;
+
+	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION: {
+		// pool registration certificates have a separate sub-machine for handling APDU and UI
+		// nothing more to be done with them here, we just init the sub-machine
+		ctx->stage = SIGN_STAGE_CERTIFICATES_POOL;
+		signTxPoolRegistration_init();
+
+		respondSuccessEmptyMsg();
+		return;
+	}
+
+	default:
+		ASSERT(false);
+	}
+
+	// more granular security policy which takes into account certificate data
+	policy = policyForSignTxCertificateStaking(
+	                 ctx->stageData.certificate.type,
+	                 &ctx->stageData.certificate.keyPath
+	         );
+	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	switch (policy) {
@@ -1000,15 +1153,15 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 		{
 			addressParams_t rewardAddressParams = {
 				.type = REWARD,
-				.networkId = ctx->networkId,
+				.networkId = ctx->commonTxData.networkId,
 				.spendingKeyPath = ctx->stageData.withdrawal.path,
 				.stakingChoice = NO_STAKING,
 			};
 
 			deriveAddress(
-				&rewardAddressParams,
-				rewardAddress,
-				SIZEOF(rewardAddress)
+			        &rewardAddressParams,
+			        rewardAddress,
+			        SIZEOF(rewardAddress)
 			);
 		}
 
@@ -1021,6 +1174,8 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	}
 
 	security_policy_t policy = policyForSignTxWithdrawal();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -1058,7 +1213,7 @@ static void signTx_handleMetadata_ui_runStep()
 		                     ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash),
 		                     metadataHashHex, SIZEOF(metadataHashHex)
 		             );
-		ASSERT(len == SIZEOF(metadataHashHex));
+		ASSERT(len + 1 == SIZEOF(metadataHashHex));
 
 		ui_displayPaginatedText(
 		        "Transaction metadata",
@@ -1095,6 +1250,8 @@ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 	}
 
 	security_policy_t policy = policyForSignTxMetadata();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI step
@@ -1179,6 +1336,8 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UN
 	}
 
 	security_policy_t policy = policyForSignTxConfirm();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI step
@@ -1268,11 +1427,13 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 	}
 
 	security_policy_t policy = POLICY_DENY;
-
 	{
 		// get policy
-		policy = policyForSignTxWitness(&ctx->stageData.witness.path);
-		TRACE("policy %d", (int) policy);
+		policy = policyForSignTxWitness(
+		                 ctx->isSigningPoolRegistrationAsOwner,
+		                 &ctx->stageData.witness.path
+		         );
+		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
 	}
 

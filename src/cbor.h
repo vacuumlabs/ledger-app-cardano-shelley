@@ -17,6 +17,7 @@ enum {
 	CBOR_VALUE_MASK      = 0b00011111,
 	CBOR_TYPE_MASK       = 0b11100000,
 	CBOR_INDEF           = CBOR_VALUE_MASK,
+	CBOR_NULL            = 22
 };
 
 
@@ -25,7 +26,7 @@ enum {
 	CBOR_TYPE_UNSIGNED     = CBOR_MT_UNSIGNED << 5,
 	//CBOR_TYPE_NEGATIVE   = CBOR_MT_NEGATIVE << 5,
 	CBOR_TYPE_BYTES        = CBOR_MT_BYTES << 5,
-	//CBOR_TYPE_TEXT       = CBOR_MT_TEXT << 5,
+	CBOR_TYPE_TEXT         = CBOR_MT_TEXT << 5,
 	CBOR_TYPE_ARRAY        = CBOR_MT_ARRAY << 5,
 	CBOR_TYPE_MAP          = CBOR_MT_MAP << 5,
 	CBOR_TYPE_TAG          = CBOR_MT_TAG << 5,
@@ -34,6 +35,7 @@ enum {
 	// tag extensions
 	CBOR_TYPE_ARRAY_INDEF  = CBOR_TYPE_ARRAY + CBOR_INDEF,
 	CBOR_TYPE_INDEF_END    = CBOR_TYPE_PRIMITIVES + CBOR_INDEF,
+	CBOR_TYPE_NULL         = CBOR_TYPE_PRIMITIVES + CBOR_NULL
 };
 
 enum {
@@ -53,5 +55,9 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 
 cbor_token_t cbor_parseToken(const uint8_t* buf, size_t size);
 
+
+#ifdef DEVEL
 void run_cbor_test();
 #endif
+
+#endif // H_CARDANO_APP_CBOR

@@ -6,7 +6,7 @@ static const uint32_t CARDANO_CHAIN_EXTERNAL = 0;
 static const uint32_t CARDANO_CHAIN_INTERNAL = 1;
 static const uint32_t CARDANO_CHAIN_STAKING_KEY = 2;
 
-static const uint32_t MAX_REASONABLE_ACCOUNT = 20;
+static const uint32_t MAX_REASONABLE_ACCOUNT = 100;
 static const uint32_t MAX_REASONABLE_ADDRESS = 1000000;
 
 size_t bip44_parseFromWire(
@@ -39,6 +39,11 @@ bool isHardened(uint32_t value)
 	return value == (value | HARDENED_BIP32);
 }
 
+uint32_t unharden(uint32_t value)
+{
+	ASSERT(isHardened(value));
+	return value & (~HARDENED_BIP32);
+}
 
 // Byron: /44'/1815'
 bool bip44_hasByronPrefix(const bip44_path_t* pathSpec)
@@ -80,14 +85,17 @@ uint32_t bip44_getAccount(const bip44_path_t* pathSpec)
 	return pathSpec->path[BIP44_I_ACCOUNT];
 }
 
+bool bip44_containsMoreThanAccount(const bip44_path_t* pathSpec)
+{
+	return (pathSpec->length > BIP44_I_ACCOUNT + 1);
+}
+
 bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsAccount(pathSpec)) return false;
 	uint32_t account = bip44_getAccount(pathSpec);
 	if (!isHardened(account)) return false;
-	// Un-harden
-	account = account & (~HARDENED_BIP32);
-	return account < MAX_REASONABLE_ACCOUNT;
+	return unharden(account) <= MAX_REASONABLE_ACCOUNT;
 }
 
 // ChainType
@@ -144,8 +152,6 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 	if (bip44_containsMoreThanAddress(pathSpec)) return false;
 	if (!bip44_hasShelleyPrefix(pathSpec)) return false;
 
-	if (!bip44_hasReasonableAccount(pathSpec)) return false;
-
 	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
 	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
 
@@ -155,13 +161,11 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 // Futher
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 {
-	return (pathSpec->length > BIP44_I_REST);
+	return (pathSpec->length > BIP44_I_ADDRESS + 1);
 }
 
-
-// TODO(ppershing): this function needs to be thoroughly tested
-// on small outputSize
-void bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
+// returns the length of the resulting string
+size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 	// We have to have space for terminating null
@@ -179,8 +183,10 @@ void bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 		/* Go figure out ... */ \
 		snprintf(ptr, availableSize, fmt, ##__VA_ARGS__); \
 		size_t res = strlen(ptr); \
-		/* TODO(better error handling) */ \
-		ASSERT(res + 1 < availableSize); \
+		/* if snprintf filled all the remaining space, there is no space for '\0', */ \
+		/* i.e. outSize is insufficient, we messed something up */ \
+		/* usually, outSize >= 1 + BIP44_MAX_PATH_STRING_LENGTH */ \
+		ASSERT(res + 1 <= availableSize); \
 		ptr += res; \
 	}
 
@@ -199,12 +205,15 @@ void bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 	}
 #undef WRITE
 	ASSERT(ptr < end);
+	ASSERT(ptr >= out);
+
+	return ptr - out;
 }
 
 #ifdef DEVEL
 void bip44_PRINTF(const bip44_path_t* pathSpec)
 {
-	char tmp[100];
+	char tmp[1 + BIP44_MAX_PATH_STRING_LENGTH];
 	SIZEOF(*pathSpec);
 	bip44_printToStr(pathSpec, tmp, SIZEOF(tmp));
 	PRINTF("%s", tmp);

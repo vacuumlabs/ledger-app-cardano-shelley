@@ -7,6 +7,12 @@
 #include "base58.h"
 #include "bech32.h"
 
+uint8_t getAddressHeader(uint8_t* addressBuffer, size_t addressSize)
+{
+	ASSERT(addressSize > 0);
+	return addressBuffer[0];
+}
+
 address_type_t getAddressType(uint8_t addressHeader)
 {
 	const uint8_t ADDRESS_TYPE_MASK = 0b11110000;
@@ -294,6 +300,31 @@ static size_t deriveAddress_reward(
 	}
 	{
 		// no staking data
+	}
+
+	const int ADDRESS_LENGTH = 1 + ADDRESS_KEY_HASH_LENGTH;
+	ASSERT(view_processedSize(&out) == ADDRESS_LENGTH);
+
+	return ADDRESS_LENGTH;
+}
+
+size_t constructRewardAddress(
+        uint8_t networkId,
+        const uint8_t* stakingKeyHashBuffer, size_t stakingKeyHashSize,
+        uint8_t* outBuffer, size_t outSize
+)
+{
+	ASSERT(isValidNetworkId(networkId));
+	ASSERT(stakingKeyHashSize == ADDRESS_KEY_HASH_LENGTH);
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
+	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
+	{
+		const uint8_t addressHeader = constructShelleyAddressHeader(REWARD, networkId);
+		view_appendData(&out, &addressHeader, 1);
+	}
+	{
+		view_appendData(&out, stakingKeyHashBuffer, stakingKeyHashSize);
 	}
 
 	const int ADDRESS_LENGTH = 1 + ADDRESS_KEY_HASH_LENGTH;

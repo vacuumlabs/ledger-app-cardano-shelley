@@ -1,9 +1,8 @@
 #include "addressUtilsShelley.h"
 #include "addressUtilsByron.h"
-#include "securityPolicy.h"
 #include "bip44.h"
 
-// Warning: following helper macros assume "pathSpec" in the context
+#include "securityPolicy.h"
 
 // Helper macros
 
@@ -63,6 +62,12 @@ static inline bool has_cardano_prefix_and_any_account(const bip44_path_t* pathSp
 	       bip44_containsAccount(pathSpec);
 }
 
+static inline bool is_valid_stake_pool_owner_path(const bip44_path_t* pathSpec)
+{
+	return bip44_isValidStakingKeyPath(pathSpec);
+}
+
+// general requirements on witnesses
 static inline bool is_valid_witness(const bip44_path_t* pathSpec)
 {
 	if (!bip44_hasValidCardanoPrefix(pathSpec))
@@ -95,16 +100,54 @@ static inline bool is_too_deep(const bip44_path_t* pathSpec)
 #define SHOW_IF(expr)      if (expr)    return POLICY_SHOW_BEFORE_RESPONSE;
 #define SHOW_UNLESS(expr)  if (!(expr)) return POLICY_SHOW_BEFORE_RESPONSE;
 
+
+security_policy_t policyForGetPublicKeysInit(size_t numPaths)
+{
+	PROMPT_IF(numPaths > 1);
+
+	ALLOW_IF(true);
+}
+
 // Get extended public key and return it to the host
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 {
 	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
 
 	WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
-	// Normally extPubKey is asked only for an account
-	WARN_IF(bip44_containsChainType(pathSpec));
+
+	WARN_IF(bip44_containsMoreThanAddress(pathSpec));
 
 	PROMPT_IF(true);
+}
+
+// Get extended public key and return it to the host within bulk key export
+security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec)
+{
+	// the expected values that need not to be confirmed start with
+	// m/1852'/1815'/account' or m/44'/1815'/account', where account is not too big
+
+	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
+
+	WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
+
+	// if they contain more than account, then the suffix after account
+	// has to be one of 2/0, 0/index, 1/index
+	if (bip44_containsMoreThanAccount(pathSpec)) {
+		WARN_IF(bip44_containsMoreThanAddress(pathSpec));
+		WARN_IF(bip44_containsChainType(pathSpec) && !bip44_containsAddress(pathSpec));
+
+		// we are left with paths of length 5
+		WARN_UNLESS(bip44_hasReasonableAccount(pathSpec));
+
+		// staking paths for reasonable accounts are OK
+		ALLOW_IF(bip44_isValidStakingKeyPath(pathSpec));
+
+		// only ordinary address paths remain
+		WARN_UNLESS(bip44_isValidAddressPath(pathSpec));
+		WARN_UNLESS(bip44_hasReasonableAddress(pathSpec));
+	}
+
+	ALLOW_IF(true);
 }
 
 // Derive address and return it to the host
@@ -154,10 +197,15 @@ security_policy_t policyForSignTxInput()
 
 // For each transaction (third-party) address output
 security_policy_t policyForSignTxOutputAddress(
+        bool isSigningPoolRegistrationAsOwner,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
 )
 {
+	TRACE("isSigningPoolRegistrationAsOwner = %d", isSigningPoolRegistrationAsOwner);
+
+	ALLOW_IF(isSigningPoolRegistrationAsOwner);
+
 	ASSERT(rawAddressSize >= 1);
 	address_type_t addressType = getAddressType(rawAddressBuffer[0]);
 	if (addressType == BYRON) {
@@ -175,10 +223,16 @@ security_policy_t policyForSignTxOutputAddress(
 
 // For each output given by derivation path
 security_policy_t policyForSignTxOutputAddressParams(
+        bool isSigningPoolRegistrationAsOwner,
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic
 )
 {
+	// we forbid these to avoid leaking information
+	// (since the outputs are not shown, the user is unaware of what addresses are being derived)
+	// it also makes the tx signing faster if all outputs are given as addresses
+	DENY_IF(isSigningPoolRegistrationAsOwner);
+
 	DENY_UNLESS(spending_path_is_consistent_with_address_type(params->type, &params->spendingKeyPath));
 	DENY_UNLESS(staking_info_is_valid(params));
 	DENY_IF(is_too_deep(&params->spendingKeyPath));
@@ -196,9 +250,11 @@ security_policy_t policyForSignTxOutputAddressParams(
 }
 
 // For transaction fee
-security_policy_t policyForSignTxFee(uint64_t fee MARK_UNUSED)
+security_policy_t policyForSignTxFee(bool isSigningPoolRegistrationAsOwner, uint64_t fee MARK_UNUSED)
 {
-	// always show the fee
+	ALLOW_IF(isSigningPoolRegistrationAsOwner);
+
+	// always show the fee in ordinary transactions
 	SHOW_IF(true);
 }
 
@@ -215,12 +271,81 @@ security_policy_t policyForSignTxTtl(uint32_t ttl)
 	SHOW_IF(true);
 }
 
-// For each certificate
-security_policy_t policyForSignTxCertificate(const uint8_t certificateType MARK_UNUSED, const bip44_path_t* stakingKeyPath)
+// a generic policy for all certificates
+// does not evaluate all aspects for specific certificates
+security_policy_t policyForSignTxCertificate(
+        const bool includeStakePoolRegistrationCertificate,
+        const uint8_t certificateType
+)
 {
+	if (includeStakePoolRegistrationCertificate) {
+		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+
+		ALLOW_IF(true);
+	} else {
+		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+
+		ALLOW_IF(true);
+	}
+}
+
+// for certificates concerning staking keys and stake delegation
+security_policy_t policyForSignTxCertificateStaking(
+        const uint8_t certificateType,
+        const bip44_path_t* stakingKeyPath
+)
+{
+	switch (certificateType) {
+	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+	case CERTIFICATE_TYPE_STAKE_DELEGATION:
+		break; // these are allowed
+
+	default:
+		ASSERT(false);
+	}
+
 	DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
 
 	PROMPT_IF(true);
+}
+
+// for stake pool registration certificates
+security_policy_t policyForSignTxCertificateStakePoolRegistration()
+{
+	PROMPT_IF(true);
+}
+
+security_policy_t policyForSignTxStakePoolRegistrationOwner(pool_owner_t* owner)
+{
+	switch (owner->ownerType) {
+	case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
+		SHOW_IF(true);
+		break;
+
+	case SIGN_TX_POOL_OWNER_TYPE_PATH:
+		SHOW_IF(is_valid_stake_pool_owner_path(&owner->path));
+		break;
+
+	default:
+		ASSERT(false);
+	}
+	DENY_IF(true);
+}
+
+security_policy_t policyForSignTxStakePoolRegistrationMetadata()
+{
+	SHOW_IF(true);
+}
+
+security_policy_t policyForSignTxStakePoolRegistrationNoMetadata()
+{
+	SHOW_IF(true);
+}
+
+security_policy_t policyForSignTxStakePoolRegistrationConfirm()
+{
+	ALLOW_IF(true);
 }
 
 // For each withdrawal
@@ -233,15 +358,21 @@ security_policy_t policyForSignTxWithdrawal()
 // For each transaction witness
 // Note: witnesses reveal public key of an address
 // and Ledger *does not* check whether they correspond to previously declared UTxOs
-security_policy_t policyForSignTxWitness(const bip44_path_t* pathSpec)
+security_policy_t policyForSignTxWitness(
+        bool isSigningPoolRegistrationAsOwner,
+        const bip44_path_t* pathSpec
+)
 {
 	DENY_UNLESS(is_valid_witness(pathSpec));
 
-	// TODO Perhaps we can relax this?
-	WARN_UNLESS(has_reasonable_account_and_address(pathSpec))
+	if (isSigningPoolRegistrationAsOwner) {
+		DENY_UNLESS(is_valid_stake_pool_owner_path(pathSpec));
+	} else {
+		// witness for input or withdrawal
+		DENY_IF(is_too_deep(pathSpec));
+	}
 
-	// TODO deny this? or check for depth in is_valid_witness?
-	WARN_IF(is_too_deep(pathSpec));
+	WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
 
 	ALLOW_IF(true);
 }

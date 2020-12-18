@@ -3,10 +3,13 @@
 
 #include "common.h"
 
-static const uint32_t BIP44_MAX_PATH_LENGTH = 10;
+#define BIP44_MAX_PATH_ELEMENTS 10u
+// each element in path is uint32, so at most 10 decimal digits
+// plus ' for hardened plus / as a separator, plus the initial m
+#define BIP44_MAX_PATH_STRING_LENGTH (1 + 12 * BIP44_MAX_PATH_ELEMENTS)
 
 typedef struct {
-	uint32_t path[BIP44_MAX_PATH_LENGTH];
+	uint32_t path[BIP44_MAX_PATH_ELEMENTS];
 	uint32_t length;
 } bip44_path_t;
 
@@ -38,8 +41,9 @@ bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasValidCardanoPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
-bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec);
 uint32_t bip44_getAccount(const bip44_path_t* pathSpec);
+bool bip44_containsMoreThanAccount(const bip44_path_t* pathSpec);
+bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec);
 
 bool bip44_containsChainType(const bip44_path_t* pathSpec);
 
@@ -52,16 +56,17 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec);
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
 
 bool isHardened(uint32_t value);
+uint32_t unharden(uint32_t value);
 
-void bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
+size_t bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
 
 
 #ifdef DEVEL
+void run_bip44_test();
 void bip44_PRINTF(const bip44_path_t* pathSpec);
 #define BIP44_PRINTF(PATH) bip44_PRINTF(PATH)
 #else
 #define BIP44_PRINTF(PATH)
 #endif
-
 
 #endif // H_CARDANO_APP_BIP44

@@ -90,7 +90,9 @@
 	}
 
 // Early exit to another state, unused for now
-// #define UI_STEP_JUMP(NEXT_STEP) *__ui_step_ptr = NEXT_STEP; break;
+// #define UI_STEP_JUMP(NEXT_STEP) \
+// 				*__ui_step_ptr = NEXT_STEP; \
+// 				break;
 
 // *INDENT-ON*
 

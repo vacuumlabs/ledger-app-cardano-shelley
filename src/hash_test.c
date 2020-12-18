@@ -46,7 +46,6 @@ void testcase_blake2b_224(const char* inputHex, const char* expectedHex)
 
 void run_blake2b_test()
 {
-#define UNWRAP(...) __VA_ARGS__
 #define TESTCASE_CHUNKS_BLAKE2B_512(chunks_, expected_) \
 	{ \
 		const char* chunks[] = { UNWRAP chunks_ }; \

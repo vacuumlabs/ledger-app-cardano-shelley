@@ -6,9 +6,6 @@
 #include "hexUtils.h"
 #include "test_utils.h"
 
-// Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
-#define UNWRAP(...) __VA_ARGS__
-
 #define HD HARDENED_BIP32
 #define MAX_ADDRESS_LENGTH 128
 

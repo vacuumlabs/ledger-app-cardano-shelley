@@ -3,8 +3,15 @@
 
 #include "uiHelpers.h"
 #include "addressUtilsShelley.h"
+#include "signTxPoolRegistration.h"
 
 void ui_displayPathScreen(
+        const char* screenHeader,
+        const bip44_path_t* path,
+        ui_callback_fn_t callback
+);
+
+void ui_displayAccountScreen(
         const char* screenHeader,
         const bip44_path_t* path,
         ui_callback_fn_t callback
@@ -34,5 +41,22 @@ void ui_displayNetworkParamsScreen(
         ui_callback_fn_t callback
 );
 
+void ui_displayHexBufferScreen(
+        const char* screenHeader,
+        const uint8_t* buffer, size_t bufferSize,
+        ui_callback_fn_t callback
+);
+
+void ui_displayMarginScreen(
+        uint64_t marginNumerator, uint64_t marginDenominator,
+        ui_callback_fn_t callback
+);
+
+void ui_displayOwnerScreen(
+        const pool_owner_t* owner,
+        uint32_t ownerIndex,
+        uint8_t networkId,
+        ui_callback_fn_t callback
+);
 
 #endif
