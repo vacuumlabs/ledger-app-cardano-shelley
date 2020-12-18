@@ -1,5 +1,3 @@
-#include <limits.h>  // UINT8_MAX
-
 #include "common.h"
 #include "handlers.h"
 
@@ -22,12 +20,12 @@ void getVersion_handleAPDU(
 {
 	// Check that we have format "x.y.z"
 	STATIC_ASSERT(SIZEOF(APPVERSION) == 5 + 1, "bad APPVERSION length");
-    STATIC_ASSERT(MAJOR_VERSION >= 0 && MAJOR_VERSION <= UINT8_MAX,
-                  "MAJOR version must be between 0 and 255!");
-    STATIC_ASSERT(MINOR_VERSION >= 0 && MINOR_VERSION <= UINT8_MAX,
-                  "MINOR version must be between 0 and 255!");
-    STATIC_ASSERT(PATCH_VERSION >= 0 && PATCH_VERSION <= UINT8_MAX,
-                  "PATCH version must be between 0 and 255!");
+	STATIC_ASSERT(MAJOR_VERSION >= 0 && MAJOR_VERSION <= 9,
+	              "MAJOR version must be between 0 and 9!");
+	STATIC_ASSERT(MINOR_VERSION >= 0 && MINOR_VERSION <= 9,
+	              "MINOR version must be between 0 and 9!");
+	STATIC_ASSERT(PATCH_VERSION >= 0 && PATCH_VERSION <= 9,
+	              "PATCH version must be between 0 and 9!");
 
 	VALIDATE(p1 == P1_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
