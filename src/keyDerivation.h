@@ -6,9 +6,9 @@
 #include "bip44.h"
 
 
-static const size_t PUBLIC_KEY_SIZE =  32;
-static const size_t CHAIN_CODE_SIZE =  32;
-static const size_t EXTENDED_PUBKEY_SIZE = CHAIN_CODE_SIZE + PUBLIC_KEY_SIZE;
+#define PUBLIC_KEY_SIZE      (32)
+#define CHAIN_CODE_SIZE      (32)
+#define EXTENDED_PUBKEY_SIZE (CHAIN_CODE_SIZE + PUBLIC_KEY_SIZE)
 
 typedef cx_ecfp_256_extended_private_key_t privateKey_t;
 
