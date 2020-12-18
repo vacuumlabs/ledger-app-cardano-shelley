@@ -4,7 +4,6 @@
 #include "assert.h"
 #include "errors.h"
 #include "keyDerivation.h"
-#include "stream.h"
 #include "cbor.h"
 #include "hash.h"
 #include "crc32.h"
@@ -28,7 +27,7 @@ void derivePrivateKey(
 	uint8_t privateKeyRawBuffer[64];
 
 	STATIC_ASSERT(SIZEOF(chainCode->code) == 32, "bad chain code length");
-	os_memset(chainCode->code, 0, SIZEOF(chainCode->code));
+	explicit_bzero(chainCode->code, SIZEOF(chainCode->code));
 
 	BEGIN_TRY {
 		TRY {
@@ -51,7 +50,7 @@ void derivePrivateKey(
 			os_memmove(privateKey->d, privateKeyRawBuffer, 64);
 		}
 		FINALLY {
-			os_memset(privateKeyRawBuffer, 0, SIZEOF(privateKeyRawBuffer));
+			explicit_bzero(privateKeyRawBuffer, SIZEOF(privateKeyRawBuffer));
 		}
 	} END_TRY;
 }
@@ -129,7 +128,7 @@ void deriveExtendedPublicKey(
 			os_memmove(out->chainCode, chainCode.code, CHAIN_CODE_SIZE);
 		}
 		FINALLY {
-			os_memset(&privateKey, 0, SIZEOF(privateKey));
+			explicit_bzero(&privateKey, SIZEOF(privateKey));
 		}
 	} END_TRY;
 }

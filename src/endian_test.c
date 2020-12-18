@@ -1,9 +1,7 @@
 #ifdef DEVEL
 
 #include "endian.h"
-#include "assert.h"
 #include "test_utils.h"
-#include <os.h>
 
 void run_read_test()
 {

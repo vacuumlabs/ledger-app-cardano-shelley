@@ -49,7 +49,7 @@
 
 #define END_ASSERT_NOEXCEPT \
 	CATCH (ERR_ASSERT) { \
-		/* pass thorugh assertions */ \
+		/* pass through assertions */ \
 		THROW(ERR_ASSERT); \
 	} CATCH_OTHER (e) { \
 		char msg[50]; \
@@ -60,5 +60,7 @@
 	} END_TRY; \
 	}
 
+// Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
+#define UNWRAP(...) __VA_ARGS__
 
 #endif

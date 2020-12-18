@@ -24,23 +24,20 @@
 #include <stdbool.h>
 #include <os_io_seproxyhal.h>
 #include <os.h>
-#include "ux.h"
 
 #include "getVersion.h"
-#include "attestKey.h"
 #include "handlers.h"
 #include "state.h"
 #include "errors.h"
 #include "menu.h"
 #include "assert.h"
 #include "io.h"
-#include "endian.h"
 
 // The whole app is designed for a specific api level.
 // In case there is an api change, first *verify* changes
 // (especially potential security implications) before bumping
 // the API level!
-STATIC_ASSERT(CX_APILEVEL == 9 || CX_APILEVEL == 10, "bad api level");
+STATIC_ASSERT(CX_APILEVEL >= 9, "bad api level");
 
 static const int INS_NONE = -1;
 
@@ -140,7 +137,7 @@ static void cardano_main(void)
 				bool isNewCall = false;
 				if (currentInstruction == INS_NONE)
 				{
-					os_memset(&instructionState, 0, SIZEOF(instructionState));
+					explicit_bzero(&instructionState, SIZEOF(instructionState));
 					isNewCall = true;
 					currentInstruction = header->ins;
 				} else
@@ -177,7 +174,7 @@ static void cardano_main(void)
 					flags = IO_ASYNCH_REPLY;
 					ui_idle();
 				} else {
-					PRINTF("Uncaught error %x", (unsigned) e);
+					PRINTF("Uncaught error 0x%x", (unsigned) e);
 					#ifdef RESET_ON_CRASH
 					// Reset device
 					io_seproxyhal_se_reset();
@@ -237,7 +234,6 @@ __attribute__((section(".boot"))) int main(void)
 				BLE_power(1, "Nano X ADA");
 				#endif
 
-				attestKey_initialize();
 				io_state = IO_EXPECT_IO;
 				cardano_main();
 			}

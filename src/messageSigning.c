@@ -1,11 +1,5 @@
-#include "hex_utils.h"
-#include "stream.h"
-#include "utils.h"
-#include "assert.h"
 #include "messageSigning.h"
-#include "stream.h"
-#include "endian.h"
-#include "bip44.h"
+#include "cardano.h"
 #include "keyDerivation.h"
 
 void signRawMessage(privateKey_t* privateKey,
@@ -40,23 +34,26 @@ void getTxWitness(bip44_path_t* pathSpec,
                   const uint8_t* txHashBuffer, size_t txHashSize,
                   uint8_t* outBuffer, size_t outSize)
 {
-
 	chain_code_t chainCode;
 	privateKey_t privateKey;
 
 	TRACE("derive private key");
-	derivePrivateKey(pathSpec, &chainCode, &privateKey);
 
-	ASSERT(txHashSize == 32);
-	uint8_t messageBuffer[8 + txHashSize];
-	// Warning(ppershing): following magic contains some CBOR parts so
-	// be careful if txHashSize changes
-	u8be_write(messageBuffer, 0x011a2d964a095820);
-	os_memmove(messageBuffer + 8, txHashBuffer, txHashSize);
+	BEGIN_TRY {
+		TRY {
+			derivePrivateKey(pathSpec, &chainCode, &privateKey);
 
-	signRawMessage(
-	        &privateKey,
-	        messageBuffer, SIZEOF(messageBuffer),
-	        outBuffer, outSize
-	);
+			ASSERT(txHashSize == TX_HASH_LENGTH);
+
+			signRawMessage(
+			        &privateKey,
+			        txHashBuffer, txHashSize,
+			        outBuffer, outSize
+			);
+		}
+		FINALLY {
+			explicit_bzero(&privateKey, SIZEOF(privateKey));
+			explicit_bzero(&chainCode, SIZEOF(chainCode));
+		}
+	} END_TRY;
 }

@@ -16,20 +16,20 @@
 #*******************************************************************************
 
 ifeq ($(BOLOS_SDK),)
-	$(error Environment variable BOLOS_SDK is not set)
+$(error Environment variable BOLOS_SDK is not set)
 endif
 include $(BOLOS_SDK)/Makefile.defines
 
 SIGNKEY = `cat sign.key`
 APPSIG = `cat bin/app.sig`
 NANOS_ID = 1
-WORDS = "void come effort suffer camp survey warrior heavy shoot primary clutch crush open amazing screen patrol group space point ten exist slush involve unfold"
-PIN = 6666
+WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+PIN = 5555
 
 APPNAME = "Cardano ADA"
-APPVERSION = "1.1.2"
+APPVERSION = "2.1.0"
 
-APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'"
+APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'"
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
@@ -47,7 +47,7 @@ all: default
 # Platform #
 ############
 DEFINES += OS_IO_SEPROXYHAL
-DEFINES += HAVE_BAGL HAVE_SPRINTF
+DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 DEFINES += APPVERSION=\"$(APPVERSION)\"
 
 ## USB HID?
@@ -80,6 +80,7 @@ DEFINES += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
 DEFINES += HAVE_UX_FLOW
 else
 DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=128
+DEFINES += HAVE_BOLOS_UX HAVE_UX_LEGACY COMPLIANCE_UX_160
 endif
 
 DEFINES += RESET_ON_CRASH
@@ -97,14 +98,28 @@ ifeq ($(DEVEL), 1)
 		DEFINES += PRINTF=screen_printf
 	endif
 else
-    DEFINES += PRINTF\(...\)=
+	DEFINES += PRINTF\(...\)=
 endif
 
 ##############
 #  Compiler  #
 ##############
+ifneq ($(BOLOS_ENV),)
+$(info BOLOS_ENV=$(BOLOS_ENV))
+CLANGPATH := $(BOLOS_ENV)/clang-arm-fropi/bin/
+GCCPATH   := $(BOLOS_ENV)/gcc-arm-none-eabi-5_3-2016q1/bin/
+else
+$(info BOLOS_ENV is not set: falling back to CLANGPATH and GCCPATH)
+endif
+ifeq ($(CLANGPATH),)
+$(info CLANGPATH is not set: clang will be used from PATH)
+endif
+ifeq ($(GCCPATH),)
+$(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
+endif
+
 CC       := $(CLANGPATH)clang
-CFLAGS   += -O3 -Os -Wall -Wextra -Wuninitialized -I/usr/include
+CFLAGS   += -O3 -Os -Wall -Wextra -Wuninitialized
 
 AS     := $(GCCPATH)arm-none-eabi-gcc
 LD       := $(GCCPATH)arm-none-eabi-gcc
@@ -114,7 +129,6 @@ LDLIBS   += -lm -lgcc -lc
 
 ##Enable to strip debug info from app
 #LDFLAGS  += -Wl,-s
-
 
 ##################
 #  Dependencies  #
@@ -130,9 +144,11 @@ ifeq ($(TARGET_NAME),TARGET_NANOX)
 	SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
 	SDK_SOURCE_PATH  += lib_ux
 endif
+
 ##############
 #   Build    #
 ##############
+
 load: all
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
 
@@ -151,3 +167,11 @@ dep/%.d: %.c Makefile
 
 listvariants:
 	@echo VARIANTS COIN cardano_ada
+
+##############
+#   Style    #
+##############
+
+# better to run this manually to avoid irrelevant dependencies processing
+format:
+	astyle --options=.astylerc src/*.h src/*.c

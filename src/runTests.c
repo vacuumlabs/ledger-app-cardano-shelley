@@ -1,22 +1,20 @@
 #ifdef DEVEL
 
-#include "common.h"
-
 #include "runTests.h"
-#include "stream.h"
 #include "cbor.h"
-#include "endian.h"
 #include "base58.h"
+#include "bech32.h"
 #include "test_utils.h"
-#include "hex_utils.h"
+#include "hexUtils.h"
 #include "hash.h"
-#include "attestUtxo.h"
+#include "bip44.h"
 #include "keyDerivation.h"
-#include "addressUtils.h"
+#include "addressUtilsByron.h"
+#include "addressUtilsShelley.h"
 #include "crc32.h"
-#include "hmac.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
+#include "uiHelpers.h"
 
 void handleRunTests(
         uint8_t p1 MARK_UNUSED,
@@ -26,21 +24,23 @@ void handleRunTests(
         bool isNewCall MARK_UNUSED
 )
 {
+	// Note: Make sure to have RESET_ON_CRASH flag disabled
+	// as it interferes with tests verifying assertions
 	BEGIN_ASSERT_NOEXCEPT {
 		PRINTF("Running tests\n");
-		run_textUtils_test();
-		run_txHashBuilder_test();
-		run_endian_test();
 		run_hex_test();
-		run_stream_test();
-		run_cbor_test();
 		run_base58_test();
-		run_hash_test();
-		run_test_attestUtxo();
-		run_key_derivation_test();
-		run_address_utils_test();
+		run_bech32_test();
 		run_crc32_test();
-		run_hmac_test();
+		run_endian_test();
+		run_textUtils_test();
+		run_hash_test();
+		run_cbor_test();
+		run_bip44_test();
+		run_key_derivation_test();
+		run_addressUtilsByron_test();
+		run_addressUtilsShelley_test();
+		run_txHashBuilder_test();
 		PRINTF("All tests done\n");
 	} END_ASSERT_NOEXCEPT;
 

@@ -1,11 +1,5 @@
 #include "cbor.h"
-#include "stream.h"
-#include "assert.h"
-#include "errors.h"
-#include <os.h>
-#include <stdbool.h>
 #include "endian.h"
-#include "utils.h"
 
 // Note(ppershing): consume functions should either
 // a) *consume* expected value, or
@@ -100,24 +94,12 @@ cbor_token_t cbor_parseToken(const uint8_t* buf, size_t size)
 #undef ENSURE_AVAILABLE_BYTES
 }
 
-cbor_token_t cbor_peekToken(const stream_t* stream)
-{
-	return cbor_parseToken(stream_head(stream), stream_availableBytes(stream));
-};
-
-// TODO(ppershing): this naming is confusing for CBOR_TYPE_BYTES!
-void cbor_advanceToken(stream_t* stream)
-{
-	cbor_token_t token = cbor_peekToken(stream);
-	stream_advancePos(stream, 1 + token.width);
-}
-
 size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t bufferSize)
 {
 	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
 
 #define CHECK_BUF_LEN(requiredSize) if ((size_t) requiredSize > bufferSize) THROW(ERR_DATA_TOO_LARGE);
-	if (type == CBOR_TYPE_ARRAY_INDEF || type == CBOR_TYPE_INDEF_END) {
+	if (type == CBOR_TYPE_ARRAY_INDEF || type == CBOR_TYPE_INDEF_END || type == CBOR_TYPE_NULL) {
 		CHECK_BUF_LEN(1);
 		buffer[0] = type;
 		return 1;
@@ -132,6 +114,7 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 	switch (type) {
 	case CBOR_TYPE_UNSIGNED:
 	case CBOR_TYPE_BYTES:
+	case CBOR_TYPE_TEXT:
 	case CBOR_TYPE_ARRAY:
 	case CBOR_TYPE_MAP:
 	case CBOR_TYPE_TAG:
@@ -170,39 +153,4 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 		return 1 + 8;
 	}
 #undef CHECK_BUF_LEN
-}
-
-void cbor_appendToken(stream_t* stream, uint8_t type, uint64_t value)
-{
-	uint8_t buf[1 + 8]; // 1 for preamble, 8 for possible uint64 value data
-	size_t bufLen = cbor_writeToken(type, value, buf, SIZEOF(buf));
-	stream_appendData(stream, buf, bufLen);
-}
-
-// Expect & consume CBOR token with specific type and value
-void cbor_takeTokenWithValue(stream_t* stream, uint8_t expectedType, uint64_t expectedValue)
-{
-	const cbor_token_t token = cbor_peekToken(stream);
-	if (token.type != expectedType || token.value != expectedValue) {
-		THROW(ERR_UNEXPECTED_TOKEN);
-	}
-	cbor_advanceToken(stream);
-}
-
-// Expect & consume CBOR token with specific type, return value
-uint64_t cbor_takeToken(stream_t* stream, uint8_t expectedType)
-{
-	const cbor_token_t token = cbor_peekToken(stream);
-	if (token.type != expectedType) {
-		THROW(ERR_UNEXPECTED_TOKEN);
-	}
-	cbor_advanceToken(stream);
-	return token.value;
-}
-
-// Is next CBOR token indefinite array/map end?
-bool cbor_peekNextIsIndefEnd(stream_t* stream)
-{
-	cbor_token_t head = cbor_peekToken(stream);
-	return (head.type == CBOR_TYPE_INDEF_END);
 }

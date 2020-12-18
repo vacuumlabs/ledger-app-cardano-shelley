@@ -1,8 +1,9 @@
 #include <bolos_target.h> // we need target definitions
-#if defined(TARGET_NANOS)
+#ifdef TARGET_NANOS
 
-#include <os_io_seproxyhal.h>
+#include "common.h"
 #include "uiHelpers.h"
+#include "uiElements.h"
 
 #ifdef HEADLESS
 #define HEADLESS_UI_ELEMENT() \

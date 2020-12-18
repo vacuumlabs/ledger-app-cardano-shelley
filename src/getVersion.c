@@ -3,7 +3,6 @@
 
 #include "uiHelpers.h"
 #include "getVersion.h"
-#include "getExtendedPublicKey.h"
 
 
 enum {
@@ -26,9 +25,9 @@ void getVersion_handleAPDU(
 	ASSERT_IS_DIGIT(2);
 	ASSERT_IS_DIGIT(4);
 
-	VALIDATE(p1 == 0, ERR_INVALID_REQUEST_PARAMETERS);
-	VALIDATE(p2 == 0, ERR_INVALID_REQUEST_PARAMETERS);
-	VALIDATE(wireDataSize == 0, ERR_INVALID_REQUEST_PARAMETERS);
+	VALIDATE(p1 == P1_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+	VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 
 	struct {
 		uint8_t major;

@@ -1,31 +1,14 @@
 #ifdef DEVEL
 
 #include "keyDerivation.h"
+#include "hexUtils.h"
 #include "test_utils.h"
-#include "hex_utils.h"
-#include "stream.h"
-#include <string.h>
-#include "errors.h"
-#include "utils.h"
-#include "state.h"
 
-
-// Note(ppershing): Used in macros to have (parenthesis) => {initializer} magic
-#define UNWRAP(...) __VA_ARGS__
-
-static void pathSpec_init(bip44_path_t* pathSpec, uint32_t* pathArray, uint32_t pathLength)
+static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
 {
 	pathSpec->length = pathLength;
 	os_memmove(pathSpec->path, pathArray, pathLength * 4);
 }
-
-static void PRINTF_bip44(const bip44_path_t* pathSpec)
-{
-	char tmp[100];
-	SIZEOF(*pathSpec);
-	bip44_printToStr(pathSpec, tmp, SIZEOF(tmp));
-	PRINTF("%s", tmp);
-};
 
 void testcase_derivePrivateKey(uint32_t* path, uint32_t pathLen, const char* expectedHex)
 {
@@ -33,11 +16,11 @@ void testcase_derivePrivateKey(uint32_t* path, uint32_t pathLen, const char* exp
 
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
-	PRINTF_bip44(&pathSpec);
+	bip44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	uint8_t expected[64];
-	size_t expectedSize = parseHexString(expectedHex, expected, SIZEOF(expected));
+	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));
 
 	chain_code_t chainCode;
 	privateKey_t privateKey;
@@ -109,7 +92,7 @@ void testcase_derivePublicKey(uint32_t* path, uint32_t pathLen, const char* expe
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	PRINTF_bip44(&pathSpec);
+	bip44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	chain_code_t chainCode;
@@ -121,7 +104,7 @@ void testcase_derivePublicKey(uint32_t* path, uint32_t pathLen, const char* expe
 	extractRawPublicKey(&publicKey, publicKeyRaw, SIZEOF(publicKeyRaw));
 
 	uint8_t expectedBuffer[32];
-	parseHexString(expected, expectedBuffer, SIZEOF(expectedBuffer));
+	decode_hex(expected, expectedBuffer, SIZEOF(expectedBuffer));
 	EXPECT_EQ_BYTES(expectedBuffer, publicKeyRaw, SIZEOF(expectedBuffer));
 }
 
@@ -133,9 +116,10 @@ void testPublicKeyDerivation()
 		testcase_derivePublicKey(path, ARRAY_LEN(path), expectedHex_); \
 	}
 
+	// byron
+
 	TESTCASE(
 	        (HD + 44, HD + 1815, HD + 1),
-
 	        "eb6e933ce45516ac7b0e023de700efae5e212ccc6bf0fcb33ba9243b9d832827"
 	)
 
@@ -156,6 +140,18 @@ void testPublicKeyDerivation()
 	        "3aba387352d588040e33046bfd5d856210e5324f91cb5d6b710b23e65a096400"
 	);
 
+	// shelley
+
+	TESTCASE(
+	        (HD + 1852, HD + 1815, HD + 1),
+	        "c9d624c493e269271980bc5e89bcd913719137f3b20c11339f28875951124c82"
+	);
+
+	TESTCASE(
+	        (HD + 1852, HD + 1815, HD + 1, HD + 23, 189),
+	        "e5bf32e096f786209b5f53906c6eaa7ac36b2a9859370379c0b46e0cd9d56e6f"
+	);
+
 #undef TESTCASE
 }
 
@@ -170,12 +166,12 @@ void testcase_deriveChainCode(uint32_t* path, uint32_t pathLen, const char* expe
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	PRINTF_bip44(&pathSpec);
+	bip44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	derivePrivateKey(&pathSpec, &chainCode, &privateKey);
 	uint8_t expectedBuffer[32];
-	parseHexString(expectedHex, expectedBuffer, 32);
+	decode_hex(expectedHex, expectedBuffer, 32);
 	EXPECT_EQ_BYTES(expectedBuffer, chainCode.code, 32);
 }
 

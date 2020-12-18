@@ -1,11 +1,12 @@
-#ifndef H_CARDANO_APP_ADDRESS_UTILS
-#define H_CARDANO_APP_ADDRESS_UTILS
+#ifndef H_CARDANO_APP_ADDRESS_UTILS_BYRON
+#define H_CARDANO_APP_ADDRESS_UTILS_BYRON
 
 #include "common.h"
 #include "bip44.h"
 
-size_t deriveAddress(
+size_t deriveAddress_byron(
         const bip44_path_t* pathSpec,
+        uint32_t protocolMagic,
         uint8_t* outBuffer, size_t outSize
 );
 
@@ -22,16 +23,18 @@ size_t cborPackRawAddressWithChecksum(
 
 size_t deriveRawAddress(
         const bip44_path_t* pathSpec,
+        uint32_t protocolMagic,
         uint8_t* outBuffer, size_t outSize
 );
 
-// Note: validates boxing
-// TODO(ppershing): should we just return a pointer view?
-size_t unboxChecksummedAddress(
-        const uint8_t* addressBuffer, size_t addressSize,
-        uint8_t* outputBuffer, size_t outputSize
+// Note: validates the overall address structure at the same time
+uint32_t extractProtocolMagic(
+        const uint8_t* addressBuffer, size_t addressSize
 );
 
-void run_address_utils_test();
 
+#ifdef DEVEL
+void run_addressUtilsByron_test();
 #endif
+
+#endif // H_CARDANO_APP_ADDRESS_UTILS_BYRON

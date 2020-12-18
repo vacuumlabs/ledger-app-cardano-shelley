@@ -1,12 +1,13 @@
-#include "common.h"
 #include "deriveAddress.h"
-#include "keyDerivation.h"
-#include "endian.h"
 #include "state.h"
 #include "securityPolicy.h"
 #include "uiHelpers.h"
-#include "addressUtils.h"
+#include "uiScreens.h"
+#include "addressUtilsByron.h"
+#include "addressUtilsShelley.h"
 #include "base58.h"
+#include "bech32.h"
+#include "bufView.h"
 
 static uint16_t RESPONSE_READY_MAGIC = 11223;
 
@@ -17,44 +18,39 @@ enum {
 	P1_DISPLAY = 0x02,
 };
 
-// forward declarations
+static void prepareResponse()
+{
+	ctx->address.size = deriveAddress(
+	                            &ctx->addressParams,
+	                            ctx->address.buffer, SIZEOF(ctx->address.buffer)
+	                    );
+	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
+}
+
 
 static void deriveAddress_return_ui_runStep();
 enum {
 	RETURN_UI_STEP_WARNING = 100,
-	RETURN_UI_STEP_PATH,
+	RETURN_UI_STEP_SPENDING_PATH,
+	RETURN_UI_STEP_STAKING_INFO,
 	RETURN_UI_STEP_CONFIRM,
 	RETURN_UI_STEP_RESPOND,
 	RETURN_UI_STEP_INVALID,
 };
 
-static void deriveAddress_handleReturn(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void deriveAddress_handleReturn()
 {
-	TRACE();
-	VALIDATE(p2 == 0, ERR_INVALID_REQUEST_PARAMETERS);
-
-	// Parse wire
-	size_t parsedSize = bip44_parseFromWire(&ctx->pathSpec, wireDataBuffer, wireDataSize);
-
-	if (parsedSize != wireDataSize) {
-		THROW(ERR_INVALID_DATA);
-	}
-
 	// Check security policy
-	security_policy_t policy = policyForReturnDeriveAddress(&ctx->pathSpec);
+	security_policy_t policy = policyForReturnDeriveAddress(&ctx->addressParams);
+	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
-	ctx->address.size = deriveAddress(
-	                            &ctx->pathSpec,
-	                            ctx->address.buffer,
-	                            SIZEOF(ctx->address.buffer)
-	                    );
-	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
+	prepareResponse();
 
 	switch (policy) {
 #	define  CASE(POLICY, STEP) case POLICY: {ctx->ui_step=STEP; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,    RETURN_UI_STEP_WARNING);
-		CASE(POLICY_PROMPT_BEFORE_RESPONSE, RETURN_UI_STEP_PATH);
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, RETURN_UI_STEP_SPENDING_PATH);
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   RETURN_UI_STEP_RESPOND);
 #	undef   CASE
 	default:
@@ -78,20 +74,15 @@ static void deriveAddress_return_ui_runStep()
 		        this_fn
 		);
 	}
-	UI_STEP(RETURN_UI_STEP_PATH) {
-		// Response
-		char pathStr[100];
-		{
-			const char* prefix = "Path: ";
-			size_t len = strlen(prefix);
-			os_memcpy(pathStr, prefix, len); // Note: not null-terminated yet
-			bip44_printToStr(&ctx->pathSpec, pathStr + len, SIZEOF(pathStr) - len);
-		}
-		ui_displayPaginatedText(
+	UI_STEP(RETURN_UI_STEP_SPENDING_PATH) {
+		ui_displayPathScreen(
 		        "Export address",
-		        pathStr,
+		        &ctx->addressParams.spendingKeyPath,
 		        this_fn
 		);
+	}
+	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
+		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
 	}
 	UI_STEP(RETURN_UI_STEP_CONFIRM) {
 		ui_displayPrompt(
@@ -118,34 +109,21 @@ enum {
 	DISPLAY_UI_STEP_WARNING = 200,
 	DISPLAY_UI_STEP_INSTRUCTIONS,
 	DISPLAY_UI_STEP_PATH,
+	DISPLAY_UI_STEP_STAKING_INFO,
 	DISPLAY_UI_STEP_ADDRESS,
 	DISPLAY_UI_STEP_RESPOND,
 	DISPLAY_UI_STEP_INVALID
 };
 
 
-static void deriveAddress_handleDisplay(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void deriveAddress_handleDisplay()
 {
-	TRACE();
-	VALIDATE(p2 == 0, ERR_INVALID_REQUEST_PARAMETERS);
-
-	// Parse wire
-	size_t parsedSize = bip44_parseFromWire(&ctx->pathSpec, wireDataBuffer, wireDataSize);
-
-	if (parsedSize != wireDataSize) {
-		THROW(ERR_INVALID_DATA);
-	}
-
 	// Check security policy
-	security_policy_t policy = policyForShowDeriveAddress(&ctx->pathSpec);
+	security_policy_t policy = policyForShowDeriveAddress(&ctx->addressParams);
+	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
-	ctx->address.size = deriveAddress(
-	                            &ctx->pathSpec,
-	                            ctx->address.buffer,
-	                            SIZEOF(ctx->address.buffer)
-	                    );
-	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
+	prepareResponse();
 
 	switch (policy) {
 #	define  CASE(policy, step) case policy: {ctx->ui_step=step; break;}
@@ -180,28 +158,20 @@ static void deriveAddress_display_ui_runStep()
 		);
 	}
 	UI_STEP(DISPLAY_UI_STEP_PATH) {
-		// Response
-		char pathStr[100];
-		bip44_printToStr(&ctx->pathSpec, pathStr, SIZEOF(pathStr));
-		ui_displayPaginatedText(
+		ui_displayPathScreen(
 		        "Address path",
-		        pathStr,
+		        &ctx->addressParams.spendingKeyPath,
 		        this_fn
 		);
 	}
+	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
+		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
+	}
 	UI_STEP(DISPLAY_UI_STEP_ADDRESS) {
-		char address58Str[100];
 		ASSERT(ctx->address.size <= SIZEOF(ctx->address.buffer));
-
-		encode_base58(
-		        ctx->address.buffer,
-		        ctx->address.size,
-		        address58Str,
-		        SIZEOF(address58Str)
-		);
-		ui_displayPaginatedText(
+		ui_displayAddressScreen(
 		        "Address",
-		        address58Str,
+		        ctx->address.buffer, ctx->address.size,
 		        this_fn
 		);
 	}
@@ -220,13 +190,19 @@ void deriveAddress_handleAPDU(
         bool isNewCall
 )
 {
+	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
 	// Initialize state
 	if (isNewCall) {
-		os_memset(ctx, 0, SIZEOF(*ctx));
+		explicit_bzero(ctx, SIZEOF(*ctx));
 	}
 	ctx->responseReadyMagic = 0;
+
+	parseAddressParams(wireDataBuffer, wireDataSize, &ctx->addressParams);
+
 	switch (p1) {
-#	define  CASE(P1, HANDLER_FN) case P1: {HANDLER_FN(p2, wireDataBuffer, wireDataSize); break;}
+#	define  CASE(P1, HANDLER_FN) case P1: {HANDLER_FN(); break;}
 		CASE(P1_RETURN,  deriveAddress_handleReturn);
 		CASE(P1_DISPLAY, deriveAddress_handleDisplay);
 #	undef  CASE

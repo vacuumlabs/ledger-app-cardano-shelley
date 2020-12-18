@@ -3,7 +3,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "securityPolicy.h"
+#include <stdbool.h>
+#include <ux.h>
+
+#include "utils.h"
 
 typedef void ui_callback_fn_t();
 
@@ -47,6 +50,8 @@ typedef union {
 } displayState_t;
 
 
+// ui_idle displays the main menu screen. Command handlers should call ui_idle
+// when they finish.
 void ui_idle(void);
 
 void ui_displayPaginatedText(
@@ -55,14 +60,6 @@ void ui_displayPaginatedText(
         ui_callback_fn_t* callback);
 
 void ui_displayPrompt(
-        const char* headerStr,
-        const char* bodyStr,
-        ui_callback_fn_t* confirm,
-        ui_callback_fn_t* reject
-);
-
-void ui_checkUserConsent(
-        security_policy_t policy,
         const char* headerStr,
         const char* bodyStr,
         ui_callback_fn_t* confirm,

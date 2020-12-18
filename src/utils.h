@@ -1,7 +1,6 @@
 #ifndef H_CARDANO_APP_UTILS
 #define H_CARDANO_APP_UTILS
 
-#include <os.h>
 #include "assert.h"
 
 
@@ -34,24 +33,6 @@
 	               "Wrong type" \
 	             )
 
-// Given that memset is root of many problems, a bit of paranoia is good.
-// If you don't believe, just check out https://www.viva64.com/en/b/0360/
-//
-// TL;DR; We want to avoid cases such as:
-//
-// int[10] x; void fn(int* ptr) { memset(ptr, 0, sizeof(ptr)); }
-// int[10][20] x; memset(x, 0, sizeof(x));
-// struct_t* ptr; memset(ptr, 0, sizeof(ptr));
-// int[10] x; memset(x, 0, 10);
-//
-// The best way is to provide an expected type and make sure expected and
-// inferred type have the same size.
-#define MEMCLEAR(ptr, expected_type) \
-	do { \
-		STATIC_ASSERT(sizeof(expected_type) == sizeof(*(ptr)), "bad memclear parameters"); \
-		os_memset(ptr, 0, sizeof(expected_type)); \
-	} while(0)
-
 // Helper function to check APDU request parameters
 #define VALIDATE(cond, error) \
 	do {\
@@ -77,8 +58,6 @@
 
 
 // *INDENT-OFF*
-// TODO(ppershing): maybe we can also join this with PARSER macros
-// in attestUtxo.c
 
 // Warning: Following macros are *NOT* brace-balanced by design!
 // The macros simplify writing resumable logic that needs to happen over
@@ -111,7 +90,9 @@
 	}
 
 // Early exit to another state, unused for now
-// #define UI_STEP_JUMP(NEXT_STEP) *__ui_step_ptr = NEXT_STEP; break;
+// #define UI_STEP_JUMP(NEXT_STEP) \
+// 				*__ui_step_ptr = NEXT_STEP; \
+// 				break;
 
 // *INDENT-ON*
 
@@ -120,7 +101,7 @@
 // start using such variable. deprecated deals with that.
 #define MARK_UNUSED __attribute__ ((unused, deprecated))
 
-#if DEVEL
+#ifdef DEVEL
 #define TRACE(...) \
 	do { \
 		PRINTF("[%s:%d] ", __func__, __LINE__); \
@@ -130,4 +111,14 @@
 #else
 #define TRACE(...)
 #endif
+
+
+#ifdef DEVEL
+#define TRACE_BUFFER(BUF, SIZE) \
+	TRACE("%.*h", SIZE, BUF);
+#else
+#define TRACE_BUFFER(BUF, SIZE)
 #endif
+
+
+#endif // H_CARDANO_APP_UTILS

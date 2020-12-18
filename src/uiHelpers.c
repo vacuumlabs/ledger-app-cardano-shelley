@@ -1,6 +1,7 @@
 #include <os_io_seproxyhal.h>
+
 #include "uiHelpers.h"
-#include "ux.h"
+#include "uiElements.h"
 #include "assert.h"
 #include "io.h"
 #include "utils.h"
@@ -143,7 +144,7 @@ void ui_displayPrompt(
 	ASSERT(text_len < SIZEOF(promptState->text));
 
 	// clear all memory
-	os_memset(&displayState, 0, SIZEOF(displayState));
+	explicit_bzero(&displayState, SIZEOF(displayState));
 	promptState_t* ctx = promptState;
 
 	// Copy data
@@ -178,7 +179,7 @@ void ui_displayPaginatedText(
 	ASSERT(body_len < SIZEOF(ctx->fullText));
 
 	// clear all memory
-	os_memset(ctx, 0, SIZEOF(*ctx));
+	explicit_bzero(ctx, SIZEOF(*ctx));
 
 	// Copy data
 	os_memmove(ctx->header, headerStr, header_len);
