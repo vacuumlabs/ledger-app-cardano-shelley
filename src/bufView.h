@@ -101,6 +101,15 @@ static inline cbor_token_t view_readToken(read_view_t* view)
 	return token;
 }
 
+// moves <length> bytes from the view to the buffer via os_memmove
+// (view.ptr is advanced accordingly)
+static inline void view_memmove(uint8_t* destBuffer, read_view_t* view, size_t length)
+{
+	ASSERT(length <= view_remainingSize(view));
+	os_memmove(destBuffer, view->ptr, length);
+	view_skipBytes(view, length);
+}
+
 // Note(ppershing): these macros expand to two arguments!
 #define VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view) (view)->ptr, view_remainingSize(view)
 #define VIEW_PROCESSED_TO_TUPLE_BUF_SIZE(view) (view)->begin, view_processedSize(view)

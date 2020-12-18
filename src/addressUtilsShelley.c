@@ -484,8 +484,7 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 	case STAKING_KEY_HASH:
 		VALIDATE(view_remainingSize(&view) >= ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
-		os_memmove(params->stakingKeyHash, view.ptr, ADDRESS_KEY_HASH_LENGTH);
-		view_skipBytes(&view, ADDRESS_KEY_HASH_LENGTH);
+		view_memmove(params->stakingKeyHash, &view, ADDRESS_KEY_HASH_LENGTH);
 		TRACE("Staking key hash: ");
 		TRACE_BUFFER(params->stakingKeyHash, SIZEOF(params->stakingKeyHash));
 		break;

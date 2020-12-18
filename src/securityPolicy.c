@@ -91,6 +91,15 @@ static inline bool is_too_deep(const bip44_path_t* pathSpec)
 	return bip44_containsMoreThanAddress(pathSpec);
 }
 
+bool is_tx_network_verifiable(
+        uint16_t numOutputs,
+        uint16_t numWithdrawals,
+        bool isSigningPoolRegistrationAsOwner
+)
+{
+	return (numOutputs > 0) || (numWithdrawals > 0) || (isSigningPoolRegistrationAsOwner);
+}
+
 #define DENY_IF(expr)      if (expr)    return POLICY_DENY;
 #define DENY_UNLESS(expr)  if (!(expr)) return POLICY_DENY;
 #define WARN_IF(expr)      if (expr)    return POLICY_PROMPT_WARN_UNUSUAL;
@@ -176,11 +185,19 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 
 
 // Initiate transaction signing
-security_policy_t policyForSignTxInit(uint8_t networkId, uint32_t protocolMagic)
+security_policy_t policyForSignTxInit(
+        uint8_t networkId,
+        uint32_t protocolMagic,
+        uint16_t numOutputs,
+        uint16_t numWithdrawals,
+        bool isSigningPoolRegistrationAsOwner
+)
 {
 	// Deny shelley mainnet with weird byron protocol magic
 	DENY_IF(networkId == MAINNET_NETWORK_ID && protocolMagic != MAINNET_PROTOCOL_MAGIC);
 	// Note: testnets can still use byron mainnet protocol magic so we can't deny the opposite direction
+
+	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, isSigningPoolRegistrationAsOwner));
 
 	WARN_IF(networkId != MAINNET_NETWORK_ID);
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);

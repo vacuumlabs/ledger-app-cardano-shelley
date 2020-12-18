@@ -473,8 +473,7 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 				if (includeIpv4 == RELAY_YES) {
 					VALIDATE(view_remainingSize(&view) >= IPV4_SIZE, ERR_INVALID_DATA);
 					STATIC_ASSERT(sizeof(ipv4.ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
-					os_memmove(ipv4.ip, view.ptr, IPV4_SIZE);
-					view_skipBytes(&view, IPV4_SIZE);
+					view_memmove(ipv4.ip, &view, IPV4_SIZE);
 					TRACE("ipv4");
 					TRACE_BUFFER(ipv4.ip, IPV4_SIZE);
 					ipv4Ptr = &ipv4;
@@ -490,9 +489,8 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 				uint8_t includeIpv6 = parse_u1be(&view);
 				if (includeIpv6 == RELAY_YES) {
 					VALIDATE(view_remainingSize(&view) >= IPV6_SIZE, ERR_INVALID_DATA);
-					STATIC_ASSERT(sizeof(ipv6.ip) == IPV6_SIZE, "wrong ipv6 size"); // SIZEOF does not work for 4-byte buffers
-					os_memmove(ipv6.ip, view.ptr, IPV6_SIZE);
-					view_skipBytes(&view, IPV6_SIZE);
+					STATIC_ASSERT(SIZEOF(ipv6.ip) == IPV6_SIZE, "wrong ipv6 size");
+					view_memmove(ipv6.ip, &view, IPV6_SIZE);
 					TRACE("ipv6");
 					TRACE_BUFFER(ipv6.ip, IPV6_SIZE);
 					ipv6Ptr = &ipv6;
@@ -713,15 +711,13 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		{
 			VALIDATE(view_remainingSize(&view) >= METADATA_HASH_LENGTH, ERR_INVALID_DATA);
 			ASSERT(SIZEOF(md->hash) == METADATA_HASH_LENGTH);
-			os_memmove(md->hash, view.ptr, SIZEOF(md->hash));
-			view_skipBytes(&view, METADATA_HASH_LENGTH);
+			view_memmove(md->hash, &view, METADATA_HASH_LENGTH);
 		}
 		{
 			md->urlSize = view_remainingSize(&view);
 			VALIDATE(md->urlSize <= POOL_METADATA_URL_MAX_LENGTH, ERR_INVALID_DATA);
 			ASSERT(SIZEOF(md->url) >= md->urlSize);
-			os_memmove(md->url, view.ptr, md->urlSize);
-			view_skipBytes(&view, md->urlSize);
+			view_memmove(md->url, &view, md->urlSize);
 			str_validateTextBuffer(md->url, md->urlSize);
 		}
 
