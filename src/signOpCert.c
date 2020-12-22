@@ -52,7 +52,7 @@ void signOpCert_handleAPDU(
 
 		STATIC_ASSERT(SIZEOF(ctx->kesPublicKey) == KES_PUBLIC_KEY_LENGTH, "wrong KES public key size");
 		VALIDATE(view_remainingSize(&view) >= KES_PUBLIC_KEY_LENGTH, ERR_INVALID_DATA);
-		view_memmove(ctx->kesPublicKey, view.ptr, KES_PUBLIC_KEY_LENGTH);
+		view_memmove(ctx->kesPublicKey, &view, KES_PUBLIC_KEY_LENGTH);
 
 		VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
 		ctx->kesPeriod = parse_u8be(&view);
@@ -96,7 +96,7 @@ void signOpCert_handleAPDU(
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   UI_STEP_RESPOND);
 #	undef   CASE
 	default:
-		ASSERT(false);
+		THROW(ERR_NOT_IMPLEMENTED);
 	}
 	signOpCert_ui_runStep();
 }
@@ -143,7 +143,7 @@ static void signOpCert_ui_runStep()
 	}
 	UI_STEP(UI_STEP_DISPLAY_ISSUE_COUNTER) {
 		char issueCounterString[50];
-		snprintf(issueCounterString, SIZEOF(issueCounterString), "%llu", ctx->kesPeriod);
+		snprintf(issueCounterString, SIZEOF(issueCounterString), "%llu", ctx->issueCounter);
 		ui_displayPaginatedText(
 		        "Issue counter",
 		        issueCounterString,

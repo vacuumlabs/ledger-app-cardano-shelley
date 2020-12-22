@@ -133,7 +133,7 @@ static void runGetOnePublicKeyUIFlow()
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   GET_KEY_UI_STEP_RESPOND);
 #	undef   CASE
 	default:
-		ASSERT(false);
+		THROW(ERR_NOT_IMPLEMENTED);
 	}
 
 	getPublicKeys_respondOneKey_ui_runStep();
