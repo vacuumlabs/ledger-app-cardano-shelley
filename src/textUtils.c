@@ -59,7 +59,8 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	return rawSize + suffixLength;
 }
 
-size_t str_formatUint64(uint64_t number, char* out, size_t outSize) {
+size_t str_formatUint64(uint64_t number, char* out, size_t outSize)
+{
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	char scratchBuffer[30];
