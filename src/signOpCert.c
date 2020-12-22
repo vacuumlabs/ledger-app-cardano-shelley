@@ -134,7 +134,7 @@ static void signOpCert_ui_runStep()
 	}
 	UI_STEP(UI_STEP_DISPLAY_KES_PERIOD) {
 		char kesPeriodString[50];
-		snprintf(kesPeriodString, SIZEOF(kesPeriodString), "%llu", ctx->kesPeriod);
+		str_formatUint64(ctx->kesPeriod, kesPeriodString, SIZEOF(kesPeriodString));
 		ui_displayPaginatedText(
 		        "KES period",
 		        kesPeriodString,
@@ -143,7 +143,7 @@ static void signOpCert_ui_runStep()
 	}
 	UI_STEP(UI_STEP_DISPLAY_ISSUE_COUNTER) {
 		char issueCounterString[50];
-		snprintf(issueCounterString, SIZEOF(issueCounterString), "%llu", ctx->issueCounter);
+		str_formatUint64(ctx->issueCounter, issueCounterString, SIZEOF(issueCounterString));
 		ui_displayPaginatedText(
 		        "Issue counter",
 		        issueCounterString,

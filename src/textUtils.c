@@ -59,6 +59,41 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	return rawSize + suffixLength;
 }
 
+size_t str_formatUint64(uint64_t number, char* out, size_t outSize) {
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
+	char scratchBuffer[30];
+	char* ptr = BEGIN(scratchBuffer);
+	char* end = END(scratchBuffer);
+
+	// We print in reverse
+	// We want at least one iteration
+	int place = 0;
+	do {
+		WRITE_CHAR(ptr, end, '0' + (number % 10));
+		number /= 10;
+		place++;
+	} while (number > 0);
+
+	// Size without terminating character
+	STATIC_ASSERT(sizeof(ptr - scratchBuffer) == sizeof(size_t), "bad size_t size");
+	size_t rawSize = (size_t) (ptr - scratchBuffer);
+
+	if (rawSize + 1 > outSize) {
+		THROW(ERR_DATA_TOO_LARGE);
+	}
+
+	// Copy reversed & append terminator
+	for (size_t i = 0; i < rawSize; i++) {
+		out[i] = scratchBuffer[rawSize - 1 - i];
+	}
+	out[rawSize] = 0;
+
+	ASSERT(strlen(out) == rawSize);
+
+	return rawSize;
+}
+
 #ifdef DEVEL
 void str_traceAdaAmount(const char* prefix, uint64_t amount)
 {

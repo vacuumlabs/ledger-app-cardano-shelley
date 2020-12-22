@@ -188,7 +188,7 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
-	CHECK(pathSpec->length == POOL_COLD_KEY_PATH_LENGTH);
+	CHECK(pathSpec->length == BIP44_I_POOL_COLD_KEY + 1);
 	CHECK(bip44_hasValidCardanoPoolColdKeyPrefix(pathSpec));
 	CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY_USECASE] == 0);
 	CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY] >= HARDENED_BIP32);
