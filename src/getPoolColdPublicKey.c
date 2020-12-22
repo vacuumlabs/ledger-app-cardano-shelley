@@ -98,7 +98,7 @@ static void getPoolColdPublicKey_ui_runStep()
 	UI_STEP(UI_STEP_RESPOND) {
 		ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
 
-		io_send_buf(SUCCESS, (uint8_t*) &ctx->extPoolColdPubKey.pubKey, SIZEOF(ctx->extPoolColdPubKey.pubKey));
+		io_send_buf(SUCCESS, (uint8_t*) &ctx->extPoolColdPubKey, SIZEOF(ctx->extPoolColdPubKey));
 		ui_idle();
 
 	}

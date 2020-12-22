@@ -30,7 +30,7 @@ handler_fn_t* lookupHandler(uint8_t ins)
 		CASE(0x11, deriveAddress_handleAPDU);
 		CASE(0x12, getPoolColdPublicKey_handleAPDU);
 
-		// 0x2* -  signing-transaction related
+		// 0x2* -  signing related
 		CASE(0x21, signTx_handleAPDU);
 		CASE(0x22, signOpCert_handleAPDU);
 
