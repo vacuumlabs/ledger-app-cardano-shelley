@@ -8,6 +8,7 @@
 #include "uiScreens.h"
 #include "securityPolicy.h"
 #include "messageSigning.h"
+#include "textUtils.h"
 
 static ins_sign_op_cert_context_t* ctx = &(instructionState.signOpCertContext);
 
