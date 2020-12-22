@@ -80,7 +80,7 @@ void signOpCert_handleAPDU(
 		ASSERT(view_processedSize(&opCertBodyBufferView) == OP_CERT_BODY_LENGTH);
 
 		getOpCertSignature(
-		        & ctx->poolColdKeyPathSpec,
+		        &ctx->poolColdKeyPathSpec,
 		        opCertBodyBuffer,
 		        OP_CERT_BODY_LENGTH,
 		        ctx->signature,

@@ -54,8 +54,8 @@ void getPoolColdPublicKey_handleAPDU(
 
 	// Calculation
 	deriveExtendedPublicKey(
-	        & ctx->pathSpec,
-	        & ctx->extPoolColdPubKey
+	        &ctx->pathSpec,
+	        &ctx->extPoolColdPubKey
 	);
 	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
 
