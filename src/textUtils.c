@@ -108,6 +108,13 @@ void str_traceAdaAmount(const char* prefix, uint64_t amount)
 	str_formatAdaAmount(amount, adaAmountStr + prefixLen, SIZEOF(adaAmountStr) - prefixLen);
 	TRACE("%s", adaAmountStr);
 }
+
+void str_traceUint64(uint64_t number)
+{
+	char numberStr[100];
+	str_formatUint64(number, numberStr, SIZEOF(numberStr));
+	TRACE("%s", numberStr);
+}
 #endif
 
 
