@@ -44,12 +44,12 @@ void ui_displayAccountScreen(
 		if (bip44_hasByronPrefix(path)) {
 			snprintf(
 			        accountDescription, SIZEOF(accountDescription),
-			        "Byron account %u  ", account
+			        "Byron account #%u  ", account + 1
 			);
 		} else if (bip44_hasShelleyPrefix(path)) {
 			snprintf(
 			        accountDescription, SIZEOF(accountDescription),
-			        "Account %u  ", account
+			        "Account #%u  ", account + 1
 			);
 		} else {
 			ASSERT(false);
