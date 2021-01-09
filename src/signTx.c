@@ -237,7 +237,7 @@ static void signTx_handleInit_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step);
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
-		if (is_tx_network_verifiable(ctx->numOutputs, ctx->numWithdrawals, ctx->commonTxData.isSigningPoolRegistrationAsOwner)) {
+		if (is_tx_network_verifiable(ctx->commonTxData.signTxUsecase, ctx->numOutputs, ctx->numWithdrawals)) {
 			ui_displayNetworkParamsScreen(
 			        "New transaction",
 			        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
@@ -297,6 +297,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		struct {
+			uint8_t signTxUsecase;
+
 			uint8_t networkId;
 			uint8_t protocolMagic[4];
 
@@ -313,6 +315,18 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		}* wireHeader = (void*) wireDataBuffer;
 
 		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
+
+		ctx->commonTxData.signTxUsecase = wireHeader->signTxUsecase;
+		TRACE("sign tx use case %d", (int) ctx->commonTxData.signTxUsecase);
+		switch(ctx->commonTxData.signTxUsecase) {
+		case SIGN_TX_USECASE_ORDINARY_TX:
+		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+			// these usecases are allowed
+			break;
+
+		default:
+			THROW(ERR_INVALID_DATA);
+		}
 
 		ASSERT_TYPE(ctx->commonTxData.networkId, uint8_t);
 		ctx->commonTxData.networkId = wireHeader->networkId;
@@ -331,19 +345,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 		ctx->includeValidityIntervalStart = signTx_parseIncluded(wireHeader->includeValidityIntervalStart);
 		TRACE("Include validity interval start %d", ctx->includeValidityIntervalStart);
-
-		switch (wireHeader->isSigningPoolRegistrationAsOwner) {
-		case SIGN_TX_POOL_REGISTRATION_YES:
-			ctx->commonTxData.isSigningPoolRegistrationAsOwner = true;
-			break;
-
-		case SIGN_TX_POOL_REGISTRATION_NO:
-			ctx->commonTxData.isSigningPoolRegistrationAsOwner = false;
-			break;
-
-		default:
-			THROW(ERR_INVALID_DATA);
-		}
 
 		ASSERT_TYPE(ctx->numInputs, uint16_t);
 		ASSERT_TYPE(ctx->numOutputs, uint16_t);
@@ -365,10 +366,26 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		VALIDATE(ctx->numCertificates <= SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
 		VALIDATE(ctx->numWithdrawals <= SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
 
-		// TODO isn't this more like a security policy?
-		if (ctx->commonTxData.isSigningPoolRegistrationAsOwner) {
+		switch (ctx->commonTxData.signTxUsecase) {
+		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+			// necessary for security reasons
 			VALIDATE(ctx->numCertificates == 1, ERR_INVALID_DATA);
 			VALIDATE(ctx->numWithdrawals == 0, ERR_INVALID_DATA);
+			break;
+
+			#ifdef POOL_OPERATOR_APP
+		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+			// there is no point in signing a tx with more than one certificate
+			// because pool owners will not be able to sign it anyway
+			VALIDATE(ctx->numCertificates == 1, ERR_INVALID_DATA);
+
+			// TODO what other validations?
+			break;
+			#endif
+
+		default:
+			// no additional validation for other use cases
+			break;
 		}
 
 		// Current code design assumes at least one input.
@@ -383,14 +400,30 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			// in WITNESS stage we do not verify whether the witness belongs
 			// to a given utxo, withdrawal or certificate.
 
-			size_t maxNumWitnesses;
-			if (ctx->commonTxData.isSigningPoolRegistrationAsOwner) {
+			size_t maxNumWitnesses = 0;
+			switch (ctx->commonTxData.signTxUsecase) {
+			case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 				maxNumWitnesses = 1;
-			} else {
+				break;
+
+				#ifdef POOL_OPERATOR_APP
+			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+				maxNumWitnesses = 2; // pool key and one owner
+				// TODO think about this
+				break;
+				#endif
+
+			case SIGN_TX_USECASE_ORDINARY_TX:
 				maxNumWitnesses = (size_t) ctx->numInputs +
 				                  (size_t) ctx->numCertificates +
 				                  (size_t) ctx->numWithdrawals;
+				break;
+
+			default:
+				ASSERT(false);
 			}
+			ASSERT(maxNumWitnesses > 0);
+
 			VALIDATE(ctx->numWitnesses <= maxNumWitnesses, ERR_INVALID_DATA);
 		}
 	}
@@ -408,9 +441,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	);
 
 	security_policy_t policy = policyForSignTxInit(
+	                                   ctx->commonTxData.signTxUsecase,
 	                                   ctx->commonTxData.networkId,
 	                                   ctx->commonTxData.protocolMagic,
-	                                   ctx->commonTxData.isSigningPoolRegistrationAsOwner,
 	                                   ctx->numOutputs,
 	                                   ctx->numWithdrawals
 	                           );
@@ -597,7 +630,7 @@ static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 		txHashBuilder_addFee(&ctx->txHashBuilder, ctx->stageData.fee);
 	}
 
-	security_policy_t policy = policyForSignTxFee(ctx->commonTxData.isSigningPoolRegistrationAsOwner, ctx->stageData.fee);
+	security_policy_t policy = policyForSignTxFee(ctx->commonTxData.signTxUsecase, ctx->stageData.fee);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -752,7 +785,7 @@ static void signTx_handleCertificate_ui_runStep()
 	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_STAKING_KEY) {
 		ui_displayPathScreen(
 		        "Staking key",
-		        &ctx->stageData.certificate.keyPath,
+		        &ctx->stageData.certificate.pathSpec,
 		        this_fn
 		);
 	}
@@ -817,9 +850,9 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	}
 
 	// staking key derivation path
-	view_skipBytes(&view, bip44_parseFromWire(&certificateData->keyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
+	view_skipBytes(&view, bip44_parseFromWire(&certificateData->pathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
 	TRACE();
-	BIP44_PRINTF(&certificateData->keyPath);
+	BIP44_PRINTF(&certificateData->pathSpec);
 
 	TRACE("Remaining bytes: %d", view_remainingSize(&view));
 
@@ -853,7 +886,7 @@ static void _addCertificateDataToTx(sign_tx_certificate_data_t* certificateData,
 	uint8_t stakingKeyHash[ADDRESS_KEY_HASH_LENGTH];
 	{
 		write_view_t stakingKeyHashView = make_write_view(stakingKeyHash, stakingKeyHash + SIZEOF(stakingKeyHash));
-		size_t keyHashLength = view_appendPublicKeyHash(&stakingKeyHashView, &ctx->stageData.certificate.keyPath);
+		size_t keyHashLength = view_appendPublicKeyHash(&stakingKeyHashView, &ctx->stageData.certificate.pathSpec);
 		ASSERT(keyHashLength == ADDRESS_KEY_HASH_LENGTH);
 	}
 
@@ -907,7 +940,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 
 	// basic policy that just decides if the certificate is allowed
 	security_policy_t policy = policyForSignTxCertificate(
-	                                   ctx->commonTxData.isSigningPoolRegistrationAsOwner,
+	                                   ctx->commonTxData.signTxUsecase,
 	                                   ctx->stageData.certificate.type
 	                           );
 	TRACE("Policy: %d", (int) policy);
@@ -937,7 +970,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	// more granular security policy which takes into account certificate data
 	policy = policyForSignTxCertificateStaking(
 	                 ctx->stageData.certificate.type,
-	                 &ctx->stageData.certificate.keyPath
+	                 &ctx->stageData.certificate.pathSpec
 	         );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -1381,7 +1414,7 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 	{
 		// get policy
 		policy = policyForSignTxWitness(
-		                 ctx->commonTxData.isSigningPoolRegistrationAsOwner,
+		                 ctx->commonTxData.signTxUsecase,
 		                 &ctx->stageData.witness.path
 		         );
 		TRACE("Policy: %d", (int) policy);

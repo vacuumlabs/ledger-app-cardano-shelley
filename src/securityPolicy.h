@@ -24,22 +24,22 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 
 
 security_policy_t policyForSignTxInit(
+        sign_tx_usecase_t signTxUsecase,
         uint8_t networkId,
         uint32_t protocolMagic,
         uint16_t numOutputs,
-        uint16_t numWithdrawals,
-        bool isSigningPoolRegistrationAsOwner
+        uint16_t numWithdrawals
 );
 
 security_policy_t policyForSignTxInput();
 
 security_policy_t policyForSignTxOutputAddressBytes(
-        bool isSigningPoolRegistrationAsOwner,
+        sign_tx_usecase_t signTxUsecase,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
 );
 security_policy_t policyForSignTxOutputAddressParams(
-        bool isSigningPoolRegistrationAsOwner,
+        sign_tx_usecase_t signTxUsecase,
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic
 );
@@ -48,12 +48,12 @@ security_policy_t policyForSignTxOutputConfirm(
         uint64_t numAssetGroups
 );
 
-security_policy_t policyForSignTxFee(bool isSigningPoolRegistrationAsOwner, uint64_t fee);
+security_policy_t policyForSignTxFee(sign_tx_usecase_t signTxUsecase, uint64_t fee);
 
 security_policy_t policyForSignTxTtl(uint32_t ttl);
 
 security_policy_t policyForSignTxCertificate(
-        const bool includeStakePoolRegistrationCertificate,
+        sign_tx_usecase_t signTxUsecase,
         const certificate_type_t certificateType
 );
 security_policy_t policyForSignTxCertificateStaking(
@@ -74,16 +74,16 @@ security_policy_t policyForSignTxMetadata();
 security_policy_t policyForSignTxValidityIntervalStart();
 
 security_policy_t policyForSignTxWitness(
-        bool isSigningPoolRegistrationAsOwner,
+        sign_tx_usecase_t signTxUsecase,
         const bip44_path_t* pathSpec
 );
 
 security_policy_t policyForSignTxConfirm();
 
 bool is_tx_network_verifiable(
+        sign_tx_usecase_t signTxUsecase,
         uint16_t numOutputs,
-        uint16_t numWithdrawals,
-        bool isSigningPoolRegistrationAsOwner
+        uint16_t numWithdrawals
 );
 
 

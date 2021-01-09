@@ -10,6 +10,16 @@
 #include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
 
+// the use case significantly affects restrictions on tx being signed
+typedef enum {
+	SIGN_TX_USECASE_ORDINARY_TX = 3, // enum value 3 is needed for backwards compatibility
+	SIGN_TX_USECASE_POOL_REGISTRATION_OWNER = 4,
+
+	#ifdef POOL_OPERATOR_APP
+	SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR = 5,
+	#endif
+} sign_tx_usecase_t;
+
 typedef enum {
 	SIGN_STAGE_NONE = 0,
 	SIGN_STAGE_INIT = 23,
@@ -35,9 +45,8 @@ enum {
 };
 
 typedef struct {
-	// the presence of a stake pool registration certificate
-	// significantly affects restrictions on the whole tx
-	bool isSigningPoolRegistrationAsOwner;
+	// significantly affects restrictions on the tx
+	sign_tx_usecase_t signTxUsecase;
 
 	uint8_t networkId; // part of Shelley address
 	uint32_t protocolMagic; // part of Byron address
@@ -45,7 +54,8 @@ typedef struct {
 
 typedef struct {
 	certificate_type_t type;
-	bip44_path_t keyPath;
+	bip44_path_t pathSpec; // interpretation depends on type
+
 	// only for specific types
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
 } sign_tx_certificate_data_t;

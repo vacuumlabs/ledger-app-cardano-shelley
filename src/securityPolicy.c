@@ -36,18 +36,6 @@ static inline bool is_valid_stake_pool_owner_path(const bip44_path_t* pathSpec)
 	return bip44_isValidStakingKeyPath(pathSpec);
 }
 
-// general requirements on witnesses
-static inline bool is_valid_witness(const bip44_path_t* pathSpec)
-{
-	if (!bip44_hasValidCardanoPrefix(pathSpec))
-		return false;
-
-	if (bip44_isValidStakingKeyPath(pathSpec))
-		return true;
-
-	return bip44_isValidAddressPath(pathSpec);
-}
-
 // account is from a small brute-forcable range
 static inline bool has_reasonable_account(const bip44_path_t* pathSpec)
 {
@@ -72,12 +60,26 @@ static inline bool is_too_deep(const bip44_path_t* pathSpec)
 }
 
 bool is_tx_network_verifiable(
+        sign_tx_usecase_t signTxUsecase,
         uint16_t numOutputs,
-        uint16_t numWithdrawals,
-        bool isSigningPoolRegistrationAsOwner
+        uint16_t numWithdrawals
 )
 {
-	return (numOutputs > 0) || (numWithdrawals > 0) || (isSigningPoolRegistrationAsOwner);
+	if (numOutputs > 0) return true;
+	if (numWithdrawals > 0) return true;
+
+	switch (signTxUsecase) {
+
+		#ifdef POOL_OPERATOR_APP
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		#endif
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+		// pool registration certificate contains pool reward account
+		return true;
+
+	default:
+		return false;
+	}
 }
 
 
@@ -174,18 +176,18 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 
 // Initiate transaction signing
 security_policy_t policyForSignTxInit(
+        sign_tx_usecase_t signTxUsecase,
         uint8_t networkId,
         uint32_t protocolMagic,
         uint16_t numOutputs,
-        uint16_t numWithdrawals,
-        bool isSigningPoolRegistrationAsOwner
+        uint16_t numWithdrawals
 )
 {
 	// Deny shelley mainnet with weird byron protocol magic
 	DENY_IF(networkId == MAINNET_NETWORK_ID && protocolMagic != MAINNET_PROTOCOL_MAGIC);
 	// Note: testnets can still use byron mainnet protocol magic so we can't deny the opposite direction
 
-	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, isSigningPoolRegistrationAsOwner));
+	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, signTxUsecase));
 
 	WARN_IF(networkId != MAINNET_NETWORK_ID);
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
@@ -203,16 +205,12 @@ security_policy_t policyForSignTxInput()
 
 // For each transaction (third-party) address output
 security_policy_t policyForSignTxOutputAddressBytes(
-        bool isSigningPoolRegistrationAsOwner,
+        sign_tx_usecase_t signTxUsecase,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
 )
 {
-	TRACE("isSigningPoolRegistrationAsOwner = %d", isSigningPoolRegistrationAsOwner);
-
-	ALLOW_IF(isSigningPoolRegistrationAsOwner);
-
-	// network identification should be consistent across tx
+	// network identification must be consistent across tx
 	ASSERT(rawAddressSize >= 1);
 	address_type_t addressType = getAddressType(rawAddressBuffer[0]);
 	if (addressType == BYRON) {
@@ -224,25 +222,36 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		DENY_IF(addressType == REWARD);
 	}
 
-	// We always show third-party output addresses
-	SHOW();
+	switch (signTxUsecase) {
+	case SIGN_TX_USECASE_ORDINARY_TX:
+		// We always show third-party output addresses
+		SHOW();
+
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+		// all the funds are provided by the operator
+		// and thus outputs are irrelevant to the owner
+		ALLOW();
+
+		#ifdef POOL_OPERATOR_APP
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		SHOW();
+		#endif
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
 // For each output given by derivation path
 security_policy_t policyForSignTxOutputAddressParams(
-        bool isSigningPoolRegistrationAsOwner,
+        sign_tx_usecase_t signTxUsecase,
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic
 )
 {
-	// we forbid these to avoid leaking information
-	// (since the outputs are not shown, the user is unaware of what addresses are being derived)
-	// it also makes the tx signing faster if all outputs are given as addresses
-	DENY_IF(isSigningPoolRegistrationAsOwner);
-
 	DENY_UNLESS(isValidAddressParams(params));
-
-	DENY_IF(is_too_deep(&params->spendingKeyPath));
 
 	// network identification should be consistent across tx
 	if (params->type == BYRON) {
@@ -251,10 +260,31 @@ security_policy_t policyForSignTxOutputAddressParams(
 		DENY_IF(params->networkId != networkId);
 	}
 
-	SHOW_UNLESS(has_reasonable_account_and_address(&params->spendingKeyPath));
-	SHOW_UNLESS(is_standard_base_address(params));
+	switch (signTxUsecase) {
 
-	ALLOW();
+		#ifdef POOL_OPERATOR_APP
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		#endif
+	case SIGN_TX_USECASE_ORDINARY_TX: {
+		DENY_IF(is_too_deep(&params->spendingKeyPath));
+
+		SHOW_UNLESS(has_reasonable_account_and_address(&params->spendingKeyPath));
+		SHOW_UNLESS(is_standard_base_address(params));
+
+		ALLOW();
+	}
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
+		// we forbid these to avoid leaking information
+		// (since the outputs are not shown, the user is unaware of what addresses are being derived)
+		// it also makes the tx signing faster if all outputs are given as addresses
+		DENY();
+	}
+	default: {
+		ASSERT(false);
+	}
+	}
+
+	DENY(); // should not be reached
 }
 
 security_policy_t policyForSignTxOutputConfirm(
@@ -280,12 +310,29 @@ security_policy_t policyForSignTxOutputConfirm(
 }
 
 // For transaction fee
-security_policy_t policyForSignTxFee(bool isSigningPoolRegistrationAsOwner, uint64_t fee MARK_UNUSED)
+security_policy_t policyForSignTxFee(
+        sign_tx_usecase_t signTxUsecase,
+        uint64_t fee MARK_UNUSED
+)
 {
-	ALLOW_IF(isSigningPoolRegistrationAsOwner);
+	switch (signTxUsecase) {
 
-	// always show the fee in ordinary transactions
-	SHOW();
+		#ifdef POOL_OPERATOR_APP
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		#endif
+	case SIGN_TX_USECASE_ORDINARY_TX:
+		// always show the fee in ordinary transactions
+		SHOW();
+
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+		// fees are paid by the operator and are thus irrelevant for owners
+		ALLOW();
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
 // For transaction TTL
@@ -302,21 +349,29 @@ security_policy_t policyForSignTxTtl(uint32_t ttl)
 }
 
 // a generic policy for all certificates
-// does not evaluate all aspects for specific certificates
+// does not evaluate aspects of specific certificates
 security_policy_t policyForSignTxCertificate(
-        const bool includeStakePoolRegistrationCertificate,
+        sign_tx_usecase_t signTxUsecase,
         const certificate_type_t certificateType
 )
 {
-	if (includeStakePoolRegistrationCertificate) {
-		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-
-		ALLOW();
-	} else {
+	switch (signTxUsecase) {
+	case SIGN_TX_USECASE_ORDINARY_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-
 		ALLOW();
+
+		#ifdef POOL_OPERATOR_APP
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		#endif
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+		ALLOW();
+
+	default:
+		ASSERT(false);
 	}
+
+	DENY(); // should not be reached
 }
 
 // for certificates concerning staking keys and stake delegation
@@ -385,26 +440,57 @@ security_policy_t policyForSignTxWithdrawal()
 	SHOW();
 }
 
+static inline bool is_valid_input_witness(const bip44_path_t* pathSpec)
+{
+	return bip44_isValidAddressPath(pathSpec);
+}
+
+static inline bool is_valid_withdrawal_witness(const bip44_path_t* pathSpec)
+{
+	return bip44_isValidStakingKeyPath(pathSpec);
+}
+
 // For each transaction witness
 // Note: witnesses reveal public key of an address
 // and Ledger *does not* check whether they correspond to previously declared UTxOs
 security_policy_t policyForSignTxWitness(
-        bool isSigningPoolRegistrationAsOwner,
+        sign_tx_usecase_t signTxUsecase,
         const bip44_path_t* pathSpec
 )
 {
-	DENY_UNLESS(is_valid_witness(pathSpec));
+	switch (signTxUsecase) {
 
-	if (isSigningPoolRegistrationAsOwner) {
+	case SIGN_TX_USECASE_ORDINARY_TX:
+		if (is_valid_input_witness(pathSpec)) {
+			DENY_IF(is_too_deep(pathSpec));
+			WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
+			ALLOW();
+
+		}  else if (is_valid_withdrawal_witness(pathSpec)) {
+			WARN_UNLESS(has_reasonable_account(pathSpec));
+			ALLOW();
+
+		} else {
+			DENY();
+		}
+
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(is_valid_stake_pool_owner_path(pathSpec));
-	} else {
-		// witness for input or withdrawal
-		DENY_IF(is_too_deep(pathSpec));
+		WARN_UNLESS(has_reasonable_account(pathSpec));
+		ALLOW();
+		break;
+
+		#ifdef POOL_OPERATOR_APP
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		// TODO there could be two witnesses, one for pool key, one for pool owner
+		break;
+		#endif
+
+	default:
+		ASSERT(false);
 	}
 
-	WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
-
-	ALLOW();
+	DENY(); // should not be reached
 }
 
 security_policy_t policyForSignTxMetadata()

@@ -3,6 +3,8 @@
 #include "hexUtils.h"
 #include "textUtils.h"
 #include "cardanoCertificates.h"
+#include "signTx.h"
+
 
 void ui_displayPathScreen(
         const char* screenHeader,
