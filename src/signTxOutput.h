@@ -3,9 +3,8 @@
 
 #include "common.h"
 #include "cardano.h"
-#include "cardanoCertificates.h"
 #include "addressUtilsShelley.h"
-#include "securityPolicy.h"
+#include "securityPolicyType.h"
 
 #define OUTPUT_ASSET_GROUPS_MAX 1000
 #define OUTPUT_TOKENS_IN_GROUP_MAX 1000

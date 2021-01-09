@@ -2,7 +2,6 @@
 
 #include "txHashBuilder.h"
 #include "cardano.h"
-#include "cardanoCertificates.h"
 #include "hexUtils.h"
 #include "textUtils.h"
 #include "testUtils.h"
@@ -103,7 +102,7 @@ static struct {
 	}
 };
 
-static const char* expectedHex = "58dc0efc7a2d654795ae3b7c85518065bb123f17056406732c18d1553cc2510f";
+static const char* expectedHex = "8d8344a54f788061068957e25dbfa580468562d412c5e3a30ebd66006f9f3721";
 
 
 static void addMultiassetOutput(tx_hash_builder_t* builder)
@@ -165,36 +164,37 @@ static void addOutputs(tx_hash_builder_t* builder)
 
 static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 {
-	pool_registration_params_t poolParams = {};
+	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+	uint8_t vrfKeyHash[VRF_KEY_HASH_LENGTH];
+	uint64_t pledge = 500000000;
+	uint64_t cost = 340000000;
+	uint64_t marginNumerator = 1;
+	uint64_t marginDenominator = 1;
+	uint8_t rewardAccount[REWARD_ACCOUNT_SIZE];
 
 	size_t poolKeyHashSize = decode_hex(
 	                                 "5631EDE662CFB10FD5FD69B4667101DD289568E12BCF5F64D1C406FC",
-	                                 poolParams.poolKeyHash, SIZEOF(poolParams.poolKeyHash)
+	                                 poolKeyHash, SIZEOF(poolKeyHash)
 	                         );
-	ASSERT(poolKeyHashSize == SIZEOF(poolParams.poolKeyHash));
+	ASSERT(poolKeyHashSize == SIZEOF(poolKeyHash));
 
 	size_t vrfKeyHashSize = decode_hex(
 	                                "198890AD6C92E80FBDAB554DDA02DA9FB49D001BBD96181F3E07F7A6AB0D0640",
-	                                poolParams.vrfKeyHash, SIZEOF(poolParams.vrfKeyHash)
+	                                vrfKeyHash, SIZEOF(vrfKeyHash)
 	                        );
-	ASSERT(vrfKeyHashSize == SIZEOF(poolParams.vrfKeyHash));
+	ASSERT(vrfKeyHashSize == SIZEOF(vrfKeyHash));
 
 	size_t rewardAccountSize = decode_hex(
 	                                   "E03A7F09D3DF4CF66A7399C2B05BFA234D5A29560C311FC5DB4C490711",
-	                                   poolParams.rewardAccount, SIZEOF(poolParams.rewardAccount)
+	                                   rewardAccount, SIZEOF(rewardAccount)
 	                           );
-	ASSERT(rewardAccountSize == SIZEOF(poolParams.rewardAccount));
+	ASSERT(rewardAccountSize == SIZEOF(rewardAccount));
 
-	poolParams.pledge = 500000000;
-	poolParams.cost = 340000000;
-	poolParams.marginNumerator = 1;
-	poolParams.marginDenominator = 1;
-
-	txHashBuilder_addPoolRegistrationCertificate(
-	        builder,
-	        &poolParams,
-	        1, 3
-	);
+	txHashBuilder_poolRegistrationCertificate_enter(builder, 1, 3);
+	txHashBuilder_poolRegistrationCertificate_poolKeyHash(builder, poolKeyHash, SIZEOF(poolKeyHash));
+	txHashBuilder_poolRegistrationCertificate_vrfKeyHash(builder, vrfKeyHash, SIZEOF(vrfKeyHash));
+	txHashBuilder_poolRegistrationCertificate_financials(builder, pledge, cost, marginNumerator, marginDenominator);
+	txHashBuilder_poolRegistrationCertificate_rewardAccount(builder, rewardAccount, SIZEOF(rewardAccount));
 
 	txHashBuilder_addPoolRegistrationCertificate_enterOwners(builder);
 
@@ -206,34 +206,62 @@ static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 
 	txHashBuilder_addPoolRegistrationCertificate_enterRelays(builder);
 
-	ipv4_t ipv4;
-	decode_hex("08080808", ipv4.ip, IPV4_SIZE);
-
-	uint16_t port = 1234;
-
-	txHashBuilder_addPoolRegistrationCertificate_addRelay0(builder, &port, &ipv4, NULL);
-
-	// a valid DNS AAAA record, since dnsName actually is suppposed to be an A or AAAA record
-	const char* dnsName = "AAAA 2400:cb00:2049:1::a29f:1804";
-	uint8_t dnsNameBuffer[DNS_NAME_MAX_LENGTH];
-	size_t dnsNameBufferSize = str_textToBuffer(dnsName, dnsNameBuffer, SIZEOF(dnsNameBuffer));
-	ASSERT(dnsNameBufferSize <= DNS_NAME_MAX_LENGTH);
-
-	txHashBuilder_addPoolRegistrationCertificate_addRelay1(builder, NULL, dnsNameBuffer, dnsNameBufferSize);
-
-	// dnsName is not a valid DNS SRV record, but we don't validate it
-	txHashBuilder_addPoolRegistrationCertificate_addRelay2(builder, dnsNameBuffer, dnsNameBufferSize);
+	{
+		pool_relay_t relay0;
+		relay0.format = 0;
+		relay0.port.isNull = false;
+		relay0.port.number = 1234;
+		relay0.ipv4.isNull = false;
+		decode_hex("08080808", relay0.ipv4.ip, IPV4_SIZE);
+		relay0.ipv6.isNull = true;
+		txHashBuilder_addPoolRegistrationCertificate_addRelay(builder, &relay0);
+	}
+	{
+		pool_relay_t relay1;
+		relay1.format = 1;
+		relay1.port.isNull = true;
+		// a valid DNS AAAA record, since dnsName actually is suppposed to be an A or AAAA record
+		const char* dnsName = "AAAA 2400:cb00:2049:1::a29f:1804";
+		relay1.dnsNameSize = str_textToBuffer(dnsName, relay1.dnsName, SIZEOF(relay1.dnsName));
+		txHashBuilder_addPoolRegistrationCertificate_addRelay(builder, &relay1);
+	}
+	{
+		pool_relay_t relay2;
+		relay2.format = 2;
+		// dnsName is not a valid DNS SRV record, but we don't validate it
+		const char* dnsName = "AAAA 2400:cb00:2049:1::a29f:1804";
+		relay2.dnsNameSize = str_textToBuffer(dnsName, relay2.dnsName, SIZEOF(relay2.dnsName));
+		txHashBuilder_addPoolRegistrationCertificate_addRelay(builder, &relay2);
+	}
 
 	uint8_t metadataHash[32];
 	size_t metadataHashSize = decode_hex("914C57C1F12BBF4A82B12D977D4F274674856A11ED4B9B95BD70F5D41C5064A6", metadataHash, SIZEOF(metadataHash));
 	ASSERT(metadataHashSize == SIZEOF(metadataHash));
 
 	const char* metadataUrl = "https://teststakepool.com";
-	uint8_t urlBuffer[DNS_NAME_MAX_LENGTH];
+	uint8_t urlBuffer[DNS_NAME_SIZE_MAX];
 	size_t urlSize = str_textToBuffer(metadataUrl, urlBuffer, SIZEOF(urlBuffer));
-	ASSERT(urlSize <= DNS_NAME_MAX_LENGTH);
+	ASSERT(urlSize <= DNS_NAME_SIZE_MAX);
 
 	txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(builder, urlBuffer, urlSize, metadataHash, metadataHashSize);
+}
+
+static void addPoolRetirementCertificate(tx_hash_builder_t* builder)
+{
+	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+	uint64_t epoch = 1000;
+
+	size_t poolKeyHashSize = decode_hex(
+	                                 "5631EDE662CFB10FD5FD69B4667101DD289568E12BCF5F64D1C406FC",
+	                                 poolKeyHash, SIZEOF(poolKeyHash)
+	                         );
+	ASSERT(poolKeyHashSize == SIZEOF(poolKeyHash));
+
+	txHashBuilder_addCertificate_poolRetirement(
+	        builder,
+	        poolKeyHash, SIZEOF(poolKeyHash),
+	        epoch
+	);
 }
 
 static void addCertificates(tx_hash_builder_t* builder)
@@ -262,6 +290,8 @@ static void addCertificates(tx_hash_builder_t* builder)
 
 	addPoolRegistrationCertificate(builder);
 
+	addPoolRetirementCertificate(builder);
+
 	ITERATE(it, delegationCertificates) {
 		uint8_t tmp_credential[70];
 		size_t tmpSize_credential = decode_hex(
@@ -286,7 +316,8 @@ void run_txHashBuilder_test()
 	const size_t numCertificates = ARRAY_LEN(registrationCertificates) +
 	                               ARRAY_LEN(deregistrationCertificates) +
 	                               ARRAY_LEN(delegationCertificates) +
-	                               1; // stake pool registration certificate
+	                               1 + // stake pool retirement certificate
+	                               1;  // stake pool registration certificate
 
 	txHashBuilder_init(&builder,
 	                   ARRAY_LEN(inputs), ARRAY_LEN(outputs) + 2, // +2 for multiasset outputs

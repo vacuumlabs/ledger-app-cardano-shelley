@@ -65,7 +65,7 @@ static void deriveAddress_return_ui_runStep()
 	ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
 	ui_callback_fn_t* this_fn = deriveAddress_return_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(RETURN_UI_STEP_WARNING) {
 		ui_displayPaginatedText(
@@ -141,7 +141,7 @@ static void deriveAddress_display_ui_runStep()
 	ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
 	ui_callback_fn_t* this_fn = deriveAddress_display_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(DISPLAY_UI_STEP_WARNING) {
 		ui_displayPaginatedText(
