@@ -39,10 +39,14 @@ typedef enum {
 	TX_HASH_BUILDER_IN_FEE = 400,
 	TX_HASH_BUILDER_IN_TTL = 500,
 	TX_HASH_BUILDER_IN_CERTIFICATES = 600,
-	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_PARAMS = 610,
-	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS = 611,
-	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS = 612,
-	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA = 613,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_INIT = 610,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_KEY_HASH = 611,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_VRF = 612,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_FINANCIALS = 613,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_REWARD_ACCOUNT = 614,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS = 615,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS = 616,
+	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA = 617,
 	TX_HASH_BUILDER_IN_WITHDRAWALS = 700,
 	TX_HASH_BUILDER_IN_METADATA = 800,
 	TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START = 900,
@@ -133,10 +137,27 @@ void txHashBuilder_addCertificate_poolRetirement(
         uint64_t epoch
 );
 #endif
-void txHashBuilder_addPoolRegistrationCertificate(
+
+void txHashBuilder_poolRegistrationCertificate_enter(
         tx_hash_builder_t* builder,
-        const pool_registration_params_t* params,
         uint16_t numOwners, uint16_t numRelays
+);
+void txHashBuilder_poolRegistrationCertificate_poolKeyHash(
+        tx_hash_builder_t* builder,
+        uint8_t* poolKeyHash, size_t poolKeyHashSize
+);
+void txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
+        tx_hash_builder_t* builder,
+        uint8_t* vrfKeyHash, size_t vrfKeyHashSize
+);
+void txHashBuilder_poolRegistrationCertificate_financials(
+        tx_hash_builder_t* builder,
+		uint64_t pledge, uint64_t cost,
+		uint64_t marginNumerator, uint64_t marginDenominator
+);
+void txHashBuilder_poolRegistrationCertificate_rewardAccount(
+        tx_hash_builder_t* builder,
+        uint8_t* rewardAccount, size_t rewardAccountSize
 );
 void txHashBuilder_addPoolRegistrationCertificate_enterOwners(tx_hash_builder_t* builder);
 void txHashBuilder_addPoolRegistrationCertificate_addOwner(

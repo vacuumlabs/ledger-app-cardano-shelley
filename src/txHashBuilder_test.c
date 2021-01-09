@@ -165,36 +165,37 @@ static void addOutputs(tx_hash_builder_t* builder)
 
 static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 {
-	pool_registration_params_t poolParams = {};
+	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+	uint8_t vrfKeyHash[VRF_KEY_HASH_LENGTH];
+	uint64_t pledge = 500000000;
+	uint64_t cost = 340000000;
+	uint64_t marginNumerator = 1;
+	uint64_t marginDenominator = 1;
+	uint8_t rewardAccount[REWARD_ACCOUNT_SIZE];
 
 	size_t poolKeyHashSize = decode_hex(
 	                                 "5631EDE662CFB10FD5FD69B4667101DD289568E12BCF5F64D1C406FC",
-	                                 poolParams.poolKeyHash, SIZEOF(poolParams.poolKeyHash)
+	                                 poolKeyHash, SIZEOF(poolKeyHash)
 	                         );
-	ASSERT(poolKeyHashSize == SIZEOF(poolParams.poolKeyHash));
+	ASSERT(poolKeyHashSize == SIZEOF(poolKeyHash));
 
 	size_t vrfKeyHashSize = decode_hex(
 	                                "198890AD6C92E80FBDAB554DDA02DA9FB49D001BBD96181F3E07F7A6AB0D0640",
-	                                poolParams.vrfKeyHash, SIZEOF(poolParams.vrfKeyHash)
+	                                vrfKeyHash, SIZEOF(vrfKeyHash)
 	                        );
-	ASSERT(vrfKeyHashSize == SIZEOF(poolParams.vrfKeyHash));
+	ASSERT(vrfKeyHashSize == SIZEOF(vrfKeyHash));
 
 	size_t rewardAccountSize = decode_hex(
 	                                   "E03A7F09D3DF4CF66A7399C2B05BFA234D5A29560C311FC5DB4C490711",
-	                                   poolParams.rewardAccount, SIZEOF(poolParams.rewardAccount)
+	                                   rewardAccount, SIZEOF(rewardAccount)
 	                           );
-	ASSERT(rewardAccountSize == SIZEOF(poolParams.rewardAccount));
+	ASSERT(rewardAccountSize == SIZEOF(rewardAccount));
 
-	poolParams.pledge = 500000000;
-	poolParams.cost = 340000000;
-	poolParams.marginNumerator = 1;
-	poolParams.marginDenominator = 1;
-
-	txHashBuilder_addPoolRegistrationCertificate(
-	        builder,
-	        &poolParams,
-	        1, 3
-	);
+	txHashBuilder_poolRegistrationCertificate_enter(builder, 1, 3);
+	txHashBuilder_poolRegistrationCertificate_poolKeyHash(builder, poolKeyHash, SIZEOF(poolKeyHash));
+	txHashBuilder_poolRegistrationCertificate_vrfKeyHash(builder, vrfKeyHash, SIZEOF(vrfKeyHash));
+	txHashBuilder_poolRegistrationCertificate_financials(builder, pledge, cost, marginNumerator, marginDenominator);
+	txHashBuilder_poolRegistrationCertificate_rewardAccount(builder, rewardAccount, SIZEOF(rewardAccount));
 
 	txHashBuilder_addPoolRegistrationCertificate_enterOwners(builder);
 

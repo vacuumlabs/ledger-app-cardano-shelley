@@ -12,18 +12,35 @@
 // SIGN_STAGE_CERTIFICATES = 28
 // CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3
 typedef enum {
-	STAKE_POOL_REGISTRATION_PARAMS = 2830,
-	STAKE_POOL_REGISTRATION_OWNERS = 2831,
-	STAKE_POOL_REGISTRATION_RELAYS = 2832,
-	STAKE_POOL_REGISTRATION_METADATA = 2833,
-	STAKE_POOL_REGISTRATION_CONFIRM = 2834,
-	STAKE_POOL_REGISTRATION_FINISHED = 2835
+	STAKE_POOL_REGISTRATION_INIT = 2830,
+	STAKE_POOL_REGISTRATION_POOL_KEY = 2831,
+	STAKE_POOL_REGISTRATION_VRF_KEY = 2832,
+	STAKE_POOL_REGISTRATION_FINANCIALS = 2833,
+	STAKE_POOL_REGISTRATION_REWARD_ACCOUNT = 2834,
+	STAKE_POOL_REGISTRATION_OWNERS = 2835,
+	STAKE_POOL_REGISTRATION_RELAYS = 2836,
+	STAKE_POOL_REGISTRATION_METADATA = 2837,
+	STAKE_POOL_REGISTRATION_CONFIRM = 2838,
+	STAKE_POOL_REGISTRATION_FINISHED = 2839,
 } sign_tx_pool_registration_state_t;
 
-enum {
-	SIGN_TX_POOL_OWNER_TYPE_PATH = 1,
-	SIGN_TX_POOL_OWNER_TYPE_KEY_HASH = 2,
-};
+typedef struct {
+	data_description_kind_t descriptionKind;
+	uint8_t hash[POOL_KEY_HASH_LENGTH];
+	bip44_path_t path;
+} pool_id_t;
+
+typedef struct {
+	data_description_kind_t descriptionKind;
+	uint8_t buffer[REWARD_ACCOUNT_SIZE];
+	bip44_path_t path;
+} pool_reward_account_t;
+
+typedef struct {
+	data_description_kind_t descriptionKind;
+	uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+	bip44_path_t path;
+} pool_owner_t;
 
 typedef struct {
 	uint8_t url[POOL_METADATA_URL_MAX_LENGTH];
@@ -31,15 +48,12 @@ typedef struct {
 	uint8_t hash[METADATA_HASH_LENGTH];
 } pool_metadata_t;
 
-typedef struct {
-	uint8_t descriptionKind;
-	uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
-	bip44_path_t path;
-} pool_owner_t;
 
 typedef struct {
 	sign_tx_pool_registration_state_t state;
+
 	int ui_step;
+
 	uint16_t currentOwner;
 	uint16_t numOwnersGivenByPath;
 	uint16_t currentRelay;
@@ -48,9 +62,15 @@ typedef struct {
 	uint16_t numRelays;
 
 	union {
+		pool_id_t poolId;
+		uint8_t vrfKeyHash[VRF_KEY_HASH_LENGTH];
 		struct {
-			pool_registration_params_t poolParams;
+			uint64_t pledge;
+			uint64_t cost;
+			uint64_t marginNumerator;
+			uint64_t marginDenominator;
 		};
+		pool_reward_account_t poolRewardAccount;
 		pool_owner_t owner;
 		pool_metadata_t metadata;
 	} stateData;

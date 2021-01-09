@@ -67,7 +67,17 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
         uint64_t epoch
 );
 #endif
-security_policy_t policyForSignTxCertificateStakePoolRegistration();
+security_policy_t policyForSignTxStakePoolRegistrationPoolId(
+        sign_tx_usecase_t signTxUsecase,
+        const pool_id_t* poolId
+);
+security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
+        sign_tx_usecase_t signTxUsecase
+);
+security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
+        sign_tx_usecase_t signTxUsecase,
+        const pool_reward_account_t* poolRewardAccount
+);
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const sign_tx_usecase_t signTxUsecase,
         const pool_owner_t* owner

@@ -2,15 +2,16 @@
 #include "state.h"
 #include "cardano.h"
 #include "addressUtilsShelley.h"
+#include "keyDerivation.h"
 #include "uiHelpers.h"
 #include "signTxUtils.h"
 #include "uiScreens.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
 #include "hexUtils.h"
-#include "messageSigning.h"
 #include "bufView.h"
 #include "securityPolicy.h"
+#include "signTxPoolRegistration.h"
 
 // we want to distinguish the two state machines to avoid potential confusion:
 // ctx / subctx
@@ -27,7 +28,11 @@ bool signTxPoolRegistration_isFinished()
 	case STAKE_POOL_REGISTRATION_FINISHED:
 		return true;
 
-	case STAKE_POOL_REGISTRATION_PARAMS:
+	case STAKE_POOL_REGISTRATION_INIT:
+	case STAKE_POOL_REGISTRATION_POOL_KEY:
+	case STAKE_POOL_REGISTRATION_VRF_KEY:
+	case STAKE_POOL_REGISTRATION_FINANCIALS:
+	case STAKE_POOL_REGISTRATION_REWARD_ACCOUNT:
 	case STAKE_POOL_REGISTRATION_OWNERS:
 	case STAKE_POOL_REGISTRATION_RELAYS:
 	case STAKE_POOL_REGISTRATION_METADATA:
@@ -45,7 +50,7 @@ void signTxPoolRegistration_init()
 		ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 		explicit_bzero(&ctx->stageContext.pool_registration_subctx, SIZEOF(ctx->stageContext.pool_registration_subctx));
 	}
-	subctx->state = STAKE_POOL_REGISTRATION_PARAMS;
+	subctx->state = STAKE_POOL_REGISTRATION_INIT;
 }
 
 static inline void CHECK_STATE(sign_tx_pool_registration_state_t expected)
@@ -60,20 +65,39 @@ static inline void advanceState()
 
 	switch (subctx->state) {
 
-	case STAKE_POOL_REGISTRATION_PARAMS:
-		subctx->state = STAKE_POOL_REGISTRATION_OWNERS;
-		ASSERT(subctx->numOwners >= 1);
-
-		txHashBuilder_addPoolRegistrationCertificate_enterOwners(txHashBuilder);
+	case STAKE_POOL_REGISTRATION_INIT:
+		subctx->state = STAKE_POOL_REGISTRATION_POOL_KEY;
 		break;
+
+	case STAKE_POOL_REGISTRATION_POOL_KEY:
+		subctx->state = STAKE_POOL_REGISTRATION_VRF_KEY;
+		break;
+
+	case STAKE_POOL_REGISTRATION_VRF_KEY:
+		subctx->state = STAKE_POOL_REGISTRATION_FINANCIALS;
+		break;
+
+	case STAKE_POOL_REGISTRATION_FINANCIALS:
+		subctx->state = STAKE_POOL_REGISTRATION_REWARD_ACCOUNT;
+		break;
+
+	case STAKE_POOL_REGISTRATION_REWARD_ACCOUNT:
+		txHashBuilder_addPoolRegistrationCertificate_enterOwners(txHashBuilder);
+		subctx->state = STAKE_POOL_REGISTRATION_OWNERS;
+
+		if (subctx->numOwners > 0) {
+			break;
+		}
+
+	// intentional fallthrough
 
 	case STAKE_POOL_REGISTRATION_OWNERS:
 		ASSERT(subctx->currentOwner == subctx->numOwners);
-		ASSERT(subctx->numOwnersGivenByPath == 1);
 
+		txHashBuilder_addPoolRegistrationCertificate_enterRelays(txHashBuilder);
 		subctx->state = STAKE_POOL_REGISTRATION_RELAYS;
+
 		if (subctx->numRelays > 0) {
-			txHashBuilder_addPoolRegistrationCertificate_enterRelays(txHashBuilder);
 			break;
 		}
 
@@ -101,79 +125,39 @@ static inline void advanceState()
 }
 
 
-// ============================== POOL PARAMS ==============================
+// ============================== INIT ==============================
 
 enum {
-	HANDLE_POOLPARAMS_STEP_DISPLAY_OPERATION = 6300,
-	HANDLE_POOLPARAMS_STEP_DISPLAY_POOL_KEY_HASH,
-	HANDLE_POOLPARAMS_STEP_DISPLAY_PLEDGE,
-	HANDLE_POOLPARAMS_STEP_DISPLAY_COST,
-	HANDLE_POOLPARAMS_STEP_DISPLAY_MARGIN,
-	HANDLE_POOLPARAMS_STEP_DISPLAY_REWARD_ACCOUNT,
-	HANDLE_POOLPARAMS_STEP_RESPOND,
-	HANDLE_POOLPARAMS_STEP_INVALID,
+	HANDLE_POOL_INIT_STEP_DISPLAY = 6310,
+	HANDLE_POOL_INIT_STEP_RESPOND,
+	HANDLE_POOL_INIT_STEP_INVALID,
 } ;
 
-static void handlePoolParams_ui_runStep()
+static void handlePoolInit_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = handlePoolParams_ui_runStep;
+	ui_callback_fn_t* this_fn = handlePoolInit_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
-	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_OPERATION) {
+	UI_STEP(HANDLE_POOL_INIT_STEP_DISPLAY) {
 		ui_displayPaginatedText(
 		        "Pool registration",
 		        "certificate",
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_POOL_KEY_HASH) {
-		ui_displayPoolIdScreen(
-		        subctx->poolParams.poolKeyHash, SIZEOF(subctx->poolParams.poolKeyHash),
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_PLEDGE) {
-		ui_displayAdaAmountScreen(
-		        "Pledge",
-		        subctx->stateData.poolParams.pledge,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_COST) {
-		ui_displayAdaAmountScreen(
-		        "Cost",
-		        subctx->stateData.poolParams.cost,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_MARGIN) {
-		ui_displayPoolMarginScreen(
-		        subctx->poolParams.marginNumerator,
-		        subctx->poolParams.marginDenominator,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_REWARD_ACCOUNT) {
-		ui_displayAddressScreen(
-		        "Reward account",
-		        subctx->stateData.poolParams.rewardAccount,
-		        SIZEOF(subctx->stateData.poolParams.rewardAccount),
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOLPARAMS_STEP_RESPOND) {
+	UI_STEP(HANDLE_POOL_INIT_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 		advanceState();
 	}
-	UI_STEP_END(HANDLE_POOLPARAMS_STEP_INVALID);
+	UI_STEP_END(HANDLE_POOL_INIT_STEP_INVALID);
 }
 
-static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
-		CHECK_STATE(STAKE_POOL_REGISTRATION_PARAMS);
+		CHECK_STATE(STAKE_POOL_REGISTRATION_INIT);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
@@ -182,7 +166,322 @@ static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer,
 		subctx->currentOwner = 0;
 		subctx->currentRelay = 0;
 
-		explicit_bzero(&subctx->stateData.poolParams, SIZEOF(subctx->stateData.poolParams));
+		explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
+	}
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		struct {
+			uint8_t numOwners[4];
+			uint8_t numRelays[4];
+		}* wireHeader = (void*) wireDataBuffer;
+
+		VALIDATE(wireDataSize == SIZEOF(*wireHeader), ERR_INVALID_DATA);
+
+		uint64_t numOwners = u4be_read(wireHeader->numOwners);
+		uint64_t numRelays = u4be_read(wireHeader->numRelays);
+		TRACE(
+		        "num owners, relays: %d %d",
+		        subctx->numOwners, subctx->numRelays
+		);
+
+		VALIDATE(subctx->numOwners <= POOL_MAX_OWNERS, ERR_INVALID_DATA);
+		VALIDATE(subctx->numRelays <= POOL_MAX_RELAYS, ERR_INVALID_DATA);
+		ASSERT_TYPE(subctx->numOwners, uint16_t);
+		ASSERT_TYPE(subctx->numRelays, uint16_t);
+		subctx->numOwners = (uint16_t) numOwners;
+		subctx->numRelays = (uint16_t) numRelays;
+
+		switch (commonTxData->signTxUsecase) {
+			case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+				// there should be exactly one owner given by path for which we provide a witness
+				VALIDATE(subctx->numOwners >= 1, ERR_INVALID_DATA);
+				break;
+			
+			default:
+				// nothing to validate in other cases
+				break;
+		}
+	}
+	{
+		txHashBuilder_poolRegistrationCertificate_enter(
+				txHashBuilder,
+				subctx->numOwners, subctx->numRelays
+		);
+	}
+
+	subctx->ui_step = HANDLE_POOL_INIT_STEP_DISPLAY;
+	handlePoolInit_ui_runStep();
+}
+
+// ============================== POOL KEY HASH / ID ==============================
+
+static void _calculatePooKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
+{
+	switch (poolId->descriptionKind) {
+
+	case DATA_DESCRIPTION_HASH: {
+		STATIC_ASSERT(SIZEOF(poolId->hash) == POOL_KEY_HASH_LENGTH, "wrong pool key hash length");
+		os_memmove(poolKeyHash, poolId->hash, POOL_KEY_HASH_LENGTH);
+		break;
+	}
+	case DATA_DESCRIPTION_PATH: {
+		extendedPublicKey_t extPubKey;
+		deriveExtendedPublicKey(&poolId->path, &extPubKey);
+
+		STATIC_ASSERT(POOL_KEY_HASH_LENGTH * 8 == 224, "wrong pool key hash length");
+		blake2b_224_hash(
+		        extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
+		        poolKeyHash, POOL_KEY_HASH_LENGTH
+		);
+		break;
+	}
+	default:
+		ASSERT(false);
+	}
+}
+
+enum {
+	HANDLE_POOL_KEY_STEP_DISPLAY = 6320,
+	HANDLE_POOL_KEY_STEP_RESPOND,
+	HANDLE_POOL_KEY_STEP_INVALID,
+} ;
+
+static void handlePoolKey_ui_runStep()
+{
+	TRACE("UI step %d", subctx->ui_step);
+	ui_callback_fn_t* this_fn = handlePoolKey_ui_runStep;
+
+	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY) {
+		// TODO display as path for operator? or rather both path and hash so that he is really sure?
+		// or bech32 using prefix from https://cips.cardano.org/cips/cip5/
+		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+		_calculatePooKeyHash(&subctx->stateData.poolId, poolKeyHash);
+
+		ui_displayHexBufferScreen(
+		        "Pool ID",
+		        poolKeyHash, SIZEOF(poolKeyHash),
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_POOL_KEY_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+		advanceState();
+	}
+	UI_STEP_END(HANDLE_POOL_KEY_STEP_INVALID);
+}
+
+static void _parsePoolId(read_view_t* view)
+{
+	pool_id_t* key = &subctx->stateData.poolId;
+
+	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
+	key->descriptionKind = parse_u1be(view);
+
+	switch (key->descriptionKind) {
+
+	case DATA_DESCRIPTION_HASH:
+		VALIDATE(view_remainingSize(view) >= POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
+		STATIC_ASSERT(SIZEOF(key->hash) == POOL_KEY_HASH_LENGTH, "wrong pool id key hash size");
+		view_memmove(key->hash, view, POOL_KEY_HASH_LENGTH);
+		TRACE_BUFFER(key->hash, SIZEOF(key->hash));
+		break;
+
+	case DATA_DESCRIPTION_PATH:
+		VALIDATE(view_remainingSize(view) > 0, ERR_INVALID_DATA);
+		view_skipBytes(view, bip44_parseFromWire(&key->path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
+		BIP44_PRINTF(&key->path);
+		PRINTF("\n");
+		break;
+
+	default:
+		THROW(ERR_INVALID_DATA);
+	}
+}
+
+static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STATE(STAKE_POOL_REGISTRATION_POOL_KEY);
+
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	{
+		// parse data
+
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+
+		_parsePoolId(&view);
+
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+	}
+
+	security_policy_t policy = policyForSignTxStakePoolRegistrationPoolId(
+	                                   commonTxData->signTxUsecase,
+	                                   &subctx->stateData.poolId
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// key derivation must not be done before DENY security policy is enforced
+		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+		_calculatePooKeyHash(&subctx->stateData.poolId, poolKeyHash);
+
+		txHashBuilder_poolRegistrationCertificate_poolKeyHash(
+				txHashBuilder,
+				poolKeyHash, SIZEOF(poolKeyHash)
+		);
+	}
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_KEY_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_KEY_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
+	handlePoolKey_ui_runStep();
+}
+
+// ============================== VRF KEY HASH ==============================
+
+enum {
+	HANDLE_POOL_VRF_KEY_STEP_DISPLAY = 6330,
+	HANDLE_POOL_VRF_KEY_STEP_RESPOND,
+	HANDLE_POOL_VRF_KEY_STEP_INVALID,
+} ;
+
+static void handlePoolVrfKey_ui_runStep()
+{
+	TRACE("UI step %d", subctx->ui_step);
+	ui_callback_fn_t* this_fn = handlePoolVrfKey_ui_runStep;
+
+	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP(HANDLE_POOL_VRF_KEY_STEP_DISPLAY) {
+		// TODO display in bech32 using prefix from https://cips.cardano.org/cips/cip5/  ?
+		ui_displayHexBufferScreen(
+		        "VRF key hash",
+		        subctx->stateData.vrfKeyHash, SIZEOF(subctx->stateData.vrfKeyHash),
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_POOL_VRF_KEY_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+		advanceState();
+	}
+	UI_STEP_END(HANDLE_POOL_VRF_KEY_STEP_INVALID);
+}
+
+static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STATE(STAKE_POOL_REGISTRATION_VRF_KEY);
+
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	{
+		// parse data
+
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		VALIDATE(wireDataSize == SIZEOF(subctx->stateData.vrfKeyHash), ERR_INVALID_DATA);
+
+		{
+			STATIC_ASSERT(SIZEOF(subctx->stateData.vrfKeyHash) == VRF_KEY_HASH_LENGTH, "wrong vrfKeyHash size");
+			os_memmove(subctx->stateData.vrfKeyHash, wireDataBuffer, VRF_KEY_HASH_LENGTH);
+			// nothing to validate, all values are valid
+		}
+	}
+
+	security_policy_t policy = policyForSignTxStakePoolRegistrationVrfKey(
+	                                   commonTxData->signTxUsecase
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
+	        txHashBuilder,
+	        subctx->stateData.vrfKeyHash, SIZEOF(subctx->stateData.vrfKeyHash)
+	);
+
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_VRF_KEY_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_VRF_KEY_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
+	handlePoolVrfKey_ui_runStep();
+}
+
+// ============================== POOL FINANCIALS ==============================
+
+enum {
+	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE = 6340,
+	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_COST,
+	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_MARGIN,
+	HANDLE_POOL_FINANCIALS_STEP_RESPOND,
+	HANDLE_POOL_FINANCIALS_STEP_INVALID,
+} ;
+
+static void handlePoolFinancials_ui_runStep()
+{
+	TRACE("UI step %d", subctx->ui_step);
+	ui_callback_fn_t* this_fn = handlePoolFinancials_ui_runStep;
+
+	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE) {
+		ui_displayAmountScreen(
+>>>>>>> signTxPoolRegistration
+		        "Pledge",
+		        subctx->stateData.pledge,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_COST) {
+		ui_displayAmountScreen(
+		        "Cost",
+		        subctx->stateData.cost,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_MARGIN) {
+		ui_displayMarginScreen(
+		        subctx->stateData.marginNumerator,
+		        subctx->stateData.marginDenominator,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+		advanceState();
+	}
+	UI_STEP_END(HANDLE_POOL_FINANCIALS_STEP_INVALID);
+}
+
+static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STATE(STAKE_POOL_REGISTRATION_FINANCIALS);
+
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -190,109 +489,195 @@ static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer,
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		struct {
-			uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
-			uint8_t vrfKeyHash[VRF_KEY_HASH_LENGTH];
 			uint8_t pledge[8];
 			uint8_t cost[8];
 			uint8_t marginNumerator[8];
 			uint8_t marginDenominator[8];
-			uint8_t rewardAccount[1 + ADDRESS_KEY_HASH_LENGTH];
-
-			uint8_t numOwners[4];
-			uint8_t numRelays[4];
 		}* wireHeader = (void*) wireDataBuffer;
 
-		TRACE("%d %d", SIZEOF(*wireHeader), wireDataSize);
-		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
+		VALIDATE(wireDataSize == SIZEOF(*wireHeader), ERR_INVALID_DATA);
 
 		{
-			pool_registration_params_t* p = &subctx->stateData.poolParams;
+			ASSERT_TYPE(subctx->stateData.pledge, uint64_t);
+			subctx->stateData.pledge = u8be_read(wireHeader->pledge);
+			TRACE_ADA_AMOUNT("pledge ", subctx->stateData.pledge);
+			VALIDATE(subctx->stateData.pledge < LOVELACE_MAX_SUPPLY, ERR_INVALID_DATA);
 
-			TRACE_BUFFER(wireHeader->poolKeyHash, SIZEOF(wireHeader->poolKeyHash));
-			STATIC_ASSERT(SIZEOF(wireHeader->poolKeyHash) == SIZEOF(p->poolKeyHash), "wrong poolKeyHash size");
-			os_memmove(p->poolKeyHash, wireHeader->poolKeyHash, SIZEOF(p->poolKeyHash));
-			// nothing to validate, all values are valid
+			ASSERT_TYPE(subctx->stateData.cost, uint64_t);
+			subctx->stateData.cost = u8be_read(wireHeader->cost);
+			TRACE_ADA_AMOUNT("cost ", subctx->stateData.cost);
+			VALIDATE(subctx->stateData.cost < LOVELACE_MAX_SUPPLY, ERR_INVALID_DATA);
 
-			TRACE_BUFFER(wireHeader->vrfKeyHash, SIZEOF(wireHeader->vrfKeyHash));
-			STATIC_ASSERT(SIZEOF(wireHeader->vrfKeyHash) == SIZEOF(p->vrfKeyHash), "wrong vrfKeyHash size");
-			os_memmove(p->vrfKeyHash, wireHeader->vrfKeyHash, SIZEOF(p->vrfKeyHash));
-			// nothing to validate, all values are valid
+			ASSERT_TYPE(subctx->stateData.marginNumerator, uint64_t);
+			subctx->stateData.marginNumerator = u8be_read(wireHeader->marginNumerator);
+			TRACE_BUFFER((uint8_t *) &subctx->stateData.marginNumerator, 8);
+			VALIDATE(subctx->stateData.marginNumerator <= MARGIN_DENOMINATOR_MAX, ERR_INVALID_DATA);
 
-			ASSERT_TYPE(p->pledge, uint64_t);
-			p->pledge = u8be_read(wireHeader->pledge);
-			TRACE_ADA_AMOUNT("pledge ", p->pledge);
-			VALIDATE(p->pledge < LOVELACE_MAX_SUPPLY, ERR_INVALID_DATA);
-
-			ASSERT_TYPE(p->cost, uint64_t);
-			p->cost = u8be_read(wireHeader->cost);
-			TRACE_ADA_AMOUNT("cost ", p->cost);
-			VALIDATE(p->cost < LOVELACE_MAX_SUPPLY, ERR_INVALID_DATA);
-
-			ASSERT_TYPE(p->marginNumerator, uint64_t);
-			p->marginNumerator = u8be_read(wireHeader->marginNumerator);
-			TRACE_BUFFER((uint8_t *) &p->marginNumerator, 8);
-			VALIDATE(p->marginNumerator <= MARGIN_DENOMINATOR_MAX, ERR_INVALID_DATA);
-
-			ASSERT_TYPE(p->marginDenominator, uint64_t);
-			p->marginDenominator = u8be_read(wireHeader->marginDenominator);
-			TRACE_BUFFER((uint8_t *) &p->marginDenominator, 8);
-			VALIDATE(p->marginDenominator != 0, ERR_INVALID_DATA);
-			VALIDATE(p->marginDenominator <= MARGIN_DENOMINATOR_MAX, ERR_INVALID_DATA);
-			VALIDATE(p->marginNumerator <= p->marginDenominator, ERR_INVALID_DATA);
-
-			TRACE_BUFFER(wireHeader->rewardAccount, SIZEOF(wireHeader->rewardAccount));
-			STATIC_ASSERT(SIZEOF(wireHeader->rewardAccount) == SIZEOF(p->rewardAccount), "wrong reward account size");
-			os_memmove(p->rewardAccount, wireHeader->rewardAccount, SIZEOF(p->rewardAccount));
-			const uint8_t header = getAddressHeader(p->rewardAccount, SIZEOF(p->rewardAccount));
-			VALIDATE(getAddressType(header) == REWARD, ERR_INVALID_DATA);
-			VALIDATE(getNetworkId(header) == commonTxData->networkId, ERR_INVALID_DATA);
+			ASSERT_TYPE(subctx->stateData.marginDenominator, uint64_t);
+			subctx->stateData.marginDenominator = u8be_read(wireHeader->marginDenominator);
+			TRACE_BUFFER((uint8_t *) &subctx->stateData.marginDenominator, 8);
+			VALIDATE(subctx->stateData.marginDenominator != 0, ERR_INVALID_DATA);
+			VALIDATE(subctx->stateData.marginDenominator <= MARGIN_DENOMINATOR_MAX, ERR_INVALID_DATA);
+			VALIDATE(subctx->stateData.marginNumerator <= subctx->stateData.marginDenominator, ERR_INVALID_DATA);
 		}
-
-		ASSERT_TYPE(subctx->numOwners, uint16_t);
-		ASSERT_TYPE(subctx->numRelays, uint16_t);
-		subctx->numOwners = (uint16_t) u4be_read(wireHeader->numOwners);
-		subctx->numRelays = (uint16_t) u4be_read(wireHeader->numRelays);
-
-		TRACE(
-		        "num owners, relays: %d %d",
-		        subctx->numOwners, subctx->numRelays
+	}
+	{
+		txHashBuilder_poolRegistrationCertificate_financials(
+				txHashBuilder,
+				subctx->stateData.pledge, subctx->stateData.cost,
+				subctx->stateData.marginNumerator, subctx->stateData.marginDenominator
 		);
-		VALIDATE(subctx->numOwners <= POOL_MAX_OWNERS, ERR_INVALID_DATA);
-		VALIDATE(subctx->numRelays <= POOL_MAX_RELAYS, ERR_INVALID_DATA);
-
-		// there should be exactly one owner given by path for which we provide a witness
-		VALIDATE(subctx->numOwners >= 1, ERR_INVALID_DATA);
 	}
 
-	// Note: make sure that everything in subctx is initialized properly
-	txHashBuilder_addPoolRegistrationCertificate(
-	        txHashBuilder,
-	        &subctx->stateData.poolParams,
-	        subctx->numOwners, subctx->numRelays
-	);
+	subctx->ui_step = HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE;
+	handlePoolFinancials_ui_runStep();
+}
 
-	security_policy_t policy = policyForSignTxCertificateStakePoolRegistration();
+// ============================== POOL REWARD ACCOUNT ==============================
+
+static void _calculateRewardAccount(const pool_reward_account_t* rewardAccount, uint8_t* rewardAccountBuffer)
+{
+	switch (rewardAccount->descriptionKind) {
+
+	case DATA_DESCRIPTION_HASH: {
+		STATIC_ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
+		os_memmove(rewardAccountBuffer, rewardAccount->buffer, REWARD_ACCOUNT_SIZE);
+		break;
+	}
+	case DATA_DESCRIPTION_PATH: {
+		addressParams_t addressParams = {
+			.type = REWARD,
+			.networkId = commonTxData->networkId,
+			.spendingKeyPath = rewardAccount->path,
+			.stakingChoice = NO_STAKING
+		};
+		deriveAddress(&addressParams, rewardAccountBuffer, REWARD_ACCOUNT_SIZE);
+		break;
+	}
+	default:
+		ASSERT(false);
+	}
+}
+
+enum {
+	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY = 6350,
+	HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND,
+	HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID,
+} ;
+
+static void handlePoolRewardAccount_ui_runStep()
+{
+	TRACE("UI step %d", subctx->ui_step);
+	ui_callback_fn_t* this_fn = handlePoolRewardAccount_ui_runStep;
+
+	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY) {
+		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
+		_calculateRewardAccount(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
+
+		ui_displayAddressScreen(
+		        "Reward account",
+		        rewardAccountBuffer,
+		        SIZEOF(rewardAccountBuffer),
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+		advanceState();
+	}
+	UI_STEP_END(HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID);
+}
+
+static void _parsePoolRewardAccount(read_view_t* view)
+{
+	pool_reward_account_t* rewardAccount = &subctx->stateData.poolRewardAccount;
+
+	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
+	rewardAccount->descriptionKind = parse_u1be(view);
+
+	switch (rewardAccount->descriptionKind) {
+
+	case DATA_DESCRIPTION_HASH:
+		VALIDATE(view_remainingSize(view) >= REWARD_ACCOUNT_SIZE, ERR_INVALID_DATA);
+		STATIC_ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
+		view_memmove(rewardAccount->buffer, view, REWARD_ACCOUNT_SIZE);
+		TRACE_BUFFER(rewardAccount->buffer, SIZEOF(rewardAccount->buffer));
+
+		const uint8_t header = getAddressHeader(rewardAccount->buffer, SIZEOF(rewardAccount->buffer));
+		VALIDATE(getAddressType(header) == REWARD, ERR_INVALID_DATA);
+		VALIDATE(getNetworkId(header) == commonTxData->networkId, ERR_INVALID_DATA);
+		break;
+
+	case DATA_DESCRIPTION_PATH:
+		VALIDATE(view_remainingSize(view) > 0, ERR_INVALID_DATA);
+		view_skipBytes(view, bip44_parseFromWire(&rewardAccount->path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
+		BIP44_PRINTF(&rewardAccount->path);
+		PRINTF("\n");
+		break;
+
+	default:
+		THROW(ERR_INVALID_DATA);
+	}
+}
+
+static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STATE(STAKE_POOL_REGISTRATION_REWARD_ACCOUNT);
+
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	{
+		// parse data
+
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+
+		_parsePoolRewardAccount(&view);
+
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+	}
+
+	security_policy_t policy = policyForSignTxStakePoolRegistrationRewardAccount(
+	                                   commonTxData->signTxUsecase,
+	                                   &subctx->stateData.poolRewardAccount
+	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
+
+	{
+		// key derivation must not be done before DENY security policy is enforced
+		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
+		_calculateRewardAccount(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
+
+		txHashBuilder_poolRegistrationCertificate_rewardAccount(
+				txHashBuilder,
+				rewardAccountBuffer, SIZEOF(rewardAccountBuffer)
+		);
+	}
+
 	{
 		// select UI steps
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_POOLPARAMS_STEP_DISPLAY_OPERATION);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT,   HANDLE_POOLPARAMS_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND);
 #	undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 	}
 
-	handlePoolParams_ui_runStep();
+	handlePoolRewardAccount_ui_runStep();
 }
 
 // ============================== OWNER ==============================
 
 enum {
-	HANDLE_OWNER_STEP_DISPLAY = 6320,
+	HANDLE_OWNER_STEP_DISPLAY = 6360,
 	HANDLE_OWNER_STEP_RESPOND,
 	HANDLE_OWNER_STEP_INVALID,
 };
@@ -388,8 +773,14 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 	{
 		// compute key hash if needed
 		if (owner->descriptionKind == DATA_DESCRIPTION_PATH) {
-			write_view_t view = make_write_view(owner->keyHash, owner->keyHash + SIZEOF(owner->keyHash));
-			view_appendPublicKeyHash(&view, &owner->path);
+			extendedPublicKey_t extPubKey;
+			deriveExtendedPublicKey(&owner->path, &extPubKey);
+
+			STATIC_ASSERT(SIZEOF(owner->keyHash) * 8 == 224, "wrong owner key hash length");
+			blake2b_224_hash(
+			        extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
+			        owner->keyHash, SIZEOF(owner->keyHash)
+			);
 		}
 	}
 
@@ -583,7 +974,7 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 // ============================== METADATA ==============================
 
 enum {
-	HANDLE_NULL_METADATA_STEP_DISPLAY = 6340,
+	HANDLE_NULL_METADATA_STEP_DISPLAY = 6380,
 	HANDLE_NULL_METADATA_STEP_RESPOND,
 	HANDLE_NULL_METADATA_STEP_INVALID,
 };
@@ -766,7 +1157,7 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 // ============================== CONFIRM ==============================
 
 enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 6360,
+	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 6390,
 	HANDLE_CONFIRM_STEP_RESPOND,
 	HANDLE_CONFIRM_STEP_INVALID,
 };
@@ -830,17 +1221,25 @@ static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MAR
 // ============================== main APDU handler ==============================
 
 enum {
-	APDU_INSTRUCTION_PARAMS = 0x30,
-	APDU_INSTRUCTION_OWNERS = 0x31,
-	APDU_INSTRUCTION_RELAYS = 0x32,
-	APDU_INSTRUCTION_METADATA = 0x33,
-	APDU_INSTRUCTION_CONFIRMATION = 0x34
+	APDU_INSTRUCTION_INIT = 0x30,
+	APDU_INSTRUCTION_POOL_KEY = 0x31,
+	APDU_INSTRUCTION_VRF_KEY = 0x32,
+	APDU_INSTRUCTION_FINANCIALS = 0x33,
+	APDU_INSTRUCTION_REWARD_ACCOUNT = 0x34,
+	APDU_INSTRUCTION_OWNERS = 0x35,
+	APDU_INSTRUCTION_RELAYS = 0x36,
+	APDU_INSTRUCTION_METADATA = 0x37,
+	APDU_INSTRUCTION_CONFIRMATION = 0x38
 };
 
 bool signTxPoolRegistration_isValidInstruction(uint8_t p2)
 {
 	switch (p2) {
-	case APDU_INSTRUCTION_PARAMS:
+	case APDU_INSTRUCTION_INIT:
+	case APDU_INSTRUCTION_POOL_KEY:
+	case APDU_INSTRUCTION_VRF_KEY:
+	case APDU_INSTRUCTION_FINANCIALS:
+	case APDU_INSTRUCTION_REWARD_ACCOUNT:
 	case APDU_INSTRUCTION_OWNERS:
 	case APDU_INSTRUCTION_RELAYS:
 	case APDU_INSTRUCTION_METADATA:
@@ -857,8 +1256,24 @@ void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size
 	TRACE("p2 = %d", p2);
 
 	switch (p2) {
-	case APDU_INSTRUCTION_PARAMS:
-		signTxPoolRegistration_handlePoolParamsAPDU(wireDataBuffer, wireDataSize);
+	case APDU_INSTRUCTION_INIT:
+		signTxPoolRegistration_handleInitAPDU(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_POOL_KEY:
+		signTxPoolRegistration_handlePoolKeyAPDU(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_VRF_KEY:
+		signTxPoolRegistration_handleVrfKeyAPDU(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_FINANCIALS:
+		signTxPoolRegistration_handlePoolFinancialsAPDU(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_REWARD_ACCOUNT:
+		signTxPoolRegistration_handleRewardAccountAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_OWNERS:

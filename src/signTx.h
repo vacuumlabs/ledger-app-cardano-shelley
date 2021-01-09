@@ -98,6 +98,7 @@ typedef struct {
 	bool metadataReceived;
 	bool validityIntervalStartReceived;
 
+	// TODO move these to commonTxData?
 	tx_hash_builder_t txHashBuilder;
 	uint8_t txHash[TX_HASH_LENGTH];
 
