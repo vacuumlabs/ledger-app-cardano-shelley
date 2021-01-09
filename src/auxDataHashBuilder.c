@@ -22,28 +22,34 @@ enum {
 	HC_CATALYST_PAYLOAD = (1u << 1)  // catalyst voting registration payload hash context
 };
 
-// Syntactic sugar
+/*
+The following macros and functions have dual purpose:
+1. syntactic sugar for neat recording of hash computations;
+2. tracing of hash computations (allows to reconstruct bytestrings we are hashing via usbtool).
+*/
+
 #define APPEND_CBOR(hashContexts, type, value) \
 	if (hashContexts & HC_AUX_DATA) { \
-		blake2b_256_append_cbor(&builder->auxDataHash, type, value, true); \
+		blake2b_256_append_cbor_aux_data(&builder->auxDataHash, type, value, true); \
 	} \
 	if (hashContexts & HC_CATALYST_PAYLOAD) { \
-		blake2b_256_append_cbor(&builder->catalystRegistrationData.payloadHash, type, value, false); \
+		blake2b_256_append_cbor_aux_data(&builder->catalystRegistrationData.payloadHash, type, value, false); \
 	}
 
 #define APPEND_DATA(hashContexts, buffer, bufferSize) \
 	if (hashContexts & HC_AUX_DATA) { \
-		blake2b_256_append_and_trace(&builder->auxDataHash, buffer, bufferSize); \
+		blake2b_256_append_buffer_aux_data(&builder->auxDataHash, buffer, bufferSize, true); \
 	} \
 	if (hashContexts & HC_CATALYST_PAYLOAD) { \
-		blake2b_256_append(&builder->catalystRegistrationData.payloadHash, buffer, bufferSize); \
+		blake2b_256_append_buffer_aux_data(&builder->catalystRegistrationData.payloadHash, buffer, bufferSize, false); \
 	}
 
 
 __noinline_due_to_stack__
-static void blake2b_256_append_cbor(
+static void blake2b_256_append_cbor_aux_data(
         blake2b_256_context_t* hashCtx,
-        uint8_t type, uint64_t value, bool trace
+        uint8_t type, uint64_t value,
+        bool trace
 )
 {
 	uint8_t buffer[10];
@@ -54,17 +60,21 @@ static void blake2b_256_append_cbor(
 	blake2b_256_append(hashCtx, buffer, size);
 }
 
-static void blake2b_256_append_and_trace(
+static void blake2b_256_append_buffer_aux_data(
         blake2b_256_context_t* hashCtx,
-        const uint8_t* buffer,
-        size_t bufferSize
+        const uint8_t* buffer, size_t bufferSize,
+        bool trace
 )
 {
 	// keeping tracing within a function to be able to extract the serialized data
 	// by matching the function name where the tracing is invoked
-	TRACE_BUFFER(buffer, bufferSize);
+	if (trace) {
+		TRACE_BUFFER(buffer, bufferSize);
+	}
 	blake2b_256_append(hashCtx, buffer, bufferSize);
 }
+
+/* End of hash computation utilities. */
 
 void auxDataHashBuilder_init(
         aux_data_hash_builder_t* builder

@@ -103,7 +103,7 @@ static void signTxCatalystRegistration_handleVotingKey_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleVotingKey_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_VOTING_KEY_STEP_DISPLAY) {
 		STATIC_ASSERT(SIZEOF(subctx->stateData.votingPubKey) == CATALYST_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
@@ -189,7 +189,7 @@ static void signTxCatalystRegistration_handleStakingKey_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleStakingKey_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_STAKING_KEY_STEP_WARNING) {
 		ui_displayPaginatedText(
@@ -284,7 +284,7 @@ static void signTxCatalystRegistration_handleVotingRewardsAddress_addressParams_
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleVotingRewardsAddress_addressParams_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_WARNING) {
 		ui_displayPaginatedText(
@@ -395,7 +395,7 @@ static void signTxCatalystRegistration_handleNonce_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleNonce_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_NONCE_STEP_DISPLAY) {
 		ui_displayUint64Screen(
@@ -472,7 +472,7 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleConfirm_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(
 		        "Confirm voting key",

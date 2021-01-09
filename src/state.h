@@ -5,6 +5,7 @@
 #include "getPublicKeys.h"
 #include "deriveAddress.h"
 #include "signTx.h"
+#include "signOpCert.h"
 
 
 typedef union {
@@ -12,6 +13,7 @@ typedef union {
 	ins_get_keys_context_t getKeysContext;
 	ins_derive_address_context_t deriveAddressContext;
 	ins_sign_tx_context_t signTxContext;
+	ins_sign_op_cert_context_t signOpCertContext;
 } instructionState_t;
 
 // Note(instructions are uint8_t but we have a special INS_NONE value

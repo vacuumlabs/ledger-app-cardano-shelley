@@ -7,6 +7,21 @@
 #include "signTxPoolRegistration.h"
 
 __noinline_due_to_stack__
+void ui_displayBech32Screen(
+        const char* screenHeader,
+        const char* bech32Prefix,
+        const uint8_t* buffer, size_t bufferSize,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
+void ui_displayHexBufferScreen(
+        const char* screenHeader,
+        const uint8_t* buffer, size_t bufferSize,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
 void ui_displayPathScreen(
         const char* screenHeader,
         const bip44_path_t* path,
@@ -14,8 +29,7 @@ void ui_displayPathScreen(
 );
 
 __noinline_due_to_stack__
-void ui_displayAccountScreen(
-        const char* screenHeader,
+void ui_displayGetPublicKeyPathScreen(
         const bip44_path_t* path,
         ui_callback_fn_t callback
 );
@@ -34,6 +48,13 @@ void ui_displayAddressScreen(
 );
 
 __noinline_due_to_stack__
+void ui_displayRewardAccountScreen(
+        const reward_account_t* rewardAccount,
+        uint8_t networkId,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
 void ui_displayStakingInfoScreen(
         const addressParams_t* addressParams,
         ui_callback_fn_t callback
@@ -47,7 +68,6 @@ size_t deriveAssetFingerprint(
         char* fingerprint,
         size_t fingerprintMaxSize
 );
-
 __noinline_due_to_stack__
 void ui_displayAssetFingerprintScreen(
         token_group_t* tokenGroup,
@@ -86,27 +106,6 @@ void ui_displayNetworkParamsScreen(
 );
 
 __noinline_due_to_stack__
-void ui_displayHexBufferScreen(
-        const char* screenHeader,
-        const uint8_t* buffer, size_t bufferSize,
-        ui_callback_fn_t callback
-);
-
-__noinline_due_to_stack__
-void ui_displayBech32Screen(
-        const char* screenHeader,
-        const char* bech32Prefix,
-        const uint8_t* buffer, size_t bufferSize,
-        ui_callback_fn_t callback
-);
-
-void ui_displayPoolIdScreen(
-        const uint8_t* poolIdBuffer,
-        size_t poolIdSize,
-        ui_callback_fn_t callback
-);
-
-__noinline_due_to_stack__
 void ui_displayPoolMarginScreen(
         uint64_t marginNumerator, uint64_t marginDenominator,
         ui_callback_fn_t callback
@@ -117,6 +116,31 @@ void ui_displayPoolOwnerScreen(
         const pool_owner_t* owner,
         uint32_t ownerIndex,
         uint8_t networkId,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
+void ui_displayPoolRelayScreen(
+        const pool_relay_t* relay,
+        size_t relayIndex,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
+void ui_displayIpv4Screen(
+        ipv4_t* ipv4,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
+void ui_displayIpv6Screen(
+        ipv6_t* ipv6,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
+void ui_displayIpPortScreen(
+        ipport_t* port,
         ui_callback_fn_t callback
 );
 
