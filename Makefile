@@ -26,6 +26,10 @@ NANOS_ID = 1
 WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 PIN = 5555
 
+# pool operator app contains additional functionality
+# set to 1 if you want to include it, or to 0 if you want a regular app
+POOL_OPERATOR_APP = 1
+
 APPNAME      = "Cardano ADA"
 APPVERSION_M = 2
 APPVERSION_N = 2
@@ -53,6 +57,10 @@ DEFINES += OS_IO_SEPROXYHAL
 DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 DEFINES += APPVERSION=\"$(APPVERSION)\"
 DEFINES += MAJOR_VERSION=$(APPVERSION_M) MINOR_VERSION=$(APPVERSION_N) PATCH_VERSION=$(APPVERSION_P)
+
+ifeq ($(POOL_OPERATOR_APP),1)
+    DEFINES += POOL_OPERATOR_APP
+endif
 
 ## USB HID?
 DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
