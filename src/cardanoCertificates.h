@@ -6,12 +6,16 @@
 #define IPV4_SIZE 4
 #define IPV6_SIZE 16
 
-// there are other types we do not support
+// there may be other types we do not support
 typedef enum {
 	CERTIFICATE_TYPE_STAKE_REGISTRATION = 0,
 	CERTIFICATE_TYPE_STAKE_DEREGISTRATION = 1,
 	CERTIFICATE_TYPE_STAKE_DELEGATION = 2,
-	CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3
+	CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3,
+
+	#ifdef POOL_OPERATOR_APP
+	CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT = 4,
+	#endif
 } certificate_type_t;
 
 typedef struct {

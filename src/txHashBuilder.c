@@ -521,6 +521,38 @@ void txHashBuilder_addPoolRegistrationCertificate(
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL_PARAMS;
 }
 
+#ifdef POOL_OPERATOR_APP
+void txHashBuilder_addCertificate_poolRetirement(
+        tx_hash_builder_t* builder,
+        uint8_t* poolKeyHash, size_t poolKeyHashSize,
+        uint64_t epoch
+)
+{
+	TRACE("txHashBuilder_addCertificate_poolRetirement: %d", builder->state);
+
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES);
+	ASSERT(builder->remainingCertificates > 0);
+	builder->remainingCertificates--;
+
+	// Array(3)[
+	//   Unsigned[4]
+	//   Bytes[poolKeyHash]
+	//   Unsigned[epoch]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 4);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, poolKeyHashSize);
+			BUILDER_APPEND_DATA(poolKeyHash, poolKeyHashSize);
+		}
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, epoch);
+	}
+}
+#endif
+
 void txHashBuilder_addPoolRegistrationCertificate_enterOwners(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %u", builder->state);

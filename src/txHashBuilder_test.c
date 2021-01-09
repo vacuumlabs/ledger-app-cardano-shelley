@@ -262,6 +262,8 @@ static void addCertificates(tx_hash_builder_t* builder)
 
 	addPoolRegistrationCertificate(builder);
 
+	// TODO add pool retirement certificate
+
 	ITERATE(it, delegationCertificates) {
 		uint8_t tmp_credential[70];
 		size_t tmpSize_credential = decode_hex(

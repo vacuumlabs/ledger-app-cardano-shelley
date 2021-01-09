@@ -136,14 +136,14 @@ static void handlePoolParams_ui_runStep()
 	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_PLEDGE) {
 		ui_displayAdaAmountScreen(
 		        "Pledge",
-		        subctx->poolParams.pledge,
+		        subctx->stateData.poolParams.pledge,
 		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_COST) {
 		ui_displayAdaAmountScreen(
 		        "Cost",
-		        subctx->poolParams.cost,
+		        subctx->stateData.poolParams.cost,
 		        this_fn
 		);
 	}
@@ -157,8 +157,8 @@ static void handlePoolParams_ui_runStep()
 	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_REWARD_ACCOUNT) {
 		ui_displayAddressScreen(
 		        "Reward account",
-		        subctx->poolParams.rewardAccount,
-		        SIZEOF(subctx->poolParams.rewardAccount),
+		        subctx->stateData.poolParams.rewardAccount,
+		        SIZEOF(subctx->stateData.poolParams.rewardAccount),
 		        this_fn
 		);
 	}
@@ -182,7 +182,7 @@ static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer,
 		subctx->currentOwner = 0;
 		subctx->currentRelay = 0;
 
-		explicit_bzero(&subctx->poolParams, SIZEOF(subctx->poolParams));
+		explicit_bzero(&subctx->stateData.poolParams, SIZEOF(subctx->stateData.poolParams));
 	}
 	{
 		// parse data
@@ -206,7 +206,7 @@ static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer,
 		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
 
 		{
-			pool_registration_params_t* p = &subctx->poolParams;
+			pool_registration_params_t* p = &subctx->stateData.poolParams;
 
 			TRACE_BUFFER(wireHeader->poolKeyHash, SIZEOF(wireHeader->poolKeyHash));
 			STATIC_ASSERT(SIZEOF(wireHeader->poolKeyHash) == SIZEOF(p->poolKeyHash), "wrong poolKeyHash size");
@@ -267,7 +267,7 @@ static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer,
 	// Note: make sure that everything in subctx is initialized properly
 	txHashBuilder_addPoolRegistrationCertificate(
 	        txHashBuilder,
-	        &subctx->poolParams,
+	        &subctx->stateData.poolParams,
 	        subctx->numOwners, subctx->numRelays
 	);
 
@@ -312,7 +312,20 @@ static void handleOwner_ui_runStep()
 
 		subctx->currentOwner++;
 		if (subctx->currentOwner == subctx->numOwners) {
-			VALIDATE(subctx->numOwnersGivenByPath == 1, ERR_INVALID_DATA);
+			switch (commonTxData->signTxUsecase) {
+			case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+				VALIDATE(subctx->numOwnersGivenByPath == 1, ERR_INVALID_DATA);
+				break;
+
+				#ifdef POOL_OPERATOR_APP
+			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+				ASSERT(subctx->numOwnersGivenByPath <= 1);
+				break;
+				#endif
+
+			default:
+				ASSERT(false);
+			}
 
 			advanceState();
 		}
@@ -329,7 +342,9 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	explicit_bzero(&subctx->owner, SIZEOF(subctx->owner));
+	pool_owner_t* owner = &subctx->stateData.owner;
+
+	explicit_bzero(owner, SIZEOF(subctx->stateData.owner));
 
 	{
 		// parse data
@@ -338,21 +353,22 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-		subctx->owner.ownerType = parse_u1be(&view);
-		switch (subctx->owner.ownerType) {
+		owner->descriptionKind = parse_u1be(&view);
+		switch (owner->descriptionKind) {
 
-		case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
+		case DATA_DESCRIPTION_HASH:
 			VALIDATE(view_remainingSize(&view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
-			STATIC_ASSERT(SIZEOF(subctx->owner.keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong owner.keyHash size");
-			os_memmove(subctx->owner.keyHash, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
-			TRACE_BUFFER(subctx->owner.keyHash, SIZEOF(subctx->owner.keyHash));
+			STATIC_ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong owner.keyHash size");
+			os_memmove(owner->keyHash, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
+			TRACE_BUFFER(owner->keyHash, SIZEOF(owner->keyHash));
 			break;
 
-		case SIGN_TX_POOL_OWNER_TYPE_PATH:
-			view_skipBytes(&view, bip44_parseFromWire(&subctx->owner.path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
+		case DATA_DESCRIPTION_PATH:
+			view_skipBytes(&view, bip44_parseFromWire(&owner->path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
 			// further validation of the path in security policy below
 			TRACE("Owner given by path:");
-			BIP44_PRINTF(&subctx->owner.path);
+			BIP44_PRINTF(&owner->path);
+			PRINTF("\n");
 			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
 			subctx->numOwnersGivenByPath++;
@@ -365,15 +381,15 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		}
 	}
 
-	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(&subctx->owner);
+	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(commonTxData->signTxUsecase, owner);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	{
 		// compute key hash if needed
-		if (subctx->owner.ownerType == SIGN_TX_POOL_OWNER_TYPE_PATH) {
-			write_view_t view = make_write_view(subctx->owner.keyHash, subctx->owner.keyHash + SIZEOF(subctx->owner.keyHash));
-			view_appendPublicKeyHash(&view, &subctx->owner.path);
+		if (owner->descriptionKind == DATA_DESCRIPTION_PATH) {
+			write_view_t view = make_write_view(owner->keyHash, owner->keyHash + SIZEOF(owner->keyHash));
+			view_appendPublicKeyHash(&view, &owner->path);
 		}
 	}
 
@@ -382,7 +398,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		TRACE("Adding owner to tx hash");
 		txHashBuilder_addPoolRegistrationCertificate_addOwner(
 		        txHashBuilder,
-		        subctx->owner.keyHash, SIZEOF(subctx->owner.keyHash)
+		        owner->keyHash, SIZEOF(owner->keyHash)
 		);
 		TRACE();
 	}
@@ -605,7 +621,7 @@ static void handleMetadata_ui_runStep()
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = handleMetadata_ui_runStep;
 
-	pool_metadata_t* md = &subctx->metadata;
+	pool_metadata_t* md = &subctx->stateData.metadata;
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
@@ -678,13 +694,13 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	explicit_bzero(&subctx->metadata, SIZEOF(subctx->metadata));
+	explicit_bzero(&subctx->stateData.metadata, SIZEOF(subctx->stateData.metadata));
 
 	{
 		// parse data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-		pool_metadata_t* md = &subctx->metadata;
+		pool_metadata_t* md = &subctx->stateData.metadata;
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
@@ -739,8 +755,8 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		TRACE("Adding metadata hash to tx hash");
 		txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
 		        txHashBuilder,
-		        subctx->metadata.url, subctx->metadata.urlSize,
-		        subctx->metadata.hash, SIZEOF(subctx->metadata.hash)
+		        subctx->stateData.metadata.url, subctx->stateData.metadata.urlSize,
+		        subctx->stateData.metadata.hash, SIZEOF(subctx->stateData.metadata.hash)
 		);
 	}
 

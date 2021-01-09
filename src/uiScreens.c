@@ -398,13 +398,13 @@ void ui_displayPoolOwnerScreen(
 		ASSERT(isValidNetworkId(networkId));
 		ASSERT(ownerIndex < POOL_MAX_OWNERS);
 
-		switch (owner->ownerType) {
+		switch (owner->descriptionKind) {
 
-		case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
+		case DATA_DESCRIPTION_HASH:
 			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
 			break;
 
-		case SIGN_TX_POOL_OWNER_TYPE_PATH:
+		case DATA_DESCRIPTION_PATH:
 			ASSERT(bip44_isValidStakingKeyPath(&owner->path));
 			break;
 
@@ -416,7 +416,7 @@ void ui_displayPoolOwnerScreen(
 	// we display the owner as bech32-encoded reward address for his staking key
 	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 	{
-		if (owner->ownerType == SIGN_TX_POOL_OWNER_TYPE_PATH) {
+		if (owner->descriptionKind == DATA_DESCRIPTION_PATH) {
 			addressParams_t rewardAddressParams = {
 				.type = REWARD,
 				.networkId = networkId,
@@ -447,7 +447,7 @@ void ui_displayPoolOwnerScreen(
 	explicit_bzero(ownerDescription, SIZEOF(ownerDescription));
 	size_t descLen = 0; // owner description length
 
-	if (owner->ownerType == SIGN_TX_POOL_OWNER_TYPE_PATH) {
+	if (owner->descriptionKind == DATA_DESCRIPTION_PATH) {
 		descLen += bip44_printToStr(&owner->path, ownerDescription, SIZEOF(ownerDescription));
 	}
 

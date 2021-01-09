@@ -126,6 +126,13 @@ void txHashBuilder_addCertificate_delegation(
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
 );
+#ifdef POOL_OPERATOR_APP
+void txHashBuilder_addCertificate_poolRetirement(
+        tx_hash_builder_t* builder,
+        uint8_t* poolKeyHash, size_t poolKeyHashSize,
+        uint64_t epoch
+);
+#endif
 void txHashBuilder_addPoolRegistrationCertificate(
         tx_hash_builder_t* builder,
         const pool_registration_params_t* params,

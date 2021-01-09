@@ -60,9 +60,18 @@ security_policy_t policyForSignTxCertificateStaking(
         const certificate_type_t certificateType,
         const bip44_path_t* stakingKeyPath
 );
-security_policy_t policyForSignTxCertificateStakePoolRegistration(
+#ifdef POOL_OPERATOR_APP
+security_policy_t policyForSignTxCertificateStakePoolRetirement(
+        sign_tx_usecase_t signTxUsecase,
+        const bip44_path_t* poolIdPath,
+        uint64_t epoch
 );
-security_policy_t policyForSignTxStakePoolRegistrationOwner(pool_owner_t* owner);
+#endif
+security_policy_t policyForSignTxCertificateStakePoolRegistration();
+security_policy_t policyForSignTxStakePoolRegistrationOwner(
+        const sign_tx_usecase_t signTxUsecase,
+        const pool_owner_t* owner
+);
 security_policy_t policyForSignTxStakePoolRegistrationMetadata();
 security_policy_t policyForSignTxStakePoolRegistrationNoMetadata();
 security_policy_t policyForSignTxStakePoolRegistrationConfirm();

@@ -58,6 +58,7 @@ typedef struct {
 
 	// only for specific types
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+	uint64_t epoch;
 } sign_tx_certificate_data_t;
 
 typedef struct {

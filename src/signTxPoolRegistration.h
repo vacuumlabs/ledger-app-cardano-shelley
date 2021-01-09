@@ -32,7 +32,7 @@ typedef struct {
 } pool_metadata_t;
 
 typedef struct {
-	uint8_t ownerType;
+	uint8_t descriptionKind;
 	uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
 	bip44_path_t path;
 } pool_owner_t;
@@ -47,13 +47,15 @@ typedef struct {
 	uint16_t numOwners;
 	uint16_t numRelays;
 
-	pool_registration_params_t poolParams;
-
 	union {
+		struct {
+			pool_registration_params_t poolParams;
+		};
 		pool_owner_t owner;
 		pool_metadata_t metadata;
-	};
+	} stateData;
 } pool_registration_context_t;
+
 
 void signTxPoolRegistration_init();
 

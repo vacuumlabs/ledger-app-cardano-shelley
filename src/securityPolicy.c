@@ -395,28 +395,50 @@ security_policy_t policyForSignTxCertificateStaking(
 	PROMPT();
 }
 
-// for stake pool registration certificates
 security_policy_t policyForSignTxCertificateStakePoolRegistration()
 {
 	PROMPT();
 }
 
-security_policy_t policyForSignTxStakePoolRegistrationOwner(pool_owner_t* owner)
+security_policy_t policyForSignTxStakePoolRegistrationOwner(
+        const sign_tx_usecase_t signTxUsecase,
+        const pool_owner_t* owner
+)
 {
-	switch (owner->ownerType) {
-	case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
-		SHOW();
-		break;
+	if (owner->descriptionKind == DATA_DESCRIPTION_PATH)
+		DENY_UNLESS(is_valid_stake_pool_owner_path(&owner->path));
 
-	case SIGN_TX_POOL_OWNER_TYPE_PATH:
-		SHOW_IF(is_valid_stake_pool_owner_path(&owner->path));
-		break;
+	switch(signTxUsecase) {
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+		SHOW();
+
+		#ifdef POOL_OPERATOR_APP
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		DENY_UNLESS(owner->descriptionKind == DATA_DESCRIPTION_HASH);
+		SHOW();
+		#endif
 
 	default:
 		ASSERT(false);
 	}
-	DENY();
+	DENY(); // should not be reached
 }
+
+#ifdef POOL_OPERATOR_APP
+security_policy_t policyForSignTxCertificateStakePoolRetirement(
+        sign_tx_usecase_t signTxUsecase,
+        const bip44_path_t* poolIdPath,
+        uint64_t epoch MARK_UNUSED
+)
+{
+	// TODO deny for signTxUsecase == SIGN_TX_USECASE_POOL_OWNER
+
+	// TODO uncomment when merged with cold key derivation
+	// DENY_UNLESS(bip44_hasValidCardanoPoolColdKeyPrefix(stakingKeyPath));
+
+	PROMPT();
+}
+#endif
 
 security_policy_t policyForSignTxStakePoolRegistrationMetadata()
 {

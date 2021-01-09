@@ -772,7 +772,8 @@ static void signTx_handleCertificate_ui_runStep()
 
 		default:
 			// includes CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION
-			// which has separate UI; this handler must not be used
+			// and CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT
+			// which have separate UI; this handler must not be used
 			ASSERT(false);
 		}
 
@@ -822,7 +823,74 @@ static void signTx_handleCertificate_ui_runStep()
 
 		advanceCertificatesStateIfAppropriate();
 	}
-	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
+	UI_STEP_END(HANDLE_CERTIFICATE_STEP_INVALID);
+}
+
+#ifdef POOL_OPERATOR_APP
+enum {
+	HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION = 650,
+	HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_EPOCH,
+	HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_CONFIRM,
+	HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_RESPOND,
+	HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_INVALID,
+};
+
+static void signTx_handleCertificatePoolRetirement_ui_runStep()
+{
+	ASSERT(ctx->stageData.certificate.type == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
+
+	TRACE("UI step %d", ctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleCertificatePoolRetirement_ui_runStep;
+
+	UI_STEP_BEGIN(ctx->ui_step);
+
+	UI_STEP(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION) {
+		char poolId[200];
+		explicit_bzero(poolId, SIZEOF(poolId));
+
+		size_t length = encode_hex(
+		                        ctx->stageData.certificate.poolKeyHash, SIZEOF(ctx->stageData.certificate.poolKeyHash),
+		                        poolId, SIZEOF(poolId)
+		                );
+		ASSERT(length == strlen(poolId));
+		ASSERT(length == 2 * SIZEOF(ctx->stageData.certificate.poolKeyHash));
+
+		ui_displayPaginatedText(
+		        "Retire stake pool",
+		        poolId,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_EPOCH) {
+		// TODO; see also str_formatTtl()?
+		ui_displayPaginatedText(
+		        "TODO",
+		        "TODO",
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_CONFIRM) {
+		ui_displayPrompt(
+		        "Confirm",
+		        "pool retirement",
+		        this_fn,
+		        respond_with_user_reject
+		);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		advanceCertificatesStateIfAppropriate();
+	}
+	UI_STEP_END(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_INVALID);
+}
+#endif
+
+static void _parsePathSpec(read_view_t* view, sign_tx_certificate_data_t* certificateData)
+{
+	view_skipBytes(view, bip44_parseFromWire(&certificateData->pathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
+	TRACE();
+	BIP44_PRINTF(&certificateData->pathSpec);
 }
 
 static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, sign_tx_certificate_data_t* certificateData)
@@ -835,80 +903,92 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 	certificateData->type = parse_u1be(&view);
 	TRACE("Certificate type: %d", certificateData->type);
-	VALIDATE(
-	        (certificateData->type == CERTIFICATE_TYPE_STAKE_REGISTRATION) ||
-	        (certificateData->type == CERTIFICATE_TYPE_STAKE_DEREGISTRATION) ||
-	        (certificateData->type == CERTIFICATE_TYPE_STAKE_DELEGATION) ||
-	        (certificateData->type == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION),
-	        ERR_INVALID_DATA
-	);
-
-	if (certificateData->type == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION) {
-		// nothing more to parse
-		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
-		return;
-	}
-
-	// staking key derivation path
-	view_skipBytes(&view, bip44_parseFromWire(&certificateData->pathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
-	TRACE();
-	BIP44_PRINTF(&certificateData->pathSpec);
-
-	TRACE("Remaining bytes: %d", view_remainingSize(&view));
 
 	switch (certificateData->type) {
-
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
-	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
+		_parsePathSpec(&view, certificateData); // staking key path for stake credential
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
-
 		break;
-	}
-	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
+
+	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+		_parsePathSpec(&view, certificateData); // staking key path for stake credential
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+		break;
+
+	case CERTIFICATE_TYPE_STAKE_DELEGATION:
+		_parsePathSpec(&view, certificateData); // staking key path for stake credential
 		VALIDATE(view_remainingSize(&view) == POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
 		view_memmove(certificateData->poolKeyHash, &view, POOL_KEY_HASH_LENGTH);
 		break;
-	}
+
+	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION:
+		// nothing more to parse, certificate data will be provided
+		// in additional APDUs processesed by a submachine
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+		return;
+
+		#ifdef POOL_OPERATOR_APP
+	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
+		_parsePathSpec(&view, certificateData); // pool id path
+		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
+		certificateData->epoch  = parse_u8be(&view);
+		// TODO no validation?
+		break;
+		#endif
+
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
+
+	ASSERT(view_remainingSize(&view) == 0);
 }
 
 static void _addCertificateDataToTx(sign_tx_certificate_data_t* certificateData, tx_hash_builder_t* txHashBuilder)
 {
-	if (ctx->stageData.certificate.type == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION) {
-		// everything is added in the sub-machine, see signTxPoolRegistration.c
-		return;
-	}
 
-	// compute staking key hash
-	uint8_t stakingKeyHash[ADDRESS_KEY_HASH_LENGTH];
+	// data only added in the sub-machine, see signTxPoolRegistration.c
+	ASSERT(ctx->stageData.certificate.type != CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+
+	// compute hash of the public key determined by the given path
+	uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
 	{
-		write_view_t stakingKeyHashView = make_write_view(stakingKeyHash, stakingKeyHash + SIZEOF(stakingKeyHash));
-		size_t keyHashLength = view_appendPublicKeyHash(&stakingKeyHashView, &ctx->stageData.certificate.pathSpec);
+		write_view_t keyHashView = make_write_view(keyHash, keyHash + SIZEOF(keyHash));
+		size_t keyHashLength = view_appendPublicKeyHash(&keyHashView, &ctx->stageData.certificate.pathSpec);
 		ASSERT(keyHashLength == ADDRESS_KEY_HASH_LENGTH);
 	}
+	TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
 
 	switch (ctx->stageData.certificate.type) {
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
 		txHashBuilder_addCertificate_stakingKey(
 		        txHashBuilder, certificateData->type,
-		        stakingKeyHash, SIZEOF(stakingKeyHash));
+		        keyHash, SIZEOF(keyHash));
 		break;
 	}
+
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		TRACE("Adding delegation certificate to tx hash");
 		txHashBuilder_addCertificate_delegation(
 		        txHashBuilder,
-		        stakingKeyHash, SIZEOF(stakingKeyHash),
+		        keyHash, SIZEOF(keyHash),
 		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
 		);
 		break;
 	}
+
+	#ifdef POOL_OPERATOR_APP
+	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
+		txHashBuilder_addCertificate_poolRetirement(
+		        txHashBuilder,
+		        keyHash, SIZEOF(keyHash),
+		        certificateData->epoch
+		);
+		break;
+	}
+	#endif
+
 	default:
 		ASSERT(false);
 	}
@@ -933,25 +1013,45 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 
 	// a new certificate arrived
-
 	explicit_bzero(&ctx->stageData.certificate, SIZEOF(ctx->stageData.certificate));
 
 	_parseCertificateData(wireDataBuffer, wireDataSize, &ctx->stageData.certificate);
 
-	// basic policy that just decides if the certificate is allowed
-	security_policy_t policy = policyForSignTxCertificate(
-	                                   ctx->commonTxData.signTxUsecase,
-	                                   ctx->stageData.certificate.type
-	                           );
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
+	{
+		// basic policy that just decides if the certificate is allowed
+		security_policy_t policy = policyForSignTxCertificate(
+		                                   ctx->commonTxData.signTxUsecase,
+		                                   ctx->stageData.certificate.type
+		                           );
+		TRACE("Policy: %d", (int) policy);
+		ENSURE_NOT_DENIED(policy);
+	}
 
 	switch (ctx->stageData.certificate.type) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
-	case CERTIFICATE_TYPE_STAKE_DELEGATION:
-		// these can be handled uniformly, see below
-		break;
+	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
+		security_policy_t policy = policyForSignTxCertificateStaking(
+		                                   ctx->stageData.certificate.type,
+		                                   &ctx->stageData.certificate.pathSpec
+		                           );
+		TRACE("Policy: %d", (int) policy);
+		ENSURE_NOT_DENIED(policy);
+
+		_addCertificateDataToTx(&ctx->stageData.certificate, &ctx->txHashBuilder);
+
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+
+		signTx_handleCertificate_ui_runStep();
+		return;
+	}
 
 	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION: {
 		// pool registration certificates have a separate sub-machine for handling APDU and UI
@@ -963,30 +1063,34 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 		return;
 	}
 
+	#ifdef POOL_OPERATOR_APP
+	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
+		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
+		                                   ctx->commonTxData.signTxUsecase,
+		                                   &ctx->stageData.certificate.pathSpec,
+		                                   ctx->stageData.certificate.epoch
+		                           );
+		TRACE("Policy: %d", (int) policy);
+		ENSURE_NOT_DENIED(policy);
+
+		_addCertificateDataToTx(&ctx->stageData.certificate, &ctx->txHashBuilder);
+
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+		signTx_handleCertificatePoolRetirement_ui_runStep();
+		return;
+	}
+	#endif
+
 	default:
 		ASSERT(false);
 	}
-
-	// more granular security policy which takes into account certificate data
-	policy = policyForSignTxCertificateStaking(
-	                 ctx->stageData.certificate.type,
-	                 &ctx->stageData.certificate.pathSpec
-	         );
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
-
-	switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION);
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_STEP_RESPOND);
-#	undef   CASE
-	default:
-		THROW(ERR_NOT_IMPLEMENTED);
-	}
-
-	_addCertificateDataToTx(&ctx->stageData.certificate, &ctx->txHashBuilder);
-
-	signTx_handleCertificate_ui_runStep();
 }
 
 // ============================== WITHDRAWALS ==============================
