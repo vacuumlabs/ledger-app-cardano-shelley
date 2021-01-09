@@ -422,7 +422,7 @@ void txHashBuilder_addCertificate_delegation(
 	ASSERT(builder->remainingCertificates > 0);
 	builder->remainingCertificates--;
 
-	// Array(2)[
+	// Array(3)[
 	//   Unsigned[2]
 	//   Array(2)[
 	//     Unsigned[0]

@@ -101,6 +101,7 @@ size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDeriv
 	deriveExtendedPublicKey(keyDerivationPath, &extPubKey);
 
 	uint8_t hashedPubKey[ADDRESS_KEY_HASH_LENGTH];
+	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH * 8 == 224, "wrong address key hash length");
 	blake2b_224_hash(
 	        extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
 	        hashedPubKey, SIZEOF(hashedPubKey)
@@ -295,7 +296,8 @@ static size_t deriveAddress_reward(
 	}
 	{
 		// staking key path expected (corresponds to reward account)
-		ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath)); // TODO check for unusual account?
+		ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath));
+
 		view_appendPublicKeyHash(&out, spendingKeyPath);
 	}
 	{

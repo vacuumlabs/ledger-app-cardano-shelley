@@ -128,6 +128,7 @@ static void cardano_main(void)
 
 				VALIDATE(header->cla == CLA, ERR_BAD_CLA);
 
+				TRACE("APDU: ins = %d,   p1 = %d,    p2 = %d", header->ins, header->p1, header->p2);
 
 				// Lookup and call the requested command handler.
 				handler_fn_t *handlerFn = lookupHandler(header->ins);
