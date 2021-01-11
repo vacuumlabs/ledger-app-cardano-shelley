@@ -26,7 +26,7 @@ enum {
 		cx_##cipher##_t cx_ctx; \
 	} cipher##_##bits##_context_t;\
 	\
-	inline void cipher##_##bits##_init( \
+	static __attribute__((always_inline)) void cipher##_##bits##_init( \
 	                                    cipher##_##bits##_context_t* ctx \
 	                                  ) \
 	{ \
@@ -38,7 +38,7 @@ enum {
 		ctx->initialized_magic = HASH_CONTEXT_INITIALIZED_MAGIC; \
 	} \
 	\
-	inline void cipher##_##bits##_append( \
+	static __attribute__((always_inline)) void cipher##_##bits##_append( \
 	                                      cipher##_##bits##_context_t* ctx, \
 	                                      const uint8_t* inBuffer, size_t inSize \
 	                                    ) { \
@@ -52,7 +52,7 @@ enum {
 		       ); \
 	} \
 	\
-	inline void cipher##_##bits##_finalize( \
+	static __attribute__((always_inline)) void cipher##_##bits##_finalize( \
 	                                        cipher##_##bits##_context_t* ctx, \
 	                                        uint8_t* outBuffer, size_t outSize \
 	                                      ) { \
@@ -68,7 +68,7 @@ enum {
 		       ); \
 	} \
 	/* Convenience function to make all in one step */ \
-	inline void cipher##_##bits##_hash( \
+	static __attribute__((always_inline)) void cipher##_##bits##_hash( \
 	                                    const uint8_t* inBuffer, size_t inSize, \
 	                                    uint8_t* outBuffer, size_t outSize \
 	                                  ) { \
