@@ -7,6 +7,7 @@
 // BOLOS
 #include <os.h>
 #include <os_io_seproxyhal.h>
+#include <cx.h>
 
 // ours
 #include "utils.h"

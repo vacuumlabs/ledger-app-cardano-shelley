@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <os_io_seproxyhal.h>
+#include <ux.h>
 
 enum  {
 	P1_UNUSED = 0,
