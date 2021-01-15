@@ -97,6 +97,8 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 
 size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath)
 {
+	TRACE_STACK_USAGE();
+
 	extendedPublicKey_t extPubKey;
 	deriveExtendedPublicKey(keyDerivationPath, &extPubKey);
 
@@ -287,8 +289,11 @@ static size_t deriveAddress_reward(
         uint8_t* outBuffer, size_t outSize
 )
 {
+	TRACE_STACK_USAGE();
+
 	ASSERT(getAddressType(addressHeader) == REWARD);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+	TRACE();
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
@@ -297,7 +302,11 @@ static size_t deriveAddress_reward(
 	{
 		// staking key path expected (corresponds to reward account)
 		ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath)); // TODO check for unusual account?
+
+		TRACE_STACK_USAGE();
+		
 		view_appendPublicKeyHash(&out, spendingKeyPath);
+		TRACE();
 	}
 	{
 		// no staking data
@@ -309,7 +318,23 @@ static size_t deriveAddress_reward(
 	return ADDRESS_LENGTH;
 }
 
-size_t constructRewardAddress(
+size_t constructRewardAddressFromKeyPath(
+	const bip44_path_t* path, uint8_t networkId, uint8_t* outBuffer, size_t outSize
+)
+{
+	ASSERT(outSize == REWARD_ACCOUNT_SIZE);
+	ASSERT(bip44_isValidStakingKeyPath(path));
+
+	TRACE_STACK_USAGE();
+
+	const uint8_t header = constructShelleyAddressHeader(REWARD, networkId);
+	return deriveAddress_reward(
+			header, path,
+			outBuffer, outSize
+	);
+}
+
+size_t constructRewardAddressFromKeyHash(
         uint8_t networkId,
         const uint8_t* stakingKeyHashBuffer, size_t stakingKeyHashSize,
         uint8_t* outBuffer, size_t outSize

@@ -26,20 +26,26 @@ typedef enum {
 
 typedef struct {
 	data_description_kind_t descriptionKind;
-	uint8_t hash[POOL_KEY_HASH_LENGTH];
-	bip44_path_t path;
+	union {
+		bip44_path_t path;
+		uint8_t hash[POOL_KEY_HASH_LENGTH];
+	};
 } pool_id_t;
 
 typedef struct {
 	data_description_kind_t descriptionKind;
-	uint8_t buffer[REWARD_ACCOUNT_SIZE];
-	bip44_path_t path;
+	union {
+		bip44_path_t path;
+		uint8_t buffer[REWARD_ACCOUNT_SIZE];
+	};
 } pool_reward_account_t;
 
 typedef struct {
 	data_description_kind_t descriptionKind;
-	uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
-	bip44_path_t path;
+	union {
+		bip44_path_t path;
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+	};
 } pool_owner_t;
 
 typedef struct {

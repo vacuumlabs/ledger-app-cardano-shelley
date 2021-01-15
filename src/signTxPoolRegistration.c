@@ -136,9 +136,11 @@ enum {
 static void handlePoolInit_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolInit_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
+
 	UI_STEP(HANDLE_POOL_INIT_STEP_DISPLAY) {
 		ui_displayPaginatedText(
 		        "Pool registration",
@@ -153,8 +155,9 @@ static void handlePoolInit_ui_runStep()
 	UI_STEP_END(HANDLE_POOL_INIT_STEP_INVALID);
 }
 
-static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_INIT);
@@ -217,7 +220,7 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 
 // ============================== POOL KEY HASH / ID ==============================
 
-static void _calculatePooKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
+__noinline_due_to_stack__ static void _calculatePooKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
 {
 	switch (poolId->descriptionKind) {
 
@@ -251,9 +254,11 @@ enum {
 static void handlePoolKey_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolKey_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
+
 	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY) {
 		// TODO display as path for operator? or rather both path and hash so that he is really sure?
 		// or bech32 using prefix from https://cips.cardano.org/cips/cip5/
@@ -301,8 +306,9 @@ static void _parsePoolId(read_view_t* view)
 	}
 }
 
-static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_POOL_KEY);
@@ -364,9 +370,11 @@ enum {
 static void handlePoolVrfKey_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolVrfKey_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
+
 	UI_STEP(HANDLE_POOL_VRF_KEY_STEP_DISPLAY) {
 		// TODO display in bech32 using prefix from https://cips.cardano.org/cips/cip5/  ?
 		ui_displayHexBufferScreen(
@@ -382,8 +390,9 @@ static void handlePoolVrfKey_ui_runStep()
 	UI_STEP_END(HANDLE_POOL_VRF_KEY_STEP_INVALID);
 }
 
-static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_VRF_KEY);
@@ -443,9 +452,11 @@ enum {
 static void handlePoolFinancials_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolFinancials_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
+
 	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE) {
 		ui_displayAmountScreen(
 >>>>>>> signTxPoolRegistration
@@ -475,8 +486,9 @@ static void handlePoolFinancials_ui_runStep()
 	UI_STEP_END(HANDLE_POOL_FINANCIALS_STEP_INVALID);
 }
 
-static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_FINANCIALS);
@@ -535,7 +547,10 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuf
 
 // ============================== POOL REWARD ACCOUNT ==============================
 
-static void _calculateRewardAccount(const pool_reward_account_t* rewardAccount, uint8_t* rewardAccountBuffer)
+__noinline_due_to_stack__ static void _calculateRewardAccount(
+	const pool_reward_account_t* rewardAccount,
+	uint8_t* rewardAccountBuffer
+)
 {
 	switch (rewardAccount->descriptionKind) {
 
@@ -545,13 +560,10 @@ static void _calculateRewardAccount(const pool_reward_account_t* rewardAccount, 
 		break;
 	}
 	case DATA_DESCRIPTION_PATH: {
-		addressParams_t addressParams = {
-			.type = REWARD,
-			.networkId = commonTxData->networkId,
-			.spendingKeyPath = rewardAccount->path,
-			.stakingChoice = NO_STAKING
-		};
-		deriveAddress(&addressParams, rewardAccountBuffer, REWARD_ACCOUNT_SIZE);
+		constructRewardAddressFromKeyPath(
+			&rewardAccount->path, commonTxData->networkId,
+			rewardAccountBuffer, REWARD_ACCOUNT_SIZE
+		);
 		break;
 	}
 	default:
@@ -568,9 +580,11 @@ enum {
 static void handlePoolRewardAccount_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolRewardAccount_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
+
 	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY) {
 		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
 		_calculateRewardAccount(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
@@ -621,8 +635,9 @@ static void _parsePoolRewardAccount(read_view_t* view)
 	}
 }
 
-static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_REWARD_ACCOUNT);
@@ -685,6 +700,7 @@ enum {
 static void handleOwner_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleOwner_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
@@ -718,8 +734,44 @@ static void handleOwner_ui_runStep()
 	UI_STEP_END(HANDLE_OWNER_STEP_INVALID);
 }
 
-static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void _addOwnerToTxHash()
 {
+	pool_owner_t* owner = &subctx->stateData.owner;
+
+	uint8_t ownerKeyHash[ADDRESS_KEY_HASH_LENGTH];
+
+	switch (owner->descriptionKind) {
+	case DATA_DESCRIPTION_PATH: {
+		extendedPublicKey_t extPubKey;
+		deriveExtendedPublicKey(&owner->path, &extPubKey);
+
+		STATIC_ASSERT(SIZEOF(ownerKeyHash) * 8 == 224, "wrong owner key hash length");
+		blake2b_224_hash(
+				extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
+				ownerKeyHash, SIZEOF(ownerKeyHash)
+		);
+		break;
+	}
+	case DATA_DESCRIPTION_HASH: {
+		os_memmove(ownerKeyHash, owner->keyHash, SIZEOF(ownerKeyHash));
+		break;
+	}
+	default:
+		ASSERT(false);
+	}
+
+	// add data to tx
+	TRACE("Adding owner to tx hash");
+	txHashBuilder_addPoolRegistrationCertificate_addOwner(
+			txHashBuilder,
+			ownerKeyHash, SIZEOF(ownerKeyHash)
+	);
+	TRACE();
+}
+
+__noinline_due_to_stack__ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_OWNERS);
@@ -729,7 +781,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 
 	pool_owner_t* owner = &subctx->stateData.owner;
 
-	explicit_bzero(owner, SIZEOF(subctx->stateData.owner));
+	explicit_bzero(owner, SIZEOF(*owner));
 
 	{
 		// parse data
@@ -766,33 +818,15 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		}
 	}
 
+	TRACE_STACK_USAGE();
+
 	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(commonTxData->signTxUsecase, owner);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
-	{
-		// compute key hash if needed
-		if (owner->descriptionKind == DATA_DESCRIPTION_PATH) {
-			extendedPublicKey_t extPubKey;
-			deriveExtendedPublicKey(&owner->path, &extPubKey);
+	_addOwnerToTxHash();
 
-			STATIC_ASSERT(SIZEOF(owner->keyHash) * 8 == 224, "wrong owner key hash length");
-			blake2b_224_hash(
-			        extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
-			        owner->keyHash, SIZEOF(owner->keyHash)
-			);
-		}
-	}
-
-	{
-		// add data to tx
-		TRACE("Adding owner to tx hash");
-		txHashBuilder_addPoolRegistrationCertificate_addOwner(
-		        txHashBuilder,
-		        owner->keyHash, SIZEOF(owner->keyHash)
-		);
-		TRACE();
-	}
+	TRACE_STACK_USAGE();	
 
 	{
 		// select UI steps
@@ -836,8 +870,9 @@ format 1 single_host_name:
 format 2 multi_host_name:
 [0-64B dns_name]
 */
-static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_RELAYS);
@@ -982,6 +1017,7 @@ enum {
 static void handleNullMetadata_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleNullMetadata_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
@@ -1010,6 +1046,7 @@ enum {
 static void handleMetadata_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleMetadata_ui_runStep;
 
 	pool_metadata_t* md = &subctx->stateData.metadata;
@@ -1076,8 +1113,9 @@ static void handleNullMetadata()
 	handleNullMetadata_ui_runStep();
 }
 
-static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_METADATA);
@@ -1165,6 +1203,7 @@ enum {
 static void signTxPoolRegistration_handleConfirm_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxPoolRegistration_handleConfirm_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
@@ -1184,8 +1223,9 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
-static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		//sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_CONFIRM);
@@ -1253,7 +1293,8 @@ bool signTxPoolRegistration_isValidInstruction(uint8_t p2)
 
 void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	TRACE("p2 = %d", p2);
+	TRACE_STACK_USAGE();
+	TRACE("p2 = 0x%x", p2);
 
 	switch (p2) {
 	case APDU_INSTRUCTION_INIT:

@@ -131,12 +131,16 @@ static void uiCallback_init(ui_callback_t* cb, ui_callback_fn_t* confirm, ui_cal
 	cb->reject = reject;
 }
 
-void ui_displayPrompt(
+__noinline_due_to_stack__ void ui_displayPrompt(
         const char* headerStr,
         const char* bodyStr,
         ui_callback_fn_t* confirm,
         ui_callback_fn_t* reject)
 {
+	TRACE_STACK_USAGE();
+	TRACE("%s", headerStr);
+	TRACE("%s", bodyStr);
+
 	size_t header_len = strlen(headerStr);
 	size_t text_len = strlen(bodyStr);
 	// sanity checks, keep 1 byte for null terminator
@@ -165,12 +169,15 @@ void ui_displayPrompt(
 	#endif // HEADLESS
 }
 
-void ui_displayPaginatedText(
+__noinline_due_to_stack__ void ui_displayPaginatedText(
         const char* headerStr,
         const char* bodyStr,
         ui_callback_fn_t* callback)
 {
-	TRACE();
+	TRACE_STACK_USAGE();
+	TRACE("%s", headerStr);
+	TRACE("%s", bodyStr);
+
 	paginatedTextState_t* ctx = paginatedTextState;
 	size_t header_len = strlen(headerStr);
 	size_t body_len = strlen(bodyStr);

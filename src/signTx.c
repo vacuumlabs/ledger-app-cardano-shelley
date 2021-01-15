@@ -233,9 +233,11 @@ enum {
 static void signTx_handleInit_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleInit_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step);
+
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
 		if (is_tx_network_verifiable(ctx->commonTxData.signTxUsecase, ctx->numOutputs, ctx->numWithdrawals)) {
 			ui_displayNetworkParamsScreen(
@@ -267,8 +269,9 @@ static void signTx_handleInit_ui_runStep()
 	UI_STEP_END(HANDLE_INIT_STEP_INVALID);
 }
 
-static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_INIT);
@@ -476,6 +479,7 @@ enum {
 static void signTx_handleInput_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
+	TRACE_STACK_USAGE();
 
 	UI_STEP_BEGIN(ctx->ui_step);
 
@@ -493,8 +497,9 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
 
-static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_INPUTS);
@@ -605,7 +610,7 @@ static void signTx_handleFee_ui_runStep()
 	UI_STEP_END(HANDLE_FEE_STEP_INVALID);
 }
 
-static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -680,7 +685,7 @@ static void signTx_handleTtl_ui_runStep()
 	UI_STEP_END(HANDLE_TTL_STEP_INVALID);
 }
 
-static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -837,9 +842,8 @@ enum {
 
 static void signTx_handleCertificatePoolRetirement_ui_runStep()
 {
-	ASSERT(ctx->stageData.certificate.type == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
-
 	TRACE("UI step %d", ctx->ui_step);
+	ASSERT(ctx->stageData.certificate.type == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
 	ui_callback_fn_t* this_fn = signTx_handleCertificatePoolRetirement_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step);
@@ -944,7 +948,10 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	ASSERT(view_remainingSize(&view) == 0);
 }
 
-static void _addCertificateDataToTx(sign_tx_certificate_data_t* certificateData, tx_hash_builder_t* txHashBuilder)
+__noinline_due_to_stack__ static void _addCertificateDataToTx(
+	sign_tx_certificate_data_t* certificateData,
+	tx_hash_builder_t* txHashBuilder
+)
 {
 
 	// data only added in the sub-machine, see signTxPoolRegistration.c
@@ -952,6 +959,7 @@ static void _addCertificateDataToTx(sign_tx_certificate_data_t* certificateData,
 
 	// compute hash of the public key determined by the given path
 	uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+
 	{
 		write_view_t keyHashView = make_write_view(keyHash, keyHash + SIZEOF(keyHash));
 		size_t keyHashLength = view_appendPublicKeyHash(&keyHashView, &ctx->stageData.certificate.pathSpec);
@@ -994,17 +1002,19 @@ static void _addCertificateDataToTx(sign_tx_certificate_data_t* certificateData,
 	}
 }
 
-static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	ASSERT(ctx->currentCertificate < ctx->numCertificates);
+	TRACE_STACK_USAGE();
 
-	TRACE("p2 = %d", p2);
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+	ASSERT(ctx->currentCertificate < ctx->numCertificates);
 
 	// delegate to state sub-machine for stake pool registration certificate data
 	if (signTxPoolRegistration_isValidInstruction(p2)) {
 		TRACE();
 		VALIDATE(ctx->stage == SIGN_STAGE_CERTIFICATES_POOL, ERR_INVALID_DATA);
+
+		TRACE_STACK_USAGE();
+
 		signTxPoolRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
 		return;
 	}
@@ -1104,6 +1114,7 @@ enum {
 static void signTx_handleWithdrawal_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleWithdrawal_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step);
@@ -1125,8 +1136,28 @@ static void signTx_handleWithdrawal_ui_runStep()
 	UI_STEP_END(HANDLE_WITHDRAWAL_STEP_INVALID);
 }
 
-static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void _addWithdrawalToTxHash()
 {
+	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
+
+	constructRewardAddressFromKeyPath(
+			&ctx->stageData.withdrawal.path,
+			ctx->commonTxData.networkId,
+			rewardAddress,
+			SIZEOF(rewardAddress)
+	);
+
+	TRACE("Adding withdrawal to tx hash");
+	txHashBuilder_addWithdrawal(
+			&ctx->txHashBuilder,
+			rewardAddress, SIZEOF(rewardAddress),
+			ctx->stageData.withdrawal.amount
+	);
+}
+
+__noinline_due_to_stack__ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_WITHDRAWALS);
@@ -1156,30 +1187,7 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 
 	}
 
-	{
-		uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
-		{
-			addressParams_t rewardAddressParams = {
-				.type = REWARD,
-				.networkId = ctx->commonTxData.networkId,
-				.spendingKeyPath = ctx->stageData.withdrawal.path,
-				.stakingChoice = NO_STAKING,
-			};
-
-			deriveAddress(
-			        &rewardAddressParams,
-			        rewardAddress,
-			        SIZEOF(rewardAddress)
-			);
-		}
-
-		TRACE("Adding withdrawal to tx hash");
-		txHashBuilder_addWithdrawal(
-		        &ctx->txHashBuilder,
-		        rewardAddress, SIZEOF(rewardAddress),
-		        ctx->stageData.withdrawal.amount
-		);
-	}
+	_addWithdrawalToTxHash();
 
 	security_policy_t policy = policyForSignTxWithdrawal();
 	TRACE("Policy: %d", (int) policy);
@@ -1211,6 +1219,7 @@ enum {
 static void signTx_handleMetadata_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleMetadata_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step);
@@ -1236,8 +1245,9 @@ static void signTx_handleMetadata_ui_runStep()
 	UI_STEP_END(HANDLE_METADATA_STEP_INVALID);
 }
 
-static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_METADATA);
@@ -1377,6 +1387,7 @@ enum {
 static void signTx_handleConfirm_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleConfirm_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step);
@@ -1399,8 +1410,9 @@ static void signTx_handleConfirm_ui_runStep()
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
-static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+__noinline_due_to_stack__  static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		//sanity checks
 		CHECK_STAGE(SIGN_STAGE_CONFIRM);
@@ -1456,6 +1468,7 @@ enum {
 static void signTx_handleWitness_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleWitness_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step);
@@ -1492,8 +1505,9 @@ static void signTx_handleWitness_ui_runStep()
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
 
-static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_WITNESSES);

@@ -28,7 +28,7 @@ PIN = 5555
 
 # pool operator app contains additional functionality
 # set to 1 if you want to include it, or to 0 if you want a regular app
-POOL_OPERATOR_APP = 1
+POOL_OPERATOR_APP = 0
 
 APPNAME      = "Cardano ADA"
 APPVERSION_M = 2
@@ -131,9 +131,9 @@ $(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
 endif
 
 CC       := $(CLANGPATH)clang
-CFLAGS   += -O3 -Os -Wall -Wextra -Wuninitialized
+CFLAGS   += -std=gnu11 -O3 -Os -Wall -Wextra -Wuninitialized
 
-AS     := $(GCCPATH)arm-none-eabi-gcc
+AS       := $(GCCPATH)arm-none-eabi-gcc
 LD       := $(GCCPATH)arm-none-eabi-gcc
 
 LDFLAGS  += -O3 -Os -Wall
