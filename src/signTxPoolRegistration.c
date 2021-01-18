@@ -818,15 +818,11 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleOwnerAPDU(uin
 		}
 	}
 
-	TRACE_STACK_USAGE();
-
 	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(commonTxData->signTxUsecase, owner);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	_addOwnerToTxHash();
-
-	TRACE_STACK_USAGE();	
 
 	{
 		// select UI steps
@@ -847,15 +843,100 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleOwnerAPDU(uin
 // ============================== RELAY ==============================
 
 enum {
-	RELAY_SINGLE_HOST_IP = 0,
-	RELAY_SINGLE_HOST_NAME = 1,
-	RELAY_MULTIPLE_HOST_NAME = 2
-};
-
-enum {
 	RELAY_NO = 1,
 	RELAY_YES = 2
 };
+
+enum {
+	HANDLE_RELAY_STEP_DISPLAY = 6370,
+	HANDLE_RELAY_STEP_RESPOND,
+	HANDLE_RELAY_STEP_INVALID,
+};
+
+static void handleRelay_ui_runStep()
+{
+	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
+	ui_callback_fn_t* this_fn = handleRelay_ui_runStep;
+
+	UI_STEP_BEGIN(subctx->ui_step);
+
+	UI_STEP(HANDLE_RELAY_STEP_DISPLAY) {
+		ui_displayPaginatedText(
+			"Relay TODO",
+			"TODO",
+			this_fn
+		);
+	}
+	UI_STEP(HANDLE_RELAY_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		subctx->currentRelay++;
+		TRACE("current relay %d", subctx->currentRelay);
+
+		if (subctx->currentRelay == subctx->numRelays) {
+			advanceState();
+		}
+	}
+	UI_STEP_END(HANDLE_RELAY_STEP_INVALID);
+}
+
+static void _parsePort(pool_relay_t* relay, read_view_t* view)
+{
+	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
+	uint8_t isPortGiven = parse_u1be(view);
+	if (isPortGiven == RELAY_YES) {
+		relay->hasPort = true;
+		ASSERT_TYPE(relay->port, uint16_t);
+		relay->port = parse_u2be(view);
+		TRACE("Port: %u", relay->port);
+	} else {
+		VALIDATE(isPortGiven == RELAY_NO, ERR_INVALID_DATA);
+		relay->hasPort = false;
+	}
+}
+
+static void _parseIpv4(pool_relay_t* relay, read_view_t* view)
+{
+	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
+	uint8_t isIpv4Given = parse_u1be(view);
+	if (isIpv4Given == RELAY_YES) {
+		relay->hasIpv4 = true;
+		VALIDATE(view_remainingSize(view) >= IPV4_SIZE, ERR_INVALID_DATA);
+		STATIC_ASSERT(sizeof(relay->ipv4.ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
+		view_memmove(relay->ipv4.ip, view, IPV4_SIZE);
+		TRACE("ipv4");
+		TRACE_BUFFER(relay->ipv4.ip, IPV4_SIZE);
+	} else {
+		VALIDATE(isIpv4Given == RELAY_NO, ERR_INVALID_DATA);
+		relay->hasIpv4 = false;
+	}
+}
+
+static void _parseIpv6(pool_relay_t* relay, read_view_t* view)
+{
+	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
+	uint8_t isIpv6Given = parse_u1be(view);
+	if (isIpv6Given == RELAY_YES) {
+		relay->hasIpv6 = true;
+		VALIDATE(view_remainingSize(view) >= IPV6_SIZE, ERR_INVALID_DATA);
+		STATIC_ASSERT(SIZEOF(relay->ipv6.ip) == IPV6_SIZE, "wrong ipv6 size");
+		view_memmove(relay->ipv6.ip, view, IPV6_SIZE);
+		TRACE("ipv6");
+		TRACE_BUFFER(relay->ipv6.ip, IPV6_SIZE);
+	} else {
+		VALIDATE(isIpv6Given == RELAY_NO, ERR_INVALID_DATA);
+		relay->hasIpv6 = false;
+	}
+}
+
+static void _parseDnsName(pool_relay_t* relay, read_view_t* view)
+{
+	relay->dnsNameSize = view_remainingSize(view);
+	VALIDATE(relay->dnsNameSize <= DNS_NAME_SIZE_MAX, ERR_INVALID_DATA);
+	str_validateTextBuffer(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view));
+	view_memmove(relay->dnsName, view, relay->dnsNameSize);
+}
 
 /*
 wire data:
@@ -880,129 +961,68 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uin
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	{
-		// parse data and add it to tx
+	pool_relay_t* relay = &subctx->stateData.relay;
+	{		
+		// parse data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-		uint8_t format = parse_u1be(&view);
-		TRACE("Relay format %u", format);
-		switch (format) {
+		relay->format = parse_u1be(&view);
+		TRACE("Relay format %u", relay->format);
+		switch (relay->format) {
 
 		case RELAY_SINGLE_HOST_IP: {
-			uint16_t port;
-			uint16_t *portPtr = NULL;
-			{
-				VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-				uint8_t includePort = parse_u1be(&view);
-				if (includePort == RELAY_YES) {
-					port = parse_u2be(&view);
-					TRACE("Port: %u", port);
-					portPtr = &port;
-				} else {
-					VALIDATE(includePort == RELAY_NO, ERR_INVALID_DATA);
-				}
-			}
-
-			ipv4_t ipv4;
-			ipv4_t* ipv4Ptr = NULL;
-			{
-				VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-				uint8_t includeIpv4 = parse_u1be(&view);
-				if (includeIpv4 == RELAY_YES) {
-					VALIDATE(view_remainingSize(&view) >= IPV4_SIZE, ERR_INVALID_DATA);
-					STATIC_ASSERT(sizeof(ipv4.ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
-					view_memmove(ipv4.ip, &view, IPV4_SIZE);
-					TRACE("ipv4");
-					TRACE_BUFFER(ipv4.ip, IPV4_SIZE);
-					ipv4Ptr = &ipv4;
-				} else {
-					VALIDATE(includeIpv4 == RELAY_NO, ERR_INVALID_DATA);
-				}
-			}
-
-			ipv6_t ipv6;
-			ipv6_t* ipv6Ptr = NULL;
-			{
-				VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-				uint8_t includeIpv6 = parse_u1be(&view);
-				if (includeIpv6 == RELAY_YES) {
-					VALIDATE(view_remainingSize(&view) >= IPV6_SIZE, ERR_INVALID_DATA);
-					STATIC_ASSERT(SIZEOF(ipv6.ip) == IPV6_SIZE, "wrong ipv6 size");
-					view_memmove(ipv6.ip, &view, IPV6_SIZE);
-					TRACE("ipv6");
-					TRACE_BUFFER(ipv6.ip, IPV6_SIZE);
-					ipv6Ptr = &ipv6;
-				} else {
-					VALIDATE(includeIpv6 == RELAY_NO, ERR_INVALID_DATA);
-				}
-			}
-
-			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
-
-			TRACE("Adding relay format 0 to tx hash");
-			txHashBuilder_addPoolRegistrationCertificate_addRelay0(
-			        txHashBuilder, portPtr, ipv4Ptr, ipv6Ptr
-			);
+			_parsePort(relay, &view);
+			VALIDATE(relay->hasPort, ERR_INVALID_DATA);
+			_parseIpv4(relay, &view);
+			_parseIpv6(relay, &view);
+			VALIDATE(relay->hasIpv4 || relay->hasIpv6, ERR_INVALID_DATA);
 			break;
 		}
 
 		case RELAY_SINGLE_HOST_NAME: {
-			uint16_t port;
-			uint16_t *portPtr = NULL;
-			{
-				VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-				uint8_t includePort = parse_u1be(&view);
-				if (includePort == RELAY_YES) {
-					port = parse_u2be(&view);
-					TRACE("Port: %u", port);
-					portPtr = &port;
-				} else {
-					VALIDATE(includePort == RELAY_NO, ERR_INVALID_DATA);
-				}
-			}
-
-			VALIDATE(view_remainingSize(&view) <= DNS_NAME_MAX_LENGTH, ERR_INVALID_DATA);
-			str_validateTextBuffer(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
-
-			TRACE("Adding relay format 1 to tx hash");
-			txHashBuilder_addPoolRegistrationCertificate_addRelay1(
-			        txHashBuilder,
-			        portPtr,
-			        VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)
-			);
+			_parsePort(relay, &view);
+			VALIDATE(relay->hasPort, ERR_INVALID_DATA);
+			_parseDnsName(relay, &view);
+			VALIDATE(relay->dnsNameSize > 0, ERR_INVALID_DATA);
 			break;
 		}
 
 		case RELAY_MULTIPLE_HOST_NAME: {
-			VALIDATE(view_remainingSize(&view) <= DNS_NAME_MAX_LENGTH, ERR_INVALID_DATA);
-			str_validateTextBuffer(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
-
-			TRACE("Adding relay format 2 to tx hash");
-			txHashBuilder_addPoolRegistrationCertificate_addRelay2(
-			        txHashBuilder,
-			        VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)
-			);
+			_parseDnsName(relay, &view);
+			VALIDATE(relay->dnsNameSize > 0, ERR_INVALID_DATA);
 			break;
 		}
 
 		default:
 			THROW(ERR_INVALID_DATA);
 		}
+
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	respondSuccessEmptyMsg();
+	security_policy_t policy = policyForSignTxStakePoolRegistrationRelay(commonTxData->signTxUsecase, relay);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	TRACE("Adding relay format %d to tx hash", (int) relay->format);
+	txHashBuilder_addPoolRegistrationCertificate_addRelay(txHashBuilder, relay);
 
 	{
-		subctx->currentRelay++;
-		TRACE("current relay %d", subctx->currentRelay);
-
-		if (subctx->currentRelay == subctx->numRelays) {
-			advanceState();
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_RELAY_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_RELAY_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
 		}
 	}
+
+	handleRelay_ui_runStep();
 }
 
 
@@ -1054,8 +1074,8 @@ static void handleMetadata_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step);
 
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_URL) {
-		char metadataUrlStr[1 + POOL_METADATA_URL_MAX_LENGTH];
-		ASSERT(md->urlSize <= POOL_METADATA_URL_MAX_LENGTH);
+		char metadataUrlStr[1 + POOL_METADATA_URL_LENGTH_MAX];
+		ASSERT(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX);
 		os_memcpy(metadataUrlStr, md->url, md->urlSize);
 		metadataUrlStr[md->urlSize] = '\0';
 		ASSERT(strlen(metadataUrlStr) == md->urlSize);
@@ -1154,7 +1174,7 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolMetadataA
 		}
 		{
 			md->urlSize = view_remainingSize(&view);
-			VALIDATE(md->urlSize <= POOL_METADATA_URL_MAX_LENGTH, ERR_INVALID_DATA);
+			VALIDATE(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX, ERR_INVALID_DATA);
 			ASSERT(SIZEOF(md->url) >= md->urlSize);
 			view_memmove(md->url, &view, md->urlSize);
 			str_validateTextBuffer(md->url, md->urlSize);
@@ -1295,6 +1315,8 @@ void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size
 {
 	TRACE_STACK_USAGE();
 	TRACE("p2 = 0x%x", p2);
+
+	explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 
 	switch (p2) {
 	case APDU_INSTRUCTION_INIT:

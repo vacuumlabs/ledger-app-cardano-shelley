@@ -511,6 +511,27 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 	DENY(); // should not be reached
 }
 
+security_policy_t policyForSignTxStakePoolRegistrationRelay(
+        const sign_tx_usecase_t signTxUsecase,
+        const pool_relay_t* relay MARK_UNUSED
+)
+{
+	switch(signTxUsecase) {
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+		ALLOW();
+
+		#ifdef POOL_OPERATOR_APP
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		SHOW();
+		#endif
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
 security_policy_t policyForSignTxStakePoolRegistrationMetadata()
 {
 	SHOW();

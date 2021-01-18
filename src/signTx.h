@@ -104,6 +104,7 @@ typedef struct {
 
 	common_tx_data_t commonTxData;
 
+	// this holds data valid only through the processing of a single APDU
 	union {
 		uint64_t fee;
 		uint64_t ttl;

@@ -3,6 +3,12 @@
 
 #include "cardano.h"
 
+// see the calculation in ui_displayMarginScreen() in uiScreens.c
+#define MARGIN_DENOMINATOR_MAX 1000000000000000ul // 10^15
+
+#define POOL_METADATA_URL_LENGTH_MAX 64
+#define DNS_NAME_SIZE_MAX 64
+
 #define IPV4_SIZE 4
 #define IPV6_SIZE 16
 
@@ -18,6 +24,12 @@ typedef enum {
 	#endif
 } certificate_type_t;
 
+typedef enum {
+	RELAY_SINGLE_HOST_IP = 0,
+	RELAY_SINGLE_HOST_NAME = 1,
+	RELAY_MULTIPLE_HOST_NAME = 2
+} relay_format_t;
+
 typedef struct {
 	uint8_t ip[IPV4_SIZE];
 } ipv4_t;
@@ -29,7 +41,21 @@ typedef struct {
 // see the calculation in ui_displayPoolMarginScreen() in uiScreens.c
 #define MARGIN_DENOMINATOR_MAX 1000000000000000ul // 10^15
 
-#define POOL_METADATA_URL_MAX_LENGTH 64
-#define DNS_NAME_MAX_LENGTH 64
+typedef struct {
+	relay_format_t format;
+
+	bool hasPort;
+	uint16_t port;
+
+	bool hasIpv4;
+	ipv4_t ipv4;
+
+	bool hasIpv6;
+	ipv6_t ipv6;
+
+	size_t dnsNameSize;
+	uint8_t dnsName[DNS_NAME_SIZE_MAX];
+} pool_relay_t;
+
 
 #endif // H_CARDANO_APP_CARDANO_CERTIFICATES

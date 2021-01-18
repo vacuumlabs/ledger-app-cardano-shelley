@@ -141,7 +141,7 @@
 #define TRACE_STACK_USAGE() \
 	do { \
 		volatile uint32_t x = 0; \
-		TRACE("stack position = %d", (int)((uint8_t*)&x - (uint8_t*)&app_stack_canary)); \
+		TRACE("stack position = %d", (int)((void*)&x - (void*)&app_stack_canary)); \
 		if (app_stack_canary != APP_STACK_CANARY_MAGIC) { \
 			TRACE("===================== stack overflow ====================="); \
 		} \

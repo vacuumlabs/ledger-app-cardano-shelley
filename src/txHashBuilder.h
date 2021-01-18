@@ -165,21 +165,9 @@ void txHashBuilder_addPoolRegistrationCertificate_addOwner(
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize
 );
 void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t* builder);
-// three possible relay formats, serialized as 0, 1, 2
-void txHashBuilder_addPoolRegistrationCertificate_addRelay0(
+void txHashBuilder_addPoolRegistrationCertificate_addRelay(
         tx_hash_builder_t* builder,
-        const uint16_t* port,
-        const ipv4_t* ipv4,
-        const ipv6_t* ipv6
-);
-void txHashBuilder_addPoolRegistrationCertificate_addRelay1(
-        tx_hash_builder_t* builder,
-        const uint16_t* port,
-        const uint8_t* dnsName, size_t dnsNameSize
-);
-void txHashBuilder_addPoolRegistrationCertificate_addRelay2(
-        tx_hash_builder_t* builder,
-        const uint8_t* dnsName, size_t dnsNameSize
+        pool_relay_t* relay
 );
 void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
         tx_hash_builder_t* builder,

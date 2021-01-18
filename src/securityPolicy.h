@@ -5,6 +5,7 @@
 #include "bip44.h"
 #include "cardanoOutputs.h"
 #include "signTxPoolRegistration.h"
+#include "signTx.h"
 
 typedef enum {
 	POLICY_DENY = 1,
@@ -81,6 +82,10 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const sign_tx_usecase_t signTxUsecase,
         const pool_owner_t* owner
+);
+security_policy_t policyForSignTxStakePoolRegistrationRelay(
+        const sign_tx_usecase_t signTxUsecase,
+        const pool_relay_t* relay
 );
 security_policy_t policyForSignTxStakePoolRegistrationMetadata();
 security_policy_t policyForSignTxStakePoolRegistrationNoMetadata();

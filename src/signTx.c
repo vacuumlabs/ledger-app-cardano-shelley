@@ -1612,6 +1612,8 @@ void signTx_handleAPDU(
 	// advance stage if a state sub-machine has finished
 	checkForFinishedSubmachines();
 
+	explicit_bzero(&ctx->stageData, SIZEOF(ctx->stageData));
+
 	subhandler_fn_t* subhandler = lookup_subhandler(p1);
 	VALIDATE(subhandler != NULL, ERR_INVALID_REQUEST_PARAMETERS);
 	subhandler(p2, wireDataBuffer, wireDataSize);

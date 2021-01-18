@@ -207,32 +207,42 @@ static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 
 	txHashBuilder_addPoolRegistrationCertificate_enterRelays(builder);
 
-	ipv4_t ipv4;
-	decode_hex("08080808", ipv4.ip, IPV4_SIZE);
-
-	uint16_t port = 1234;
-
-	txHashBuilder_addPoolRegistrationCertificate_addRelay0(builder, &port, &ipv4, NULL);
-
-	// a valid DNS AAAA record, since dnsName actually is suppposed to be an A or AAAA record
-	const char* dnsName = "AAAA 2400:cb00:2049:1::a29f:1804";
-	uint8_t dnsNameBuffer[DNS_NAME_MAX_LENGTH];
-	size_t dnsNameBufferSize = str_textToBuffer(dnsName, dnsNameBuffer, SIZEOF(dnsNameBuffer));
-	ASSERT(dnsNameBufferSize <= DNS_NAME_MAX_LENGTH);
-
-	txHashBuilder_addPoolRegistrationCertificate_addRelay1(builder, NULL, dnsNameBuffer, dnsNameBufferSize);
-
-	// dnsName is not a valid DNS SRV record, but we don't validate it
-	txHashBuilder_addPoolRegistrationCertificate_addRelay2(builder, dnsNameBuffer, dnsNameBufferSize);
+	{
+		pool_relay_t relay0;
+		relay0.format = 0;
+		relay0.hasPort = true;
+		relay0.port = 1234;
+		relay0.hasIpv4 = true;
+		decode_hex("08080808", relay0.ipv4.ip, IPV4_SIZE);
+		relay0.hasIpv6 = false;
+		txHashBuilder_addPoolRegistrationCertificate_addRelay(builder, &relay0);
+	}
+	{
+		pool_relay_t relay1;
+		relay1.format = 1;
+		relay1.hasPort = false;
+		// a valid DNS AAAA record, since dnsName actually is suppposed to be an A or AAAA record
+		const char* dnsName = "AAAA 2400:cb00:2049:1::a29f:1804";
+		relay1.dnsNameSize = str_textToBuffer(dnsName, relay1.dnsName, SIZEOF(relay1.dnsName));
+		txHashBuilder_addPoolRegistrationCertificate_addRelay(builder, &relay1);
+	}
+	{
+		pool_relay_t relay2;
+		relay2.format = 2;
+		// dnsName is not a valid DNS SRV record, but we don't validate it
+		const char* dnsName = "AAAA 2400:cb00:2049:1::a29f:1804";
+		relay2.dnsNameSize = str_textToBuffer(dnsName, relay2.dnsName, SIZEOF(relay2.dnsName));
+		txHashBuilder_addPoolRegistrationCertificate_addRelay(builder, &relay2);
+	}
 
 	uint8_t metadataHash[32];
 	size_t metadataHashSize = decode_hex("914C57C1F12BBF4A82B12D977D4F274674856A11ED4B9B95BD70F5D41C5064A6", metadataHash, SIZEOF(metadataHash));
 	ASSERT(metadataHashSize == SIZEOF(metadataHash));
 
 	const char* metadataUrl = "https://teststakepool.com";
-	uint8_t urlBuffer[DNS_NAME_MAX_LENGTH];
+	uint8_t urlBuffer[DNS_NAME_SIZE_MAX];
 	size_t urlSize = str_textToBuffer(metadataUrl, urlBuffer, SIZEOF(urlBuffer));
-	ASSERT(urlSize <= DNS_NAME_MAX_LENGTH);
+	ASSERT(urlSize <= DNS_NAME_SIZE_MAX);
 
 	txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(builder, urlBuffer, urlSize, metadataHash, metadataHashSize);
 }

@@ -49,7 +49,7 @@ typedef struct {
 } pool_owner_t;
 
 typedef struct {
-	uint8_t url[POOL_METADATA_URL_MAX_LENGTH];
+	uint8_t url[POOL_METADATA_URL_LENGTH_MAX];
 	size_t urlSize;
 	uint8_t hash[METADATA_HASH_LENGTH];
 } pool_metadata_t;
@@ -67,6 +67,7 @@ typedef struct {
 	uint16_t numOwners;
 	uint16_t numRelays;
 
+	// this holds data valid only through the processing of a single APDU
 	union {
 		pool_id_t poolId;
 		uint8_t vrfKeyHash[VRF_KEY_HASH_LENGTH];
@@ -78,6 +79,7 @@ typedef struct {
 		};
 		pool_reward_account_t poolRewardAccount;
 		pool_owner_t owner;
+		pool_relay_t relay;
 		pool_metadata_t metadata;
 	} stateData;
 } pool_registration_context_t;
