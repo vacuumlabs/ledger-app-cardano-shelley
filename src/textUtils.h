@@ -5,6 +5,8 @@
 
 size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize);
 
+size_t str_formatUint64(uint64_t number, char* out, size_t outSize);
+
 #ifdef DEVEL
 void str_traceAdaAmount(const char *prefix, uint64_t amount);
 #define TRACE_ADA_AMOUNT(PREFIX, AMOUNT) \
@@ -13,6 +15,16 @@ void str_traceAdaAmount(const char *prefix, uint64_t amount);
 	} while(0)
 #else
 #define TRACE_ADA_AMOUNT(PREFIX, AMOUNT)
+#endif
+
+#ifdef DEVEL
+void str_traceUint64(uint64_t number);
+#define TRACE_UINT64(NUMBER) \
+	do { \
+		str_traceUint64(NUMBER); \
+	} while(0)
+#else
+#define TRACE_UINT64(NUMBER)
 #endif
 
 size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize);
