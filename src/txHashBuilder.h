@@ -32,6 +32,9 @@ typedef enum {
 	TX_HASH_BUILDER_INIT = 100,
 	TX_HASH_BUILDER_IN_INPUTS = 200,
 	TX_HASH_BUILDER_IN_OUTPUTS = 300,
+	TX_HASH_BUILDER_IN_OUTPUTS_BASIC_DATA = 310,
+	TX_HASH_BUILDER_IN_OUTPUTS_TOKEN_GROUP = 311,
+	TX_HASH_BUILDER_IN_OUTPUTS_TOKEN_AMOUNT = 312,
 	TX_HASH_BUILDER_IN_FEE = 400,
 	TX_HASH_BUILDER_IN_TTL = 500,
 	TX_HASH_BUILDER_IN_CERTIFICATES = 600,
@@ -51,10 +54,17 @@ typedef struct {
 	uint16_t remainingCertificates;
 	bool includeMetadata;
 
-	struct {
-		uint16_t remainingOwners;
-		uint16_t remainingRelays;
-	} poolCertificateData;
+	union {
+		struct {
+			uint16_t remainingOwners;
+			uint16_t remainingRelays;
+		} poolCertificateData;
+
+		struct {
+			uint16_t remainingTokenGroups;
+			uint16_t remainingTokenAmounts;
+		} outputData;
+	};
 
 	tx_hash_builder_state_t state;
 	blake2b_256_context_t txHash;
@@ -78,9 +88,20 @@ void txHashBuilder_addInput(
 );
 
 void txHashBuilder_enterOutputs(tx_hash_builder_t* builder);
-void txHashBuilder_addOutput(
+void txHashBuilder_addOutput_basicData(
         tx_hash_builder_t* builder,
         const uint8_t* addressBuffer, size_t addressSize,
+        uint64_t amount,
+        uint16_t numTokenGroups
+);
+void txHashBuilder_addOutput_tokenGroup(
+        tx_hash_builder_t* builder,
+        const uint8_t* policyIdBuffer, size_t policyIdSize,
+        uint16_t numTokenAmounts
+);
+void txHashBuilder_addOutput_tokenAmount(
+        tx_hash_builder_t* builder,
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
         uint64_t amount
 );
 

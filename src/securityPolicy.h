@@ -3,6 +3,7 @@
 
 #include "bip44.h"
 #include "addressUtilsShelley.h"
+#include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
 
 typedef enum {
@@ -42,6 +43,13 @@ security_policy_t policyForSignTxOutputAddressParams(
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic
 );
+security_policy_t policyForSignTxOutputTokenGroup(
+        token_group_t* tokenGroup
+);
+security_policy_t policyForSignTxOutputTokenAmount(
+        token_amount_t* tokenAmount
+);
+security_policy_t policyForSignTxOutputConfirm(uint64_t numTokenGroups);
 
 security_policy_t policyForSignTxFee(bool isSigningPoolRegistrationAsOwner, uint64_t fee);
 

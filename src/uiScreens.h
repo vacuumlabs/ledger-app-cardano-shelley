@@ -34,6 +34,12 @@ void ui_displayAmountScreen(
         ui_callback_fn_t callback
 );
 
+void ui_displayUint64Screen(
+        const char* screenHeader,
+        uint64_t value,
+        ui_callback_fn_t callback
+);
+
 void ui_displayNetworkParamsScreen(
         const char* screenHeader,
         uint8_t networkId,

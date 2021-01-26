@@ -182,6 +182,19 @@ void str_validateTextBuffer(const uint8_t* text, size_t textSize)
 	}
 }
 
+// check if it is printable ASCII between 33 and 126
+bool str_isTextPrintable(const uint8_t* text, size_t textSize)
+{
+	ASSERT(textSize < BUFFER_SIZE_PARANOIA);
+
+	for (size_t i = 0; i < textSize; i++) {
+		if (text[i] > 126) return false;
+		if (text[i] <  33) return false;
+	}
+
+	return true;
+}
+
 #ifdef DEVEL
 
 // converts a text to bytes (suitable for CBORization) and validates if chars are allowed

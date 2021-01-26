@@ -330,12 +330,14 @@ void run_txHashBuilder_test()
 	ITERATE(it, outputs) {
 		uint8_t tmp[70];
 		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
-		txHashBuilder_addOutput(
+		txHashBuilder_addOutput_basicData(
 		        &builder,
 		        tmp, tmpSize,
-		        it->amount
+		        it->amount,
+		        0
 		);
 	}
+	// TOOD add multiasset output
 
 	txHashBuilder_addFee(&builder, 42);
 

@@ -32,6 +32,7 @@ size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize);
 size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, char* out, size_t outSize);
 
 void str_validateTextBuffer(const uint8_t* text, size_t textSize);
+bool str_isTextPrintable(const uint8_t* text, size_t textSize);
 
 
 #ifdef DEVEL

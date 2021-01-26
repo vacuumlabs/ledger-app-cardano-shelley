@@ -191,6 +191,22 @@ void ui_displayAmountScreen(
 	);
 }
 
+void ui_displayUint64Screen(
+        const char* screenHeader,
+        uint64_t value,
+        ui_callback_fn_t callback
+)
+{
+	char valueStr[30];
+	str_formatUint64(value, valueStr, SIZEOF(valueStr));
+
+	ui_displayPaginatedText(
+	        screenHeader,
+	        valueStr,
+	        callback
+	);
+}
+
 void ui_displayNetworkParamsScreen(
         const char* screenHeader,
         uint8_t networkId,

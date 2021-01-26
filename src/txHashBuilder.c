@@ -133,29 +133,126 @@ void txHashBuilder_enterOutputs(tx_hash_builder_t* builder)
 	builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
 }
 
-void txHashBuilder_addOutput(
+void txHashBuilder_addOutput_basicData(
         tx_hash_builder_t* builder,
         const uint8_t* addressBuffer, size_t addressSize,
-        uint64_t amount
+        uint64_t amount,
+        uint16_t numTokenGroups
 )
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
 	ASSERT(builder->remainingOutputs > 0);
 	builder->remainingOutputs--;
 
-	// Array(2)[
-	//   Bytes[address]
-	//   Unsigned[amount]
+	if (numTokenGroups == 0) {
+		// Array(2)[
+		//   Bytes[address]
+		//   Unsigned[amount]
+		// ]
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
+				BUILDER_APPEND_DATA(addressBuffer, addressSize);
+			}
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
+			}
+		}
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+	} else {
+		builder->outputData.remainingTokenGroups = numTokenGroups;
+		// Array(2)[
+		//   Bytes[address]
+		//   Array(2)[]
+		//     Unsigned[amount]
+		//     Map(numTokenGroups)[
+		//       // entries added later, { * policy_id => { * asset_name => uint } }
+		//     ]
+		//   ]
+		// ]
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
+				BUILDER_APPEND_DATA(addressBuffer, addressSize);
+			}
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+				{
+					BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
+					BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numTokenGroups);
+				}
+			}
+		}
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_TOKEN_GROUP;
+	}
+}
+
+void txHashBuilder_addOutput_tokenGroup(
+        tx_hash_builder_t* builder,
+        const uint8_t* policyIdBuffer, size_t policyIdSize,
+        uint16_t numTokenAmounts
+)
+{
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS_TOKEN_GROUP);
+	ASSERT(builder->outputData.remainingTokenGroups > 0);
+	builder->outputData.remainingTokenGroups--;
+
+	ASSERT(numTokenAmounts > 0);
+	builder->outputData.remainingTokenAmounts = numTokenAmounts;
+
+	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
+
+	// Bytes[policyId]
+	// Map(numTokenAmounts)[
+	//   // entried added later { * asset_name => auint }
 	// ]
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
-			BUILDER_APPEND_DATA(addressBuffer, addressSize);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, policyIdSize);
+			BUILDER_APPEND_DATA(policyIdBuffer, policyIdSize);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numTokenAmounts);
+		}
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_TOKEN_AMOUNT;
+	}
+}
+
+void txHashBuilder_addOutput_tokenAmount(
+        tx_hash_builder_t* builder,
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
+        uint64_t amount
+)
+{
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS_TOKEN_AMOUNT);
+	ASSERT(builder->outputData.remainingTokenAmounts > 0);
+	builder->outputData.remainingTokenAmounts--;
+
+	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
+
+	// add a map entry:
+	// Bytes[assetname]
+	// Unsigned[Amount]
+	{
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, assetNameSize);
+			BUILDER_APPEND_DATA(assetNameBuffer, assetNameSize);
 		}
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
 		}
+	}
+
+	if (builder->outputData.remainingTokenAmounts == 0) {
+		if (builder->outputData.remainingTokenGroups == 0)
+			builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+		else
+			builder->state = TX_HASH_BUILDER_IN_OUTPUTS_TOKEN_GROUP;
+	} else {
+		// we remain in TX_HASH_BUILDER_IN_OUTPUTS_TOKEN_AMOUNT
+		// because we are expecting more token amounts
 	}
 }
 

@@ -266,6 +266,28 @@ security_policy_t policyForSignTxOutputAddressParams(
 	ALLOW_IF(true);
 }
 
+// multiasset token groups in outputs
+security_policy_t policyForSignTxOutputTokenGroup(
+        token_group_t* tokenGroup MARK_UNUSED
+)
+{
+	SHOW_IF(true); // TODO replace with SHOW(); in operator app
+}
+
+// multiasset tokens in outputs
+security_policy_t policyForSignTxOutputTokenAmount(
+        token_amount_t* tokenAmount MARK_UNUSED
+)
+{
+	SHOW_IF(true); // TODO replace with SHOW(); in operator app
+}
+
+security_policy_t policyForSignTxOutputConfirm(uint64_t numTokenGroups)
+{
+	PROMPT_IF(numTokenGroups > 0);
+	ALLOW_IF(true); // TODO replace with SHOW(); in operator app
+}
+
 // For transaction fee
 security_policy_t policyForSignTxFee(bool isSigningPoolRegistrationAsOwner, uint64_t fee MARK_UNUSED)
 {
