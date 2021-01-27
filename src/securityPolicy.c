@@ -421,6 +421,11 @@ security_policy_t policyForSignTxMetadata()
 	SHOW_IF(true);
 }
 
+security_policy_t policyForSignTxValidityIntervalStart()
+{
+	SHOW_IF(true); // TODO use SHOW() in operator app
+}
+
 security_policy_t policyForSignTxConfirm()
 {
 	PROMPT_IF(true);

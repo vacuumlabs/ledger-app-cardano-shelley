@@ -12,7 +12,8 @@ enum {
 	TX_BODY_KEY_CERTIFICATES = 4,
 	TX_BODY_KEY_WITHDRAWALS = 5,
 	// TX_BODY_KEY_UPDATE = 6, // not used
-	TX_BODY_KEY_METADATA = 7
+	TX_BODY_KEY_METADATA = 7,
+	TX_BODY_KEY_VALIDITY_INTERVAL_START = 8,
 };
 
 /* The state machine of the tx hash builder is driven by user calls.
@@ -44,7 +45,8 @@ typedef enum {
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA = 613,
 	TX_HASH_BUILDER_IN_WITHDRAWALS = 700,
 	TX_HASH_BUILDER_IN_METADATA = 800,
-	TX_HASH_BUILDER_FINISHED = 900,
+	TX_HASH_BUILDER_IN_VALIDITY_INTERVAL = 900,
+	TX_HASH_BUILDER_FINISHED = 1000,
 } tx_hash_builder_state_t;
 
 typedef struct {
@@ -52,7 +54,9 @@ typedef struct {
 	uint16_t remainingOutputs;
 	uint16_t remainingWithdrawals;
 	uint16_t remainingCertificates;
+	bool includeTtl;
 	bool includeMetadata;
+	bool includeValidityIntervalStart;
 
 	union {
 		struct {
@@ -77,7 +81,9 @@ void txHashBuilder_init(
         uint16_t numOutputs,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
-        bool includeMetadata
+        bool includeTtl,
+        bool includeMetadata,
+        bool includeValidityIntervalStart
 );
 
 void txHashBuilder_enterInputs(tx_hash_builder_t* builder);
@@ -166,6 +172,11 @@ void txHashBuilder_addWithdrawal(
 void txHashBuilder_addMetadata(
         tx_hash_builder_t* builder,
         const uint8_t* metadataHashBuffer, size_t metadataHashSize
+);
+
+void txHashBuilder_addValidityIntervalStart(
+        tx_hash_builder_t* builder,
+        uint64_t validityIntervalStart
 );
 
 void txHashBuilder_finalize(

@@ -22,8 +22,9 @@ typedef enum {
 	SIGN_STAGE_CERTIFICATES_POOL = 30, // pool registration certificate sub-machine
 	SIGN_STAGE_WITHDRAWALS = 31,
 	SIGN_STAGE_METADATA = 32,
-	SIGN_STAGE_CONFIRM = 33,
-	SIGN_STAGE_WITNESSES = 34,
+	SIGN_STAGE_VALIDITY_INTERVAL = 33,
+	SIGN_STAGE_CONFIRM = 34,
+	SIGN_STAGE_WITNESSES = 35,
 } sign_tx_stage_t;
 
 enum {
@@ -68,10 +69,12 @@ typedef struct {
 
 	uint16_t numInputs;
 	uint16_t numOutputs;
+	bool includeTtl;
 	uint16_t numCertificates;
 	uint16_t numWithdrawals; // reward withdrawals
-	uint16_t numWitnesses;
 	bool includeMetadata;
+	bool includeValidityIntervalStart;
+	uint16_t numWitnesses;
 
 	uint16_t currentInput;
 	uint16_t currentOutput;
@@ -79,8 +82,12 @@ typedef struct {
 	uint16_t currentWithdrawal;
 	uint16_t currentWitness;
 
+// TODO add js tests for missing ttl and inclusion of validity interval start
+// TODO display ttl with pershing routine, also validity interval start, but only on mainnet?
 	bool feeReceived;
 	bool ttlReceived;
+	bool metadataReceived;
+	bool validityIntervalStartReceived;
 
 	tx_hash_builder_t txHashBuilder;
 	uint8_t txHash[TX_HASH_LENGTH];
@@ -93,6 +100,7 @@ typedef struct {
 		sign_tx_certificate_data_t certificate;
 		sign_tx_withdrawal_data_t withdrawal;
 		sign_tx_metadata_data_t metadata;
+		uint64_t validityIntervalStart;
 		sign_tx_witness_data_t witness;
 	} stageData;
 

@@ -313,7 +313,10 @@ void run_txHashBuilder_test()
 	                               ARRAY_LEN(delegationCertificates) +
 	                               1; // stake pool registration certificate
 
-	txHashBuilder_init(&builder, ARRAY_LEN(inputs), ARRAY_LEN(outputs), numCertificates, ARRAY_LEN(withdrawals), true);
+	txHashBuilder_init(&builder,
+	                   ARRAY_LEN(inputs), ARRAY_LEN(outputs),
+	                   numCertificates, ARRAY_LEN(withdrawals),
+	                   true, true, false); // TODO add validity interval start
 
 	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {

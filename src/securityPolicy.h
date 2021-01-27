@@ -74,6 +74,8 @@ security_policy_t policyForSignTxWithdrawal();
 
 security_policy_t policyForSignTxMetadata();
 
+security_policy_t policyForSignTxValidityIntervalStart();
+
 security_policy_t policyForSignTxWitness(
         bool isSigningPoolRegistrationAsOwner,
         const bip44_path_t* pathSpec

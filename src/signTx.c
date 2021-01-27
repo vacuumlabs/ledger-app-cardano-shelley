@@ -15,8 +15,8 @@
 #include "securityPolicy.h"
 
 enum {
-	SIGN_TX_METADATA_NO = 1,
-	SIGN_TX_METADATA_YES = 2
+	SIGN_TX_INCLUDED_NO = 1,
+	SIGN_TX_INCLUDED_YES = 2
 };
 
 enum {
@@ -59,16 +59,23 @@ static inline void advanceStage()
 		break;
 
 	case SIGN_STAGE_FEE:
-		// we should have received fee
 		ASSERT(ctx->feeReceived);
+
 		ctx->stage = SIGN_STAGE_TTL;
-		break;
+
+		if (ctx->includeTtl) {
+			// wait for TTL APDU
+			break;
+		}
+
+	// intentional fallthrough
 
 	case SIGN_STAGE_TTL:
-		// we should have received ttl
-		ASSERT(ctx->ttlReceived);
+		if (ctx->includeTtl)
+			ASSERT(ctx->ttlReceived);
 
 		ctx->stage = SIGN_STAGE_CERTIFICATES;
+
 		if (ctx->numCertificates > 0) {
 			txHashBuilder_enterCertificates(&ctx->txHashBuilder);
 			break;
@@ -102,6 +109,21 @@ static inline void advanceStage()
 	// intentional fallthrough
 
 	case SIGN_STAGE_METADATA:
+		if (ctx->includeMetadata)
+			ASSERT(ctx->metadataReceived);
+
+		ctx->stage = SIGN_STAGE_VALIDITY_INTERVAL;
+
+		if (ctx->includeValidityIntervalStart) {
+			break;
+		}
+
+	// intentional fallthrough
+
+	case SIGN_STAGE_VALIDITY_INTERVAL:
+		if (ctx->includeValidityIntervalStart)
+			ASSERT(ctx->validityIntervalStartReceived);
+
 		ctx->stage = SIGN_STAGE_CONFIRM;
 		break;
 
@@ -166,7 +188,7 @@ static inline void checkForFinishedSubmachines()
 			TRACE();
 			ASSERT(ctx->currentOutput < ctx->numOutputs);
 			ctx->stage = SIGN_STAGE_OUTPUTS;
-			
+
 			ctx->currentOutput++;
 			if (ctx->currentOutput == ctx->numOutputs) {
 				advanceStage();
@@ -257,6 +279,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		// initialization
 		ctx->feeReceived = false;
 		ctx->ttlReceived = false;
+		ctx->metadataReceived = false;
+		ctx->validityIntervalStartReceived = false;
 
 		ctx->currentInput = 0;
 		ctx->currentOutput = 0;
@@ -274,7 +298,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			uint8_t networkId;
 			uint8_t protocolMagic[4];
 
+			uint8_t includeTtl;
 			uint8_t includeMetadata;
+			uint8_t includeValidityIntervalStart;
 			uint8_t isSigningPoolRegistrationAsOwner;
 
 			uint8_t numInputs[4];
@@ -295,13 +321,39 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		ctx->commonTxData.protocolMagic = u4be_read(wireHeader->protocolMagic);
 		TRACE("protocol magic %d", ctx->commonTxData.protocolMagic);
 
+		switch (wireHeader->includeTtl) {
+		case SIGN_TX_INCLUDED_YES:
+			ctx->includeTtl = true;
+			break;
+
+		case SIGN_TX_INCLUDED_NO:
+			ctx->includeTtl = false;
+			break;
+
+		default:
+			THROW(ERR_INVALID_DATA);
+		}
+
 		switch (wireHeader->includeMetadata) {
-		case SIGN_TX_METADATA_YES:
+		case SIGN_TX_INCLUDED_YES:
 			ctx->includeMetadata = true;
 			break;
 
-		case SIGN_TX_METADATA_NO:
+		case SIGN_TX_INCLUDED_NO:
 			ctx->includeMetadata = false;
+			break;
+
+		default:
+			THROW(ERR_INVALID_DATA);
+		}
+
+		switch (wireHeader->includeValidityIntervalStart) {
+		case SIGN_TX_INCLUDED_YES:
+			ctx->includeValidityIntervalStart = true;
+			break;
+
+		case SIGN_TX_INCLUDED_NO:
+			ctx->includeValidityIntervalStart = false;
 			break;
 
 		default:
@@ -378,7 +430,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	        ctx->numOutputs,
 	        ctx->numCertificates,
 	        ctx->numWithdrawals,
-	        ctx->includeMetadata
+	        ctx->includeTtl,
+	        ctx->includeMetadata,
+	        ctx->includeValidityIntervalStart
 	);
 
 	security_policy_t policy = policyForSignTxInit(
@@ -606,6 +660,7 @@ static void signTx_handleTtl_ui_runStep()
 
 	UI_STEP(HANDLE_TTL_STEP_DISPLAY) {
 		char ttlString[50];
+		// TODO just display it as a plain uint64, the same as validity interval start
 		str_formatTtl(ctx->stageData.ttl, ttlString, SIZEOF(ttlString));
 		ui_displayPaginatedText(
 		        "Transaction TTL",
@@ -625,6 +680,7 @@ static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_TTL);
+		ASSERT(ctx->includeTtl == true);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
@@ -1087,7 +1143,9 @@ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		VALIDATE(wireDataSize == METADATA_HASH_LENGTH, ERR_INVALID_DATA);
+		STATIC_ASSERT(SIZEOF(ctx->stageData.metadata.metadataHash) == METADATA_HASH_LENGTH, "inconsistent metadata hash length");
 		os_memmove(ctx->stageData.metadata.metadataHash, wireDataBuffer, SIZEOF(ctx->stageData.metadata.metadataHash));
+		ctx->metadataReceived = true;
 	}
 
 	security_policy_t policy = policyForSignTxMetadata();
@@ -1119,10 +1177,87 @@ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_
 	signTx_handleMetadata_ui_runStep();
 }
 
+// ============================== VALIDITY INTERVAL START ==============================
+
+enum {
+	HANDLE_VALIDITY_INTERVAL_STEP_DISPLAY = 900,
+	HANDLE_VALIDITY_INTERVAL_STEP_RESPOND,
+	HANDLE_VALIDITY_INTERVAL_STEP_INVALID,
+};
+
+static void signTx_handleValidityInterval_ui_runStep()
+{
+	TRACE("UI step %d", ctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleValidityInterval_ui_runStep;
+
+	UI_STEP_BEGIN(ctx->ui_step);
+
+	UI_STEP(HANDLE_VALIDITY_INTERVAL_STEP_DISPLAY) {
+		ui_displayUint64Screen(
+		        "Validity interval start",
+		        ctx->stageData.validityIntervalStart,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_VALIDITY_INTERVAL_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+		advanceStage();
+	}
+	UI_STEP_END(HANDLE_VALIDITY_INTERVAL_STEP_INVALID);
+}
+
+static void signTx_handleValidityIntervalAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_VALIDITY_INTERVAL);
+		ASSERT(ctx->includeValidityIntervalStart == true);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
+		ctx->stageData.validityIntervalStart = u8be_read(wireDataBuffer);
+		ctx->validityIntervalStartReceived = true;
+	}
+
+	security_policy_t policy = policyForSignTxValidityIntervalStart();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// select UI step
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VALIDITY_INTERVAL_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VALIDITY_INTERVAL_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
+	{
+		TRACE("Adding validity interval start to tx hash");
+		txHashBuilder_addValidityIntervalStart(
+		        &ctx->txHashBuilder,
+		        ctx->stageData.validityIntervalStart
+		);
+		TRACE();
+	}
+
+	signTx_handleValidityInterval_ui_runStep();
+}
+
 // ============================== CONFIRM ==============================
 
 enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 900,
+	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 1000,
 	HANDLE_CONFIRM_STEP_RESPOND,
 	HANDLE_CONFIRM_STEP_INVALID,
 };
@@ -1199,7 +1334,7 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UN
 // ============================== WITNESS ==============================
 
 enum {
-	HANDLE_WITNESS_STEP_WARNING = 1000,
+	HANDLE_WITNESS_STEP_WARNING = 1100,
 	HANDLE_WITNESS_STEP_DISPLAY,
 	HANDLE_WITNESS_STEP_CONFIRM,
 	HANDLE_WITNESS_STEP_RESPOND,
@@ -1324,8 +1459,9 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x06, signTx_handleCertificateAPDU);
 		CASE(0x07, signTx_handleWithdrawalAPDU);
 		CASE(0x08, signTx_handleMetadataAPDU);
-		CASE(0x09, signTx_handleConfirmAPDU);
-		CASE(0x0a, signTx_handleWitnessAPDU);
+		CASE(0x09, signTx_handleValidityIntervalAPDU);
+		CASE(0x0a, signTx_handleConfirmAPDU);
+		CASE(0x0f, signTx_handleWitnessAPDU);
 		DEFAULT(NULL)
 #	undef   CASE
 #	undef   DEFAULT

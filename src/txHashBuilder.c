@@ -42,7 +42,9 @@ void txHashBuilder_init(
         uint16_t numOutputs,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
-        bool includeMetadata
+        bool includeTtl,
+        bool includeMetadata,
+        bool includeValidityIntervalStart
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -54,10 +56,19 @@ void txHashBuilder_init(
 	blake2b_256_init(&builder->txHash);
 
 	{
-		size_t numItems = 4;
+		size_t numItems = 0;
 
 		builder->remainingInputs = numInputs;
+		numItems++; // an array that is always included (even if empty)
+
 		builder->remainingOutputs = numOutputs;
+		numItems++; // an array that is always included (even if empty)
+
+		// fee always included
+		numItems++;
+
+		builder->includeTtl = includeTtl;
+		if (includeTtl) numItems++;
 
 		builder->remainingCertificates = numCertificates;
 		if (numCertificates > 0) numItems++;
@@ -67,6 +78,11 @@ void txHashBuilder_init(
 
 		builder->includeMetadata = includeMetadata;
 		if (includeMetadata) numItems++;
+
+		builder->includeValidityIntervalStart = includeValidityIntervalStart;
+		if (includeValidityIntervalStart) numItems++;
+
+		ASSERT(3 <= numItems && numItems <= 8);
 
 		TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -290,9 +306,13 @@ void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl)
 
 static void txHashBuilder_assertCanLeaveTtl(tx_hash_builder_t* builder)
 {
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_TTL);
-}
+	ASSERT(builder->state <= TX_HASH_BUILDER_IN_TTL);
 
+	if (builder->state < TX_HASH_BUILDER_IN_TTL) {
+		txHashBuilder_assertCanLeaveFee(builder);
+		ASSERT(!builder->includeTtl);
+	}
+}
 
 void txHashBuilder_enterCertificates(tx_hash_builder_t* builder)
 {
@@ -801,17 +821,36 @@ static void txHashBuilder_assertCanLeaveMetadata(tx_hash_builder_t* builder)
 {
 	ASSERT(builder->state <= TX_HASH_BUILDER_IN_METADATA);
 
-	if (builder->state == TX_HASH_BUILDER_IN_METADATA) {
-		// nothing to do
-	} else {
+	if (builder->state < TX_HASH_BUILDER_IN_METADATA) {
 		txHashBuilder_assertCanLeaveWithdrawals(builder);
 		ASSERT(!builder->includeMetadata);
 	}
 }
 
-void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
+void txHashBuilder_addValidityIntervalStart(tx_hash_builder_t* builder, uint64_t validityIntervalStart)
 {
 	txHashBuilder_assertCanLeaveMetadata(builder);
+
+	// add fee item into the main tx body map
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_VALIDITY_INTERVAL_START);
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, validityIntervalStart);
+
+	builder->state = TX_HASH_BUILDER_IN_VALIDITY_INTERVAL;
+}
+
+static void txHashBuilder_assertCanLeaveValidityIntervalStart(tx_hash_builder_t* builder)
+{
+	ASSERT(builder->state <= TX_HASH_BUILDER_IN_VALIDITY_INTERVAL);
+
+	if (builder->state < TX_HASH_BUILDER_IN_VALIDITY_INTERVAL) {
+		txHashBuilder_assertCanLeaveMetadata(builder);
+		ASSERT(!builder->includeValidityIntervalStart);
+	}
+}
+
+void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
+{
+	txHashBuilder_assertCanLeaveValidityIntervalStart(builder);
 
 	ASSERT(outSize == 32);
 	{
