@@ -7,131 +7,6 @@
 #include "textUtils.h"
 #include "test_utils.h"
 
-/* original data from trezor; we added one stake pool registration certificate
-
-{
-  "inputs": [
-    {
-        "path": "m/1852'/1815'/0'/0/0",
-        "prev_hash": "0b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7",
-        "prev_index": 0
-    },
-    {
-        "path": "m/1852'/1815'/0'/0/0",
-        "prev_hash": "1b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7",
-        "prev_index": 1
-    },
-    {
-        "path": "m/1852'/1815'/0'/0/0",
-        "prev_hash": "2b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7",
-        "prev_index": 2
-    },
-    {
-        "path": "m/1852'/1815'/0'/0/0",
-        "prev_hash": "3b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7",
-        "prev_index": 3
-    }
-  ],
-  "outputs": [
-    {
-        "addressType": 3,
-        "path": "m/44'/1815'/0'/0/0",
-        "amount": "100"
-    },
-    {
-        "addressType": 0,
-        "path": "m/1852'/1815'/0'/0/0",
-        "stakingKeyPath": "m/1852'/1815'/0'/2/0",
-        "amount": "200"
-    },
-    {
-        "addressType": 1,
-        "path": "m/1852'/1815'/0'/0/0",
-        "pointer":{
-          "block_index": 1000,
-          "tx_index": 2000,
-          "certificate_index": 3000
-        },
-        "amount": "300"
-    },
-    {
-        "addressType": 2,
-        "path": "m/1852'/1815'/0'/0/0",
-        "amount": "400"
-    },
-    {
-        "addressType": 2,
-        "path": "m/1852'/1815'/0'/0/0",
-        "amount": "500"
-    }
-  ],
-  "certificates": [
-    {
-      "type": 0,
-      "path": "m/1852'/1815'/0'/2/0"
-    },
-    {
-      "type": 1,
-      "path": "m/1852'/1815'/0'/2/0"
-    },
-    {
-      "type": 1,
-      "path": "m/1852'/1815'/1'/2/0"
-    },
-    {
-      "type": 2,
-      "path": "m/1852'/1815'/0'/2/0",
-      "pool": "0d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e2"
-    },
-    {
-      "type": 2,
-      "path": "m/1852'/1815'/0'/2/0",
-      "pool": "1d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e2"
-    },
-    {
-      "type": 2,
-      "path": "m/1852'/1815'/0'/2/0",
-      "pool": "2d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e2"
-    }
-  ],
-  "withdrawals": [
-    {
-      "path": "m/1852'/1815'/0'/2/0",
-      "amount": 111
-    },
-    {
-      "path": "m/1852'/1815'/0'/2/0",
-      "amount": 222
-    },
-    {
-      "path": "m/1852'/1815'/0'/2/0",
-      "amount": 333
-    },
-    {
-      "path": "m/1852'/1815'/0'/2/0",
-      "amount": 444
-    },
-    {
-      "path": "m/1852'/1815'/0'/2/0",
-      "amount": 555
-    },
-    {
-      "path": "m/1852'/1815'/0'/2/0",
-      "amount": 666
-    }
-  ],
-  "fee": 42,
-  "ttl": 235000
-}
-
-tx_body:
-a700848258200b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7008258201b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7018258202b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b7028258203b40265111d8bb3c3c608d95b3a0bf83461ace32d79336579a1939b3aad1c0b703018582582b82d818582183581c6ee5bb111c8771ce03278e624056a12c9cfb353eb112e8abf21fa4fea0001a74eee4081864825839009493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc18c8825823409493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e87688f50973819012c82581d609493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e19019082581d609493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e1901f402182a031a000395f8048782008200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc82018200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc82018200581c337b62cfff6403a06a3acbc34f8c46003c69fe79a3628cefa9c472518a03581c5631ede662cfb10fd5fd69b4667101dd289568e12bcf5f64d1c406fc5820198890ad6c92e80fbdab554dda02da9fb49d001bbd96181f3e07f7a6ab0d06401a1dcd65001a1443fd00d81e820101581de03a7f09d3df4cf66a7399c2b05bfa234d5a29560c311fc5db4c49071181581c3a7f09d3df4cf66a7399c2b05bfa234d5a29560c311fc5db4c4907118384001904d24408080808f68301f678204141414120323430303a636230303a323034393a313a3a613239663a31383034820278204141414120323430303a636230303a323034393a313a3a613239663a3138303482781968747470733a2f2f746573747374616b65706f6f6c2e636f6d5820914c57c1f12bbf4a82b12d977d4f274674856a11ed4b9b95bd70f5d41c5064a683028200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc581c0d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e283028200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc581c1d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e283028200581c32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc581c2d13015cdbcdbd0889ce276192a1601f2d4d20b8392d4ef4f9a754e205a1581de032c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc19029a075820deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef
-
-tx_hash:
-42a2d8a4c1b2676dbd728a218bb250c1c09aad4f41164759551470a2436a7ad7
-*/
-
-
 
 static struct {
 	const char* txHashHex;
@@ -228,9 +103,67 @@ static struct {
 	}
 };
 
-static const char* expectedHex = "42a2d8a4c1b2676dbd728a218bb250c1c09aad4f41164759551470a2436a7ad7";
+static const char* expectedHex = "58dc0efc7a2d654795ae3b7c85518065bb123f17056406732c18d1553cc2510f";
 
-void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
+
+static void addMultiassetOutput(tx_hash_builder_t* builder)
+{
+	uint8_t tmp[70];
+	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
+	txHashBuilder_addOutput_topLevelData(
+	        builder,
+	        tmp, tmpSize,
+	        outputs[1].amount,
+	        2
+	);
+
+	// we reuse the buffers to avoid wasting stack
+	uint8_t policy[MINTING_POLICY_ID_SIZE];
+	explicit_bzero(policy, SIZEOF(policy));
+
+	uint8_t assetNameBuffer[ASSET_NAME_SIZE_MAX];
+	explicit_bzero(assetNameBuffer, SIZEOF(assetNameBuffer));
+
+	policy[0] = 1;
+	txHashBuilder_addOutput_tokenGroup(builder, policy, SIZEOF(policy), 2);
+
+	assetNameBuffer[0] = 11;
+	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 110);
+	assetNameBuffer[0] = 12;
+	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 120);
+
+	policy[0] = 2;
+	txHashBuilder_addOutput_tokenGroup(builder, policy, SIZEOF(policy), 2);
+
+	assetNameBuffer[0] = 21;
+	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 210);
+	assetNameBuffer[0] = 22;
+	// use a short buffer on purpose
+	txHashBuilder_addOutput_token(builder, assetNameBuffer, 1, 220);
+}
+
+static void addOutputs(tx_hash_builder_t* builder)
+{
+	txHashBuilder_enterOutputs(builder);
+
+	addMultiassetOutput(builder);
+
+	ITERATE(it, outputs) {
+		uint8_t tmp[70];
+		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
+		txHashBuilder_addOutput_topLevelData(
+		        builder,
+		        tmp, tmpSize,
+		        it->amount,
+		        0
+		);
+	}
+
+	// added for the second time to more thoroughly check the state machine
+	addMultiassetOutput(builder);
+}
+
+static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 {
 	pool_registration_params_t poolParams = {};
 
@@ -303,6 +236,48 @@ void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 	txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(builder, urlBuffer, urlSize, metadataHash, metadataHashSize);
 }
 
+static void addCertificates(tx_hash_builder_t* builder)
+{
+	txHashBuilder_enterCertificates(builder);
+
+	ITERATE(it, registrationCertificates) {
+		uint8_t tmp[70];
+		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
+		txHashBuilder_addCertificate_stakingKey(
+		        builder,
+		        CERTIFICATE_TYPE_STAKE_REGISTRATION,
+		        tmp, tmpSize
+		);
+	}
+
+	ITERATE(it, deregistrationCertificates) {
+		uint8_t tmp[70];
+		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
+		txHashBuilder_addCertificate_stakingKey(
+		        builder,
+		        CERTIFICATE_TYPE_STAKE_DEREGISTRATION,
+		        tmp, tmpSize
+		);
+	}
+
+	addPoolRegistrationCertificate(builder);
+
+	ITERATE(it, delegationCertificates) {
+		uint8_t tmp_credential[70];
+		size_t tmpSize_credential = decode_hex(
+		                                    PTR_PIC(it->stakingKeyHash),
+		                                    tmp_credential, SIZEOF(tmp_credential)
+		                            );
+		uint8_t tmp_pool[70];
+		size_t tmpSize_pool = decode_hex(PTR_PIC(it->poolKeyHash), tmp_pool, SIZEOF(tmp_pool));
+		txHashBuilder_addCertificate_delegation(
+		        builder,
+		        tmp_credential, tmpSize_credential,
+		        tmp_pool, tmpSize_pool
+		);
+	}
+}
+
 void run_txHashBuilder_test()
 {
 	PRINTF("txHashBuilder test\n");
@@ -314,9 +289,12 @@ void run_txHashBuilder_test()
 	                               1; // stake pool registration certificate
 
 	txHashBuilder_init(&builder,
-	                   ARRAY_LEN(inputs), ARRAY_LEN(outputs),
+	                   ARRAY_LEN(inputs), ARRAY_LEN(outputs) + 2, // +2 for multiasset outputs
+	                   true, // ttl
 	                   numCertificates, ARRAY_LEN(withdrawals),
-	                   true, true, false); // TODO add validity interval start
+	                   true, // metadata
+	                   true // validity interval start
+	                  );
 
 	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {
@@ -329,61 +307,13 @@ void run_txHashBuilder_test()
 		);
 	}
 
-	txHashBuilder_enterOutputs(&builder);
-	ITERATE(it, outputs) {
-		uint8_t tmp[70];
-		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
-		txHashBuilder_addOutput_basicData(
-		        &builder,
-		        tmp, tmpSize,
-		        it->amount,
-		        0
-		);
-	}
-	// TOOD add multiasset output
+	addOutputs(&builder);
 
 	txHashBuilder_addFee(&builder, 42);
 
 	txHashBuilder_addTtl(&builder, 235000);
 
-	txHashBuilder_enterCertificates(&builder);
-
-	ITERATE(it, registrationCertificates) {
-		uint8_t tmp[70];
-		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
-		txHashBuilder_addCertificate_stakingKey(
-		        &builder,
-		        CERTIFICATE_TYPE_STAKE_REGISTRATION,
-		        tmp, tmpSize
-		);
-	}
-
-	ITERATE(it, deregistrationCertificates) {
-		uint8_t tmp[70];
-		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
-		txHashBuilder_addCertificate_stakingKey(
-		        &builder,
-		        CERTIFICATE_TYPE_STAKE_DEREGISTRATION,
-		        tmp, tmpSize
-		);
-	}
-
-	addPoolRegistrationCertificate(&builder);
-
-	ITERATE(it, delegationCertificates) {
-		uint8_t tmp_credential[70];
-		size_t tmpSize_credential = decode_hex(
-		                                    PTR_PIC(it->stakingKeyHash),
-		                                    tmp_credential, SIZEOF(tmp_credential)
-		                            );
-		uint8_t tmp_pool[70];
-		size_t tmpSize_pool = decode_hex(PTR_PIC(it->poolKeyHash), tmp_pool, SIZEOF(tmp_pool));
-		txHashBuilder_addCertificate_delegation(
-		        &builder,
-		        tmp_credential, tmpSize_credential,
-		        tmp_pool, tmpSize_pool
-		);
-	}
+	addCertificates(&builder);
 
 	txHashBuilder_enterWithdrawals(&builder);
 
@@ -404,6 +334,8 @@ void run_txHashBuilder_test()
 		ASSERT(tmpSize == METADATA_HASH_LENGTH);
 		txHashBuilder_addMetadata(&builder, tmp, tmpSize);
 	}
+
+	txHashBuilder_addValidityIntervalStart(&builder, 33);
 
 	uint8_t result[TX_HASH_LENGTH];
 	txHashBuilder_finalize(&builder, result, SIZEOF(result));

@@ -1,14 +1,10 @@
 #include "signTxOutput.h"
 #include "state.h"
-// #include "cardano.h"
-// #include "addressUtilsShelley.h"
 #include "uiHelpers.h"
 #include "signTxUtils.h"
 #include "uiScreens.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
-// #include "hexUtils.h"
-// #include "messageSigning.h"
 #include "bufView.h"
 #include "securityPolicy.h"
 
@@ -29,8 +25,8 @@ bool signTxOutput_isFinished()
 		return true;
 
 	case STATE_OUTPUT_BASIC_DATA:
-	case STATE_OUTPUT_TOKEN_GROUP:
-	case STATE_OUTPUT_TOKEN_AMOUNT:
+	case STATE_OUTPUT_ASSET_GROUP:
+	case STATE_OUTPUT_TOKEN:
 	case STATE_OUTPUT_CONFIRM:
 		return false;
 
@@ -59,36 +55,36 @@ static inline void advanceState()
 	switch (subctx->state) {
 
 	case STATE_OUTPUT_BASIC_DATA:
-		if (subctx->numTokenGroups > 0) {
-			ASSERT(subctx->currentTokenGroup == 0);
-			subctx->state = STATE_OUTPUT_TOKEN_GROUP;
+		if (subctx->numAssetGroups > 0) {
+			ASSERT(subctx->currentAssetGroup == 0);
+			subctx->state = STATE_OUTPUT_ASSET_GROUP;
 		} else {
 			subctx->state = STATE_OUTPUT_CONFIRM;
 		}
 		break;
 
-	case STATE_OUTPUT_TOKEN_GROUP:
-		ASSERT(subctx->currentTokenGroup < subctx->numTokenGroups);
+	case STATE_OUTPUT_ASSET_GROUP:
+		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
 
 		// we are going to receive token amounts for this group
-		ASSERT(subctx->numTokenAmounts > 0);
+		ASSERT(subctx->numTokens > 0);
+		ASSERT(subctx->currentToken == 0);
 
-		subctx->state = STATE_OUTPUT_TOKEN_AMOUNT;
+		subctx->state = STATE_OUTPUT_TOKEN;
 		break;
 
-	case STATE_OUTPUT_TOKEN_AMOUNT:
-		if (subctx->currentTokenAmount == subctx->numTokenAmounts) {
-			// we are done with the current token group
-			subctx->currentTokenGroup++;
+	case STATE_OUTPUT_TOKEN:
+		// we are done with the current token group
+		ASSERT(subctx->currentToken == subctx->numTokens);
+		subctx->currentToken = 0;
+		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
+		subctx->currentAssetGroup++;
 
-			if (subctx->currentTokenGroup == subctx->numTokenGroups) {
-				// all of the token bundle has been received
-				subctx->state = STATE_OUTPUT_CONFIRM;
-			} else {
-				subctx->state = STATE_OUTPUT_TOKEN_GROUP;
-			}
+		if (subctx->currentAssetGroup == subctx->numAssetGroups) {
+			// the whole token bundle has been received
+			subctx->state = STATE_OUTPUT_CONFIRM;
 		} else {
-			// no need to change the state, more token amounts to receive
+			subctx->state = STATE_OUTPUT_ASSET_GROUP;
 		}
 		break;
 
@@ -131,7 +127,7 @@ static void signTx_handleOutput_address_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT) {
-		ui_displayAmountScreen("Send", subctx->stateData.output.adaAmount, this_fn);
+		ui_displayAdaAmountScreen("Send", subctx->stateData.output.adaAmount, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -153,17 +149,19 @@ static void signTx_handleOutput_addressBytes()
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
+	subctx->addressSecurityPolicy = policy;
+
 	{
 		// add to tx
 		ASSERT(subctx->stateData.output.address.size > 0);
 		ASSERT(subctx->stateData.output.address.size < BUFFER_SIZE_PARANOIA);
 
-		txHashBuilder_addOutput_basicData(
+		txHashBuilder_addOutput_topLevelData(
 		        txHashBuilder,
 		        subctx->stateData.output.address.buffer,
 		        subctx->stateData.output.address.size,
 		        subctx->stateData.output.adaAmount,
-		        subctx->numTokenGroups
+		        subctx->numAssetGroups
 		);
 	}
 
@@ -171,7 +169,7 @@ static void signTx_handleOutput_addressBytes()
 		// select UI steps
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
 #	undef   CASE
 		default:
@@ -206,7 +204,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 		ui_displayStakingInfoScreen(&subctx->stateData.output.params, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT) {
-		ui_displayAmountScreen("Send", subctx->stateData.output.adaAmount, this_fn);
+		ui_displayAdaAmountScreen("Send", subctx->stateData.output.adaAmount, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -240,11 +238,11 @@ static void signTx_handleOutput_addressParams()
 		ASSERT(addressSize > 0);
 		ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 
-		txHashBuilder_addOutput_basicData(
+		txHashBuilder_addOutput_topLevelData(
 		        txHashBuilder,
 		        addressBuffer, addressSize,
 		        subctx->stateData.output.adaAmount,
-		        subctx->numTokenGroups
+		        subctx->numAssetGroups
 		);
 	}
 
@@ -263,7 +261,7 @@ static void signTx_handleOutput_addressParams()
 	}
 }
 
-static void signTxOutput_handleBasicDataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// safety checks
@@ -313,13 +311,13 @@ static void signTxOutput_handleBasicDataAPDU(uint8_t* wireDataBuffer, size_t wir
 		VALIDATE(adaAmount < LOVELACE_MAX_SUPPLY, ERR_INVALID_DATA);
 
 		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
-		uint32_t numTokenGroups = parse_u4be(&view);
-		TRACE("num token groups %u", subctx->numTokenGroups);
-		VALIDATE(subctx->numTokenGroups <= OUTPUT_NUM_TOKEN_GROUPS_MAX, ERR_INVALID_DATA);
+		uint32_t numAssetGroups = parse_u4be(&view);
+		TRACE("num token groups %u", subctx->numAssetGroups);
+		VALIDATE(subctx->numAssetGroups <= OUTPUT_ASSET_GROUPS_MAX, ERR_INVALID_DATA);
 
-		STATIC_ASSERT(OUTPUT_NUM_TOKEN_GROUPS_MAX <= UINT16_MAX, "wrong max token groups");
-		ASSERT_TYPE(subctx->numTokenGroups, uint16_t);
-		subctx->numTokenGroups = (uint16_t) numTokenGroups;
+		STATIC_ASSERT(OUTPUT_ASSET_GROUPS_MAX <= UINT16_MAX, "wrong max token groups");
+		ASSERT_TYPE(subctx->numAssetGroups, uint16_t);
+		subctx->numAssetGroups = (uint16_t) numAssetGroups;
 
 		TRACE("remaining %u", view_remainingSize(&view));
 		TRACE_BUFFER(view.ptr, view_remainingSize(&view));
@@ -345,23 +343,23 @@ static void signTxOutput_handleBasicDataAPDU(uint8_t* wireDataBuffer, size_t wir
 	}
 }
 
-// ============================== TOKEN GROUP ==============================
+// ============================== ASSET GROUP ==============================
 
 enum {
-	HANDLE_TOKEN_GROUP_STEP_DISPLAY = 800, // TODO
-	HANDLE_TOKEN_GROUP_STEP_RESPOND,
-	HANDLE_TOKEN_GROUP_STEP_INVALID,
+	HANDLE_ASSET_GROUP_STEP_DISPLAY = 800, // TODO
+	HANDLE_ASSET_GROUP_STEP_RESPOND,
+	HANDLE_ASSET_GROUP_STEP_INVALID,
 };
 
-static void signTxOutput_handleTokenGroup_ui_runStep()
+static void signTxOutput_handleAssetGroup_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxOutput_handleTokenGroup_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxOutput_handleAssetGroup_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
-	UI_STEP(HANDLE_TOKEN_GROUP_STEP_DISPLAY) {
-		STATIC_ASSERT(SIZEOF(subctx->stateData.tokenGroup.policyId) == MINTING_POLICY_ID_SIZE, "inconsistent minting policy id size");
+	UI_STEP(HANDLE_ASSET_GROUP_STEP_DISPLAY) {
+		STATIC_ASSERT(SIZEOF(subctx->stateData.tokenGroup.policyId) == MINTING_POLICY_ID_SIZE, "wrong minting policy id size");
 
 		ui_displayHexBufferScreen(
 		        "Token policy id",
@@ -369,18 +367,19 @@ static void signTxOutput_handleTokenGroup_ui_runStep()
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_TOKEN_GROUP_STEP_RESPOND) {
+	UI_STEP(HANDLE_ASSET_GROUP_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
+
 		advanceState();
 	}
-	UI_STEP_END(HANDLE_TOKEN_GROUP_STEP_INVALID);
+	UI_STEP_END(HANDLE_ASSET_GROUP_STEP_INVALID);
 }
 
-static void signTxOutput_handleTokenGroupAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
-		CHECK_STATE(STATE_OUTPUT_TOKEN_GROUP);
+		CHECK_STATE(STATE_OUTPUT_ASSET_GROUP);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
@@ -392,18 +391,21 @@ static void signTxOutput_handleTokenGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		VALIDATE(view_remainingSize(&view) >= MINTING_POLICY_ID_SIZE, ERR_INVALID_DATA);
-		STATIC_ASSERT(SIZEOF(tokenGroup->policyId) == MINTING_POLICY_ID_SIZE, "inconsistent policy id size");
+		STATIC_ASSERT(SIZEOF(tokenGroup->policyId) == MINTING_POLICY_ID_SIZE, "wrong policy id size");
 		view_memmove(tokenGroup->policyId, &view, MINTING_POLICY_ID_SIZE);
 
 		VALIDATE(view_remainingSize(&view) == 4, ERR_INVALID_DATA);
-		uint32_t numTokenAmounts = parse_u4be(&view);
-		VALIDATE(numTokenAmounts <= OUTPUT_TOKEN_GROUP_NUM_TOKENS_MAX, ERR_INVALID_DATA);
-		STATIC_ASSERT(OUTPUT_TOKEN_GROUP_NUM_TOKENS_MAX <= UINT16_MAX, "wrong max token amounts in a group");
-		ASSERT_TYPE(subctx->numTokenAmounts, uint16_t);
-		subctx->numTokenAmounts = (uint16_t) numTokenAmounts;
+		uint32_t numTokens = parse_u4be(&view);
+		VALIDATE(numTokens <= OUTPUT_TOKENS_IN_GROUP_MAX, ERR_INVALID_DATA);
+		STATIC_ASSERT(OUTPUT_TOKENS_IN_GROUP_MAX <= UINT16_MAX, "wrong max token amounts in a group");
+		ASSERT_TYPE(subctx->numTokens, uint16_t);
+		subctx->numTokens = (uint16_t) numTokens;
 	}
 
-	security_policy_t policy = policyForSignTxOutputTokenGroup(&subctx->stateData.tokenGroup);
+	security_policy_t policy = policyForSignTxOutputAssetGroup(
+	                                   subctx->addressSecurityPolicy,
+	                                   &subctx->stateData.tokenGroup
+	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -411,8 +413,8 @@ static void signTxOutput_handleTokenGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		// select UI step
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOKEN_GROUP_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TOKEN_GROUP_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_ASSET_GROUP_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_ASSET_GROUP_STEP_RESPOND);
 #	undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
@@ -425,96 +427,85 @@ static void signTxOutput_handleTokenGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		txHashBuilder_addOutput_tokenGroup(
 		        txHashBuilder,
 		        subctx->stateData.tokenGroup.policyId, MINTING_POLICY_ID_SIZE,
-		        subctx->numTokenAmounts
+		        subctx->numTokens
 		);
 		TRACE();
 	}
 
-	signTxOutput_handleTokenGroup_ui_runStep();
+	signTxOutput_handleAssetGroup_ui_runStep();
 }
 
-// ============================== TOKEN AMOUNT ==============================
+// ============================== TOKEN ==============================
 
 enum {
-	HANDLE_TOKEN_AMOUNT_STEP_DISPLAY_NAME = 800, // TODO
-	HANDLE_TOKEN_AMOUNT_STEP_DISPLAY_AMOUNT,
-	HANDLE_TOKEN_AMOUNT_STEP_RESPOND,
-	HANDLE_TOKEN_AMOUNT_STEP_INVALID,
+	HANDLE_TOKEN_STEP_DISPLAY_NAME = 800, // TODO
+	HANDLE_TOKEN_STEP_DISPLAY_AMOUNT,
+	HANDLE_TOKEN_STEP_RESPOND,
+	HANDLE_TOKEN_STEP_INVALID,
 };
 
-static void signTxOutput_handleTokenAmount_ui_runStep()
+static void signTxOutput_handleToken_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxOutput_handleTokenAmount_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxOutput_handleToken_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
-	UI_STEP(HANDLE_TOKEN_AMOUNT_STEP_DISPLAY_NAME) {
-		token_amount_t* tokenAmount = &subctx->stateData.tokenAmount;
-		if (str_isTextPrintable(tokenAmount->assetName, tokenAmount->assetNameSize)) {
-			char name[ASSET_NAME_SIZE_MAX + 1];
-			ASSERT(tokenAmount->assetNameSize + 1 <= SIZEOF(name));
-			for (size_t i = 0; i < tokenAmount->assetNameSize; i++)
-				name[i] = tokenAmount->assetName[i];
-			name[tokenAmount->assetNameSize] = '\0';
-
-			ui_displayPaginatedText(
-			        "Token name",
-			        name,
-			        this_fn
-			);
-		} else {
-			ui_displayHexBufferScreen(
-			        "Token name",
-			        subctx->stateData.tokenAmount.assetName, subctx->stateData.tokenAmount.assetNameSize,
-			        this_fn
-			);
-		}
+	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_NAME) {
+		ui_displayTokenNameScreen(&subctx->stateData.token, this_fn);
 	}
-	UI_STEP(HANDLE_TOKEN_AMOUNT_STEP_DISPLAY_AMOUNT) {
+	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_AMOUNT) {
 		ui_displayUint64Screen(
 		        "Token amount",
-		        subctx->stateData.tokenAmount.amount,
+		        subctx->stateData.token.amount,
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_TOKEN_AMOUNT_STEP_RESPOND) {
+	UI_STEP(HANDLE_TOKEN_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-		advanceState();
+
+		ASSERT(subctx->currentToken < subctx->numTokens);
+		subctx->currentToken++;
+
+		if (subctx->currentToken == subctx->numTokens) {
+			advanceState();
+		}
 	}
-	UI_STEP_END(HANDLE_TOKEN_AMOUNT_STEP_INVALID);
+	UI_STEP_END(HANDLE_TOKEN_STEP_INVALID);
 }
 
-static void signTxOutput_handleTokenAmountAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
-		CHECK_STATE(STATE_OUTPUT_TOKEN_AMOUNT);
+		CHECK_STATE(STATE_OUTPUT_TOKEN);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
-		token_amount_t* tokenAmount = &subctx->stateData.tokenAmount;
+		token_amount_t* token = &subctx->stateData.token;
 
 		// parse data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
-		tokenAmount->assetNameSize = parse_u4be(&view);
-		VALIDATE(tokenAmount->assetNameSize > 0, ERR_INVALID_DATA);
-		VALIDATE(tokenAmount->assetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
+		token->assetNameSize = parse_u4be(&view);
+		VALIDATE(token->assetNameSize > 0, ERR_INVALID_DATA);
+		VALIDATE(token->assetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
 
-		ASSERT(tokenAmount->assetNameSize <= SIZEOF(tokenAmount->assetName));
-		view_memmove(tokenAmount->assetName, &view, tokenAmount->assetNameSize);
+		ASSERT(token->assetNameSize <= SIZEOF(token->assetNameBytes));
+		view_memmove(token->assetNameBytes, &view, token->assetNameSize);
 
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
-		tokenAmount->amount = parse_u8be(&view);
-		TRACE_UINT64(tokenAmount->amount);
-		// TODO validate something?
+		token->amount = parse_u8be(&view);
+		TRACE_UINT64(token->amount);
 	}
 
-	security_policy_t policy = policyForSignTxOutputTokenAmount(&subctx->stateData.tokenAmount);
+	security_policy_t policy = policyForSignTxOutputToken(
+	                                   subctx->addressSecurityPolicy,
+	                                   &subctx->stateData.token
+	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -522,8 +513,8 @@ static void signTxOutput_handleTokenAmountAPDU(uint8_t* wireDataBuffer, size_t w
 		// select UI step
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOKEN_AMOUNT_STEP_DISPLAY_NAME);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TOKEN_AMOUNT_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOKEN_STEP_DISPLAY_NAME);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TOKEN_STEP_RESPOND);
 #	undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
@@ -533,15 +524,15 @@ static void signTxOutput_handleTokenAmountAPDU(uint8_t* wireDataBuffer, size_t w
 	{
 		// add tokengroup to tx
 		TRACE("Adding token group hash to tx hash");
-		txHashBuilder_addOutput_tokenAmount(
+		txHashBuilder_addOutput_token(
 		        txHashBuilder,
-		        subctx->stateData.tokenAmount.assetName, subctx->stateData.tokenAmount.assetNameSize,
-		        subctx->stateData.tokenAmount.amount
+		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
+		        subctx->stateData.token.amount
 		);
 		TRACE();
 	}
 
-	signTxOutput_handleTokenAmount_ui_runStep();
+	signTxOutput_handleToken_ui_runStep();
 }
 
 // ============================== CONFIRM ==============================
@@ -588,7 +579,10 @@ static void signTxOutput_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, 
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForSignTxOutputConfirm(subctx->numTokenGroups);
+	security_policy_t policy = policyForSignTxOutputConfirm(
+	                                   subctx->addressSecurityPolicy,
+	                                   subctx->numAssetGroups
+	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -612,8 +606,8 @@ static void signTxOutput_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, 
 
 enum {
 	APDU_INSTRUCTION_BASIC_DATA = 0x30,
-	APDU_INSTRUCTION_TOKEN_GROUP = 0x31,
-	APDU_INSTRUCTION_TOKEN_AMOUNT = 0x32,
+	APDU_INSTRUCTION_ASSET_GROUP = 0x31,
+	APDU_INSTRUCTION_TOKEN = 0x32,
 	APDU_INSTRUCTION_CONFIRM = 0x33,
 };
 
@@ -621,8 +615,8 @@ bool signTxOutput_isValidInstruction(uint8_t p2)
 {
 	switch (p2) {
 	case APDU_INSTRUCTION_BASIC_DATA:
-	case APDU_INSTRUCTION_TOKEN_GROUP:
-	case APDU_INSTRUCTION_TOKEN_AMOUNT:
+	case APDU_INSTRUCTION_ASSET_GROUP:
+	case APDU_INSTRUCTION_TOKEN:
 	case APDU_INSTRUCTION_CONFIRM:
 		return true;
 
@@ -633,19 +627,17 @@ bool signTxOutput_isValidInstruction(uint8_t p2)
 
 void signTxOutput_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	TRACE("p2 = %d", p2);
-
 	switch (p2) {
 	case APDU_INSTRUCTION_BASIC_DATA:
-		signTxOutput_handleBasicDataAPDU(wireDataBuffer, wireDataSize);
+		signTxOutput_handleTopLevelDataAPDU(wireDataBuffer, wireDataSize);
 		break;
 
-	case APDU_INSTRUCTION_TOKEN_GROUP:
-		signTxOutput_handleTokenGroupAPDU(wireDataBuffer, wireDataSize);
+	case APDU_INSTRUCTION_ASSET_GROUP:
+		signTxOutput_handleAssetGroupAPDU(wireDataBuffer, wireDataSize);
 		break;
 
-	case APDU_INSTRUCTION_TOKEN_AMOUNT:
-		signTxOutput_handleTokenAmountAPDU(wireDataBuffer, wireDataSize);
+	case APDU_INSTRUCTION_TOKEN:
+		signTxOutput_handleTokenAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_CONFIRM:

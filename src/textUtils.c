@@ -128,24 +128,24 @@ static struct {
 	{0, 0, 21600}
 };
 
-size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize)
+size_t str_formatValidityBoundary(uint64_t slotNumber, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	unsigned i = 0;
-	while (ttl < EPOCH_SLOTS_CONFIG[i].startBlockNumber) {
+	while (slotNumber < EPOCH_SLOTS_CONFIG[i].startBlockNumber) {
 		i++;
 		ASSERT(i < ARRAY_LEN(EPOCH_SLOTS_CONFIG));
 	}
 
-	ASSERT(ttl >= EPOCH_SLOTS_CONFIG[i].startBlockNumber);
+	ASSERT(slotNumber >= EPOCH_SLOTS_CONFIG[i].startBlockNumber);
 
 	uint64_t startBlockNumber = EPOCH_SLOTS_CONFIG[i].startBlockNumber;
 	uint64_t startEpoch = EPOCH_SLOTS_CONFIG[i].startEpoch;
 	uint64_t slotsInEpoch = EPOCH_SLOTS_CONFIG[i].slotsInEpoch;
 
-	uint64_t epoch = startEpoch + (ttl - startBlockNumber) / slotsInEpoch;
-	uint64_t slotInEpoch = (ttl - startBlockNumber) % slotsInEpoch;
+	uint64_t epoch = startEpoch + (slotNumber - startBlockNumber) / slotsInEpoch;
+	uint64_t slotInEpoch = (slotNumber - startBlockNumber) % slotsInEpoch;
 
 	ASSERT(sizeof(int) >= sizeof(uint32_t));
 
@@ -182,14 +182,14 @@ void str_validateTextBuffer(const uint8_t* text, size_t textSize)
 	}
 }
 
-// check if it is printable ASCII between 33 and 126
-bool str_isTextPrintable(const uint8_t* text, size_t textSize)
+// check if a non-null-terminated buffer contains printable ASCII between 33 and 126 (inclusive)
+bool str_isAsciiPrintableBuffer(const uint8_t* buffer, size_t bufferSize)
 {
-	ASSERT(textSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
 
-	for (size_t i = 0; i < textSize; i++) {
-		if (text[i] > 126) return false;
-		if (text[i] <  33) return false;
+	for (size_t i = 0; i < bufferSize; i++) {
+		if (buffer[i] > 126) return false;
+		if (buffer[i] <  33) return false;
 	}
 
 	return true;

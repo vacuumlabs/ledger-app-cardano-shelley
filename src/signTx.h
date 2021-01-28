@@ -82,8 +82,6 @@ typedef struct {
 	uint16_t currentWithdrawal;
 	uint16_t currentWitness;
 
-// TODO add js tests for missing ttl and inclusion of validity interval start
-// TODO display ttl with pershing routine, also validity interval start, but only on mainnet?
 	bool feeReceived;
 	bool ttlReceived;
 	bool metadataReceived;
@@ -113,5 +111,25 @@ typedef struct {
 } ins_sign_tx_context_t;
 
 handler_fn_t signTx_handleAPDU;
+
+
+enum {
+	SIGN_TX_INCLUDED_NO = 1,
+	SIGN_TX_INCLUDED_YES = 2
+};
+
+inline bool signTx_parseIncluded(uint8_t value)
+{
+	switch (value) {
+	case SIGN_TX_INCLUDED_YES:
+		return true;
+
+	case SIGN_TX_INCLUDED_NO:
+		return false;
+
+	default:
+		THROW(ERR_INVALID_DATA);
+	}
+}
 
 #endif

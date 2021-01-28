@@ -128,28 +128,27 @@ static void handlePoolParams_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_POOL_KEY_HASH) {
-		ui_displayHexBufferScreen(
-		        "Pool ID",
+		ui_displayPoolIdScreen(
 		        subctx->poolParams.poolKeyHash, SIZEOF(subctx->poolParams.poolKeyHash),
 		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_PLEDGE) {
-		ui_displayAmountScreen(
+		ui_displayAdaAmountScreen(
 		        "Pledge",
 		        subctx->poolParams.pledge,
 		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_COST) {
-		ui_displayAmountScreen(
+		ui_displayAdaAmountScreen(
 		        "Cost",
 		        subctx->poolParams.cost,
 		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_POOLPARAMS_STEP_DISPLAY_MARGIN) {
-		ui_displayMarginScreen(
+		ui_displayPoolMarginScreen(
 		        subctx->poolParams.marginNumerator,
 		        subctx->poolParams.marginDenominator,
 		        this_fn
@@ -306,7 +305,7 @@ static void handleOwner_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step);
 
 	UI_STEP(HANDLE_OWNER_STEP_DISPLAY) {
-		ui_displayOwnerScreen(&subctx->owner, subctx->currentOwner, commonTxData->networkId, this_fn);
+		ui_displayPoolOwnerScreen(&subctx->owner, subctx->currentOwner, commonTxData->networkId, this_fn);
 	}
 	UI_STEP(HANDLE_OWNER_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -644,11 +643,6 @@ static void handleMetadata_ui_runStep()
 	UI_STEP_END(HANDLE_METADATA_STEP_INVALID);
 }
 
-enum {
-	POOL_CERTIFICATE_METADATA_NO = 1,
-	POOL_CERTIFICATE_METADATA_YES = 2
-};
-
 static void handleNullMetadata()
 {
 	{
@@ -698,14 +692,14 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 			// deal with null metadata
 
 			VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-			int includeMetadata = parse_u1be(&view);
 
-			if (includeMetadata == POOL_CERTIFICATE_METADATA_NO) {
+			uint8_t includeMetadataByte = parse_u1be(&view);
+			int includeMetadata = signTx_parseIncluded(includeMetadataByte);
+
+			if (!includeMetadata) {
 				VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 				handleNullMetadata();
 				return;
-			} else {
-				VALIDATE(includeMetadata == POOL_CERTIFICATE_METADATA_YES, ERR_INVALID_DATA);
 			}
 		}
 		{

@@ -32,7 +32,7 @@ typedef struct {
 	uint8_t ip[IPV6_SIZE];
 } ipv6_t;
 
-// see the calculation in ui_displayMarginScreen() in uiScreens.c
+// see the calculation in ui_displayPoolMarginScreen() in uiScreens.c
 #define MARGIN_DENOMINATOR_MAX 1000000000000000ul // 10^15
 
 #define POOL_METADATA_URL_MAX_LENGTH 64

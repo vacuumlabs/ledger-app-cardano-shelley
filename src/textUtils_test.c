@@ -51,7 +51,7 @@ void testcase_formatTtl(
 
 	{
 		char tmp[30];
-		size_t len = str_formatTtl(ttl, tmp, SIZEOF(tmp));
+		size_t len = str_formatValidityBoundary(ttl, tmp, SIZEOF(tmp));
 		EXPECT_EQ(len, strlen(expected));
 		EXPECT_EQ(strcmp(tmp, expected), 0);
 	}
@@ -59,7 +59,7 @@ void testcase_formatTtl(
 	{
 		// check for buffer overflows
 		char tmp[30];
-		EXPECT_THROWS(str_formatTtl(ttl, tmp, strlen(expected)), ERR_ASSERT);
+		EXPECT_THROWS(str_formatValidityBoundary(ttl, tmp, strlen(expected)), ERR_ASSERT);
 	}
 }
 
