@@ -24,7 +24,7 @@ bool signTxOutput_isFinished()
 	case STATE_OUTPUT_FINISHED:
 		return true;
 
-	case STATE_OUTPUT_BASIC_DATA:
+	case STATE_OUTPUT_TOP_LEVEL_DATA:
 	case STATE_OUTPUT_ASSET_GROUP:
 	case STATE_OUTPUT_TOKEN:
 	case STATE_OUTPUT_CONFIRM:
@@ -39,7 +39,7 @@ void signTxOutput_init()
 {
 	explicit_bzero(subctx, SIZEOF(*subctx));
 
-	subctx->state = STATE_OUTPUT_BASIC_DATA;
+	subctx->state = STATE_OUTPUT_TOP_LEVEL_DATA;
 }
 
 static inline void CHECK_STATE(sign_tx_output_state_t expected)
@@ -54,7 +54,7 @@ static inline void advanceState()
 
 	switch (subctx->state) {
 
-	case STATE_OUTPUT_BASIC_DATA:
+	case STATE_OUTPUT_TOP_LEVEL_DATA:
 		if (subctx->numAssetGroups > 0) {
 			ASSERT(subctx->currentAssetGroup == 0);
 			subctx->state = STATE_OUTPUT_ASSET_GROUP;
@@ -99,7 +99,7 @@ static inline void advanceState()
 	TRACE("Advancing output state to: %d", subctx->state);
 }
 
-// ============================== BASIC_DATA ==============================
+// ============================== TOP LEVEL DATA ==============================
 
 enum {
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS = 300,
@@ -265,7 +265,7 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 {
 	{
 		// safety checks
-		CHECK_STATE(STATE_OUTPUT_BASIC_DATA);
+		CHECK_STATE(STATE_OUTPUT_TOP_LEVEL_DATA);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
@@ -274,7 +274,7 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 		// parse all APDU data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-		basic_output_data_t* output = &subctx->stateData.output;
+		top_level_output_data_t* output = &subctx->stateData.output;
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
@@ -312,15 +312,13 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 
 		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 		uint32_t numAssetGroups = parse_u4be(&view);
-		TRACE("num token groups %u", subctx->numAssetGroups);
+		TRACE("num asset groups %u", subctx->numAssetGroups);
 		VALIDATE(subctx->numAssetGroups <= OUTPUT_ASSET_GROUPS_MAX, ERR_INVALID_DATA);
 
 		STATIC_ASSERT(OUTPUT_ASSET_GROUPS_MAX <= UINT16_MAX, "wrong max token groups");
 		ASSERT_TYPE(subctx->numAssetGroups, uint16_t);
 		subctx->numAssetGroups = (uint16_t) numAssetGroups;
 
-		TRACE("remaining %u", view_remainingSize(&view));
-		TRACE_BUFFER(view.ptr, view_remainingSize(&view));
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 	{
@@ -605,7 +603,7 @@ static void signTxOutput_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, 
 // ============================== main APDU handler ==============================
 
 enum {
-	APDU_INSTRUCTION_BASIC_DATA = 0x30,
+	APDU_INSTRUCTION_TOP_LEVEL_DATA = 0x30,
 	APDU_INSTRUCTION_ASSET_GROUP = 0x31,
 	APDU_INSTRUCTION_TOKEN = 0x32,
 	APDU_INSTRUCTION_CONFIRM = 0x33,
@@ -614,7 +612,7 @@ enum {
 bool signTxOutput_isValidInstruction(uint8_t p2)
 {
 	switch (p2) {
-	case APDU_INSTRUCTION_BASIC_DATA:
+	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
 	case APDU_INSTRUCTION_ASSET_GROUP:
 	case APDU_INSTRUCTION_TOKEN:
 	case APDU_INSTRUCTION_CONFIRM:
@@ -628,7 +626,7 @@ bool signTxOutput_isValidInstruction(uint8_t p2)
 void signTxOutput_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	switch (p2) {
-	case APDU_INSTRUCTION_BASIC_DATA:
+	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
 		signTxOutput_handleTopLevelDataAPDU(wireDataBuffer, wireDataSize);
 		break;
 

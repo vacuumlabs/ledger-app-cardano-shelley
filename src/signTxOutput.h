@@ -18,7 +18,7 @@ enum {
 
 // SIGN_STAGE_OUTPUTS = 25
 typedef enum {
-	STATE_OUTPUT_BASIC_DATA = 2510,
+	STATE_OUTPUT_TOP_LEVEL_DATA = 2510,
 	STATE_OUTPUT_ASSET_GROUP = 2511,
 	STATE_OUTPUT_TOKEN = 2512,
 	STATE_OUTPUT_CONFIRM = 2513,
@@ -37,7 +37,7 @@ typedef struct {
 	};
 
 	uint64_t adaAmount;
-} basic_output_data_t;
+} top_level_output_data_t;
 
 
 typedef struct {
@@ -54,7 +54,7 @@ typedef struct {
 	security_policy_t addressSecurityPolicy;
 
 	union {
-		basic_output_data_t output;
+		top_level_output_data_t output;
 		token_group_t tokenGroup;
 		token_amount_t token;
 	} stateData;
