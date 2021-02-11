@@ -246,7 +246,8 @@ __noinline_due_to_stack__ static void _calculatePooKeyHash(const pool_id_t* pool
 }
 
 enum {
-	HANDLE_POOL_KEY_STEP_DISPLAY = 6320,
+	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID = 6320,
+	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH,
 	HANDLE_POOL_KEY_STEP_RESPOND,
 	HANDLE_POOL_KEY_STEP_INVALID,
 } ;
@@ -259,15 +260,20 @@ static void handlePoolKey_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
-	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY) {
-		// TODO display as path for operator? or rather both path and hash so that he is really sure?
-		// or bech32 using prefix from https://cips.cardano.org/cips/cip5/
+	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID) {
 		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
 		_calculatePooKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
-		ui_displayHexBufferScreen(
-		        "Pool ID",
+		ui_displayPoolIdScreen(
 		        poolKeyHash, SIZEOF(poolKeyHash),
+		        this_fn
+		);
+	}
+	// TODO this should not be done for owner usecase
+	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH) {
+		ui_displayPathScreen(
+		        "Pool ID path",
+		        &subctx->stateData.poolId.path,
 		        this_fn
 		);
 	}
