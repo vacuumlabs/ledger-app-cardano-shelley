@@ -28,7 +28,7 @@ enum {
 	\
 	static __attribute__((always_inline, unused)) void cipher##_##bits##_init( \
 	        cipher##_##bits##_context_t* ctx \
-	                                                                 ) \
+	                                                                         ) \
 	{ \
 		STATIC_ASSERT( bits == CIPHER##_##bits##_SIZE * 8, "bad cipher size"); \
 		cx_##cipher##_init( \
@@ -41,7 +41,7 @@ enum {
 	static __attribute__((always_inline, unused)) void cipher##_##bits##_append( \
 	        cipher##_##bits##_context_t* ctx, \
 	        const uint8_t* inBuffer, size_t inSize \
-	                                                                   ) { \
+	                                                                           ) { \
 		ASSERT(ctx->initialized_magic == HASH_CONTEXT_INITIALIZED_MAGIC); \
 		cx_hash( \
 		         & ctx->cx_ctx.header, \
@@ -55,7 +55,7 @@ enum {
 	static __attribute__((always_inline, unused)) void cipher##_##bits##_finalize( \
 	        cipher##_##bits##_context_t* ctx, \
 	        uint8_t* outBuffer, size_t outSize \
-	                                                                     ) { \
+	                                                                             ) { \
 		ASSERT(ctx->initialized_magic == HASH_CONTEXT_INITIALIZED_MAGIC); \
 		ASSERT(outSize == CIPHER##_##bits##_SIZE); \
 		cx_hash( \
@@ -71,7 +71,7 @@ enum {
 	static __attribute__((always_inline, unused)) void cipher##_##bits##_hash( \
 	        const uint8_t* inBuffer, size_t inSize, \
 	        uint8_t* outBuffer, size_t outSize \
-	                                                                 ) { \
+	                                                                         ) { \
 		ASSERT(inSize < BUFFER_SIZE_PARANOIA); \
 		ASSERT(outSize == CIPHER##_##bits##_SIZE); \
 		cipher##_##bits##_context_t ctx; \

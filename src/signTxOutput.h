@@ -51,7 +51,7 @@ typedef struct {
 	uint16_t currentToken;
 
 	// this affects whether amounts and tokens are shown
-	security_policy_t addressSecurityPolicy;
+	security_policy_t outputSecurityPolicy;
 
 	union {
 		top_level_output_data_t output;

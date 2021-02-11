@@ -223,7 +223,7 @@ security_policy_t policyForSignTxInput()
 }
 
 // For each transaction (third-party) address output
-security_policy_t policyForSignTxOutputAddress(
+security_policy_t policyForSignTxOutputAddressBytes(
         bool isSigningPoolRegistrationAsOwner,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
@@ -276,38 +276,26 @@ security_policy_t policyForSignTxOutputAddressParams(
 	ALLOW();
 }
 
-// multiasset token groups in outputs
-security_policy_t policyForSignTxOutputAssetGroup(
-        security_policy_t addressPolicy,
-        token_group_t* tokenGroup MARK_UNUSED
-)
-{
-	ALLOW_IF(addressPolicy == POLICY_ALLOW_WITHOUT_PROMPT);
-
-	SHOW();
-}
-
-// multiasset tokens in outputs
-security_policy_t policyForSignTxOutputToken(
-        security_policy_t addressPolicy,
-        token_amount_t* token MARK_UNUSED
-)
-{
-	ALLOW_IF(addressPolicy == POLICY_ALLOW_WITHOUT_PROMPT);
-
-	SHOW();
-}
-
 security_policy_t policyForSignTxOutputConfirm(
-        security_policy_t addressPolicy,
+        security_policy_t outputPolicy,
         uint64_t numAssetGroups
 )
 {
-	ALLOW_IF(addressPolicy == POLICY_ALLOW_WITHOUT_PROMPT);
+	switch (outputPolicy) {
+	case POLICY_ALLOW_WITHOUT_PROMPT:
+		ALLOW();
+		break;
 
-	PROMPT_IF(numAssetGroups > 0);
+	case POLICY_SHOW_BEFORE_RESPONSE:
+		PROMPT_IF(numAssetGroups > 0);
+		ALLOW();
+		break;
 
-	ALLOW();
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
 // For transaction fee

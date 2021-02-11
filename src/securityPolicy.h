@@ -33,7 +33,7 @@ security_policy_t policyForSignTxInit(
 
 security_policy_t policyForSignTxInput();
 
-security_policy_t policyForSignTxOutputAddress(
+security_policy_t policyForSignTxOutputAddressBytes(
         bool isSigningPoolRegistrationAsOwner,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
@@ -42,14 +42,6 @@ security_policy_t policyForSignTxOutputAddressParams(
         bool isSigningPoolRegistrationAsOwner,
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic
-);
-security_policy_t policyForSignTxOutputAssetGroup(
-        security_policy_t addressPolicy,
-        token_group_t* tokenGroup
-);
-security_policy_t policyForSignTxOutputToken(
-        security_policy_t addressPolicy,
-        token_amount_t* token
 );
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t addressPolicy,

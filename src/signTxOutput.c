@@ -141,7 +141,7 @@ static void signTx_handleOutput_addressBytes()
 {
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
 
-	security_policy_t policy = policyForSignTxOutputAddress(
+	security_policy_t policy = policyForSignTxOutputAddressBytes(
 	                                   commonTxData->isSigningPoolRegistrationAsOwner,
 	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
@@ -149,7 +149,7 @@ static void signTx_handleOutput_addressBytes()
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
-	subctx->addressSecurityPolicy = policy;
+	subctx->outputSecurityPolicy = policy;
 
 	{
 		// add to tx
@@ -225,6 +225,8 @@ static void signTx_handleOutput_addressParams()
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
+
+	subctx->outputSecurityPolicy = policy;
 
 	{
 		// add to tx
@@ -400,16 +402,9 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		subctx->numTokens = (uint16_t) numTokens;
 	}
 
-	security_policy_t policy = policyForSignTxOutputAssetGroup(
-	                                   subctx->addressSecurityPolicy,
-	                                   &subctx->stateData.tokenGroup
-	                           );
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
-
 	{
 		// select UI step
-		switch (policy) {
+		switch (subctx->outputSecurityPolicy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_ASSET_GROUP_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_ASSET_GROUP_STEP_RESPOND);
@@ -500,16 +495,9 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		TRACE_UINT64(token->amount);
 	}
 
-	security_policy_t policy = policyForSignTxOutputToken(
-	                                   subctx->addressSecurityPolicy,
-	                                   &subctx->stateData.token
-	                           );
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
-
 	{
 		// select UI step
-		switch (policy) {
+		switch (subctx->outputSecurityPolicy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOKEN_STEP_DISPLAY_NAME);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TOKEN_STEP_RESPOND);
@@ -578,7 +566,7 @@ static void signTxOutput_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, 
 	}
 
 	security_policy_t policy = policyForSignTxOutputConfirm(
-	                                   subctx->addressSecurityPolicy,
+	                                   subctx->outputSecurityPolicy,
 	                                   subctx->numAssetGroups
 	                           );
 	TRACE("Policy: %d", (int) policy);
