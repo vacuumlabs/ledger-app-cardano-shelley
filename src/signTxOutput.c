@@ -484,7 +484,6 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 
 		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 		token->assetNameSize = parse_u4be(&view);
-		VALIDATE(token->assetNameSize > 0, ERR_INVALID_DATA);
 		VALIDATE(token->assetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
 
 		ASSERT(token->assetNameSize <= SIZEOF(token->assetNameBytes));
