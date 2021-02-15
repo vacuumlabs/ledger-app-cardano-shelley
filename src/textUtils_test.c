@@ -115,4 +115,4 @@ void run_textUtils_test()
 	test_formatUint64();
 }
 
-#endif
+#endif // DEVEL

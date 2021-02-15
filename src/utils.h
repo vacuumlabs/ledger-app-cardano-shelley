@@ -110,7 +110,7 @@
 	} while(0)
 #else
 #define TRACE(...)
-#endif
+#endif // DEVEL
 
 
 #ifdef DEVEL
@@ -118,7 +118,7 @@
 	TRACE("%.*h", SIZE, BUF);
 #else
 #define TRACE_BUFFER(BUF, SIZE)
-#endif
+#endif // DEVEL
 
 
 #endif // H_CARDANO_APP_UTILS

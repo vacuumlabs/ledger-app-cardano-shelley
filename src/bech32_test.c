@@ -48,4 +48,4 @@ void run_bech32_test()
 	}
 }
 
-#endif
+#endif // DEVEL

@@ -218,4 +218,4 @@ void bip44_PRINTF(const bip44_path_t* pathSpec)
 	bip44_printToStr(pathSpec, tmp, SIZEOF(tmp));
 	PRINTF("%s", tmp);
 };
-#endif
+#endif // DEVEL

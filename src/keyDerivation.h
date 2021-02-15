@@ -46,6 +46,6 @@ void extractRawPublicKey(
 
 #ifdef DEVEL
 void run_key_derivation_test();
-#endif
+#endif // DEVEL
 
 #endif // H_CARDANO_APP_KEY_DERIVATION

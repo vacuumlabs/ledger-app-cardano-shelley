@@ -63,4 +63,4 @@ void run_endian_test()
 	run_read_write_test();
 }
 
-#endif
+#endif // DEVEL

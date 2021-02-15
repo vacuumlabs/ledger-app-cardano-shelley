@@ -171,4 +171,4 @@ void run_addressUtilsByron_test()
 	testProtocolMagicExtractionThrows();
 }
 
-#endif
+#endif // DEVEL

@@ -34,7 +34,7 @@ handler_fn_t* lookupHandler(uint8_t ins)
 		// 0xF* -  debug_mode related
 		CASE(0xF0, handleRunTests);
 		//   0xF1  reserved for INS_SET_HEADLESS_INTERACTION
-		#endif
+		#endif // DEVEL
 #	undef   CASE
 	default:
 		return NULL;

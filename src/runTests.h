@@ -1,3 +1,5 @@
+#ifdef DEVEL
+
 #ifndef H_CARDANO_APP_RUN_TESTS
 #define H_CARDANO_APP_RUN_TESTS
 
@@ -5,4 +7,6 @@
 
 handler_fn_t handleRunTests;
 
-#endif
+#endif // H_CARDANO_APP_RUN_TESTS
+
+#endif // DEVEL

@@ -54,4 +54,4 @@ void run_base58_test()
 	}
 }
 
-#endif
+#endif // DEVEL
