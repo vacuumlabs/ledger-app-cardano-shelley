@@ -433,19 +433,19 @@ __noinline_due_to_stack__ void ui_displayPoolOwnerScreen(
 
 		{
 			uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
-			
+
 			switch (owner->descriptionKind) {
 			case DATA_DESCRIPTION_PATH: {
 				constructRewardAddressFromKeyPath(
-					&owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)
+				        &owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)
 				);
 				break;
 			}
 			case DATA_DESCRIPTION_HASH: {
 				constructRewardAddressFromKeyHash(
-						networkId,
-						owner->keyHash, SIZEOF(owner->keyHash),
-						rewardAddress, SIZEOF(rewardAddress)
+				        networkId,
+				        owner->keyHash, SIZEOF(owner->keyHash),
+				        rewardAddress, SIZEOF(rewardAddress)
 				);
 				break;
 			}
@@ -454,9 +454,9 @@ __noinline_due_to_stack__ void ui_displayPoolOwnerScreen(
 			}
 
 			descLen += humanReadableAddress(
-							rewardAddress, SIZEOF(rewardAddress),
-							ownerDescription + descLen, SIZEOF(ownerDescription) - descLen
-		           );
+			                   rewardAddress, SIZEOF(rewardAddress),
+			                   ownerDescription + descLen, SIZEOF(ownerDescription) - descLen
+			           );
 		}
 		ASSERT(descLen == strlen(ownerDescription));
 		ASSERT(descLen + 1 <= SIZEOF(ownerDescription));

@@ -948,8 +948,8 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 }
 
 __noinline_due_to_stack__ static void _addCertificateDataToTx(
-	sign_tx_certificate_data_t* certificateData,
-	tx_hash_builder_t* txHashBuilder
+        sign_tx_certificate_data_t* certificateData,
+        tx_hash_builder_t* txHashBuilder
 )
 {
 
@@ -1140,17 +1140,17 @@ __noinline_due_to_stack__ static void _addWithdrawalToTxHash()
 	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 
 	constructRewardAddressFromKeyPath(
-			&ctx->stageData.withdrawal.path,
-			ctx->commonTxData.networkId,
-			rewardAddress,
-			SIZEOF(rewardAddress)
+	        &ctx->stageData.withdrawal.path,
+	        ctx->commonTxData.networkId,
+	        rewardAddress,
+	        SIZEOF(rewardAddress)
 	);
 
 	TRACE("Adding withdrawal to tx hash");
 	txHashBuilder_addWithdrawal(
-			&ctx->txHashBuilder,
-			rewardAddress, SIZEOF(rewardAddress),
-			ctx->stageData.withdrawal.amount
+	        &ctx->txHashBuilder,
+	        rewardAddress, SIZEOF(rewardAddress),
+	        ctx->stageData.withdrawal.amount
 	);
 }
 

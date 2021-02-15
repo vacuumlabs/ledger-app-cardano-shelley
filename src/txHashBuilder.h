@@ -152,8 +152,8 @@ void txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
 );
 void txHashBuilder_poolRegistrationCertificate_financials(
         tx_hash_builder_t* builder,
-		uint64_t pledge, uint64_t cost,
-		uint64_t marginNumerator, uint64_t marginDenominator
+        uint64_t pledge, uint64_t cost,
+        uint64_t marginNumerator, uint64_t marginDenominator
 );
 void txHashBuilder_poolRegistrationCertificate_rewardAccount(
         tx_hash_builder_t* builder,

@@ -145,7 +145,7 @@
 		if (app_stack_canary != APP_STACK_CANARY_MAGIC) { \
 			TRACE("===================== stack overflow ====================="); \
 		} \
-		 \
+		\
 	} while(0)
 #define APP_STACK_CANARY_MAGIC 0xDEAD0031
 extern unsigned int app_stack_canary;

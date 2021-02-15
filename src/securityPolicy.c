@@ -574,7 +574,7 @@ security_policy_t policyForSignTxWitness(
 {
 	switch (signTxUsecase) {
 
-	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_ORDINARY_TX: {
 		if (is_valid_input_witness(pathSpec)) {
 			DENY_IF(is_too_deep(pathSpec));
 			WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
@@ -587,18 +587,21 @@ security_policy_t policyForSignTxWitness(
 		} else {
 			DENY();
 		}
+	}
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
 		DENY_UNLESS(is_valid_stake_pool_owner_path(pathSpec));
 		WARN_UNLESS(has_reasonable_account(pathSpec));
 		ALLOW();
 		break;
+	}
 
-		#ifdef POOL_OPERATOR_APP
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	#ifdef POOL_OPERATOR_APP
+	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
 		// TODO there could be two witnesses, one for pool key, one for pool owner
 		break;
-		#endif
+	}
+	#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);

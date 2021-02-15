@@ -197,20 +197,20 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleInitAPDU(uint
 		subctx->numRelays = (uint16_t) numRelays;
 
 		switch (commonTxData->signTxUsecase) {
-			case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-				// there should be exactly one owner given by path for which we provide a witness
-				VALIDATE(subctx->numOwners >= 1, ERR_INVALID_DATA);
-				break;
-			
-			default:
-				// nothing to validate in other cases
-				break;
+		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+			// there should be exactly one owner given by path for which we provide a witness
+			VALIDATE(subctx->numOwners >= 1, ERR_INVALID_DATA);
+			break;
+
+		default:
+			// nothing to validate in other cases
+			break;
 		}
 	}
 	{
 		txHashBuilder_poolRegistrationCertificate_enter(
-				txHashBuilder,
-				subctx->numOwners, subctx->numRelays
+		        txHashBuilder,
+		        subctx->numOwners, subctx->numRelays
 		);
 	}
 
@@ -346,8 +346,8 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolKeyAPDU(u
 		_calculatePooKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
 		txHashBuilder_poolRegistrationCertificate_poolKeyHash(
-				txHashBuilder,
-				poolKeyHash, SIZEOF(poolKeyHash)
+		        txHashBuilder,
+		        poolKeyHash, SIZEOF(poolKeyHash)
 		);
 	}
 	{
@@ -465,7 +465,6 @@ static void handlePoolFinancials_ui_runStep()
 
 	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE) {
 		ui_displayAmountScreen(
->>>>>>> signTxPoolRegistration
 		        "Pledge",
 		        subctx->stateData.pledge,
 		        this_fn
@@ -541,9 +540,9 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolFinancial
 	}
 	{
 		txHashBuilder_poolRegistrationCertificate_financials(
-				txHashBuilder,
-				subctx->stateData.pledge, subctx->stateData.cost,
-				subctx->stateData.marginNumerator, subctx->stateData.marginDenominator
+		        txHashBuilder,
+		        subctx->stateData.pledge, subctx->stateData.cost,
+		        subctx->stateData.marginNumerator, subctx->stateData.marginDenominator
 		);
 	}
 
@@ -554,8 +553,8 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolFinancial
 // ============================== POOL REWARD ACCOUNT ==============================
 
 __noinline_due_to_stack__ static void _calculateRewardAccount(
-	const pool_reward_account_t* rewardAccount,
-	uint8_t* rewardAccountBuffer
+        const pool_reward_account_t* rewardAccount,
+        uint8_t* rewardAccountBuffer
 )
 {
 	switch (rewardAccount->descriptionKind) {
@@ -567,8 +566,8 @@ __noinline_due_to_stack__ static void _calculateRewardAccount(
 	}
 	case DATA_DESCRIPTION_PATH: {
 		constructRewardAddressFromKeyPath(
-			&rewardAccount->path, commonTxData->networkId,
-			rewardAccountBuffer, REWARD_ACCOUNT_SIZE
+		        &rewardAccount->path, commonTxData->networkId,
+		        rewardAccountBuffer, REWARD_ACCOUNT_SIZE
 		);
 		break;
 	}
@@ -675,8 +674,8 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRewardAccount
 		_calculateRewardAccount(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
 
 		txHashBuilder_poolRegistrationCertificate_rewardAccount(
-				txHashBuilder,
-				rewardAccountBuffer, SIZEOF(rewardAccountBuffer)
+		        txHashBuilder,
+		        rewardAccountBuffer, SIZEOF(rewardAccountBuffer)
 		);
 	}
 
@@ -753,8 +752,8 @@ __noinline_due_to_stack__ static void _addOwnerToTxHash()
 
 		STATIC_ASSERT(SIZEOF(ownerKeyHash) * 8 == 224, "wrong owner key hash length");
 		blake2b_224_hash(
-				extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
-				ownerKeyHash, SIZEOF(ownerKeyHash)
+		        extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
+		        ownerKeyHash, SIZEOF(ownerKeyHash)
 		);
 		break;
 	}
@@ -769,8 +768,8 @@ __noinline_due_to_stack__ static void _addOwnerToTxHash()
 	// add data to tx
 	TRACE("Adding owner to tx hash");
 	txHashBuilder_addPoolRegistrationCertificate_addOwner(
-			txHashBuilder,
-			ownerKeyHash, SIZEOF(ownerKeyHash)
+	        txHashBuilder,
+	        ownerKeyHash, SIZEOF(ownerKeyHash)
 	);
 	TRACE();
 }
@@ -869,9 +868,9 @@ static void handleRelay_ui_runStep()
 
 	UI_STEP(HANDLE_RELAY_STEP_DISPLAY) {
 		ui_displayPaginatedText(
-			"Relay TODO",
-			"TODO",
-			this_fn
+		        "Relay TODO",
+		        "TODO",
+		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_RELAY_STEP_RESPOND) {
@@ -968,7 +967,7 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uin
 	}
 
 	pool_relay_t* relay = &subctx->stateData.relay;
-	{		
+	{
 		// parse data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 

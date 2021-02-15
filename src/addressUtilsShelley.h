@@ -68,7 +68,7 @@ __noinline_due_to_stack__ size_t view_appendPublicKeyHash(write_view_t* view, co
 size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize);
 
 __noinline_due_to_stack__ size_t constructRewardAddressFromKeyPath(
-	const bip44_path_t* path, uint8_t networkId, uint8_t* outBuffer, size_t outSize
+        const bip44_path_t* path, uint8_t networkId, uint8_t* outBuffer, size_t outSize
 );
 __noinline_due_to_stack__ size_t constructRewardAddressFromKeyHash(
         uint8_t networkId,

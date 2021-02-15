@@ -304,7 +304,7 @@ static size_t deriveAddress_reward(
 		ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath)); // TODO check for unusual account?
 
 		TRACE_STACK_USAGE();
-		
+
 		view_appendPublicKeyHash(&out, spendingKeyPath);
 		TRACE();
 	}
@@ -319,7 +319,7 @@ static size_t deriveAddress_reward(
 }
 
 size_t constructRewardAddressFromKeyPath(
-	const bip44_path_t* path, uint8_t networkId, uint8_t* outBuffer, size_t outSize
+        const bip44_path_t* path, uint8_t networkId, uint8_t* outBuffer, size_t outSize
 )
 {
 	ASSERT(outSize == REWARD_ACCOUNT_SIZE);
@@ -329,9 +329,9 @@ size_t constructRewardAddressFromKeyPath(
 
 	const uint8_t header = constructShelleyAddressHeader(REWARD, networkId);
 	return deriveAddress_reward(
-			header, path,
-			outBuffer, outSize
-	);
+	               header, path,
+	               outBuffer, outSize
+	       );
 }
 
 size_t constructRewardAddressFromKeyHash(

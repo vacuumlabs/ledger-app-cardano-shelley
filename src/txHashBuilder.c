@@ -566,8 +566,8 @@ void txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
 
 void txHashBuilder_poolRegistrationCertificate_financials(
         tx_hash_builder_t* builder,
-		uint64_t pledge, uint64_t cost,
-		uint64_t marginNumerator, uint64_t marginDenominator
+        uint64_t pledge, uint64_t cost,
+        uint64_t marginNumerator, uint64_t marginDenominator
 )
 {
 	_TRACE("state = %d", builder->state);
@@ -747,7 +747,7 @@ static void _relay_addDnsName(tx_hash_builder_t* builder, pool_relay_t* relay)
 
 void txHashBuilder_addPoolRegistrationCertificate_addRelay(
         tx_hash_builder_t* builder,
-		pool_relay_t* relay
+        pool_relay_t* relay
 )
 {
 	_TRACE("state = %d, remainingRelays = %u", builder->state, builder->poolCertificateData.remainingRelays);
