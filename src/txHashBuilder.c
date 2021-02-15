@@ -492,7 +492,7 @@ void txHashBuilder_addCertificate_poolRetirement(
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, epoch);
 	}
 }
-#endif
+#endif // POOL_OPERATOR_APP
 
 
 void txHashBuilder_poolRegistrationCertificate_enter(

@@ -21,7 +21,7 @@ typedef enum {
 
 	#ifdef POOL_OPERATOR_APP
 	CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT = 4,
-	#endif
+	#endif // POOL_OPERATOR_APP
 } certificate_type_t;
 
 typedef enum {

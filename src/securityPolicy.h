@@ -4,16 +4,10 @@
 #include "addressUtilsShelley.h"
 #include "bip44.h"
 #include "cardanoOutputs.h"
+#include "securityPolicyType.h"
 #include "signTxPoolRegistration.h"
 #include "signTx.h"
 
-typedef enum {
-	POLICY_DENY = 1,
-	POLICY_ALLOW_WITHOUT_PROMPT = 2,
-	POLICY_PROMPT_BEFORE_RESPONSE = 3,
-	POLICY_PROMPT_WARN_UNUSUAL = 4,
-	POLICY_SHOW_BEFORE_RESPONSE = 5, // Show on display but do not ask for explicit confirmation
-} security_policy_t;
 
 security_policy_t policyForGetPublicKeysInit(size_t numPaths);
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec);
@@ -67,7 +61,7 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
         const bip44_path_t* poolIdPath,
         uint64_t epoch
 );
-#endif
+#endif // POOL_OPERATOR_APP
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
         sign_tx_usecase_t signTxUsecase,
         const pool_id_t* poolId
@@ -109,13 +103,5 @@ bool is_tx_network_verifiable(
         uint16_t numOutputs,
         uint16_t numWithdrawals
 );
-
-
-static inline void ENSURE_NOT_DENIED(security_policy_t policy)
-{
-	if (policy == POLICY_DENY) {
-		THROW(ERR_REJECTED_BY_POLICY);
-	}
-}
 
 #endif // H_CARDANO_APP_SECURITY_POLICY

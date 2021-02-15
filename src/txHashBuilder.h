@@ -136,7 +136,7 @@ void txHashBuilder_addCertificate_poolRetirement(
         uint8_t* poolKeyHash, size_t poolKeyHashSize,
         uint64_t epoch
 );
-#endif
+#endif // POOL_OPERATOR_APP
 
 void txHashBuilder_poolRegistrationCertificate_enter(
         tx_hash_builder_t* builder,

@@ -142,7 +142,7 @@ static void signTx_handleOutput_addressBytes()
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
 
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
-	                                   commonTxData->isSigningPoolRegistrationAsOwner,
+	                                   commonTxData->signTxUsecase,
 	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );
@@ -219,7 +219,7 @@ static void signTx_handleOutput_addressParams()
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS);
 
 	security_policy_t policy = policyForSignTxOutputAddressParams(
-	                                   commonTxData->isSigningPoolRegistrationAsOwner,
+	                                   commonTxData->signTxUsecase,
 	                                   &subctx->stateData.output.params,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );

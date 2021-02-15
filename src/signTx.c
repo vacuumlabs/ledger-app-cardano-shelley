@@ -300,15 +300,13 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2, uint8_t*
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		struct {
-			uint8_t signTxUsecase;
-
 			uint8_t networkId;
 			uint8_t protocolMagic[4];
 
 			uint8_t includeTtl;
 			uint8_t includeMetadata;
 			uint8_t includeValidityIntervalStart;
-			uint8_t isSigningPoolRegistrationAsOwner;
+			uint8_t signTxUsecase;
 
 			uint8_t numInputs[4];
 			uint8_t numOutputs[4];
@@ -318,18 +316,6 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2, uint8_t*
 		}* wireHeader = (void*) wireDataBuffer;
 
 		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
-
-		ctx->commonTxData.signTxUsecase = wireHeader->signTxUsecase;
-		TRACE("sign tx use case %d", (int) ctx->commonTxData.signTxUsecase);
-		switch(ctx->commonTxData.signTxUsecase) {
-		case SIGN_TX_USECASE_ORDINARY_TX:
-		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-			// these usecases are allowed
-			break;
-
-		default:
-			THROW(ERR_INVALID_DATA);
-		}
 
 		ASSERT_TYPE(ctx->commonTxData.networkId, uint8_t);
 		ctx->commonTxData.networkId = wireHeader->networkId;
@@ -348,6 +334,18 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2, uint8_t*
 
 		ctx->includeValidityIntervalStart = signTx_parseIncluded(wireHeader->includeValidityIntervalStart);
 		TRACE("Include validity interval start %d", ctx->includeValidityIntervalStart);
+
+		ctx->commonTxData.signTxUsecase = wireHeader->signTxUsecase;
+		TRACE("sign tx use case %d", (int) ctx->commonTxData.signTxUsecase);
+		switch(ctx->commonTxData.signTxUsecase) {
+		case SIGN_TX_USECASE_ORDINARY_TX:
+		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+			// these usecases are allowed
+			break;
+
+		default:
+			THROW(ERR_INVALID_DATA);
+		}
 
 		ASSERT_TYPE(ctx->numInputs, uint16_t);
 		ASSERT_TYPE(ctx->numOutputs, uint16_t);
@@ -384,7 +382,7 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2, uint8_t*
 
 			// TODO what other validations?
 			break;
-			#endif
+			#endif // POOL_OPERATOR_APP
 
 		default:
 			// no additional validation for other use cases
@@ -414,7 +412,7 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2, uint8_t*
 				maxNumWitnesses = 2; // pool key and one owner
 				// TODO think about this
 				break;
-				#endif
+				#endif // POOL_OPERATOR_APP
 
 			case SIGN_TX_USECASE_ORDINARY_TX:
 				maxNumWitnesses = (size_t) ctx->numInputs +
@@ -887,7 +885,7 @@ static void signTx_handleCertificatePoolRetirement_ui_runStep()
 	}
 	UI_STEP_END(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_INVALID);
 }
-#endif
+#endif // POOL_OPERATOR_APP
 
 static void _parsePathSpec(read_view_t* view, sign_tx_certificate_data_t* certificateData)
 {
@@ -938,7 +936,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 		certificateData->epoch  = parse_u8be(&view);
 		// TODO no validation?
 		break;
-		#endif
+		#endif // POOL_OPERATOR_APP
 
 	default:
 		THROW(ERR_INVALID_DATA);
@@ -994,7 +992,7 @@ __noinline_due_to_stack__ static void _addCertificateDataToTx(
 		);
 		break;
 	}
-	#endif
+	#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -1095,7 +1093,7 @@ __noinline_due_to_stack__ static void signTx_handleCertificateAPDU(uint8_t p2, u
 		signTx_handleCertificatePoolRetirement_ui_runStep();
 		return;
 	}
-	#endif
+	#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);

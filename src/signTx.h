@@ -17,7 +17,7 @@ typedef enum {
 
 	#ifdef POOL_OPERATOR_APP
 	SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR = 5,
-	#endif
+	#endif // POOL_OPERATOR_APP
 } sign_tx_usecase_t;
 
 typedef enum {

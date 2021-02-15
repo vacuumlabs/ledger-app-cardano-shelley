@@ -246,8 +246,8 @@ __noinline_due_to_stack__ static void _calculatePooKeyHash(const pool_id_t* pool
 }
 
 enum {
-	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID = 6320,
-	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH,
+	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH = 6320,
+	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID,
 	HANDLE_POOL_KEY_STEP_RESPOND,
 	HANDLE_POOL_KEY_STEP_INVALID,
 } ;
@@ -260,20 +260,19 @@ static void handlePoolKey_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
+	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH) {
+		ui_displayPathScreen(
+		        "Pool ID path",
+		        &subctx->stateData.poolId.path,
+		        this_fn
+		);
+	}
 	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID) {
 		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
 		_calculatePooKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
 		ui_displayPoolIdScreen(
 		        poolKeyHash, SIZEOF(poolKeyHash),
-		        this_fn
-		);
-	}
-	// TODO this should not be done for owner usecase
-	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH) {
-		ui_displayPathScreen(
-		        "Pool ID path",
-		        &subctx->stateData.poolId.path,
 		        this_fn
 		);
 	}
@@ -351,10 +350,28 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolKeyAPDU(u
 		);
 	}
 	{
+		// ui step depends not only on security policy, but also on usecase
+		int displayUiStep = HANDLE_POOL_KEY_STEP_INVALID;
+		switch (commonTxData->signTxUsecase) {
+		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+			displayUiStep = HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID;
+			break;
+
+			#ifdef POOL_OPERATOR_APP
+		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+			displayUiStep = HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH;
+			break;
+			#endif // POOL_OPERATOR_APP
+
+		default:
+			ASSERT(false);
+		}
+		ASSERT(displayUiStep != HANDLE_POOL_KEY_STEP_INVALID);
+
 		// select UI steps
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_KEY_STEP_DISPLAY);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, displayUiStep);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_KEY_STEP_RESPOND);
 #	undef   CASE
 		default:
@@ -464,21 +481,21 @@ static void handlePoolFinancials_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step);
 
 	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE) {
-		ui_displayAmountScreen(
+		ui_displayAdaAmountScreen(
 		        "Pledge",
 		        subctx->stateData.pledge,
 		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_COST) {
-		ui_displayAmountScreen(
+		ui_displayAdaAmountScreen(
 		        "Cost",
 		        subctx->stateData.cost,
 		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_MARGIN) {
-		ui_displayMarginScreen(
+		ui_displayPoolMarginScreen(
 		        subctx->stateData.marginNumerator,
 		        subctx->stateData.marginDenominator,
 		        this_fn
@@ -711,7 +728,7 @@ static void handleOwner_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step);
 
 	UI_STEP(HANDLE_OWNER_STEP_DISPLAY) {
-		ui_displayPoolOwnerScreen(&subctx->owner, subctx->currentOwner, commonTxData->networkId, this_fn);
+		ui_displayPoolOwnerScreen(&subctx->stateData.owner, subctx->currentOwner, commonTxData->networkId, this_fn);
 	}
 	UI_STEP(HANDLE_OWNER_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -727,7 +744,7 @@ static void handleOwner_ui_runStep()
 			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 				ASSERT(subctx->numOwnersGivenByPath <= 1);
 				break;
-				#endif
+				#endif // POOL_OPERATOR_APP
 
 			default:
 				ASSERT(false);
