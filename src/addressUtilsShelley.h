@@ -76,7 +76,7 @@ void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* ou
 
 size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* out, size_t outSize);
 
-void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addressParams_t* params);
+void view_parseAddressParams(read_view_t* view, addressParams_t* params);
 
 
 #ifdef DEVEL

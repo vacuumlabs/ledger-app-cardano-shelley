@@ -438,35 +438,33 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
  *
  * (see also enums in addressUtilsShelley.h)
  */
-void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addressParams_t* params)
+void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 {
-	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
-
 	// address type
-	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-	params->type = parse_u1be(&view);
+	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
+	params->type = parse_u1be(view);
 	TRACE("Address type: 0x%x", params->type);
 	VALIDATE(isSupportedAddressType(params->type), ERR_UNSUPPORTED_ADDRESS_TYPE);
 
 	// protocol magic / network id
 	if (params->type == BYRON) {
-		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
-		params->protocolMagic = parse_u4be(&view);
+		VALIDATE(view_remainingSize(view) >= 4, ERR_INVALID_DATA);
+		params->protocolMagic = parse_u4be(view);
 		TRACE("Protocol magic: 0x%x", params->protocolMagic);
 	} else {
-		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-		params->networkId = parse_u1be(&view);
+		VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
+		params->networkId = parse_u1be(view);
 		TRACE("Network id: 0x%x", params->networkId);
 		VALIDATE(params->networkId <= 0b1111, ERR_INVALID_DATA);
 	}
 
 	// spending public key derivation path
-	view_skipBytes(&view, bip44_parseFromWire(&params->spendingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
+	view_skipBytes(view, bip44_parseFromWire(&params->spendingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 	BIP44_PRINTF(&params->spendingKeyPath);
 
 	// staking choice
-	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-	params->stakingChoice = parse_u1be(&view);
+	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
+	params->stakingChoice = parse_u1be(view);
 	TRACE("Staking choice: 0x%x", (unsigned int) params->stakingChoice);
 	VALIDATE(isValidStakingChoice(params->stakingChoice), ERR_INVALID_DATA);
 
@@ -477,23 +475,23 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 		break;
 
 	case STAKING_KEY_PATH:
-		view_skipBytes(&view, bip44_parseFromWire(&params->stakingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
+		view_skipBytes(view, bip44_parseFromWire(&params->stakingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 		BIP44_PRINTF(&params->stakingKeyPath);
 		break;
 
 	case STAKING_KEY_HASH:
-		VALIDATE(view_remainingSize(&view) >= ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
+		VALIDATE(view_remainingSize(view) >= ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
-		view_memmove(params->stakingKeyHash, &view, ADDRESS_KEY_HASH_LENGTH);
+		view_memmove(params->stakingKeyHash, view, ADDRESS_KEY_HASH_LENGTH);
 		TRACE("Staking key hash: ");
 		TRACE_BUFFER(params->stakingKeyHash, SIZEOF(params->stakingKeyHash));
 		break;
 
 	case BLOCKCHAIN_POINTER:
-		VALIDATE(view_remainingSize(&view) >= 12, ERR_INVALID_DATA);
-		params->stakingKeyBlockchainPointer.blockIndex = parse_u4be(&view);
-		params->stakingKeyBlockchainPointer.txIndex = parse_u4be(&view);
-		params->stakingKeyBlockchainPointer.certificateIndex = parse_u4be(&view);
+		VALIDATE(view_remainingSize(view) >= 12, ERR_INVALID_DATA);
+		params->stakingKeyBlockchainPointer.blockIndex = parse_u4be(view);
+		params->stakingKeyBlockchainPointer.txIndex = parse_u4be(view);
+		params->stakingKeyBlockchainPointer.certificateIndex = parse_u4be(view);
 		TRACE("Staking pointer: [%d, %d, %d]\n",
 		      params->stakingKeyBlockchainPointer.blockIndex,
 		      params->stakingKeyBlockchainPointer.txIndex,
@@ -504,6 +502,4 @@ void parseAddressParams(const uint8_t *wireDataBuffer, size_t wireDataSize, addr
 	default:
 		ASSERT(false);
 	}
-
-	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 }

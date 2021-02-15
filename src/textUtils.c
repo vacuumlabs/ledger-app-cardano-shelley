@@ -59,6 +59,42 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	return rawSize + suffixLength;
 }
 
+size_t str_formatUint64(uint64_t number, char* out, size_t outSize)
+{
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
+	char scratchBuffer[30];
+	char* ptr = BEGIN(scratchBuffer);
+	char* end = END(scratchBuffer);
+
+	// We print in reverse
+	// We want at least one iteration
+	int place = 0;
+	do {
+		WRITE_CHAR(ptr, end, '0' + (number % 10));
+		number /= 10;
+		place++;
+	} while (number > 0);
+
+	// Size without terminating character
+	STATIC_ASSERT(sizeof(ptr - scratchBuffer) == sizeof(size_t), "bad size_t size");
+	size_t rawSize = (size_t) (ptr - scratchBuffer);
+
+	if (rawSize + 1 > outSize) {
+		THROW(ERR_DATA_TOO_LARGE);
+	}
+
+	// Copy reversed & append terminator
+	for (size_t i = 0; i < rawSize; i++) {
+		out[i] = scratchBuffer[rawSize - 1 - i];
+	}
+	out[rawSize] = 0;
+
+	ASSERT(strlen(out) == rawSize);
+
+	return rawSize;
+}
+
 #ifdef DEVEL
 void str_traceAdaAmount(const char* prefix, uint64_t amount)
 {
@@ -71,6 +107,13 @@ void str_traceAdaAmount(const char* prefix, uint64_t amount)
 
 	str_formatAdaAmount(amount, adaAmountStr + prefixLen, SIZEOF(adaAmountStr) - prefixLen);
 	TRACE("%s", adaAmountStr);
+}
+
+void str_traceUint64(uint64_t number)
+{
+	char numberStr[30];
+	str_formatUint64(number, numberStr, SIZEOF(numberStr));
+	TRACE("%s", numberStr);
 }
 #endif
 
@@ -85,24 +128,24 @@ static struct {
 	{0, 0, 21600}
 };
 
-size_t str_formatTtl(uint64_t ttl, char* out, size_t outSize)
+size_t str_formatValidityBoundary(uint64_t slotNumber, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	unsigned i = 0;
-	while (ttl < EPOCH_SLOTS_CONFIG[i].startBlockNumber) {
+	while (slotNumber < EPOCH_SLOTS_CONFIG[i].startBlockNumber) {
 		i++;
 		ASSERT(i < ARRAY_LEN(EPOCH_SLOTS_CONFIG));
 	}
 
-	ASSERT(ttl >= EPOCH_SLOTS_CONFIG[i].startBlockNumber);
+	ASSERT(slotNumber >= EPOCH_SLOTS_CONFIG[i].startBlockNumber);
 
 	uint64_t startBlockNumber = EPOCH_SLOTS_CONFIG[i].startBlockNumber;
 	uint64_t startEpoch = EPOCH_SLOTS_CONFIG[i].startEpoch;
 	uint64_t slotsInEpoch = EPOCH_SLOTS_CONFIG[i].slotsInEpoch;
 
-	uint64_t epoch = startEpoch + (ttl - startBlockNumber) / slotsInEpoch;
-	uint64_t slotInEpoch = (ttl - startBlockNumber) % slotsInEpoch;
+	uint64_t epoch = startEpoch + (slotNumber - startBlockNumber) / slotsInEpoch;
+	uint64_t slotInEpoch = (slotNumber - startBlockNumber) % slotsInEpoch;
 
 	ASSERT(sizeof(int) >= sizeof(uint32_t));
 
@@ -137,6 +180,19 @@ void str_validateTextBuffer(const uint8_t* text, size_t textSize)
 		VALIDATE(text[i] <= 126, ERR_INVALID_DATA);
 		VALIDATE(text[i] >= 32, ERR_INVALID_DATA);
 	}
+}
+
+// check if a non-null-terminated buffer contains printable ASCII between 33 and 126 (inclusive)
+bool str_isAsciiPrintableBuffer(const uint8_t* buffer, size_t bufferSize)
+{
+	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
+
+	for (size_t i = 0; i < bufferSize; i++) {
+		if (buffer[i] > 126) return false;
+		if (buffer[i] <  33) return false;
+	}
+
+	return true;
 }
 
 #ifdef DEVEL

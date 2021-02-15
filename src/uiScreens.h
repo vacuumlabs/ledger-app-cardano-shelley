@@ -3,6 +3,7 @@
 
 #include "uiHelpers.h"
 #include "addressUtilsShelley.h"
+#include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
 
 void ui_displayPathScreen(
@@ -28,9 +29,27 @@ void ui_displayStakingInfoScreen(
         ui_callback_fn_t callback
 );
 
-void ui_displayAmountScreen(
+void ui_displayTokenNameScreen(
+        token_amount_t* token,
+        ui_callback_fn_t callback
+);
+
+void ui_displayAdaAmountScreen(
         const char* screenHeader,
         uint64_t amount,
+        ui_callback_fn_t callback
+);
+
+void ui_displayUint64Screen(
+        const char* screenHeader,
+        uint64_t value,
+        ui_callback_fn_t callback
+);
+
+void ui_displayValidityBoundaryScreen(
+        const char* screenHeader,
+        uint64_t boundary,
+        uint8_t networkId, uint32_t protocolMagic,
         ui_callback_fn_t callback
 );
 
@@ -47,12 +66,18 @@ void ui_displayHexBufferScreen(
         ui_callback_fn_t callback
 );
 
-void ui_displayMarginScreen(
+void ui_displayPoolIdScreen(
+        const uint8_t* poolIdBuffer,
+        size_t poolIdSize,
+        ui_callback_fn_t callback
+);
+
+void ui_displayPoolMarginScreen(
         uint64_t marginNumerator, uint64_t marginDenominator,
         ui_callback_fn_t callback
 );
 
-void ui_displayOwnerScreen(
+void ui_displayPoolOwnerScreen(
         const pool_owner_t* owner,
         uint32_t ownerIndex,
         uint8_t networkId,

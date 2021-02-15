@@ -199,7 +199,11 @@ void deriveAddress_handleAPDU(
 	}
 	ctx->responseReadyMagic = 0;
 
-	parseAddressParams(wireDataBuffer, wireDataSize, &ctx->addressParams);
+	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+
+	view_parseAddressParams(&view, &ctx->addressParams);
+
+	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
 	switch (p1) {
 #	define  CASE(P1, HANDLER_FN) case P1: {HANDLER_FN(); break;}

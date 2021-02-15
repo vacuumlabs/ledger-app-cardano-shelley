@@ -1,4 +1,5 @@
 #include "uiScreens.h"
+#include "bech32.h"
 #include "hexUtils.h"
 #include "textUtils.h"
 #include "cardanoCertificates.h"
@@ -44,12 +45,12 @@ void ui_displayAccountScreen(
 		if (bip44_hasByronPrefix(path)) {
 			snprintf(
 			        accountDescription, SIZEOF(accountDescription),
-			        "Byron account %u  ", account
+			        "Byron account #%u  ", account + 1
 			);
 		} else if (bip44_hasShelleyPrefix(path)) {
 			snprintf(
 			        accountDescription, SIZEOF(accountDescription),
-			        "Account %u  ", account
+			        "Account #%u  ", account + 1
 			);
 		} else {
 			ASSERT(false);
@@ -172,7 +173,34 @@ void ui_displayStakingInfoScreen(
 	);
 }
 
-void ui_displayAmountScreen(
+void ui_displayTokenNameScreen(
+        token_amount_t* token,
+        ui_callback_fn_t callback
+)
+{
+	if (str_isAsciiPrintableBuffer(token->assetNameBytes, token->assetNameSize)) {
+		char name[ASSET_NAME_SIZE_MAX + 1];
+		ASSERT(token->assetNameSize + 1 <= SIZEOF(name));
+		os_memmove(name, token->assetNameBytes, token->assetNameSize);
+		name[token->assetNameSize] = '\0';
+
+		bool isEmpty = (token->assetNameSize == 0);
+
+		ui_displayPaginatedText(
+		        (isEmpty) ? "Asset name is empty" : "Asset name (ASCII):",
+		        name,
+		        callback
+		);
+	} else {
+		ui_displayHexBufferScreen(
+		        "Asset name (hex):",
+		        token->assetNameBytes, token->assetNameSize,
+		        callback
+		);
+	}
+}
+
+void ui_displayAdaAmountScreen(
         const char* screenHeader,
         uint64_t amount,
         ui_callback_fn_t callback
@@ -189,6 +217,50 @@ void ui_displayAmountScreen(
 	        adaAmountStr,
 	        callback
 	);
+}
+
+void ui_displayUint64Screen(
+        const char* screenHeader,
+        uint64_t value,
+        ui_callback_fn_t callback
+)
+{
+	char valueStr[30];
+	str_formatUint64(value, valueStr, SIZEOF(valueStr));
+
+	ui_displayPaginatedText(
+	        screenHeader,
+	        valueStr,
+	        callback
+	);
+}
+
+void ui_displayValidityBoundaryScreen(
+        const char* screenHeader,
+        uint64_t boundary,
+        uint8_t networkId, uint32_t protocolMagic,
+        ui_callback_fn_t callback
+)
+{
+	char boundaryStr[30];
+	explicit_bzero(boundaryStr, SIZEOF(boundaryStr));
+
+	if ((networkId == MAINNET_NETWORK_ID) && (protocolMagic == MAINNET_PROTOCOL_MAGIC)) {
+		// nicer formatting could only be used for mainnet
+		// since it depends on network params that could differ for testnets
+		str_formatValidityBoundary(boundary, boundaryStr, SIZEOF(boundaryStr));
+		ui_displayPaginatedText(
+		        screenHeader,
+		        boundaryStr,
+		        callback
+		);
+	} else {
+		ui_displayUint64Screen(
+		        screenHeader,
+		        boundary,
+		        callback
+		);
+	}
 }
 
 void ui_displayNetworkParamsScreen(
@@ -247,7 +319,35 @@ void ui_displayHexBufferScreen(
 	);
 }
 
-void ui_displayMarginScreen(
+void ui_displayPoolIdScreen(
+        const uint8_t* poolIdBuffer,
+        size_t poolIdSize,
+        ui_callback_fn_t callback
+)
+{
+	{
+		// assert inputs
+		ASSERT(poolIdSize == POOL_KEY_HASH_LENGTH);
+	}
+
+	char poolIdStr[12 + 2 * POOL_KEY_HASH_LENGTH]; // rough upper bound on required size
+	explicit_bzero(poolIdStr, SIZEOF(poolIdStr));
+
+	{
+		size_t len = bech32_encode("pool", poolIdBuffer, poolIdSize, poolIdStr, SIZEOF(poolIdStr));
+
+		ASSERT(len == strlen(poolIdStr));
+		ASSERT(len + 1 <= SIZEOF(poolIdStr));
+	}
+
+	ui_displayPaginatedText(
+	        "Pool ID",
+	        poolIdStr,
+	        callback
+	);
+}
+
+void ui_displayPoolMarginScreen(
         uint64_t marginNumerator, uint64_t marginDenominator,
         ui_callback_fn_t callback
 )
@@ -284,7 +384,7 @@ void ui_displayMarginScreen(
 	);
 }
 
-void ui_displayOwnerScreen(
+void ui_displayPoolOwnerScreen(
         const pool_owner_t* owner,
         uint32_t ownerIndex,
         uint8_t networkId,

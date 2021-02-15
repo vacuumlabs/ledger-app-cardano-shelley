@@ -100,12 +100,21 @@ bool is_tx_network_verifiable(
 	return (numOutputs > 0) || (numWithdrawals > 0) || (isSigningPoolRegistrationAsOwner);
 }
 
+
+#define DENY()                          return POLICY_DENY;
 #define DENY_IF(expr)      if (expr)    return POLICY_DENY;
 #define DENY_UNLESS(expr)  if (!(expr)) return POLICY_DENY;
+
 #define WARN_IF(expr)      if (expr)    return POLICY_PROMPT_WARN_UNUSUAL;
 #define WARN_UNLESS(expr)  if (!(expr)) return POLICY_PROMPT_WARN_UNUSUAL;
+
+#define PROMPT()                        return POLICY_PROMPT_BEFORE_RESPONSE;
 #define PROMPT_IF(expr)    if (expr)    return POLICY_PROMPT_BEFORE_RESPONSE;
+
+#define ALLOW()                         return POLICY_ALLOW_WITHOUT_PROMPT;
 #define ALLOW_IF(expr)     if (expr)    return POLICY_ALLOW_WITHOUT_PROMPT;
+
+#define SHOW()                          return POLICY_SHOW_BEFORE_RESPONSE;
 #define SHOW_IF(expr)      if (expr)    return POLICY_SHOW_BEFORE_RESPONSE;
 #define SHOW_UNLESS(expr)  if (!(expr)) return POLICY_SHOW_BEFORE_RESPONSE;
 
@@ -114,7 +123,7 @@ security_policy_t policyForGetPublicKeysInit(size_t numPaths)
 {
 	PROMPT_IF(numPaths > 1);
 
-	ALLOW_IF(true);
+	ALLOW();
 }
 
 // Get extended public key and return it to the host
@@ -126,7 +135,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 
 	WARN_IF(bip44_containsMoreThanAddress(pathSpec));
 
-	PROMPT_IF(true);
+	PROMPT();
 }
 
 // Get extended public key and return it to the host within bulk key export
@@ -156,7 +165,7 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 		WARN_UNLESS(bip44_hasReasonableAddress(pathSpec));
 	}
 
-	ALLOW_IF(true);
+	ALLOW();
 }
 
 // Derive address and return it to the host
@@ -168,7 +177,7 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 
 	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
 
-	PROMPT_IF(true);
+	PROMPT();
 }
 
 // Derive address and show it to the user
@@ -180,7 +189,7 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 
 	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
 
-	SHOW_IF(true);
+	SHOW();
 }
 
 
@@ -201,19 +210,20 @@ security_policy_t policyForSignTxInit(
 
 	WARN_IF(networkId != MAINNET_NETWORK_ID);
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
+
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
-	PROMPT_IF(true);
+	PROMPT();
 }
 
 // For each transaction UTxO input
 security_policy_t policyForSignTxInput()
 {
 	// No need to check tx inputs
-	ALLOW_IF(true);
+	ALLOW();
 }
 
 // For each transaction (third-party) address output
-security_policy_t policyForSignTxOutputAddress(
+security_policy_t policyForSignTxOutputAddressBytes(
         bool isSigningPoolRegistrationAsOwner,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
@@ -235,7 +245,7 @@ security_policy_t policyForSignTxOutputAddress(
 	}
 
 	// We always show third-party output addresses
-	SHOW_IF(true);
+	SHOW();
 }
 
 // For each output given by derivation path
@@ -263,7 +273,29 @@ security_policy_t policyForSignTxOutputAddressParams(
 	SHOW_UNLESS(has_reasonable_account_and_address(&params->spendingKeyPath));
 	SHOW_UNLESS(is_standard_base_address(params));
 
-	ALLOW_IF(true);
+	ALLOW();
+}
+
+security_policy_t policyForSignTxOutputConfirm(
+        security_policy_t outputPolicy,
+        uint64_t numAssetGroups
+)
+{
+	switch (outputPolicy) {
+	case POLICY_ALLOW_WITHOUT_PROMPT:
+		ALLOW();
+		break;
+
+	case POLICY_SHOW_BEFORE_RESPONSE:
+		PROMPT_IF(numAssetGroups > 0);
+		ALLOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
 // For transaction fee
@@ -272,7 +304,7 @@ security_policy_t policyForSignTxFee(bool isSigningPoolRegistrationAsOwner, uint
 	ALLOW_IF(isSigningPoolRegistrationAsOwner);
 
 	// always show the fee in ordinary transactions
-	SHOW_IF(true);
+	SHOW();
 }
 
 // For transaction TTL
@@ -285,7 +317,7 @@ security_policy_t policyForSignTxTtl(uint32_t ttl)
 	// might be changed to POLICY_ALLOW_WITHOUT_PROMPT
 	// to avoid bothering the user with TTL
 	// (Daedalus does not show this)
-	SHOW_IF(true);
+	SHOW();
 }
 
 // a generic policy for all certificates
@@ -298,11 +330,11 @@ security_policy_t policyForSignTxCertificate(
 	if (includeStakePoolRegistrationCertificate) {
 		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 
-		ALLOW_IF(true);
+		ALLOW();
 	} else {
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 
-		ALLOW_IF(true);
+		ALLOW();
 	}
 }
 
@@ -324,20 +356,20 @@ security_policy_t policyForSignTxCertificateStaking(
 
 	DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
 
-	PROMPT_IF(true);
+	PROMPT();
 }
 
 // for stake pool registration certificates
 security_policy_t policyForSignTxCertificateStakePoolRegistration()
 {
-	PROMPT_IF(true);
+	PROMPT();
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationOwner(pool_owner_t* owner)
 {
 	switch (owner->ownerType) {
 	case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
-		SHOW_IF(true);
+		SHOW();
 		break;
 
 	case SIGN_TX_POOL_OWNER_TYPE_PATH:
@@ -347,29 +379,29 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(pool_owner_t* owner)
 	default:
 		ASSERT(false);
 	}
-	DENY_IF(true);
+	DENY();
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationMetadata()
 {
-	SHOW_IF(true);
+	SHOW();
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationNoMetadata()
 {
-	SHOW_IF(true);
+	SHOW();
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationConfirm()
 {
-	ALLOW_IF(true);
+	ALLOW();
 }
 
 // For each withdrawal
 security_policy_t policyForSignTxWithdrawal()
 {
 	// No need to check withdrawals
-	SHOW_IF(true);
+	SHOW();
 }
 
 // For each transaction witness
@@ -391,15 +423,20 @@ security_policy_t policyForSignTxWitness(
 
 	WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
 
-	ALLOW_IF(true);
+	ALLOW();
 }
 
 security_policy_t policyForSignTxMetadata()
 {
-	SHOW_IF(true);
+	SHOW();
+}
+
+security_policy_t policyForSignTxValidityIntervalStart()
+{
+	SHOW();
 }
 
 security_policy_t policyForSignTxConfirm()
 {
-	PROMPT_IF(true);
+	PROMPT();
 }

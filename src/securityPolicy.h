@@ -1,8 +1,9 @@
 #ifndef H_CARDANO_APP_SECURITY_POLICY
 #define H_CARDANO_APP_SECURITY_POLICY
 
-#include "bip44.h"
 #include "addressUtilsShelley.h"
+#include "bip44.h"
+#include "cardanoOutputs.h"
 #include "signTxPoolRegistration.h"
 
 typedef enum {
@@ -32,7 +33,7 @@ security_policy_t policyForSignTxInit(
 
 security_policy_t policyForSignTxInput();
 
-security_policy_t policyForSignTxOutputAddress(
+security_policy_t policyForSignTxOutputAddressBytes(
         bool isSigningPoolRegistrationAsOwner,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
@@ -41,6 +42,10 @@ security_policy_t policyForSignTxOutputAddressParams(
         bool isSigningPoolRegistrationAsOwner,
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic
+);
+security_policy_t policyForSignTxOutputConfirm(
+        security_policy_t addressPolicy,
+        uint64_t numAssetGroups
 );
 
 security_policy_t policyForSignTxFee(bool isSigningPoolRegistrationAsOwner, uint64_t fee);
@@ -65,6 +70,8 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm();
 security_policy_t policyForSignTxWithdrawal();
 
 security_policy_t policyForSignTxMetadata();
+
+security_policy_t policyForSignTxValidityIntervalStart();
 
 security_policy_t policyForSignTxWitness(
         bool isSigningPoolRegistrationAsOwner,
