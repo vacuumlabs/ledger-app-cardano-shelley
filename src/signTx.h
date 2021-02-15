@@ -132,4 +132,4 @@ inline bool signTx_parseIncluded(uint8_t value)
 	}
 }
 
-#endif
+#endif // H_CARDANO_APP_SIGN_TX

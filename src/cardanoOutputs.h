@@ -15,4 +15,4 @@ typedef struct {
 } token_amount_t;
 
 
-#endif
+#endif // H_CARDANO_APP_CARDANO_OUTPUTS

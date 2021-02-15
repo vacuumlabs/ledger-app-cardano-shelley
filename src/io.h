@@ -55,4 +55,4 @@ void nanos_clear_timer();
 // does not actually work anymore in Nano X
 #endif
 
-#endif
+#endif // H_CARDANO_APP_IO

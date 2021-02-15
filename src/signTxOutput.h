@@ -71,4 +71,4 @@ void signTxOutput_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDat
 
 bool signTxOutput_isFinished();
 
-#endif
+#endif // H_CARDANO_APP_SIGN_TX_OUTPUT

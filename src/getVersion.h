@@ -10,4 +10,4 @@
 #endif
 handler_fn_t getVersion_handleAPDU;
 
-#endif // H_GET_VERSION
+#endif // H_CARDANO_APP_GET_VERSION

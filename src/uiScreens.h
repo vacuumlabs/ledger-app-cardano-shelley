@@ -97,4 +97,4 @@ void ui_displayPoolOwnerScreen(
 void run_uiScreens_test();
 #endif // DEVEL
 
-#endif
+#endif // H_CARDANO_APP_UI_SCREENS

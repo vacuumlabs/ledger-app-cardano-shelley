@@ -14,4 +14,4 @@ size_t base58_encode(
 void run_base58_test();
 #endif
 
-#endif
+#endif // H_CARDANO_APP_BASE58
