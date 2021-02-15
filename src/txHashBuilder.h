@@ -187,6 +187,6 @@ void txHashBuilder_finalize(
 
 #ifdef DEVEL
 void run_txHashBuilder_test();
-#endif
+#endif // DEVEL
 
 #endif // H_CARDANO_APP_TX_HASH_BUILDER

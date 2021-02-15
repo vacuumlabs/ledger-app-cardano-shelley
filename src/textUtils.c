@@ -115,7 +115,7 @@ void str_traceUint64(uint64_t number)
 	str_formatUint64(number, numberStr, SIZEOF(numberStr));
 	TRACE("%s", numberStr);
 }
-#endif
+#endif // DEVEL
 
 
 // TODO: This is valid only for mainnet
@@ -214,4 +214,4 @@ size_t str_textToBuffer(const char* text, uint8_t* buffer, size_t bufferSize)
 	return textLength;
 }
 
-#endif
+#endif // DEVEL

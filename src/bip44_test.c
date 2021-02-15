@@ -60,4 +60,4 @@ void run_bip44_test()
 #undef TESTCASE
 }
 
-#endif
+#endif // DEVEL

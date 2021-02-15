@@ -16,7 +16,7 @@
 #define _TRACE(...) TRACE(__VA_ARGS__)
 #else
 #define _TRACE(...)
-#endif
+#endif // DEVEL
 
 
 // Syntactic sugar

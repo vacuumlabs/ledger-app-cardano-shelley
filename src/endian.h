@@ -57,6 +57,6 @@ inline uint64_t u8be_read(const uint8_t* inBuffer)
 
 #ifdef DEVEL
 void run_endian_test();
-#endif
+#endif // DEVEL
 
 #endif // H_CARDANO_APP_ENDIAN

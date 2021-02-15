@@ -81,6 +81,6 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params);
 
 #ifdef DEVEL
 void run_addressUtilsShelley_test();
-#endif
+#endif // DEVEL
 
 #endif // H_CARDANO_APP_ADDRESS_UTILS_SHELLEY

@@ -48,4 +48,4 @@ void handleRunTests(
 	ui_idle();
 }
 
-#endif
+#endif // DEVEL

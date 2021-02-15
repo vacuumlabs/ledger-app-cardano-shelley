@@ -102,4 +102,4 @@ void run_hash_test()
 	run_blake2b_test();
 }
 
-#endif
+#endif // DEVEL

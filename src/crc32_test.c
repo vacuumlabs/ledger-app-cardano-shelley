@@ -35,4 +35,4 @@ void run_crc32_test()
 	}
 }
 
-#endif
+#endif // DEVEL

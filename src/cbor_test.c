@@ -154,4 +154,4 @@ void run_cbor_test()
 	test_cbor_serialization();
 }
 
-#endif
+#endif // DEVEL
