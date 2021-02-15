@@ -18,4 +18,4 @@ typedef struct {
 	int ui_step;
 } ins_derive_address_context_t;
 
-#endif
+#endif // H_CARDANO_APP_DERIVE_ADDRESS

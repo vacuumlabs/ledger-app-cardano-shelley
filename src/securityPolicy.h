@@ -94,4 +94,4 @@ static inline void ENSURE_NOT_DENIED(security_policy_t policy)
 	}
 }
 
-#endif
+#endif // H_CARDANO_APP_SECURITY_POLICY

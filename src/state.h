@@ -19,4 +19,4 @@ extern int currentInstruction;
 
 extern instructionState_t instructionState;
 
-#endif
+#endif // H_CARDANO_APP_STATE

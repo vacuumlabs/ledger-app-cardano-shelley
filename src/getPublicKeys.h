@@ -1,5 +1,5 @@
-#ifndef H_CARDANO_APP_GET_PUB_KEYS
-#define H_CARDANO_APP_GET_PUB_KEYS
+#ifndef H_CARDANO_APP_GET_PUBLIC_KEYS
+#define H_CARDANO_APP_GET_PUBLIC_KEYS
 
 #include "common.h"
 #include "handlers.h"
@@ -30,4 +30,4 @@ typedef struct {
 
 handler_fn_t getPublicKeys_handleAPDU;
 
-#endif
+#endif // H_CARDANO_APP_GET_PUBLIC_KEYS

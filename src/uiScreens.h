@@ -84,4 +84,4 @@ void ui_displayPoolOwnerScreen(
         ui_callback_fn_t callback
 );
 
-#endif
+#endif // H_CARDANO_APP_UI_SCREENS
