@@ -200,4 +200,4 @@ void run_addressUtilsShelley_test()
 	testAddressDerivation();
 }
 
-#endif
+#endif // DEVEL

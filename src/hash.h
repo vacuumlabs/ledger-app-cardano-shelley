@@ -93,6 +93,6 @@ __CIPHER_DECLARE(SHA3, sha3, 256)
 
 #ifdef DEVEL
 void run_hash_test();
-#endif
+#endif // DEVEL
 
 #endif // H_CARDANO_APP_HASH

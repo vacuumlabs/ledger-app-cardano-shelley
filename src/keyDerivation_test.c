@@ -208,4 +208,4 @@ void run_key_derivation_test()
 	testChainCodeDerivation();
 }
 
-#endif
+#endif // DEVEL

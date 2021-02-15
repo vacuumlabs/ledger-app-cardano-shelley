@@ -349,4 +349,4 @@ void run_txHashBuilder_test()
 	EXPECT_EQ_BYTES(result, expected, 32);
 }
 
-#endif
+#endif // DEVEL
