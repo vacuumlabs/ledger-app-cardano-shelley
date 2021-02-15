@@ -20,4 +20,4 @@ size_t bech32_encode(const char *hrp, const uint8_t *bytes, size_t bytesSize, ch
 void run_bech32_test();
 #endif
 
-#endif /* H_CARDANO_APP_BECH32 */
+#endif // H_CARDANO_APP_BECH32

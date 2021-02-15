@@ -120,4 +120,4 @@ static inline void ui_crash_handler()
 	} \
 	END_TRY;
 
-#endif
+#endif // H_CARDANO_APP_UI_HELPERS

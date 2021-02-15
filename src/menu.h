@@ -10,4 +10,4 @@ extern const ux_menu_entry_t menu_main[4];
 extern const ux_flow_step_t* const ux_idle_flow [];
 #endif
 
-#endif
+#endif // H_CARDANO_APP_MENU

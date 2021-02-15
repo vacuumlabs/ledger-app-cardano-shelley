@@ -1,5 +1,5 @@
-#ifndef H_CARDANO_APP_UTIL
-#define H_CARDANO_APP_UTIL
+#ifndef H_CARDANO_APP_ASSERT
+#define H_CARDANO_APP_ASSERT
 
 #include "common.h"
 
@@ -28,4 +28,4 @@ extern void assert(int cond, const char* msgStr);
 
 #define ASSERT(cond) assert((cond), _SHORTEN_( _FILE_LINE_, _MAX_ASSERT_LENGTH_))
 
-#endif
+#endif // H_CARDANO_APP_ASSERT

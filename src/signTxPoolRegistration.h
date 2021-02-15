@@ -62,4 +62,4 @@ void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size
 
 bool signTxPoolRegistration_isFinished();
 
-#endif
+#endif // H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION
