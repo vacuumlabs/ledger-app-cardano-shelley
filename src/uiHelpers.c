@@ -122,7 +122,7 @@ void autoconfirmPaginatedText()
 	#endif
 }
 
-#endif
+#endif // HEADLESS
 
 static void uiCallback_init(ui_callback_t* cb, ui_callback_fn_t* confirm, ui_callback_fn_t* reject)
 {
@@ -162,7 +162,7 @@ void ui_displayPrompt(
 	if (confirm) {
 		autoconfirmPrompt();
 	}
-	#endif
+	#endif // HEADLESS
 }
 
 void ui_displayPaginatedText(
@@ -206,7 +206,7 @@ void ui_displayPaginatedText(
 	if (callback) {
 		autoconfirmPaginatedText();
 	}
-	#endif
+	#endif // HEADLESS
 }
 
 void respond_with_user_reject()
