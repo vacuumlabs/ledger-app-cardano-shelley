@@ -673,17 +673,17 @@ void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t*
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS;
 }
 
-static void _relay_addPort(tx_hash_builder_t* builder, pool_relay_t* relay)
+static void _relay_addPort(tx_hash_builder_t* builder, ipport_t* port)
 {
 	_TRACE("state = %d, remainingRelays = %u", builder->state, builder->poolCertificateData.remainingRelays);
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
 
 	//   Unsigned[port] / Null
-	if (relay->hasPort) {
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, relay->port);
-	} else {
+	if (port->isNull) {
 		BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+	} else {
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, port->number);
 	}
 }
 
@@ -769,7 +769,7 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay(
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 0);
 			}
-			_relay_addPort(builder, relay);
+			_relay_addPort(builder, &relay->port);
 			_relay_addIpv4(builder, relay);
 			_relay_addIpv6(builder, relay);
 		}
@@ -786,7 +786,7 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay(
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 1);
 			}
-			_relay_addPort(builder, relay);
+			_relay_addPort(builder, &relay->port);
 			_relay_addDnsName(builder, relay);
 		}
 		break;

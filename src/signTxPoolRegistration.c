@@ -903,18 +903,18 @@ static void handleRelay_ui_runStep()
 	UI_STEP_END(HANDLE_RELAY_STEP_INVALID);
 }
 
-static void _parsePort(pool_relay_t* relay, read_view_t* view)
+static void _parsePort(ipport_t* port, read_view_t* view)
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	uint8_t isPortGiven = parse_u1be(view);
 	if (isPortGiven == RELAY_YES) {
-		relay->hasPort = true;
-		ASSERT_TYPE(relay->port, uint16_t);
-		relay->port = parse_u2be(view);
-		TRACE("Port: %u", relay->port);
+		port->isNull = false;
+		ASSERT_TYPE(port->number, uint16_t);
+		port->number = parse_u2be(view);
+		TRACE("Port: %u", port->number);
 	} else {
 		VALIDATE(isPortGiven == RELAY_NO, ERR_INVALID_DATA);
-		relay->hasPort = false;
+		port->isNull = true;
 	}
 }
 
@@ -995,9 +995,14 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uin
 		TRACE("Relay format %u", relay->format);
 		switch (relay->format) {
 
+		// validation differs from the CDDL spec
+		// the CDDL spec allows combinations of parameters that lead
+		// to meaningless relays that are ignored by nodes
+		// so we only allow meaningful relays
+
 		case RELAY_SINGLE_HOST_IP: {
-			_parsePort(relay, &view);
-			VALIDATE(relay->hasPort, ERR_INVALID_DATA);
+			_parsePort(&relay->port, &view);
+			VALIDATE(!relay->port.isNull, ERR_INVALID_DATA);
 			_parseIpv4(relay, &view);
 			_parseIpv6(relay, &view);
 			VALIDATE(relay->hasIpv4 || relay->hasIpv6, ERR_INVALID_DATA);
@@ -1005,8 +1010,8 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uin
 		}
 
 		case RELAY_SINGLE_HOST_NAME: {
-			_parsePort(relay, &view);
-			VALIDATE(relay->hasPort, ERR_INVALID_DATA);
+			_parsePort(&relay->port, &view);
+			VALIDATE(!relay->port.isNull, ERR_INVALID_DATA);
 			_parseDnsName(relay, &view);
 			VALIDATE(relay->dnsNameSize > 0, ERR_INVALID_DATA);
 			break;

@@ -210,9 +210,9 @@ static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 	{
 		pool_relay_t relay0;
 		relay0.format = 0;
-		relay0.hasPort = true;
-		relay0.port = 1234;
 		relay0.hasIpv4 = true;
+		relay0.port.isNull = false;
+		relay0.port.number = 1234;
 		decode_hex("08080808", relay0.ipv4.ip, IPV4_SIZE);
 		relay0.hasIpv6 = false;
 		txHashBuilder_addPoolRegistrationCertificate_addRelay(builder, &relay0);
@@ -220,7 +220,7 @@ static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 	{
 		pool_relay_t relay1;
 		relay1.format = 1;
-		relay1.hasPort = false;
+		relay1.port.isNull = true;
 		// a valid DNS AAAA record, since dnsName actually is suppposed to be an A or AAAA record
 		const char* dnsName = "AAAA 2400:cb00:2049:1::a29f:1804";
 		relay1.dnsNameSize = str_textToBuffer(dnsName, relay1.dnsName, SIZEOF(relay1.dnsName));

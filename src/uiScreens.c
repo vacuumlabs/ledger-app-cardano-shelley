@@ -1,8 +1,8 @@
 #include "uiScreens.h"
 #include "bech32.h"
+#include "cardanoCertificates.h"
 #include "hexUtils.h"
 #include "textUtils.h"
-#include "cardanoCertificates.h"
 #include "signTx.h"
 #include "signTxPoolRegistration.h"
 
@@ -471,6 +471,29 @@ __noinline_due_to_stack__ void ui_displayPoolOwnerScreen(
 	ui_displayPaginatedText(
 	        firstLine,
 	        ownerDescription,
+	        callback
+	);
+}
+
+__noinline_due_to_stack__ void ui_displayIpPortScreen(
+        ipport_t* port,
+        ui_callback_fn_t callback
+)
+{
+	char portStr[sizeof "65536"];
+	explicit_bzero(portStr, SIZEOF(portStr));
+
+	if (port->isNull) {
+		snprintf(portStr, SIZEOF(portStr), "(none)");
+	} else {
+		snprintf(portStr, SIZEOF(portStr), "%u", port->number);
+	}
+
+	ASSERT(strlen(portStr) + 1 <= SIZEOF(portStr));
+
+	ui_displayPaginatedText(
+	        "Port",
+	        portStr,
 	        callback
 	);
 }

@@ -84,4 +84,9 @@ void ui_displayPoolOwnerScreen(
         ui_callback_fn_t callback
 );
 
+void ui_displayIpPortScreen(
+        ipport_t* port,
+        ui_callback_fn_t callback
+);
+
 #endif // H_CARDANO_APP_UI_SCREENS

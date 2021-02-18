@@ -38,14 +38,18 @@ typedef struct {
 	uint8_t ip[IPV6_SIZE];
 } ipv6_t;
 
+typedef struct {
+	bool isNull;
+	uint16_t number;
+} ipport_t;
+
 // see the calculation in ui_displayPoolMarginScreen() in uiScreens.c
 #define MARGIN_DENOMINATOR_MAX 1000000000000000ul // 10^15
 
 typedef struct {
 	relay_format_t format;
 
-	bool hasPort;
-	uint16_t port;
+	ipport_t port;
 
 	bool hasIpv4;
 	ipv4_t ipv4;
