@@ -499,6 +499,29 @@ __noinline_due_to_stack__ void ui_displayIpv4Screen(
 	);
 }
 
+__noinline_due_to_stack__ void ui_displayIpv6Screen(
+        ipv6_t* ipv6,
+        ui_callback_fn_t callback
+)
+{
+	char ipStr[IPV6_STR_SIZE_MAX];
+	explicit_bzero(ipStr, SIZEOF(ipStr));
+
+	if (ipv6->isNull) {
+		snprintf(ipStr, SIZEOF(ipStr), "(none)");
+	} else {
+		inet_ntop6(ipv6->ip, ipStr, SIZEOF(ipStr));
+	}
+
+	ASSERT(strlen(ipStr) + 1 <= SIZEOF(ipStr));
+
+	ui_displayPaginatedText(
+	        "IPv6 address",
+	        ipStr,
+	        callback
+	);
+}
+
 __noinline_due_to_stack__ void ui_displayIpPortScreen(
         ipport_t* port,
         ui_callback_fn_t callback

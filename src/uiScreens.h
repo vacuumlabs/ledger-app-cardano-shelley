@@ -89,6 +89,11 @@ void ui_displayIpv4Screen(
         ui_callback_fn_t callback
 );
 
+void ui_displayIpv6Screen(
+        ipv6_t* ipv6,
+        ui_callback_fn_t callback
+);
+
 void ui_displayIpPortScreen(
         ipport_t* port,
         ui_callback_fn_t callback

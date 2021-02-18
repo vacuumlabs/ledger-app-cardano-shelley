@@ -703,30 +703,32 @@ static void _relay_addIpv4(tx_hash_builder_t* builder, ipv4_t* ipv4)
 	}
 }
 
-static void _relay_addIpv6(tx_hash_builder_t* builder, pool_relay_t* relay)
+static void _relay_addIpv6(tx_hash_builder_t* builder, const ipv6_t* ipv6)
 {
 	_TRACE("state = %d, remainingRelays = %u", builder->state, builder->poolCertificateData.remainingRelays);
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
 
 	//   Bytes[ipv6] / Null
-	if (relay->hasIpv6) {
-		STATIC_ASSERT(SIZEOF(relay->ipv6.ip) == IPV6_SIZE, "wrong ipv6 size");
+	if (ipv6->isNull) {
+		BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+	} else {
+		STATIC_ASSERT(SIZEOF(ipv6->ip) == IPV6_SIZE, "wrong ipv6 size");
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, IPV6_SIZE);
 
 		// serialized as 4 big-endian uint32
 		// we need a local copy of the data to make the following pointer tricks work
-		ipv6_t ipv6 = relay->ipv6;
-		STATIC_ASSERT(SIZEOF(ipv6.ip) == 16, "wrong ipv6 size");
+		// the copy is created by memcpy instead of struct assignment to avoid compiler optimizing it away
+		uint8_t ipBuffer[IPV6_SIZE];
+		os_memcpy(ipBuffer, ipv6->ip, SIZEOF(ipBuffer));
+		STATIC_ASSERT(SIZEOF(ipBuffer) == 16, "wrong ipv6 size");
 
-		uint32_t* as_uint32 = (uint32_t*)(ipv6.ip);
+		uint32_t* as_uint32 = (uint32_t*) ipBuffer;
 		for (size_t i = 0; i < 4; i++) {
 			uint8_t chunk[4];
 			u4be_write(chunk, as_uint32[i]);
 			BUILDER_APPEND_DATA(chunk, 4);
 		}
-	} else {
-		BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
 	}
 }
 
@@ -771,7 +773,7 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay(
 			}
 			_relay_addPort(builder, &relay->port);
 			_relay_addIpv4(builder, &relay->ipv4);
-			_relay_addIpv6(builder, relay);
+			_relay_addIpv6(builder, &relay->ipv6);
 		}
 		break;
 	}

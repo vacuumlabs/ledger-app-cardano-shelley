@@ -214,7 +214,7 @@ static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 		relay0.port.number = 1234;
 		relay0.ipv4.isNull = false;
 		decode_hex("08080808", relay0.ipv4.ip, IPV4_SIZE);
-		relay0.hasIpv6 = false;
+		relay0.ipv6.isNull = true;
 		txHashBuilder_addPoolRegistrationCertificate_addRelay(builder, &relay0);
 	}
 	{

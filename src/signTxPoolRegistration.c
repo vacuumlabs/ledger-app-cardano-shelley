@@ -935,20 +935,20 @@ static void _parseIpv4(ipv4_t* ipv4, read_view_t* view)
 	}
 }
 
-static void _parseIpv6(pool_relay_t* relay, read_view_t* view)
+static void _parseIpv6(ipv6_t* ipv6, read_view_t* view)
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	uint8_t isIpv6Given = parse_u1be(view);
 	if (isIpv6Given == RELAY_YES) {
-		relay->hasIpv6 = true;
+		ipv6->isNull = false;
 		VALIDATE(view_remainingSize(view) >= IPV6_SIZE, ERR_INVALID_DATA);
-		STATIC_ASSERT(SIZEOF(relay->ipv6.ip) == IPV6_SIZE, "wrong ipv6 size");
-		view_memmove(relay->ipv6.ip, view, IPV6_SIZE);
+		STATIC_ASSERT(SIZEOF(ipv6->ip) == IPV6_SIZE, "wrong ipv6 size");
+		view_memmove(ipv6->ip, view, IPV6_SIZE);
 		TRACE("ipv6");
-		TRACE_BUFFER(relay->ipv6.ip, IPV6_SIZE);
+		TRACE_BUFFER(ipv6->ip, IPV6_SIZE);
 	} else {
 		VALIDATE(isIpv6Given == RELAY_NO, ERR_INVALID_DATA);
-		relay->hasIpv6 = false;
+		ipv6->isNull = true;
 	}
 }
 
@@ -1004,8 +1004,8 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uin
 			_parsePort(&relay->port, &view);
 			VALIDATE(!relay->port.isNull, ERR_INVALID_DATA);
 			_parseIpv4(&relay->ipv4, &view);
-			_parseIpv6(relay, &view);
-			VALIDATE(!relay->ipv4.isNull || relay->hasIpv6, ERR_INVALID_DATA);
+			_parseIpv6(&relay->ipv6, &view);
+			VALIDATE(!relay->ipv4.isNull || !relay->ipv6.isNull, ERR_INVALID_DATA);
 			break;
 		}
 

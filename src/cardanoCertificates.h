@@ -36,6 +36,7 @@ typedef struct {
 } ipv4_t;
 
 typedef struct {
+	bool isNull;
 	uint8_t ip[IPV6_SIZE];
 } ipv6_t;
 
@@ -53,8 +54,6 @@ typedef struct {
 	ipport_t port;
 
 	ipv4_t ipv4;
-
-	bool hasIpv6;
 	ipv6_t ipv6;
 
 	size_t dnsNameSize;
