@@ -131,7 +131,7 @@ static void uiCallback_init(ui_callback_t* cb, ui_callback_fn_t* confirm, ui_cal
 	cb->reject = reject;
 }
 
-__noinline_due_to_stack__ void ui_displayPrompt(
+void ui_displayPrompt(
         const char* headerStr,
         const char* bodyStr,
         ui_callback_fn_t* confirm,
@@ -169,7 +169,7 @@ __noinline_due_to_stack__ void ui_displayPrompt(
 	#endif // HEADLESS
 }
 
-__noinline_due_to_stack__ void ui_displayPaginatedText(
+void ui_displayPaginatedText(
         const char* headerStr,
         const char* bodyStr,
         ui_callback_fn_t* callback)

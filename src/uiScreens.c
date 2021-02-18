@@ -8,7 +8,7 @@
 #include "signTxPoolRegistration.h"
 
 
-__noinline_due_to_stack__ void ui_displayPathScreen(
+void ui_displayPathScreen(
         const char* screenHeader,
         const bip44_path_t* path,
         ui_callback_fn_t callback
@@ -29,7 +29,7 @@ __noinline_due_to_stack__ void ui_displayPathScreen(
 
 // the given path typically corresponds to an account
 // if it contains anything more, we display just the whole path
-__noinline_due_to_stack__ void ui_displayAccountScreen(
+void ui_displayAccountScreen(
         const char* screenHeader,
         const bip44_path_t* path,
         ui_callback_fn_t callback
@@ -81,7 +81,7 @@ __noinline_due_to_stack__ void ui_displayAccountScreen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayAddressScreen(
+void ui_displayAddressScreen(
         const char* screenHeader,
         const uint8_t* addressBuffer, size_t addressSize,
         ui_callback_fn_t callback
@@ -114,7 +114,7 @@ static const char STAKING_HEADING_HASH[]    = "Staking key hash: ";
 static const char STAKING_HEADING_POINTER[] = "Staking key pointer: ";
 static const char STAKING_HEADING_WARNING[] = "WARNING: ";
 
-__noinline_due_to_stack__ void ui_displayStakingInfoScreen(
+void ui_displayStakingInfoScreen(
         const addressParams_t* addressParams,
         ui_callback_fn_t callback
 )
@@ -177,7 +177,7 @@ __noinline_due_to_stack__ void ui_displayStakingInfoScreen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayTokenNameScreen(
+void ui_displayTokenNameScreen(
         token_amount_t* token,
         ui_callback_fn_t callback
 )
@@ -204,7 +204,7 @@ __noinline_due_to_stack__ void ui_displayTokenNameScreen(
 	}
 }
 
-__noinline_due_to_stack__ void ui_displayAdaAmountScreen(
+void ui_displayAdaAmountScreen(
         const char* screenHeader,
         uint64_t amount,
         ui_callback_fn_t callback
@@ -223,7 +223,7 @@ __noinline_due_to_stack__ void ui_displayAdaAmountScreen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayUint64Screen(
+void ui_displayUint64Screen(
         const char* screenHeader,
         uint64_t value,
         ui_callback_fn_t callback
@@ -239,7 +239,7 @@ __noinline_due_to_stack__ void ui_displayUint64Screen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayValidityBoundaryScreen(
+void ui_displayValidityBoundaryScreen(
         const char* screenHeader,
         uint64_t boundary,
         uint8_t networkId, uint32_t protocolMagic,
@@ -267,7 +267,7 @@ __noinline_due_to_stack__ void ui_displayValidityBoundaryScreen(
 	}
 }
 
-__noinline_due_to_stack__ void ui_displayNetworkParamsScreen(
+void ui_displayNetworkParamsScreen(
         const char* screenHeader,
         uint8_t networkId,
         uint32_t protocolMagic,
@@ -295,7 +295,7 @@ __noinline_due_to_stack__ void ui_displayNetworkParamsScreen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayHexBufferScreen(
+void ui_displayHexBufferScreen(
         const char* screenHeader,
         const uint8_t* buffer, size_t bufferSize,
         ui_callback_fn_t callback
@@ -323,7 +323,7 @@ __noinline_due_to_stack__ void ui_displayHexBufferScreen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayPoolIdScreen(
+void ui_displayPoolIdScreen(
         const uint8_t* poolIdBuffer,
         size_t poolIdSize,
         ui_callback_fn_t callback
@@ -351,7 +351,7 @@ __noinline_due_to_stack__ void ui_displayPoolIdScreen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayPoolMarginScreen(
+void ui_displayPoolMarginScreen(
         uint64_t marginNumerator, uint64_t marginDenominator,
         ui_callback_fn_t callback
 )
@@ -384,7 +384,7 @@ __noinline_due_to_stack__ void ui_displayPoolMarginScreen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayPoolOwnerScreen(
+void ui_displayPoolOwnerScreen(
         const pool_owner_t* owner,
         uint32_t ownerIndex,
         uint8_t networkId,
@@ -476,7 +476,7 @@ __noinline_due_to_stack__ void ui_displayPoolOwnerScreen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayIpv4Screen(
+void ui_displayIpv4Screen(
         ipv4_t* ipv4,
         ui_callback_fn_t callback
 )
@@ -499,7 +499,7 @@ __noinline_due_to_stack__ void ui_displayIpv4Screen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayIpv6Screen(
+void ui_displayIpv6Screen(
         ipv6_t* ipv6,
         ui_callback_fn_t callback
 )
@@ -522,7 +522,7 @@ __noinline_due_to_stack__ void ui_displayIpv6Screen(
 	);
 }
 
-__noinline_due_to_stack__ void ui_displayIpPortScreen(
+void ui_displayIpPortScreen(
         ipport_t* port,
         ui_callback_fn_t callback
 )

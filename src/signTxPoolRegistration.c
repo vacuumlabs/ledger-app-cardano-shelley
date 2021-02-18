@@ -155,7 +155,8 @@ static void handlePoolInit_ui_runStep()
 	UI_STEP_END(HANDLE_POOL_INIT_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -220,7 +221,8 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleInitAPDU(uint
 
 // ============================== POOL KEY HASH / ID ==============================
 
-__noinline_due_to_stack__ static void _calculatePooKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
+__noinline_due_to_stack__
+static void _calculatePooKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
 {
 	switch (poolId->descriptionKind) {
 
@@ -311,7 +313,8 @@ static void _parsePoolId(read_view_t* view)
 	}
 }
 
-__noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -413,7 +416,8 @@ static void handlePoolVrfKey_ui_runStep()
 	UI_STEP_END(HANDLE_POOL_VRF_KEY_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -508,7 +512,8 @@ static void handlePoolFinancials_ui_runStep()
 	UI_STEP_END(HANDLE_POOL_FINANCIALS_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -569,7 +574,8 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolFinancial
 
 // ============================== POOL REWARD ACCOUNT ==============================
 
-__noinline_due_to_stack__ static void _calculateRewardAccount(
+__noinline_due_to_stack__
+static void _calculateRewardAccount(
         const pool_reward_account_t* rewardAccount,
         uint8_t* rewardAccountBuffer
 )
@@ -657,7 +663,8 @@ static void _parsePoolRewardAccount(read_view_t* view)
 	}
 }
 
-__noinline_due_to_stack__ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -756,7 +763,8 @@ static void handleOwner_ui_runStep()
 	UI_STEP_END(HANDLE_OWNER_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void _addOwnerToTxHash()
+__noinline_due_to_stack__
+static void _addOwnerToTxHash()
 {
 	pool_owner_t* owner = &subctx->stateData.owner;
 
@@ -791,7 +799,8 @@ __noinline_due_to_stack__ static void _addOwnerToTxHash()
 	TRACE();
 }
 
-__noinline_due_to_stack__ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1039,7 +1048,8 @@ format 1 single_host_name:
 format 2 multi_host_name:
 [0-64B dns_name]
 */
-__noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1261,7 +1271,8 @@ static void handleNullMetadata()
 	handleNullMetadata_ui_runStep();
 }
 
-__noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1373,7 +1384,8 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{

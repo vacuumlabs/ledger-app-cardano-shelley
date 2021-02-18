@@ -63,14 +63,17 @@ typedef struct {
 
 bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams);
 
-__noinline_due_to_stack__ size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath);
+__noinline_due_to_stack__
+size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath);
 
 size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize);
 
-__noinline_due_to_stack__ size_t constructRewardAddressFromKeyPath(
+__noinline_due_to_stack__
+size_t constructRewardAddressFromKeyPath(
         const bip44_path_t* path, uint8_t networkId, uint8_t* outBuffer, size_t outSize
 );
-__noinline_due_to_stack__ size_t constructRewardAddressFromKeyHash(
+__noinline_due_to_stack__
+size_t constructRewardAddressFromKeyHash(
         uint8_t networkId,
         const uint8_t* stakingKeyHashBuffer, size_t stakingKeyHashSize,
         uint8_t* outBuffer, size_t outSize

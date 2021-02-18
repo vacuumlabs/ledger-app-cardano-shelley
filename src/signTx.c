@@ -269,7 +269,8 @@ static void signTx_handleInit_ui_runStep()
 	UI_STEP_END(HANDLE_INIT_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -499,7 +500,8 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -612,7 +614,8 @@ static void signTx_handleFee_ui_runStep()
 	UI_STEP_END(HANDLE_FEE_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -687,7 +690,8 @@ static void signTx_handleTtl_ui_runStep()
 	UI_STEP_END(HANDLE_TTL_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -949,7 +953,8 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	ASSERT(view_remainingSize(&view) == 0);
 }
 
-__noinline_due_to_stack__ static void _addCertificateDataToTx(
+__noinline_due_to_stack__
+static void _addCertificateDataToTx(
         sign_tx_certificate_data_t* certificateData,
         tx_hash_builder_t* txHashBuilder
 )
@@ -1003,7 +1008,8 @@ __noinline_due_to_stack__ static void _addCertificateDataToTx(
 	}
 }
 
-__noinline_due_to_stack__ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 
@@ -1137,7 +1143,8 @@ static void signTx_handleWithdrawal_ui_runStep()
 	UI_STEP_END(HANDLE_WITHDRAWAL_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void _addWithdrawalToTxHash()
+__noinline_due_to_stack__
+static void _addWithdrawalToTxHash()
 {
 	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 
@@ -1156,7 +1163,8 @@ __noinline_due_to_stack__ static void _addWithdrawalToTxHash()
 	);
 }
 
-__noinline_due_to_stack__ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1246,7 +1254,8 @@ static void signTx_handleMetadata_ui_runStep()
 	UI_STEP_END(HANDLE_METADATA_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1411,7 +1420,8 @@ static void signTx_handleConfirm_ui_runStep()
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
-__noinline_due_to_stack__  static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1506,7 +1516,8 @@ static void signTx_handleWitness_ui_runStep()
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+__noinline_due_to_stack__
+static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
