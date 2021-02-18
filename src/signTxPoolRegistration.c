@@ -128,7 +128,7 @@ static inline void advanceState()
 // ============================== INIT ==============================
 
 enum {
-	HANDLE_POOL_INIT_STEP_DISPLAY = 6310,
+	HANDLE_POOL_INIT_STEP_DISPLAY = 6100,
 	HANDLE_POOL_INIT_STEP_RESPOND,
 	HANDLE_POOL_INIT_STEP_INVALID,
 } ;
@@ -246,7 +246,7 @@ __noinline_due_to_stack__ static void _calculatePooKeyHash(const pool_id_t* pool
 }
 
 enum {
-	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH = 6320,
+	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH = 6200,
 	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID,
 	HANDLE_POOL_KEY_STEP_RESPOND,
 	HANDLE_POOL_KEY_STEP_INVALID,
@@ -385,7 +385,7 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolKeyAPDU(u
 // ============================== VRF KEY HASH ==============================
 
 enum {
-	HANDLE_POOL_VRF_KEY_STEP_DISPLAY = 6330,
+	HANDLE_POOL_VRF_KEY_STEP_DISPLAY = 6300,
 	HANDLE_POOL_VRF_KEY_STEP_RESPOND,
 	HANDLE_POOL_VRF_KEY_STEP_INVALID,
 } ;
@@ -465,7 +465,7 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleVrfKeyAPDU(ui
 // ============================== POOL FINANCIALS ==============================
 
 enum {
-	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE = 6340,
+	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE = 6400,
 	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_COST,
 	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_MARGIN,
 	HANDLE_POOL_FINANCIALS_STEP_RESPOND,
@@ -594,7 +594,7 @@ __noinline_due_to_stack__ static void _calculateRewardAccount(
 }
 
 enum {
-	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY = 6350,
+	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY = 6500,
 	HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND,
 	HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID,
 } ;
@@ -714,7 +714,7 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRewardAccount
 // ============================== OWNER ==============================
 
 enum {
-	HANDLE_OWNER_STEP_DISPLAY = 6360,
+	HANDLE_OWNER_STEP_DISPLAY = 6600,
 	HANDLE_OWNER_STEP_RESPOND,
 	HANDLE_OWNER_STEP_INVALID,
 };
@@ -1051,7 +1051,7 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uin
 // ============================== METADATA ==============================
 
 enum {
-	HANDLE_NULL_METADATA_STEP_DISPLAY = 6380,
+	HANDLE_NULL_METADATA_STEP_DISPLAY = 6900,
 	HANDLE_NULL_METADATA_STEP_RESPOND,
 	HANDLE_NULL_METADATA_STEP_INVALID,
 };
@@ -1079,7 +1079,7 @@ static void handleNullMetadata_ui_runStep()
 }
 
 enum {
-	HANDLE_METADATA_STEP_DISPLAY_URL = 6350,
+	HANDLE_METADATA_STEP_DISPLAY_URL = 7000,
 	HANDLE_METADATA_STEP_DISPLAY_HASH,
 	HANDLE_METADATA_STEP_RESPOND,
 	HANDLE_METADATA_STEP_INVALID,
@@ -1237,7 +1237,7 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolMetadataA
 // ============================== CONFIRM ==============================
 
 enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 6390,
+	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 7100,
 	HANDLE_CONFIRM_STEP_RESPOND,
 	HANDLE_CONFIRM_STEP_INVALID,
 };
