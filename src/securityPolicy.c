@@ -236,15 +236,18 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	case SIGN_TX_USECASE_ORDINARY_TX:
 		// We always show third-party output addresses
 		SHOW();
+		break;
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		// all the funds are provided by the operator
 		// and thus outputs are irrelevant to the owner
 		ALLOW();
+		break;
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
+		break;
 		#endif // POOL_OPERATOR_APP
 
 	default:
@@ -282,16 +285,17 @@ security_policy_t policyForSignTxOutputAddressParams(
 		SHOW_UNLESS(is_standard_base_address(params));
 
 		ALLOW();
+		break;
 	}
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
 		// we forbid these to avoid leaking information
 		// (since the outputs are not shown, the user is unaware of what addresses are being derived)
 		// it also makes the tx signing faster if all outputs are given as addresses
 		DENY();
+		break;
 	}
-	default: {
+	default:
 		ASSERT(false);
-	}
 	}
 
 	DENY(); // should not be reached
@@ -331,12 +335,14 @@ security_policy_t policyForSignTxFee(
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		#endif // POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_ORDINARY_TX:
-		// always show the fee in ordinary transactions
+		// always show the fee if it is paid by the signer
 		SHOW();
+		break;
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		// fees are paid by the operator and are thus irrelevant for owners
 		ALLOW();
+		break;
 
 	default:
 		ASSERT(false);
@@ -369,6 +375,7 @@ security_policy_t policyForSignTxCertificate(
 	case SIGN_TX_USECASE_ORDINARY_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
+		break;
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
@@ -376,6 +383,7 @@ security_policy_t policyForSignTxCertificate(
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
+		break;
 
 	default:
 		ASSERT(false);
@@ -414,18 +422,18 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		DENY();
+		break;
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		// TODO uncomment when merged with cold key derivation
-		// TODO are there other checks?
-		// DENY_UNLESS(bip44_hasValidCardanoPoolColdKeyPrefix(poolIdPath));
+		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
 		PROMPT();
+		break;
+		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
 	}
-		#endif // POOL_OPERATOR_APP
 
 	DENY(); // should not be reached
 }
@@ -439,11 +447,13 @@ security_policy_t policyForSignTxStakePoolRegistrationPoolId(
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(poolId->descriptionKind == DATA_DESCRIPTION_HASH);
 		SHOW();
+		break;
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(poolId->descriptionKind == DATA_DESCRIPTION_PATH);
 		SHOW();
+		break;
 		#endif // POOL_OPERATOR_APP
 
 	default:
@@ -460,10 +470,12 @@ security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		ALLOW();
+		break;
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
+		break;
 		#endif // POOL_OPERATOR_APP
 
 	default:
@@ -482,10 +494,12 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(poolRewardAccount->descriptionKind == DATA_DESCRIPTION_HASH);
 		SHOW();
+		break;
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
+		break;
 		#endif // POOL_OPERATOR_APP
 
 	default:
@@ -503,14 +517,16 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 	if (owner->descriptionKind == DATA_DESCRIPTION_PATH)
 		DENY_UNLESS(is_valid_stake_pool_owner_path(&owner->path));
 
-	switch(signTxUsecase) {
+	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		SHOW();
+		break;
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(owner->descriptionKind == DATA_DESCRIPTION_HASH);
 		SHOW();
+		break;
 		#endif // POOL_OPERATOR_APP
 
 	default:
@@ -524,13 +540,15 @@ security_policy_t policyForSignTxStakePoolRegistrationRelay(
         const pool_relay_t* relay MARK_UNUSED
 )
 {
-	switch(signTxUsecase) {
+	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		ALLOW();
+		break;
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
+		break;
 		#endif // POOL_OPERATOR_APP
 
 	default:
