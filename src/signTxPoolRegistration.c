@@ -870,27 +870,42 @@ enum {
 };
 
 enum {
-	HANDLE_RELAY_STEP_DISPLAY = 6370,
-	HANDLE_RELAY_STEP_RESPOND,
-	HANDLE_RELAY_STEP_INVALID,
+	HANDLE_RELAY_IP_STEP_DISPLAY_IPV4 = 6700,
+	HANDLE_RELAY_IP_STEP_DISPLAY_IPV6,
+	HANDLE_RELAY_IP_STEP_DISPLAY_PORT,
+	HANDLE_RELAY_IP_STEP_RESPOND,
+	HANDLE_RELAY_IP_STEP_INVALID,
 };
 
-static void handleRelay_ui_runStep()
+static void handleRelay_ip_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handleRelay_ui_runStep;
+	ui_callback_fn_t* this_fn = handleRelay_ip_ui_runStep;
+
+	pool_relay_t* relay = &subctx->stateData.relay;
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
-	UI_STEP(HANDLE_RELAY_STEP_DISPLAY) {
-		ui_displayPaginatedText(
-		        "Relay TODO",
-		        "TODO",
+	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_IPV4) {
+		ui_displayIpv4Screen(
+		        &relay->ipv4,
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_RELAY_STEP_RESPOND) {
+	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_IPV6) {
+		ui_displayIpv6Screen(
+		        &relay->ipv6,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_PORT) {
+		ui_displayIpPortScreen(
+		        &relay->port,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_RELAY_IP_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 
 		subctx->currentRelay++;
@@ -900,7 +915,56 @@ static void handleRelay_ui_runStep()
 			advanceState();
 		}
 	}
-	UI_STEP_END(HANDLE_RELAY_STEP_INVALID);
+	UI_STEP_END(HANDLE_RELAY_IP_STEP_INVALID);
+}
+
+enum {
+	HANDLE_RELAY_DNS_STEP_DISPLAY_PORT = 6800,
+	HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME,
+	HANDLE_RELAY_DNS_STEP_RESPOND,
+	HANDLE_RELAY_DNS_STEP_INVALID,
+};
+
+static void handleRelay_dns_ui_runStep()
+{
+	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
+	ui_callback_fn_t* this_fn = handleRelay_dns_ui_runStep;
+
+	pool_relay_t* relay = &subctx->stateData.relay;
+
+	UI_STEP_BEGIN(subctx->ui_step);
+
+	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_PORT) {
+		ui_displayIpPortScreen(
+		        &relay->port,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME) {
+		char dnsNameStr[1 + DNS_NAME_SIZE_MAX];
+		ASSERT(relay->dnsNameSize <= DNS_NAME_SIZE_MAX);
+		os_memcpy(dnsNameStr, relay->dnsName, relay->dnsNameSize);
+		dnsNameStr[relay->dnsNameSize] = '\0';
+		ASSERT(strlen(dnsNameStr) == relay->dnsNameSize);
+
+		ui_displayPaginatedText(
+		        "Dns name",
+		        dnsNameStr,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_RELAY_DNS_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		subctx->currentRelay++;
+		TRACE("current relay %d", subctx->currentRelay);
+
+		if (subctx->currentRelay == subctx->numRelays) {
+			advanceState();
+		}
+	}
+	UI_STEP_END(HANDLE_RELAY_DNS_STEP_INVALID);
 }
 
 static void _parsePort(ipport_t* port, read_view_t* view)
@@ -956,6 +1020,8 @@ static void _parseDnsName(pool_relay_t* relay, read_view_t* view)
 {
 	relay->dnsNameSize = view_remainingSize(view);
 	VALIDATE(relay->dnsNameSize <= DNS_NAME_SIZE_MAX, ERR_INVALID_DATA);
+	// TODO what about spaces? our display format does not allow to distinguish among trailing spaces
+	// TODO consider using str_isAsciiPrintableBuffer
 	str_validateTextBuffer(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view));
 	view_memmove(relay->dnsName, view, relay->dnsNameSize);
 }
@@ -1038,18 +1104,53 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uin
 	txHashBuilder_addPoolRegistrationCertificate_addRelay(txHashBuilder, relay);
 
 	{
-		// select UI steps
+		int respondStep = -1;
+		int displayStep = -1;
+		void (*uiFn)() = NULL;
+
+		switch (relay->format) {
+
+		case RELAY_SINGLE_HOST_IP: {
+			respondStep = HANDLE_RELAY_IP_STEP_RESPOND;
+			displayStep = HANDLE_RELAY_IP_STEP_DISPLAY_IPV4;
+			uiFn = handleRelay_ip_ui_runStep;
+			break;
+		}
+
+		case RELAY_SINGLE_HOST_NAME: {
+			respondStep = HANDLE_RELAY_DNS_STEP_RESPOND;
+			displayStep = HANDLE_RELAY_DNS_STEP_DISPLAY_PORT;
+			uiFn = handleRelay_dns_ui_runStep;
+			break;
+		}
+
+		case RELAY_MULTIPLE_HOST_NAME: {
+			respondStep = HANDLE_RELAY_DNS_STEP_RESPOND;
+			displayStep = HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME;
+			uiFn = handleRelay_dns_ui_runStep;
+			break;
+		}
+
+		default:
+			THROW(ERR_INVALID_DATA);
+		}
+
+		ASSERT(respondStep != -1);
+		ASSERT(displayStep != -1);
+		ASSERT(uiFn != NULL);
+
+		// select UI steps and call ui handler
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_RELAY_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_RELAY_STEP_RESPOND);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, respondStep);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, displayStep);
 #	undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
-	}
 
-	handleRelay_ui_runStep();
+		uiFn();
+	}
 }
 
 
@@ -1204,6 +1305,8 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handlePoolMetadataA
 			VALIDATE(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX, ERR_INVALID_DATA);
 			ASSERT(SIZEOF(md->url) >= md->urlSize);
 			view_memmove(md->url, &view, md->urlSize);
+			// TODO what about spaces? our display format does not allow to distinguish among trailing spaces
+			// TODO consider using str_isAsciiPrintableBuffer
 			str_validateTextBuffer(md->url, md->urlSize);
 		}
 
