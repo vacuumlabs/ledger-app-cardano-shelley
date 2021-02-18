@@ -918,20 +918,20 @@ static void _parsePort(ipport_t* port, read_view_t* view)
 	}
 }
 
-static void _parseIpv4(pool_relay_t* relay, read_view_t* view)
+static void _parseIpv4(ipv4_t* ipv4, read_view_t* view)
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	uint8_t isIpv4Given = parse_u1be(view);
 	if (isIpv4Given == RELAY_YES) {
-		relay->hasIpv4 = true;
+		ipv4->isNull = false;
 		VALIDATE(view_remainingSize(view) >= IPV4_SIZE, ERR_INVALID_DATA);
-		STATIC_ASSERT(sizeof(relay->ipv4.ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
-		view_memmove(relay->ipv4.ip, view, IPV4_SIZE);
+		STATIC_ASSERT(sizeof(ipv4->ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
+		view_memmove(ipv4->ip, view, IPV4_SIZE);
 		TRACE("ipv4");
-		TRACE_BUFFER(relay->ipv4.ip, IPV4_SIZE);
+		TRACE_BUFFER(ipv4->ip, IPV4_SIZE);
 	} else {
 		VALIDATE(isIpv4Given == RELAY_NO, ERR_INVALID_DATA);
-		relay->hasIpv4 = false;
+		ipv4->isNull = true;
 	}
 }
 
@@ -1003,9 +1003,9 @@ __noinline_due_to_stack__ static void signTxPoolRegistration_handleRelayAPDU(uin
 		case RELAY_SINGLE_HOST_IP: {
 			_parsePort(&relay->port, &view);
 			VALIDATE(!relay->port.isNull, ERR_INVALID_DATA);
-			_parseIpv4(relay, &view);
+			_parseIpv4(&relay->ipv4, &view);
 			_parseIpv6(relay, &view);
-			VALIDATE(relay->hasIpv4 || relay->hasIpv6, ERR_INVALID_DATA);
+			VALIDATE(!relay->ipv4.isNull || relay->hasIpv6, ERR_INVALID_DATA);
 			break;
 		}
 

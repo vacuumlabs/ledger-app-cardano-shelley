@@ -31,6 +31,7 @@ typedef enum {
 } relay_format_t;
 
 typedef struct {
+	bool isNull;
 	uint8_t ip[IPV4_SIZE];
 } ipv4_t;
 
@@ -51,7 +52,6 @@ typedef struct {
 
 	ipport_t port;
 
-	bool hasIpv4;
 	ipv4_t ipv4;
 
 	bool hasIpv6;

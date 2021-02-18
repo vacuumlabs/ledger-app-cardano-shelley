@@ -687,19 +687,19 @@ static void _relay_addPort(tx_hash_builder_t* builder, ipport_t* port)
 	}
 }
 
-static void _relay_addIpv4(tx_hash_builder_t* builder, pool_relay_t* relay)
+static void _relay_addIpv4(tx_hash_builder_t* builder, ipv4_t* ipv4)
 {
 	_TRACE("state = %d, remainingRelays = %u", builder->state, builder->poolCertificateData.remainingRelays);
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS);
 
 	//   Bytes[ipv4] / Null
-	if (relay->hasIpv4) {
-		STATIC_ASSERT(sizeof(relay->ipv4.ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
-		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, IPV4_SIZE);
-		BUILDER_APPEND_DATA(relay->ipv4.ip, IPV4_SIZE);
-	} else {
+	if (ipv4->isNull) {
 		BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+	} else {
+		STATIC_ASSERT(sizeof(ipv4->ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, IPV4_SIZE);
+		BUILDER_APPEND_DATA(ipv4->ip, IPV4_SIZE);
 	}
 }
 
@@ -770,7 +770,7 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay(
 				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 0);
 			}
 			_relay_addPort(builder, &relay->port);
-			_relay_addIpv4(builder, relay);
+			_relay_addIpv4(builder, &relay->ipv4);
 			_relay_addIpv6(builder, relay);
 		}
 		break;

@@ -14,6 +14,7 @@
 #include "crc32.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
+#include "ipUtils.h"
 #include "uiHelpers.h"
 
 void handleRunTests(
@@ -34,6 +35,7 @@ void handleRunTests(
 		run_crc32_test();
 		run_endian_test();
 		run_textUtils_test();
+		run_ipUtils_test();
 		run_hash_test();
 		run_cbor_test();
 		run_bip44_test();

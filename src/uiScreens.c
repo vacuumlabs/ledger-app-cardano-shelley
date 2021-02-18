@@ -2,6 +2,7 @@
 #include "bech32.h"
 #include "cardanoCertificates.h"
 #include "hexUtils.h"
+#include "ipUtils.h"
 #include "textUtils.h"
 #include "signTx.h"
 #include "signTxPoolRegistration.h"
@@ -471,6 +472,29 @@ __noinline_due_to_stack__ void ui_displayPoolOwnerScreen(
 	ui_displayPaginatedText(
 	        firstLine,
 	        ownerDescription,
+	        callback
+	);
+}
+
+__noinline_due_to_stack__ void ui_displayIpv4Screen(
+        ipv4_t* ipv4,
+        ui_callback_fn_t callback
+)
+{
+	char ipStr[IPV4_STR_SIZE_MAX];
+	explicit_bzero(ipStr, SIZEOF(ipStr));
+
+	if (ipv4->isNull) {
+		snprintf(ipStr, SIZEOF(ipStr), "(none)");
+	} else {
+		inet_ntop4(ipv4->ip, ipStr, SIZEOF(ipStr));
+	}
+
+	ASSERT(strlen(ipStr) + 1 <= SIZEOF(ipStr));
+
+	ui_displayPaginatedText(
+	        "IPv4 address",
+	        ipStr,
 	        callback
 	);
 }

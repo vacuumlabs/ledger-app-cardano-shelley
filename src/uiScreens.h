@@ -84,6 +84,11 @@ void ui_displayPoolOwnerScreen(
         ui_callback_fn_t callback
 );
 
+void ui_displayIpv4Screen(
+        ipv4_t* ipv4,
+        ui_callback_fn_t callback
+);
+
 void ui_displayIpPortScreen(
         ipport_t* port,
         ui_callback_fn_t callback
