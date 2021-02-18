@@ -340,6 +340,10 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2, uint8_t*
 		switch(ctx->commonTxData.signTxUsecase) {
 		case SIGN_TX_USECASE_ORDINARY_TX:
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+			#ifdef POOL_OPERATOR_APP
+		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+			#endif // POOL_OPERATOR_APP
+
 			// these usecases are allowed
 			break;
 
