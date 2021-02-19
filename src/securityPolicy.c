@@ -590,6 +590,23 @@ static inline bool is_valid_withdrawal_witness(const bip44_path_t* pathSpec)
 	return bip44_isValidStakingKeyPath(pathSpec);
 }
 
+static security_policy_t policyForInputSignTxWitness(
+	const bip44_path_t* pathSpec
+)
+{
+	DENY_IF(is_too_deep(pathSpec));
+	WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
+	ALLOW();
+}
+
+static security_policy_t policyForWithdrawalSignTxWitness(
+	const bip44_path_t* pathSpec
+)
+{
+	WARN_UNLESS(has_reasonable_account(pathSpec));
+	ALLOW();
+}
+
 // For each transaction witness
 // Note: witnesses reveal public key of an address
 // and Ledger *does not* check whether they correspond to previously declared UTxOs
@@ -602,14 +619,9 @@ security_policy_t policyForSignTxWitness(
 
 	case SIGN_TX_USECASE_ORDINARY_TX: {
 		if (is_valid_input_witness(pathSpec)) {
-			DENY_IF(is_too_deep(pathSpec));
-			WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
-			ALLOW();
-
+			return policyForInputSignTxWitness(pathSpec);
 		}  else if (is_valid_withdrawal_witness(pathSpec)) {
-			WARN_UNLESS(has_reasonable_account(pathSpec));
-			ALLOW();
-
+			return policyForWithdrawalSignTxWitness(pathSpec);
 		} else {
 			DENY();
 		}
@@ -625,8 +637,15 @@ security_policy_t policyForSignTxWitness(
 
 	#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
-		// TODO there could be two witnesses, one for pool key, one for pool owner
-		// TODO but operator is also paying for the tx, so ordinary witnesses too
+		if (is_valid_input_witness(pathSpec)) {
+			return policyForInputSignTxWitness(pathSpec);
+		}  else if (is_valid_withdrawal_witness(pathSpec)) {
+			return policyForWithdrawalSignTxWitness(pathSpec);
+		} else {
+			// pool id witness
+			DENY_UNLESS(bip44_isValidPoolColdKeyPath(pathSpec));
+			ALLOW();
+		}
 		break;
 	}
 	#endif // POOL_OPERATOR_APP
