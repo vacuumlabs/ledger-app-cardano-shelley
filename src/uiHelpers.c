@@ -72,7 +72,7 @@ void uiCallback_reject(ui_callback_t* cb)
 }
 
 #ifdef HEADLESS
-static int HEADLESS_DELAY = 100;
+static int HEADLESS_DELAY = 20;
 
 void ui_displayPrompt_headless_cb(bool ux_allowed)
 {
