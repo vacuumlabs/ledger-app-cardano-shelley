@@ -12,13 +12,24 @@
 #include "endian.h"
 #include "cardano.h"
 
+static bool isPathAllowed(const bip44_path_t* pathSpec)
+{
+	if (bip44_hasValidCardanoWalletPrefix(pathSpec)) return true;
+
+	#ifdef POOL_OPERATOR_APP
+	if (bip44_isValidPoolColdKeyPath(pathSpec)) return true;
+	#endif // POOL_OPERATOR_APP
+
+	return false;
+}
+
 void derivePrivateKey(
         const bip44_path_t* pathSpec,
         chain_code_t* chainCode,
         privateKey_t* privateKey
 )
 {
-	if (!bip44_hasValidCardanoWalletPrefix(pathSpec) && !bip44_isValidPoolColdKeyPath(pathSpec)) {
+	if (!isPathAllowed(pathSpec)) {
 		THROW(ERR_INVALID_BIP44_PATH);
 	}
 	// Sanity check

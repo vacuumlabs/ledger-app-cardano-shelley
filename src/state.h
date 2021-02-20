@@ -12,11 +12,11 @@
 typedef union {
 	// Here should go states of all instructions
 	ins_get_keys_context_t getKeysContext;
-	ins_get_pool_cold_pubkey_context_t getPoolColdPublicKeyContext;
 	ins_derive_address_context_t deriveAddressContext;
 	ins_sign_tx_context_t signTxContext;
 
 	#ifdef POOL_OPERATOR_APP
+	ins_get_pool_cold_pubkey_context_t getPoolColdPublicKeyContext;
 	ins_sign_op_cert_context_t signOpCertContext;
 	#endif // POOL_OPERATOR_APP
 } instructionState_t;

@@ -591,7 +591,7 @@ static inline bool is_valid_withdrawal_witness(const bip44_path_t* pathSpec)
 }
 
 static security_policy_t policyForInputSignTxWitness(
-	const bip44_path_t* pathSpec
+        const bip44_path_t* pathSpec
 )
 {
 	DENY_IF(is_too_deep(pathSpec));
@@ -600,7 +600,7 @@ static security_policy_t policyForInputSignTxWitness(
 }
 
 static security_policy_t policyForWithdrawalSignTxWitness(
-	const bip44_path_t* pathSpec
+        const bip44_path_t* pathSpec
 )
 {
 	WARN_UNLESS(has_reasonable_account(pathSpec));

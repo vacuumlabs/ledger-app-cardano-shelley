@@ -384,8 +384,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			// there is no point in signing a tx with more than one certificate
 			// because pool owners will not be able to sign it anyway
 			VALIDATE(ctx->numCertificates == 1, ERR_INVALID_DATA);
-
-			// TODO what other validations?
 			break;
 			#endif // POOL_OPERATOR_APP
 
@@ -414,8 +412,13 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 				#ifdef POOL_OPERATOR_APP
 			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-				maxNumWitnesses = 2; // pool key and one owner
-				// TODO think about this
+				ASSERT(ctx->numCertificates == 1);
+				// inputs and withdrawals are unrestricted, to fund the tx
+				// only a single pool registration certificate
+				// with two possible witnesses: pool key and one owner
+				maxNumWitnesses = (size_t) ctx->numInputs +
+				                  (size_t) ctx->numWithdrawals +
+				                  2;
 				break;
 				#endif // POOL_OPERATOR_APP
 
@@ -942,7 +945,6 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 		_parsePathSpec(&view, certificateData); // pool id path
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		certificateData->epoch  = parse_u8be(&view);
-		// TODO no validation?
 		break;
 		#endif // POOL_OPERATOR_APP
 

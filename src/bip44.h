@@ -64,8 +64,10 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
 
+#ifdef POOL_OPERATOR_APP
 bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec);
 bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec);
+#endif // POOL_OPERATOR_APP
 
 bool isHardened(uint32_t value);
 uint32_t unharden(uint32_t value);
