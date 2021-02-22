@@ -524,7 +524,6 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		DENY_UNLESS(owner->descriptionKind == DATA_DESCRIPTION_HASH);
 		SHOW();
 		break;
 		#endif // POOL_OPERATOR_APP

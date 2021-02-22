@@ -751,7 +751,7 @@ static void handleOwner_ui_runStep()
 
 				#ifdef POOL_OPERATOR_APP
 			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-				ASSERT(subctx->numOwnersGivenByPath <= 1);
+				VALIDATE(subctx->numOwnersGivenByPath <= 1, ERR_INVALID_DATA);
 				break;
 				#endif // POOL_OPERATOR_APP
 
