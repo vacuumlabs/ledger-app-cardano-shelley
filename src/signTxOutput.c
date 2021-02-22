@@ -102,7 +102,7 @@ static inline void advanceState()
 // ============================== TOP LEVEL DATA ==============================
 
 enum {
-	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS = 300,
+	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS = 3100,
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT,
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND,
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
@@ -181,7 +181,7 @@ static void signTx_handleOutput_addressBytes()
 }
 
 enum {
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH = 350,
+	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH = 3200,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND,
@@ -346,7 +346,7 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 // ============================== ASSET GROUP ==============================
 
 enum {
-	HANDLE_ASSET_GROUP_STEP_DISPLAY = 800, // TODO
+	HANDLE_ASSET_GROUP_STEP_DISPLAY = 3300,
 	HANDLE_ASSET_GROUP_STEP_RESPOND,
 	HANDLE_ASSET_GROUP_STEP_INVALID,
 };
@@ -431,7 +431,7 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 // ============================== TOKEN ==============================
 
 enum {
-	HANDLE_TOKEN_STEP_DISPLAY_NAME = 800, // TODO
+	HANDLE_TOKEN_STEP_DISPLAY_NAME = 3400,
 	HANDLE_TOKEN_STEP_DISPLAY_AMOUNT,
 	HANDLE_TOKEN_STEP_RESPOND,
 	HANDLE_TOKEN_STEP_INVALID,
@@ -523,7 +523,7 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 // ============================== CONFIRM ==============================
 
 enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 6360,
+	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 3500,
 	HANDLE_CONFIRM_STEP_RESPOND,
 	HANDLE_CONFIRM_STEP_INVALID,
 };
