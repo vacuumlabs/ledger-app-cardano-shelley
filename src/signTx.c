@@ -14,13 +14,6 @@
 #include "bufView.h"
 #include "securityPolicy.h"
 
-// TODO remove the following enum in pool operator app if it is not needed
-
-enum {
-	SIGN_TX_POOL_REGISTRATION_NO = 3,
-	SIGN_TX_POOL_REGISTRATION_YES = 4
-};
-
 static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 
 // advances the stage of the main state machine

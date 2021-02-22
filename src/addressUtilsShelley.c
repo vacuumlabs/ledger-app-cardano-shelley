@@ -293,7 +293,6 @@ static size_t deriveAddress_reward(
 
 	ASSERT(getAddressType(addressHeader) == REWARD);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
-	TRACE();
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
@@ -301,12 +300,9 @@ static size_t deriveAddress_reward(
 	}
 	{
 		// staking key path expected (corresponds to reward account)
-		ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath)); // TODO check for unusual account?
-
-		TRACE_STACK_USAGE();
+		ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath));
 
 		view_appendPublicKeyHash(&out, spendingKeyPath);
-		TRACE();
 	}
 	{
 		// no staking data
