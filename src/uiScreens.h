@@ -77,9 +77,10 @@ void ui_displayHexBufferScreen(
 );
 
 __noinline_due_to_stack__
-void ui_displayPoolIdScreen(
-        const uint8_t* poolIdBuffer,
-        size_t poolIdSize,
+void ui_displayBech32Screen(
+        const char* screenHeader,
+        const char* bech32Prefix,
+        const uint8_t* buffer, size_t bufferSize,
         ui_callback_fn_t callback
 );
 

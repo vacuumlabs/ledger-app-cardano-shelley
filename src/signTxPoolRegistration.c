@@ -273,7 +273,9 @@ static void handlePoolKey_ui_runStep()
 		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
 		_calculatePooKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
-		ui_displayPoolIdScreen(
+		ui_displayBech32Screen(
+		        "Pool ID",
+		        "pool_vk",
 		        poolKeyHash, SIZEOF(poolKeyHash),
 		        this_fn
 		);
@@ -402,9 +404,9 @@ static void handlePoolVrfKey_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step);
 
 	UI_STEP(HANDLE_POOL_VRF_KEY_STEP_DISPLAY) {
-		// TODO display in bech32 using prefix from https://cips.cardano.org/cips/cip5/  ?
-		ui_displayHexBufferScreen(
+		ui_displayBech32Screen(
 		        "VRF key hash",
+		        "vrf_vk",
 		        subctx->stateData.vrfKeyHash, SIZEOF(subctx->stateData.vrfKeyHash),
 		        this_fn
 		);

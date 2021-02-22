@@ -323,30 +323,40 @@ void ui_displayHexBufferScreen(
 	);
 }
 
-void ui_displayPoolIdScreen(
-        const uint8_t* poolIdBuffer,
-        size_t poolIdSize,
+#define BECH32_BUFFER_SIZE_MAX 150
+#define BECH32_PREFIX_LENGTH_MAX 10
+
+// works for bufferSize <= 150 and prefix length <= 10
+void ui_displayBech32Screen(
+        const char* screenHeader,
+        const char* bech32Prefix,
+        const uint8_t* buffer, size_t bufferSize,
         ui_callback_fn_t callback
 )
 {
 	{
 		// assert inputs
-		ASSERT(poolIdSize == POOL_KEY_HASH_LENGTH);
+		ASSERT(strlen(screenHeader) > 0);
+
+		ASSERT(strlen(bech32Prefix) > 0);
+		ASSERT(strlen(bech32Prefix) <= BECH32_PREFIX_LENGTH_MAX);
+
+		ASSERT(bufferSize <= BECH32_BUFFER_SIZE_MAX);
 	}
 
-	char poolIdStr[12 + 2 * POOL_KEY_HASH_LENGTH]; // rough upper bound on required size
-	explicit_bzero(poolIdStr, SIZEOF(poolIdStr));
+	char encodedStr[10 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX]; // rough upper bound on required size
+	explicit_bzero(encodedStr, SIZEOF(encodedStr));
 
 	{
-		size_t len = bech32_encode("pool", poolIdBuffer, poolIdSize, poolIdStr, SIZEOF(poolIdStr));
+		size_t len = bech32_encode(bech32Prefix, buffer, bufferSize, encodedStr, SIZEOF(encodedStr));
 
-		ASSERT(len == strlen(poolIdStr));
-		ASSERT(len + 1 <= SIZEOF(poolIdStr));
+		ASSERT(len == strlen(encodedStr));
+		ASSERT(len + 1 <= SIZEOF(encodedStr));
 	}
 
 	ui_displayPaginatedText(
-	        "Pool ID",
-	        poolIdStr,
+	        screenHeader,
+	        encodedStr,
 	        callback
 	);
 }

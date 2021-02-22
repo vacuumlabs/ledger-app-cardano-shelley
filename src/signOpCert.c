@@ -135,8 +135,9 @@ static void signOpCert_ui_runStep()
 		ui_displayPathScreen("Pool cold key path", &ctx->poolColdKeyPathSpec, this_fn);
 	}
 	UI_STEP(UI_STEP_DISPLAY_KES_PUBLIC_KEY) {
-		ui_displayHexBufferScreen(
+		ui_displayBech32Screen(
 		        "KES public key",
+		        "kes_vk",
 		        ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey),
 		        this_fn
 		);
