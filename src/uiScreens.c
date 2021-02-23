@@ -182,7 +182,7 @@ void ui_displayTokenNameScreen(
         ui_callback_fn_t callback
 )
 {
-	if (str_isAsciiPrintableBuffer(token->assetNameBytes, token->assetNameSize)) {
+	if (str_isPrintableAsciiWithoutSpaces(token->assetNameBytes, token->assetNameSize)) {
 		char name[ASSET_NAME_SIZE_MAX + 1];
 		ASSERT(token->assetNameSize + 1 <= SIZEOF(name));
 		os_memmove(name, token->assetNameBytes, token->assetNameSize);

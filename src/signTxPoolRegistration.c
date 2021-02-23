@@ -1031,9 +1031,8 @@ static void _parseDnsName(pool_relay_t* relay, read_view_t* view)
 {
 	relay->dnsNameSize = view_remainingSize(view);
 	VALIDATE(relay->dnsNameSize <= DNS_NAME_SIZE_MAX, ERR_INVALID_DATA);
-	// TODO what about spaces? our display format does not allow to distinguish among trailing spaces
-	// TODO consider using str_isAsciiPrintableBuffer
-	str_validateTextBuffer(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view));
+	VALIDATE(str_isAllowedDnsName(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)), ERR_INVALID_DATA);
+
 	view_memmove(relay->dnsName, view, relay->dnsNameSize);
 }
 
@@ -1318,9 +1317,9 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 			VALIDATE(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX, ERR_INVALID_DATA);
 			ASSERT(SIZEOF(md->url) >= md->urlSize);
 			view_memmove(md->url, &view, md->urlSize);
-			// TODO what about spaces? our display format does not allow to distinguish among trailing spaces
-			// TODO consider using str_isAsciiPrintableBuffer
-			str_validateTextBuffer(md->url, md->urlSize);
+
+			// whitespace not allowed
+			VALIDATE(str_isPrintableAsciiWithoutSpaces(md->url, md->urlSize), ERR_INVALID_DATA);
 		}
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
