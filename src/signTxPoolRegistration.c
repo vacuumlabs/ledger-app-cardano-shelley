@@ -224,14 +224,14 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 __noinline_due_to_stack__
 static void _calculatePooKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
 {
-	switch (poolId->descriptionKind) {
+	switch (poolId->keyReferenceKind) {
 
-	case DATA_DESCRIPTION_HASH: {
+	case KEY_REFERENCE_HASH: {
 		STATIC_ASSERT(SIZEOF(poolId->hash) == POOL_KEY_HASH_LENGTH, "wrong pool key hash length");
 		os_memmove(poolKeyHash, poolId->hash, POOL_KEY_HASH_LENGTH);
 		break;
 	}
-	case DATA_DESCRIPTION_PATH: {
+	case KEY_REFERENCE_PATH: {
 		extendedPublicKey_t extPubKey;
 		deriveExtendedPublicKey(&poolId->path, &extPubKey);
 
@@ -292,18 +292,18 @@ static void _parsePoolId(read_view_t* view)
 	pool_id_t* key = &subctx->stateData.poolId;
 
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
-	key->descriptionKind = parse_u1be(view);
+	key->keyReferenceKind = parse_u1be(view);
 
-	switch (key->descriptionKind) {
+	switch (key->keyReferenceKind) {
 
-	case DATA_DESCRIPTION_HASH:
+	case KEY_REFERENCE_HASH:
 		VALIDATE(view_remainingSize(view) >= POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(key->hash) == POOL_KEY_HASH_LENGTH, "wrong pool id key hash size");
 		view_memmove(key->hash, view, POOL_KEY_HASH_LENGTH);
 		TRACE_BUFFER(key->hash, SIZEOF(key->hash));
 		break;
 
-	case DATA_DESCRIPTION_PATH:
+	case KEY_REFERENCE_PATH:
 		VALIDATE(view_remainingSize(view) > 0, ERR_INVALID_DATA);
 		view_skipBytes(view, bip44_parseFromWire(&key->path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 		BIP44_PRINTF(&key->path);
@@ -582,14 +582,14 @@ static void _calculateRewardAccount(
         uint8_t* rewardAccountBuffer
 )
 {
-	switch (rewardAccount->descriptionKind) {
+	switch (rewardAccount->keyReferenceKind) {
 
-	case DATA_DESCRIPTION_HASH: {
+	case KEY_REFERENCE_HASH: {
 		STATIC_ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
 		os_memmove(rewardAccountBuffer, rewardAccount->buffer, REWARD_ACCOUNT_SIZE);
 		break;
 	}
-	case DATA_DESCRIPTION_PATH: {
+	case KEY_REFERENCE_PATH: {
 		constructRewardAddressFromKeyPath(
 		        &rewardAccount->path, commonTxData->networkId,
 		        rewardAccountBuffer, REWARD_ACCOUNT_SIZE
@@ -638,11 +638,11 @@ static void _parsePoolRewardAccount(read_view_t* view)
 	pool_reward_account_t* rewardAccount = &subctx->stateData.poolRewardAccount;
 
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
-	rewardAccount->descriptionKind = parse_u1be(view);
+	rewardAccount->keyReferenceKind = parse_u1be(view);
 
-	switch (rewardAccount->descriptionKind) {
+	switch (rewardAccount->keyReferenceKind) {
 
-	case DATA_DESCRIPTION_HASH:
+	case KEY_REFERENCE_HASH:
 		VALIDATE(view_remainingSize(view) >= REWARD_ACCOUNT_SIZE, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
 		view_memmove(rewardAccount->buffer, view, REWARD_ACCOUNT_SIZE);
@@ -653,7 +653,7 @@ static void _parsePoolRewardAccount(read_view_t* view)
 		VALIDATE(getNetworkId(header) == commonTxData->networkId, ERR_INVALID_DATA);
 		break;
 
-	case DATA_DESCRIPTION_PATH:
+	case KEY_REFERENCE_PATH:
 		VALIDATE(view_remainingSize(view) > 0, ERR_INVALID_DATA);
 		view_skipBytes(view, bip44_parseFromWire(&rewardAccount->path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 		BIP44_PRINTF(&rewardAccount->path);
@@ -772,8 +772,8 @@ static void _addOwnerToTxHash()
 
 	uint8_t ownerKeyHash[ADDRESS_KEY_HASH_LENGTH];
 
-	switch (owner->descriptionKind) {
-	case DATA_DESCRIPTION_PATH: {
+	switch (owner->keyReferenceKind) {
+	case KEY_REFERENCE_PATH: {
 		extendedPublicKey_t extPubKey;
 		deriveExtendedPublicKey(&owner->path, &extPubKey);
 
@@ -784,7 +784,7 @@ static void _addOwnerToTxHash()
 		);
 		break;
 	}
-	case DATA_DESCRIPTION_HASH: {
+	case KEY_REFERENCE_HASH: {
 		os_memmove(ownerKeyHash, owner->keyHash, SIZEOF(ownerKeyHash));
 		break;
 	}
@@ -823,17 +823,17 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-		owner->descriptionKind = parse_u1be(&view);
-		switch (owner->descriptionKind) {
+		owner->keyReferenceKind = parse_u1be(&view);
+		switch (owner->keyReferenceKind) {
 
-		case DATA_DESCRIPTION_HASH:
+		case KEY_REFERENCE_HASH:
 			VALIDATE(view_remainingSize(&view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 			STATIC_ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong owner.keyHash size");
 			os_memmove(owner->keyHash, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
 			TRACE_BUFFER(owner->keyHash, SIZEOF(owner->keyHash));
 			break;
 
-		case DATA_DESCRIPTION_PATH:
+		case KEY_REFERENCE_PATH:
 			view_skipBytes(&view, bip44_parseFromWire(&owner->path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
 			// further validation of the path in security policy below
 			TRACE("Owner given by path:");

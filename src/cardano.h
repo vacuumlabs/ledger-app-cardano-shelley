@@ -45,9 +45,9 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 
 
 typedef enum {
-	DATA_DESCRIPTION_PATH = 1,
-	DATA_DESCRIPTION_HASH = 2,
-} data_description_kind_t;
+	KEY_REFERENCE_PATH = 1,
+	KEY_REFERENCE_HASH = 2,
+} key_reference_kind_t;
 
 
 #endif // H_CARDANO_APP_CARDANO
