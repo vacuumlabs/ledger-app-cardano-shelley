@@ -869,7 +869,7 @@ static void signTx_handleCertificatePoolRetirement_ui_runStep()
 	}
 	UI_STEP(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_EPOCH) {
 		ui_displayUint64Screen(
-		        "Epoch",
+		        "at the end of epoch",
 		        ctx->stageData.certificate.epoch,
 		        this_fn
 		);
