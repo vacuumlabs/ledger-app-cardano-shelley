@@ -420,18 +420,16 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 )
 {
 	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-		DENY();
-		break;
-
 		#ifdef POOL_OPERATOR_APP
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_USECASE_ORDINARY_TX:
 		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
 		PROMPT();
 		break;
 		#endif // POOL_OPERATOR_APP
 
 	default:
+		// in other usecases, the tx containing pool retirement certificate
+		// should have already been reported as invalid
 		ASSERT(false);
 	}
 
@@ -585,10 +583,17 @@ static inline bool is_valid_input_witness(const bip44_path_t* pathSpec)
 	return bip44_isValidAddressPath(pathSpec);
 }
 
-static inline bool is_valid_withdrawal_witness(const bip44_path_t* pathSpec)
+static inline bool is_valid_staking_key_witness(const bip44_path_t* pathSpec)
 {
 	return bip44_isValidStakingKeyPath(pathSpec);
 }
+
+#ifdef POOL_OPERATOR_APP
+static inline bool is_valid_pool_cold_key_witness(const bip44_path_t* pathSpec)
+{
+	return bip44_isValidPoolColdKeyPath(pathSpec);
+}
+#endif // POOL_OPERATOR_APP
 
 static security_policy_t policyForInputSignTxWitness(
         const bip44_path_t* pathSpec
@@ -599,7 +604,7 @@ static security_policy_t policyForInputSignTxWitness(
 	ALLOW();
 }
 
-static security_policy_t policyForWithdrawalSignTxWitness(
+static security_policy_t policyForStakingKeySignTxWitness(
         const bip44_path_t* pathSpec
 )
 {
@@ -609,7 +614,8 @@ static security_policy_t policyForWithdrawalSignTxWitness(
 
 // For each transaction witness
 // Note: witnesses reveal public key of an address
-// and Ledger *does not* check whether they correspond to previously declared UTxOs
+// and Ledger *does not* check whether they correspond to
+// previously declared inputs and certificates
 security_policy_t policyForSignTxWitness(
         sign_tx_usecase_t signTxUsecase,
         const bip44_path_t* pathSpec
@@ -620,8 +626,14 @@ security_policy_t policyForSignTxWitness(
 	case SIGN_TX_USECASE_ORDINARY_TX: {
 		if (is_valid_input_witness(pathSpec)) {
 			return policyForInputSignTxWitness(pathSpec);
-		}  else if (is_valid_withdrawal_witness(pathSpec)) {
-			return policyForWithdrawalSignTxWitness(pathSpec);
+		}  else if (is_valid_staking_key_witness(pathSpec)) {
+			return policyForStakingKeySignTxWitness(pathSpec);
+
+			#ifdef POOL_OPERATOR_APP
+		} else if (is_valid_pool_cold_key_witness(pathSpec)) {
+			ALLOW(); // for pool retirement certificates
+			#endif // POOL_OPERATOR_APP
+
 		} else {
 			DENY();
 		}
@@ -639,10 +651,10 @@ security_policy_t policyForSignTxWitness(
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
 		if (is_valid_input_witness(pathSpec)) {
 			return policyForInputSignTxWitness(pathSpec);
-		} else {
-			// must be pool id witness
-			DENY_UNLESS(bip44_isValidPoolColdKeyPath(pathSpec));
+		} else if (is_valid_pool_cold_key_witness(pathSpec)) {
 			ALLOW();
+		} else {
+			DENY();
 		}
 		break;
 	}
