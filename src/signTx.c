@@ -410,9 +410,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 				ASSERT(ctx->numCertificates == 1);
 				// inputs are unrestricted, to fund the tx
 				// only a single pool registration certificate
-				// with two possible witnesses: pool key and one owner
+				// with a single possible witnesses for pool key
 				maxNumWitnesses = (size_t) ctx->numInputs +
-				                  2;
+				                  1; // pool key
 				break;
 				#endif // POOL_OPERATOR_APP
 
