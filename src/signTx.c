@@ -366,23 +366,25 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		VALIDATE(ctx->numWithdrawals <= SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
 
 		switch (ctx->commonTxData.signTxUsecase) {
+			#ifdef POOL_OPERATOR_APP
+		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+			#endif // POOL_OPERATOR_APP
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-			// necessary for security reasons
+			// necessary to avoid intermingling witnesses from several certs
 			VALIDATE(ctx->numCertificates == 1, ERR_INVALID_DATA);
+
+			// witnesses for owners and withdrawals are the same
+			// we forbid withdrawals so that users cannot be tricked into witnessing
+			// something unintentionally (e.g. an owner given by the staking key hash)
 			VALIDATE(ctx->numWithdrawals == 0, ERR_INVALID_DATA);
 			break;
 
-			#ifdef POOL_OPERATOR_APP
-		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-			// there is no point in signing a tx with more than one certificate
-			// because pool owners will not be able to sign it anyway
-			VALIDATE(ctx->numCertificates == 1, ERR_INVALID_DATA);
+		case SIGN_TX_USECASE_ORDINARY_TX:
+			// no additional validation
 			break;
-			#endif // POOL_OPERATOR_APP
 
 		default:
-			// no additional validation for other use cases
-			break;
+			ASSERT(false);
 		}
 
 		// Current code design assumes at least one input.
@@ -406,11 +408,10 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 				#ifdef POOL_OPERATOR_APP
 			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 				ASSERT(ctx->numCertificates == 1);
-				// inputs and withdrawals are unrestricted, to fund the tx
+				// inputs are unrestricted, to fund the tx
 				// only a single pool registration certificate
 				// with two possible witnesses: pool key and one owner
 				maxNumWitnesses = (size_t) ctx->numInputs +
-				                  (size_t) ctx->numWithdrawals +
 				                  2;
 				break;
 				#endif // POOL_OPERATOR_APP

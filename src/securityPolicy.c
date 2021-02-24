@@ -638,10 +638,8 @@ security_policy_t policyForSignTxWitness(
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
 		if (is_valid_input_witness(pathSpec)) {
 			return policyForInputSignTxWitness(pathSpec);
-		}  else if (is_valid_withdrawal_witness(pathSpec)) {
-			return policyForWithdrawalSignTxWitness(pathSpec);
 		} else {
-			// pool id witness
+			// must be pool id witness
 			DENY_UNLESS(bip44_isValidPoolColdKeyPath(pathSpec));
 			ALLOW();
 		}
