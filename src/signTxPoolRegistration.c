@@ -876,11 +876,6 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 // ============================== RELAY ==============================
 
 enum {
-	RELAY_NO = 1,
-	RELAY_YES = 2
-};
-
-enum {
 	HANDLE_RELAY_IP_STEP_DISPLAY_IPV4 = 6700,
 	HANDLE_RELAY_IP_STEP_DISPLAY_IPV6,
 	HANDLE_RELAY_IP_STEP_DISPLAY_PORT,
@@ -982,13 +977,13 @@ static void _parsePort(ipport_t* port, read_view_t* view)
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	uint8_t isPortGiven = parse_u1be(view);
-	if (isPortGiven == RELAY_YES) {
+	if (isPortGiven == ITEM_INCLUDED_YES) {
 		port->isNull = false;
 		ASSERT_TYPE(port->number, uint16_t);
 		port->number = parse_u2be(view);
 		TRACE("Port: %u", port->number);
 	} else {
-		VALIDATE(isPortGiven == RELAY_NO, ERR_INVALID_DATA);
+		VALIDATE(isPortGiven == ITEM_INCLUDED_NO, ERR_INVALID_DATA);
 		port->isNull = true;
 	}
 }
@@ -997,7 +992,7 @@ static void _parseIpv4(ipv4_t* ipv4, read_view_t* view)
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	uint8_t isIpv4Given = parse_u1be(view);
-	if (isIpv4Given == RELAY_YES) {
+	if (isIpv4Given == ITEM_INCLUDED_YES) {
 		ipv4->isNull = false;
 		VALIDATE(view_remainingSize(view) >= IPV4_SIZE, ERR_INVALID_DATA);
 		STATIC_ASSERT(sizeof(ipv4->ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
@@ -1005,7 +1000,7 @@ static void _parseIpv4(ipv4_t* ipv4, read_view_t* view)
 		TRACE("ipv4");
 		TRACE_BUFFER(ipv4->ip, IPV4_SIZE);
 	} else {
-		VALIDATE(isIpv4Given == RELAY_NO, ERR_INVALID_DATA);
+		VALIDATE(isIpv4Given == ITEM_INCLUDED_NO, ERR_INVALID_DATA);
 		ipv4->isNull = true;
 	}
 }
@@ -1014,7 +1009,7 @@ static void _parseIpv6(ipv6_t* ipv6, read_view_t* view)
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	uint8_t isIpv6Given = parse_u1be(view);
-	if (isIpv6Given == RELAY_YES) {
+	if (isIpv6Given == ITEM_INCLUDED_YES) {
 		ipv6->isNull = false;
 		VALIDATE(view_remainingSize(view) >= IPV6_SIZE, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(ipv6->ip) == IPV6_SIZE, "wrong ipv6 size");
@@ -1022,7 +1017,7 @@ static void _parseIpv6(ipv6_t* ipv6, read_view_t* view)
 		TRACE("ipv6");
 		TRACE_BUFFER(ipv6->ip, IPV6_SIZE);
 	} else {
-		VALIDATE(isIpv6Given == RELAY_NO, ERR_INVALID_DATA);
+		VALIDATE(isIpv6Given == ITEM_INCLUDED_NO, ERR_INVALID_DATA);
 		ipv6->isNull = true;
 	}
 }

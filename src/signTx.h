@@ -126,18 +126,13 @@ typedef struct {
 handler_fn_t signTx_handleAPDU;
 
 
-enum {
-	SIGN_TX_INCLUDED_NO = 1,
-	SIGN_TX_INCLUDED_YES = 2
-};
-
 inline bool signTx_parseIncluded(uint8_t value)
 {
 	switch (value) {
-	case SIGN_TX_INCLUDED_YES:
+	case ITEM_INCLUDED_YES:
 		return true;
 
-	case SIGN_TX_INCLUDED_NO:
+	case ITEM_INCLUDED_NO:
 		return false;
 
 	default:
