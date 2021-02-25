@@ -406,7 +406,7 @@ void ui_displayPoolOwnerScreen(
 		ASSERT(isValidNetworkId(networkId));
 		ASSERT(ownerIndex < POOL_MAX_OWNERS);
 
-		switch (owner->keyReferenceKind) {
+		switch (owner->keyReferenceType) {
 
 		case KEY_REFERENCE_HASH:
 			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
@@ -426,7 +426,7 @@ void ui_displayPoolOwnerScreen(
 	explicit_bzero(ownerDescription, SIZEOF(ownerDescription));
 	size_t descLen = 0; // owner description length
 
-	if (owner->keyReferenceKind == KEY_REFERENCE_PATH) {
+	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
 		descLen += bip44_printToStr(&owner->path, ownerDescription, SIZEOF(ownerDescription));
 	}
 
@@ -445,7 +445,7 @@ void ui_displayPoolOwnerScreen(
 		{
 			uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 
-			switch (owner->keyReferenceKind) {
+			switch (owner->keyReferenceType) {
 			case KEY_REFERENCE_PATH: {
 				constructRewardAddressFromKeyPath(
 				        &owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)

@@ -25,7 +25,7 @@ typedef enum {
 } sign_tx_pool_registration_state_t;
 
 typedef struct {
-	key_reference_kind_t keyReferenceKind;
+	key_reference_type_t keyReferenceType;
 	union {
 		bip44_path_t path;
 		uint8_t hash[POOL_KEY_HASH_LENGTH];
@@ -33,7 +33,7 @@ typedef struct {
 } pool_id_t;
 
 typedef struct {
-	key_reference_kind_t keyReferenceKind;
+	key_reference_type_t keyReferenceType;
 	union {
 		bip44_path_t path;
 		uint8_t buffer[REWARD_ACCOUNT_SIZE];
@@ -41,7 +41,7 @@ typedef struct {
 } pool_reward_account_t;
 
 typedef struct {
-	key_reference_kind_t keyReferenceKind;
+	key_reference_type_t keyReferenceType;
 	union {
 		bip44_path_t path;
 		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];

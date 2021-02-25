@@ -224,7 +224,7 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 __noinline_due_to_stack__
 static void _calculatePooKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
 {
-	switch (poolId->keyReferenceKind) {
+	switch (poolId->keyReferenceType) {
 
 	case KEY_REFERENCE_HASH: {
 		STATIC_ASSERT(SIZEOF(poolId->hash) == POOL_KEY_HASH_LENGTH, "wrong pool key hash length");
@@ -292,9 +292,9 @@ static void _parsePoolId(read_view_t* view)
 	pool_id_t* key = &subctx->stateData.poolId;
 
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
-	key->keyReferenceKind = parse_u1be(view);
+	key->keyReferenceType = parse_u1be(view);
 
-	switch (key->keyReferenceKind) {
+	switch (key->keyReferenceType) {
 
 	case KEY_REFERENCE_HASH:
 		VALIDATE(view_remainingSize(view) >= POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
@@ -582,7 +582,7 @@ static void _calculateRewardAccount(
         uint8_t* rewardAccountBuffer
 )
 {
-	switch (rewardAccount->keyReferenceKind) {
+	switch (rewardAccount->keyReferenceType) {
 
 	case KEY_REFERENCE_HASH: {
 		STATIC_ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
@@ -638,9 +638,9 @@ static void _parsePoolRewardAccount(read_view_t* view)
 	pool_reward_account_t* rewardAccount = &subctx->stateData.poolRewardAccount;
 
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
-	rewardAccount->keyReferenceKind = parse_u1be(view);
+	rewardAccount->keyReferenceType = parse_u1be(view);
 
-	switch (rewardAccount->keyReferenceKind) {
+	switch (rewardAccount->keyReferenceType) {
 
 	case KEY_REFERENCE_HASH:
 		VALIDATE(view_remainingSize(view) >= REWARD_ACCOUNT_SIZE, ERR_INVALID_DATA);
@@ -772,7 +772,7 @@ static void _addOwnerToTxHash()
 
 	uint8_t ownerKeyHash[ADDRESS_KEY_HASH_LENGTH];
 
-	switch (owner->keyReferenceKind) {
+	switch (owner->keyReferenceType) {
 	case KEY_REFERENCE_PATH: {
 		extendedPublicKey_t extPubKey;
 		deriveExtendedPublicKey(&owner->path, &extPubKey);
@@ -823,8 +823,8 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-		owner->keyReferenceKind = parse_u1be(&view);
-		switch (owner->keyReferenceKind) {
+		owner->keyReferenceType = parse_u1be(&view);
+		switch (owner->keyReferenceType) {
 
 		case KEY_REFERENCE_HASH:
 			VALIDATE(view_remainingSize(&view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);

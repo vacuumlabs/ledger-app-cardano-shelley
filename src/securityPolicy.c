@@ -443,13 +443,13 @@ security_policy_t policyForSignTxStakePoolRegistrationPoolId(
 {
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-		DENY_UNLESS(poolId->keyReferenceKind == KEY_REFERENCE_HASH);
+		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		DENY_UNLESS(poolId->keyReferenceKind == KEY_REFERENCE_PATH);
+		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_PATH);
 		SHOW();
 		break;
 		#endif // POOL_OPERATOR_APP
@@ -490,7 +490,7 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 {
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-		DENY_UNLESS(poolRewardAccount->keyReferenceKind == KEY_REFERENCE_HASH);
+		DENY_UNLESS(poolRewardAccount->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
 
@@ -512,7 +512,7 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const pool_owner_t* owner
 )
 {
-	if (owner->keyReferenceKind == KEY_REFERENCE_PATH)
+	if (owner->keyReferenceType == KEY_REFERENCE_PATH)
 		DENY_UNLESS(is_valid_stake_pool_owner_path(&owner->path));
 
 	switch (signTxUsecase) {
@@ -522,7 +522,7 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 
 		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		DENY_UNLESS(owner->keyReferenceKind == KEY_REFERENCE_HASH);
+		DENY_UNLESS(owner->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
 		#endif // POOL_OPERATOR_APP
