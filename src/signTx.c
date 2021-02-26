@@ -930,7 +930,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 
 	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION:
 		// nothing more to parse, certificate data will be provided
-		// in additional APDUs processesed by a submachine
+		// in additional APDUs processed by a submachine
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		return;
 

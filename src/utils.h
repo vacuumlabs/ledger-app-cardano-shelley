@@ -138,6 +138,9 @@
 // There is also the flag HAVE_BOLOS_APP_STACK_CANARY in our Makefile
 // which turns on automatic checking of the stack canary in io_exchange()
 // (see os_io_seproxyhal.c in nanos-secure-sdk).
+#define APP_STACK_CANARY_MAGIC 0xDEAD0031
+extern unsigned int app_stack_canary;
+
 #define TRACE_STACK_USAGE() \
 	do { \
 		volatile uint32_t x = 0; \
@@ -147,8 +150,6 @@
 		} \
 		\
 	} while(0)
-#define APP_STACK_CANARY_MAGIC 0xDEAD0031
-extern unsigned int app_stack_canary;
 #else
 #define TRACE_STACK_USAGE()
 #endif // DEVEL

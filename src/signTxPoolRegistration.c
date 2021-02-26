@@ -605,7 +605,7 @@ enum {
 	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY = 6500,
 	HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND,
 	HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID,
-} ;
+};
 
 static void handlePoolRewardAccount_ui_runStep()
 {
@@ -751,7 +751,7 @@ static void handleOwner_ui_runStep()
 
 				#ifdef POOL_OPERATOR_APP
 			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-				VALIDATE(subctx->numOwnersGivenByPath <= 1, ERR_INVALID_DATA);
+				ASSERT(subctx->numOwnersGivenByPath == 0);
 				break;
 				#endif // POOL_OPERATOR_APP
 
