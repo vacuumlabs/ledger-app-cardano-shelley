@@ -56,7 +56,7 @@ Instructions related to general app status
 
 Instructions related to public keys/addresses
 
-- `0x10` [Get extended public key](ins_get_extended_public_key.md)
+- `0x10` [Get extended public key](ins_get_public_key.md)
 - `0x11` [Derive address](ins_derive_address.md)
 
 ### `INS=0x2*` group

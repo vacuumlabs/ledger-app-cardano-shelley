@@ -23,7 +23,7 @@ For the initial APDU message, use
 
 For each of the following messages (one for each of the remaining keys), use `0x01` for P1.
 
-**Data**
+*Data*
 
 For the initial APDU message, use
 
