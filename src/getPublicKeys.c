@@ -68,6 +68,8 @@ static void getPublicKeys_respondOneKey_ui_runStep()
 	TRACE("UI step %d", ctx->ui_step);
 	ui_callback_fn_t* this_fn = getPublicKeys_respondOneKey_ui_runStep;
 
+	const bool isColdKey = bip44_isValidPoolColdKeyPath(&ctx->pathSpec);
+
 	UI_STEP_BEGIN(ctx->ui_step);
 	UI_STEP(GET_KEY_UI_STEP_WARNING) {
 		ui_displayPaginatedText(
@@ -77,12 +79,16 @@ static void getPublicKeys_respondOneKey_ui_runStep()
 		);
 	}
 	UI_STEP(GET_KEY_UI_STEP_DISPLAY) {
-		ui_displayAccountScreen("Export public key", &ctx->pathSpec, this_fn);
+		if (isColdKey) {
+			ui_displayPathScreen("Export cold public key", &ctx->pathSpec, this_fn);
+		} else {
+			ui_displayAccountScreen("Export public key", &ctx->pathSpec, this_fn);
+		}
 	}
 	UI_STEP(GET_KEY_UI_STEP_CONFIRM) {
 		ui_displayPrompt(
 		        "Confirm export",
-		        "public key?",
+		        isColdKey ? "cold public key?" : "public key?",
 		        this_fn,
 		        respond_with_user_reject
 		);

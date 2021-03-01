@@ -111,6 +111,10 @@ security_policy_t policyForGetPublicKeysInit(size_t numPaths)
 // Get extended public key and return it to the host
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 {
+	if (bip44_isValidPoolColdKeyPath(pathSpec)) {
+		return policyForGetPoolColdPublicKey(pathSpec);
+	}
+
 	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
 
 	WARN_UNLESS(has_reasonable_account(pathSpec));
@@ -123,6 +127,10 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 // Get extended public key and return it to the host within bulk key export
 security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec)
 {
+	if (bip44_isValidPoolColdKeyPath(pathSpec)) {
+		return policyForGetPoolColdPublicKey(pathSpec);
+	}
+
 	// the expected values that need not to be confirmed start with
 	// m/1852'/1815'/account' or m/44'/1815'/account', where account is not too big
 
