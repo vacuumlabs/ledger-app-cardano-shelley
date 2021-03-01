@@ -7,7 +7,6 @@
 #include "getVersion.h"
 #include "getSerial.h"
 #include "getPublicKeys.h"
-#include "getPoolColdPublicKey.h"
 #include "runTests.h"
 #include "errors.h"
 #include "deriveAddress.h"
@@ -29,16 +28,9 @@ handler_fn_t* lookupHandler(uint8_t ins)
 		CASE(0x10, getPublicKeys_handleAPDU);
 		CASE(0x11, deriveAddress_handleAPDU);
 
-		#ifdef POOL_OPERATOR_APP
-		CASE(0x12, getPoolColdPublicKey_handleAPDU);
-		#endif // POOL_OPERATOR_APP
-
 		// 0x2* -  signing related
 		CASE(0x21, signTx_handleAPDU);
-
-		#ifdef POOL_OPERATOR_APP
 		CASE(0x22, signOpCert_handleAPDU);
-		#endif // POOL_OPERATOR_APP
 
 		#ifdef DEVEL
 		// 0xF* -  debug_mode related

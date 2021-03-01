@@ -334,10 +334,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		switch(ctx->commonTxData.signTxUsecase) {
 		case SIGN_TX_USECASE_ORDINARY_TX:
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-			#ifdef POOL_OPERATOR_APP
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-			#endif // POOL_OPERATOR_APP
-
 			// these usecases are allowed
 			break;
 
@@ -366,9 +363,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		VALIDATE(ctx->numWithdrawals <= SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
 
 		switch (ctx->commonTxData.signTxUsecase) {
-			#ifdef POOL_OPERATOR_APP
+
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-			#endif // POOL_OPERATOR_APP
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 			// necessary to avoid intermingling witnesses from several certs
 			VALIDATE(ctx->numCertificates == 1, ERR_INVALID_DATA);
@@ -405,7 +401,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 				maxNumWitnesses = 1;
 				break;
 
-				#ifdef POOL_OPERATOR_APP
 			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 				ASSERT(ctx->numCertificates == 1);
 				// inputs are unrestricted, to fund the tx
@@ -414,7 +409,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 				maxNumWitnesses = (size_t) ctx->numInputs +
 				                  1; // pool key
 				break;
-				#endif // POOL_OPERATOR_APP
 
 			case SIGN_TX_USECASE_ORDINARY_TX:
 				maxNumWitnesses = (size_t) ctx->numInputs +
@@ -834,7 +828,6 @@ static void signTx_handleCertificate_ui_runStep()
 	UI_STEP_END(HANDLE_CERTIFICATE_STEP_INVALID);
 }
 
-#ifdef POOL_OPERATOR_APP
 enum {
 	HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION = 650,
 	HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_EPOCH,
@@ -890,7 +883,6 @@ static void signTx_handleCertificatePoolRetirement_ui_runStep()
 	}
 	UI_STEP_END(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_INVALID);
 }
-#endif // POOL_OPERATOR_APP
 
 static void _parsePathSpec(read_view_t* view, sign_tx_certificate_data_t* certificateData)
 {
@@ -934,13 +926,11 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		return;
 
-		#ifdef POOL_OPERATOR_APP
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
 		_parsePathSpec(&view, certificateData); // pool id path
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		certificateData->epoch  = parse_u8be(&view);
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		THROW(ERR_INVALID_DATA);
@@ -988,7 +978,6 @@ static void _addCertificateDataToTx(
 		break;
 	}
 
-	#ifdef POOL_OPERATOR_APP
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
@@ -997,7 +986,6 @@ static void _addCertificateDataToTx(
 		);
 		break;
 	}
-	#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -1076,7 +1064,6 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 		return;
 	}
 
-	#ifdef POOL_OPERATOR_APP
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
 		                                   ctx->commonTxData.signTxUsecase,
@@ -1099,7 +1086,6 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 		signTx_handleCertificatePoolRetirement_ui_runStep();
 		return;
 	}
-	#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);

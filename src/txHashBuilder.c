@@ -462,7 +462,6 @@ void txHashBuilder_addCertificate_delegation(
 	}
 }
 
-#ifdef POOL_OPERATOR_APP
 void txHashBuilder_addCertificate_poolRetirement(
         tx_hash_builder_t* builder,
         uint8_t* poolKeyHash, size_t poolKeyHashSize,
@@ -492,8 +491,6 @@ void txHashBuilder_addCertificate_poolRetirement(
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, epoch);
 	}
 }
-#endif // POOL_OPERATOR_APP
-
 
 void txHashBuilder_poolRegistrationCertificate_enter(
         tx_hash_builder_t* builder,

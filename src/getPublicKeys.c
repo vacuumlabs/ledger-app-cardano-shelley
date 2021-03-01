@@ -77,7 +77,7 @@ static void getPublicKeys_respondOneKey_ui_runStep()
 		);
 	}
 	UI_STEP(GET_KEY_UI_STEP_DISPLAY) {
-		ui_displayAccountScreen("Export public key", &ctx->pathSpec, this_fn);
+		ui_displayPublicKeyPathScreen(&ctx->pathSpec, this_fn);
 	}
 	UI_STEP(GET_KEY_UI_STEP_CONFIRM) {
 		ui_displayPrompt(

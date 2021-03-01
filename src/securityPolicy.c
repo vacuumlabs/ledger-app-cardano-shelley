@@ -14,8 +14,13 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(addressParams->type == BASE);
 	CHECK(addressParams->stakingChoice == STAKING_KEY_PATH);
-	ASSERT(bip44_containsAccount(&addressParams->stakingKeyPath));
-	ASSERT(bip44_containsAccount(&addressParams->spendingKeyPath));
+
+	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_WALLET_ADDRESS);
+	CHECK(bip44_isPathReasonable(&addressParams->spendingKeyPath));
+
+	CHECK(bip44_classifyPath(&addressParams->stakingKeyPath) == PATH_WALLET_STAKING_KEY);
+	CHECK(bip44_isPathReasonable(&addressParams->stakingKeyPath));
+
 	CHECK(
 	        bip44_getAccount(&addressParams->stakingKeyPath) ==
 	        bip44_getAccount(&addressParams->spendingKeyPath)
@@ -23,40 +28,6 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 
 	return true;
 #undef CHECK
-}
-
-static inline bool has_cardano_prefix_and_any_account(const bip44_path_t* pathSpec)
-{
-	return bip44_hasValidCardanoWalletPrefix(pathSpec) &&
-	       bip44_containsAccount(pathSpec);
-}
-
-static inline bool is_valid_stake_pool_owner_path(const bip44_path_t* pathSpec)
-{
-	return bip44_isValidStakingKeyPath(pathSpec);
-}
-
-// account is from a small brute-forcable range
-static inline bool has_reasonable_account(const bip44_path_t* pathSpec)
-{
-	return bip44_hasReasonableAccount(pathSpec);
-}
-
-// address is from a small brute-forcable range
-static inline bool has_reasonable_address(const bip44_path_t* pathSpec)
-{
-	return bip44_hasReasonableAddress(pathSpec);
-}
-
-// both account and address are from a small brute-forcable range
-static inline bool has_reasonable_account_and_address(const bip44_path_t* pathSpec)
-{
-	return has_reasonable_account(pathSpec) && has_reasonable_address(pathSpec);
-}
-
-static inline bool is_too_deep(const bip44_path_t* pathSpec)
-{
-	return bip44_containsMoreThanAddress(pathSpec);
 }
 
 bool is_tx_network_verifiable(
@@ -70,9 +41,7 @@ bool is_tx_network_verifiable(
 
 	switch (signTxUsecase) {
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		#endif // POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		// pool registration certificate contains pool reward account
 		return true;
@@ -87,6 +56,7 @@ bool is_tx_network_verifiable(
 #define DENY_IF(expr)      if (expr)    return POLICY_DENY;
 #define DENY_UNLESS(expr)  if (!(expr)) return POLICY_DENY;
 
+#define WARN()                          return POLICY_PROMPT_WARN_UNUSUAL;
 #define WARN_IF(expr)      if (expr)    return POLICY_PROMPT_WARN_UNUSUAL;
 #define WARN_UNLESS(expr)  if (!(expr)) return POLICY_PROMPT_WARN_UNUSUAL;
 
@@ -111,64 +81,80 @@ security_policy_t policyForGetPublicKeysInit(size_t numPaths)
 // Get extended public key and return it to the host
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 {
-	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
+	switch (bip44_classifyPath(pathSpec)) {
 
-	WARN_UNLESS(has_reasonable_account(pathSpec));
+	case PATH_WALLET_ACCOUNT:
+	case PATH_WALLET_ADDRESS:
+	case PATH_WALLET_STAKING_KEY:
+	case PATH_POOL_COLD_KEY:
+		if (bip44_isPathReasonable(pathSpec)) {
+			PROMPT();
+		} else {
+			WARN();
+		}
+		break;
 
-	WARN_IF(is_too_deep(pathSpec));
+	default:
+		DENY();
+		break;
+	}
 
-	PROMPT();
+	DENY(); // should not be reached
 }
 
 // Get extended public key and return it to the host within bulk key export
 security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec)
 {
-	// the expected values that need not to be confirmed start with
-	// m/1852'/1815'/account' or m/44'/1815'/account', where account is not too big
+	switch (bip44_classifyPath(pathSpec)) {
 
-	DENY_UNLESS(has_cardano_prefix_and_any_account(pathSpec));
+	case PATH_WALLET_ACCOUNT:
+	case PATH_WALLET_ADDRESS:
+	case PATH_WALLET_STAKING_KEY:
+		if (bip44_isPathReasonable(pathSpec)) {
+			ALLOW();
+		} else {
+			WARN();
+		}
+		break;
 
-	WARN_UNLESS(has_reasonable_account(pathSpec));
+	case PATH_POOL_COLD_KEY:
+		if (bip44_isPathReasonable(pathSpec)) {
+			PROMPT();
+		} else {
+			WARN();
+		}
+		break;
 
-	WARN_IF(is_too_deep(pathSpec));
-
-	// if they contain more than account, then the suffix after account
-	// has to be one of 2/0, 0/index, 1/index
-	if (bip44_containsMoreThanAccount(pathSpec)) {
-		WARN_IF(bip44_containsChainType(pathSpec) && !bip44_containsAddress(pathSpec));
-
-		// we are left with paths of length 5
-
-		ALLOW_IF(bip44_isValidStakingKeyPath(pathSpec));
-
-		// only ordinary address paths remain
-		WARN_UNLESS(bip44_isValidAddressPath(pathSpec));
-		WARN_UNLESS(has_reasonable_address(pathSpec));
+	default:
+		DENY();
+		break;
 	}
 
-	ALLOW();
+	DENY(); // should not be reached
 }
-
-#ifdef POOL_OPERATOR_APP
-security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec)
-{
-	DENY_UNLESS(bip44_isValidPoolColdKeyPath(pathSpec));
-	WARN_UNLESS(bip44_hasReasonablePoolColdKeyIndex(pathSpec));
-
-	PROMPT_IF(true);
-}
-#endif // POOL_OPERATOR_APP
 
 // Derive address and return it to the host
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams)
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
-	DENY_IF(is_too_deep(&addressParams->spendingKeyPath));
+	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
-	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
+	case PATH_WALLET_ADDRESS:
+	case PATH_WALLET_STAKING_KEY:
+		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
+			PROMPT();
+		} else {
+			WARN();
+		}
+		break;
 
-	PROMPT();
+	default:
+		DENY();
+		break;
+	}
+
+	DENY(); // should not be reached
 }
 
 // Derive address and show it to the user
@@ -176,11 +162,23 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
-	DENY_IF(is_too_deep(&addressParams->spendingKeyPath));
+	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
-	WARN_UNLESS(has_reasonable_account_and_address(&addressParams->spendingKeyPath));
+	case PATH_WALLET_ADDRESS:
+	case PATH_WALLET_STAKING_KEY:
+		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
+			SHOW();
+		} else {
+			WARN();
+		}
+		break;
 
-	SHOW();
+	default:
+		DENY();
+		break;
+	}
+
+	DENY(); // should not be reached
 }
 
 
@@ -244,11 +242,9 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		ALLOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -275,16 +271,21 @@ security_policy_t policyForSignTxOutputAddressParams(
 
 	switch (signTxUsecase) {
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		#endif // POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_ORDINARY_TX: {
-		DENY_IF(is_too_deep(&params->spendingKeyPath));
+		switch (bip44_classifyPath(&params->spendingKeyPath)) {
 
-		SHOW_UNLESS(has_reasonable_account_and_address(&params->spendingKeyPath));
-		SHOW_UNLESS(is_standard_base_address(params));
+		case PATH_WALLET_ADDRESS:
+			SHOW_UNLESS(bip44_isPathReasonable(&params->spendingKeyPath));
+			SHOW_UNLESS(is_standard_base_address(params));
+			ALLOW();
+			break;
 
-		ALLOW();
+		default:
+			DENY();
+			break;
+		}
+
 		break;
 	}
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
@@ -331,9 +332,7 @@ security_policy_t policyForSignTxFee(
 {
 	switch (signTxUsecase) {
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		#endif // POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_ORDINARY_TX:
 		// always show the fee if it is paid by the signer
 		SHOW();
@@ -377,9 +376,7 @@ security_policy_t policyForSignTxCertificate(
 		ALLOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		#endif // POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
@@ -420,12 +417,11 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 )
 {
 	switch (signTxUsecase) {
-		#ifdef POOL_OPERATOR_APP
+
 	case SIGN_TX_USECASE_ORDINARY_TX:
 		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
 		PROMPT();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		// in other usecases, the tx containing pool retirement certificate
@@ -447,12 +443,10 @@ security_policy_t policyForSignTxStakePoolRegistrationPoolId(
 		SHOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_PATH);
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -470,11 +464,9 @@ security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
 		ALLOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -494,11 +486,9 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 		SHOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -512,20 +502,19 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const pool_owner_t* owner
 )
 {
-	if (owner->keyReferenceType == KEY_REFERENCE_PATH)
-		DENY_UNLESS(is_valid_stake_pool_owner_path(&owner->path));
+	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
+		DENY_UNLESS(bip44_isValidStakingKeyPath(&owner->path));
+	}
 
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		SHOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(owner->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -543,11 +532,9 @@ security_policy_t policyForSignTxStakePoolRegistrationRelay(
 		ALLOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -578,39 +565,6 @@ security_policy_t policyForSignTxWithdrawal()
 	SHOW();
 }
 
-static inline bool is_valid_input_witness(const bip44_path_t* pathSpec)
-{
-	return bip44_isValidAddressPath(pathSpec);
-}
-
-static inline bool is_valid_staking_key_witness(const bip44_path_t* pathSpec)
-{
-	return bip44_isValidStakingKeyPath(pathSpec);
-}
-
-#ifdef POOL_OPERATOR_APP
-static inline bool is_valid_pool_cold_key_witness(const bip44_path_t* pathSpec)
-{
-	return bip44_isValidPoolColdKeyPath(pathSpec);
-}
-#endif // POOL_OPERATOR_APP
-
-static security_policy_t policyForInputSignTxWitness(
-        const bip44_path_t* pathSpec
-)
-{
-	DENY_IF(is_too_deep(pathSpec));
-	WARN_UNLESS(has_reasonable_account_and_address(pathSpec));
-	ALLOW();
-}
-
-static security_policy_t policyForStakingKeySignTxWitness(
-        const bip44_path_t* pathSpec
-)
-{
-	WARN_UNLESS(has_reasonable_account(pathSpec));
-	ALLOW();
-}
 
 // For each transaction witness
 // Note: witnesses reveal public key of an address
@@ -624,41 +578,67 @@ security_policy_t policyForSignTxWitness(
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_ORDINARY_TX: {
-		if (is_valid_input_witness(pathSpec)) {
-			return policyForInputSignTxWitness(pathSpec);
-		}  else if (is_valid_staking_key_witness(pathSpec)) {
-			return policyForStakingKeySignTxWitness(pathSpec);
 
-			#ifdef POOL_OPERATOR_APP
-		} else if (is_valid_pool_cold_key_witness(pathSpec)) {
-			ALLOW(); // for pool retirement certificates
-			#endif // POOL_OPERATOR_APP
+		switch (bip44_classifyPath(pathSpec)) {
 
-		} else {
+		case PATH_WALLET_ADDRESS:
+		case PATH_WALLET_STAKING_KEY:
+		case PATH_POOL_COLD_KEY:
+			if (bip44_isPathReasonable(pathSpec)) {
+				ALLOW();
+			} else {
+				WARN();
+			}
+			break;
+
+		default:
 			DENY();
+			break;
 		}
+
 		break;
 	}
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
-		DENY_UNLESS(is_valid_stake_pool_owner_path(pathSpec));
-		WARN_UNLESS(has_reasonable_account(pathSpec));
-		ALLOW();
+
+		switch (bip44_classifyPath(pathSpec)) {
+
+		case PATH_WALLET_STAKING_KEY:
+			if (bip44_isPathReasonable(pathSpec)) {
+				ALLOW();
+			} else {
+				WARN();
+			}
+			break;
+
+		default:
+			DENY();
+			break;
+		}
+
 		break;
 	}
 
-	#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
-		if (is_valid_input_witness(pathSpec)) {
-			return policyForInputSignTxWitness(pathSpec);
-		} else if (is_valid_pool_cold_key_witness(pathSpec)) {
-			ALLOW();
-		} else {
+
+		switch (bip44_classifyPath(pathSpec)) {
+
+		case PATH_WALLET_ADDRESS:
+		case PATH_POOL_COLD_KEY:
+			if (bip44_isPathReasonable(pathSpec)) {
+				ALLOW();
+			} else {
+				WARN();
+			}
+			break;
+
+		default:
 			DENY();
+			break;
 		}
+
 		break;
 	}
-	#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -682,9 +662,23 @@ security_policy_t policyForSignTxConfirm()
 	PROMPT();
 }
 
-#ifdef POOL_OPERATOR_APP
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 {
-	return policyForGetPoolColdPublicKey(poolColdKeyPathSpec);
+
+	switch (bip44_classifyPath(poolColdKeyPathSpec)) {
+
+	case PATH_POOL_COLD_KEY:
+		if (bip44_isPathReasonable(poolColdKeyPathSpec)) {
+			ALLOW();
+		} else {
+			WARN();
+		}
+		break;
+
+	default:
+		DENY();
+		break;
+	}
+
+	DENY(); // should not be reached
 }
-#endif // POOL_OPERATOR_APP

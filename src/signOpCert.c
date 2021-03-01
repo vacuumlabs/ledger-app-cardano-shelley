@@ -1,5 +1,3 @@
-#ifdef POOL_OPERATOR_APP
-
 #include "common.h"
 
 #include "signOpCert.h"
@@ -177,5 +175,3 @@ static void signOpCert_ui_runStep()
 	}
 	UI_STEP_END(UI_STEP_INVALID);
 }
-
-#endif // POOL_OPERATOR_APP

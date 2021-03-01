@@ -8,14 +8,15 @@
 #include "signTxPoolRegistration.h"
 #include "signTx.h"
 
+bool is_tx_network_verifiable(
+        sign_tx_usecase_t signTxUsecase,
+        uint16_t numOutputs,
+        uint16_t numWithdrawals
+);
 
 security_policy_t policyForGetPublicKeysInit(size_t numPaths);
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec);
 security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec);
-
-#ifdef POOL_OPERATOR_APP
-security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec);
-#endif // POOL_OPERATOR_APP
 
 security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams);
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams);
@@ -58,13 +59,11 @@ security_policy_t policyForSignTxCertificateStaking(
         const certificate_type_t certificateType,
         const bip44_path_t* stakingKeyPath
 );
-#ifdef POOL_OPERATOR_APP
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_usecase_t signTxUsecase,
         const bip44_path_t* poolIdPath,
         uint64_t epoch
 );
-#endif // POOL_OPERATOR_APP
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
         sign_tx_usecase_t signTxUsecase,
         const pool_id_t* poolId
@@ -101,15 +100,6 @@ security_policy_t policyForSignTxWitness(
 
 security_policy_t policyForSignTxConfirm();
 
-bool is_tx_network_verifiable(
-        sign_tx_usecase_t signTxUsecase,
-        uint16_t numOutputs,
-        uint16_t numWithdrawals
-);
-
-#ifdef POOL_OPERATOR_APP
-security_policy_t policyForGetPoolColdPublicKey(const bip44_path_t* pathSpec);
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec);
-#endif // POOL_OPERATOR_APP
 
 #endif // H_CARDANO_APP_SECURITY_POLICY

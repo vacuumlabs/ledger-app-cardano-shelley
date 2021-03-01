@@ -362,11 +362,9 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 			displayUiStep = HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID;
 			break;
 
-			#ifdef POOL_OPERATOR_APP
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 			displayUiStep = HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH;
 			break;
-			#endif // POOL_OPERATOR_APP
 
 		default:
 			ASSERT(false);
@@ -772,11 +770,9 @@ static void handleOwner_ui_runStep()
 				VALIDATE(subctx->numOwnersGivenByPath == 1, ERR_INVALID_DATA);
 				break;
 
-				#ifdef POOL_OPERATOR_APP
 			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 				ASSERT(subctx->numOwnersGivenByPath == 0);
 				break;
-				#endif // POOL_OPERATOR_APP
 
 			default:
 				ASSERT(false);

@@ -14,10 +14,7 @@
 typedef enum {
 	SIGN_TX_USECASE_ORDINARY_TX = 3, // enum value 3 is needed for backwards compatibility
 	SIGN_TX_USECASE_POOL_REGISTRATION_OWNER = 4,
-
-	#ifdef POOL_OPERATOR_APP
 	SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR = 5,
-	#endif // POOL_OPERATOR_APP
 } sign_tx_usecase_t;
 
 typedef enum {

@@ -27,58 +27,83 @@ void ui_displayPathScreen(
 	);
 }
 
+static void _printAccountDescription(
+        const bip44_path_t* path,
+        char *out,
+        size_t outSize
+)
+{
+	ASSERT(bip44_classifyPath(path) == PATH_WALLET_ACCOUNT);
+
+	uint32_t account = unharden(bip44_getAccount(path));
+	if (bip44_hasByronPrefix(path)) {
+		snprintf(
+		        out, outSize,
+		        "Byron account #%u  ", account + 1
+		);
+	} else if (bip44_hasShelleyPrefix(path)) {
+		snprintf(
+		        out, outSize,
+		        "Account #%u  ", account + 1
+		);
+	} else {
+		ASSERT(false);
+	}
+
+	{
+		size_t len = strlen(out);
+		ASSERT(len + 1 < outSize);
+
+		bip44_printToStr(path, out + len, outSize - len);
+	}
+}
+
+
 // the given path typically corresponds to an account
 // if it contains anything more, we display just the whole path
-void ui_displayAccountScreen(
-        const char* screenHeader,
+void ui_displayPublicKeyPathScreen(
         const bip44_path_t* path,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	switch (bip44_classifyPath(path)) {
+	case PATH_POOL_COLD_KEY: {
+		ui_displayPathScreen(
+		        "Export cold public key",
+		        path,
+		        callback
+		);
+		return;
+	}
 
-	ASSERT(bip44_hasValidCardanoWalletPrefix(path));
-	ASSERT(bip44_containsAccount(path));
+	case PATH_WALLET_ACCOUNT: {
+		char accountDescription[160];
+		explicit_bzero(accountDescription, SIZEOF(accountDescription));
+		{
+			_printAccountDescription(path, accountDescription, SIZEOF(accountDescription));
 
-	char accountDescription[160];
-	explicit_bzero(accountDescription, SIZEOF(accountDescription));
-
-	if (bip44_hasReasonableAccount(path) && !bip44_containsMoreThanAccount(path)) {
-		uint32_t account = unharden(bip44_getAccount(path));
-		if (bip44_hasByronPrefix(path)) {
-			snprintf(
-			        accountDescription, SIZEOF(accountDescription),
-			        "Byron account #%u  ", account + 1
-			);
-		} else if (bip44_hasShelleyPrefix(path)) {
-			snprintf(
-			        accountDescription, SIZEOF(accountDescription),
-			        "Account #%u  ", account + 1
-			);
-		} else {
-			ASSERT(false);
+			size_t len = strlen(accountDescription);
+			ASSERT(len > 0);
+			ASSERT(len + 1 < SIZEOF(accountDescription));
 		}
+
+		ui_displayPaginatedText(
+		        "Export public key",
+		        accountDescription,
+		        callback
+		);
+		return;
 	}
 
-	{
-		size_t len = strlen(accountDescription);
-		ASSERT(len + 1 < SIZEOF(accountDescription));
-
-		bip44_printToStr(path, accountDescription + len, SIZEOF(accountDescription) - len);
+	default:
+		ui_displayPathScreen(
+		        "Export public key",
+		        path,
+		        callback
+		);
+		return;
 	}
 
-	{
-		size_t len = strlen(accountDescription);
-		ASSERT(len > 0);
-		ASSERT(len + 1 < SIZEOF(accountDescription));
-	}
-
-	ui_displayPaginatedText(
-	        screenHeader,
-	        accountDescription,
-	        callback
-	);
 }
 
 void ui_displayAddressScreen(

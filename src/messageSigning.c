@@ -65,7 +65,6 @@ void getTxWitness(bip44_path_t* pathSpec,
 	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
 }
 
-#ifdef POOL_OPERATOR_APP
 void getOpCertSignature(bip44_path_t* pathSpec,
                         const uint8_t* opCertBodyBuffer, size_t opCertBodySize,
                         uint8_t* outBuffer, size_t outSize)
@@ -74,4 +73,3 @@ void getOpCertSignature(bip44_path_t* pathSpec,
 	ASSERT(bip44_isValidPoolColdKeyPath(pathSpec));
 	signRawMessageWithPath(pathSpec, opCertBodyBuffer, opCertBodySize, outBuffer, outSize);
 }
-#endif // POOL_OPERATOR_APP

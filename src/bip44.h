@@ -17,13 +17,12 @@ typedef struct {
 static const uint32_t PURPOSE_BYRON = 44;
 static const uint32_t PURPOSE_SHELLEY = 1852;
 
-#ifdef POOL_OPERATOR_APP
 static const uint32_t PURPOSE_POOL_COLD_KEY = 1853;
-#endif // POOL_OPERATOR_APP
 
 static const uint32_t ADA_COIN_TYPE = 1815;
 
 static const uint32_t HARDENED_BIP32 = ((uint32_t) 1 << 31);
+
 
 size_t bip44_parseFromWire(
         bip44_path_t* pathSpec,
@@ -51,7 +50,6 @@ bool bip44_hasValidCardanoWalletPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
 uint32_t bip44_getAccount(const bip44_path_t* pathSpec);
-bool bip44_containsMoreThanAccount(const bip44_path_t* pathSpec);
 bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec);
 
 bool bip44_containsChainType(const bip44_path_t* pathSpec);
@@ -64,15 +62,39 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
 
-#ifdef POOL_OPERATOR_APP
 bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec);
 bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec);
-#endif // POOL_OPERATOR_APP
 
 bool isHardened(uint32_t value);
 uint32_t unharden(uint32_t value);
 
 size_t bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
+
+
+typedef enum {
+	// hd wallet account
+	PATH_WALLET_ACCOUNT,
+
+	// hd wallet address
+	PATH_WALLET_ADDRESS,
+
+	// hd wallet reward adress, withdrawal witness, pool owner
+	PATH_WALLET_STAKING_KEY,
+
+	// unknown paths with wallet prefix
+	PATH_WALLET_INVALID,
+
+	// pool cold key in pool registrations and retirements
+	PATH_POOL_COLD_KEY,
+	// unknown paths with pool cold key prefix
+	PATH_POOL_COLD_KEY_INVALID,
+
+	PATH_UNKNOWN,
+} bip44_path_type_t;
+
+bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec);
+
+bool bip44_isPathReasonable(const bip44_path_t* pathSpec);
 
 
 #ifdef DEVEL
