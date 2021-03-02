@@ -110,11 +110,6 @@ uint32_t bip44_getColdKeyIndex(const bip44_path_t* pathSpec)
 }
 #endif // POOL_OPERATOR_APP
 
-bool bip44_containsMoreThanAccount(const bip44_path_t* pathSpec)
-{
-	return (pathSpec->length > BIP44_I_ACCOUNT + 1);
-}
-
 bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsAccount(pathSpec)) return false;
@@ -259,6 +254,76 @@ size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 
 	return ptr - out;
 }
+
+
+bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec)
+{
+	if (bip44_hasValidCardanoPoolColdKeyPrefix(pathSpec)) {
+		if (bip44_isValidPoolColdKeyPath(pathSpec)) {
+			return PATH_POOL_COLD_KEY;
+		} else {
+			return PATH_POOL_COLD_KEY_INVALID;
+		}
+	}
+
+	if (bip44_hasValidCardanoWalletPrefix(pathSpec)) {
+		switch (pathSpec->length) {
+
+		case 3: {
+			return PATH_WALLET_ACCOUNT;
+		}
+
+		case 5: {
+			const uint8_t chainType = bip44_getChainTypeValue(pathSpec);
+			switch (chainType) {
+
+			case 0:
+			case 1:
+				return PATH_WALLET_ADDRESS;
+
+			case 2:
+				if (bip44_isValidStakingKeyPath(pathSpec)) {
+					return PATH_WALLET_STAKING_KEY;
+				} else {
+					return PATH_WALLET_INVALID;
+				}
+
+			default:
+				return PATH_WALLET_INVALID;
+			}
+		}
+
+		default:
+			return PATH_WALLET_INVALID;
+		}
+	}
+
+	return PATH_UNKNOWN;
+}
+
+bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
+{
+	switch (bip44_classifyPath(pathSpec)) {
+
+	case PATH_WALLET_ACCOUNT:
+		return bip44_hasReasonableAccount(pathSpec);
+
+	case PATH_WALLET_ADDRESS:
+		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
+
+	case PATH_WALLET_STAKING_KEY:
+		return bip44_hasReasonableAccount(pathSpec);
+
+	case PATH_POOL_COLD_KEY:
+		return bip44_hasReasonablePoolColdKeyIndex(pathSpec);
+
+	default:
+		// we are not supposed to call this for invalid paths
+		ASSERT(false);
+	}
+	return false;
+}
+
 
 #ifdef DEVEL
 void bip44_PRINTF(const bip44_path_t* pathSpec)

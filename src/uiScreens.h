@@ -14,8 +14,7 @@ void ui_displayPathScreen(
 );
 
 __noinline_due_to_stack__
-void ui_displayAccountScreen(
-        const char* screenHeader,
+void ui_displayPublicKeyPathScreen(
         const bip44_path_t* path,
         ui_callback_fn_t callback
 );
