@@ -602,7 +602,8 @@ static void _calculateRewardAccount(
 }
 
 enum {
-	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY = 6500,
+	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_PATH = 6500,
+	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_HASH,
 	HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND,
 	HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID,
 };
@@ -615,7 +616,16 @@ static void handlePoolRewardAccount_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
-	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY) {
+	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_PATH) {
+		ASSERT(subctx->stateData.poolRewardAccount.keyReferenceType == KEY_REFERENCE_PATH);
+
+		ui_displayPathScreen(
+		        "Reward account",
+		        &subctx->stateData.poolRewardAccount.path,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_HASH) {
 		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
 		_calculateRewardAccount(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
 
@@ -707,9 +717,22 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 
 	{
 		// select UI steps
+		int displayStep = HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID;
+		switch (subctx->stateData.poolRewardAccount.keyReferenceType) {
+		case KEY_REFERENCE_PATH:
+			displayStep = HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_PATH;
+			break;
+		case KEY_REFERENCE_HASH:
+			displayStep = HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_HASH;
+			break;
+		default:
+			ASSERT(false);
+		}
+		ASSERT(displayStep != HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID);
+
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, displayStep);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND);
 #	undef   CASE
 		default:
