@@ -26,20 +26,13 @@ NANOS_ID = 1
 WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 PIN = 5555
 
-# pool operator app contains additional functionality
-# set to 1 if you want to include it, or to 0 if you want a regular app
-POOL_OPERATOR_APP = 1
-
 APPNAME      = "Cardano ADA"
 APPVERSION_M = 2
 APPVERSION_N = 2
 APPVERSION_P = 0
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
-APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'"
-ifeq ($(POOL_OPERATOR_APP),1)
-    APP_LOAD_PARAMS += --path "1853'/1815'"
-endif
+APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'" --path "1853'/1815'"
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
 ifeq ($(TARGET_NAME),TARGET_NANOX)
@@ -60,10 +53,6 @@ DEFINES += OS_IO_SEPROXYHAL
 DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 DEFINES += APPVERSION=\"$(APPVERSION)\"
 DEFINES += MAJOR_VERSION=$(APPVERSION_M) MINOR_VERSION=$(APPVERSION_N) PATCH_VERSION=$(APPVERSION_P)
-
-ifeq ($(POOL_OPERATOR_APP),1)
-    DEFINES += POOL_OPERATOR_APP
-endif
 
 ## USB HID?
 DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU

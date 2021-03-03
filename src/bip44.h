@@ -17,13 +17,12 @@ typedef struct {
 static const uint32_t PURPOSE_BYRON = 44;
 static const uint32_t PURPOSE_SHELLEY = 1852;
 
-#ifdef POOL_OPERATOR_APP
 static const uint32_t PURPOSE_POOL_COLD_KEY = 1853;
-#endif // POOL_OPERATOR_APP
 
 static const uint32_t ADA_COIN_TYPE = 1815;
 
 static const uint32_t HARDENED_BIP32 = ((uint32_t) 1 << 31);
+
 
 size_t bip44_parseFromWire(
         bip44_path_t* pathSpec,
@@ -63,10 +62,8 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
 
-#ifdef POOL_OPERATOR_APP
 bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec);
 bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec);
-#endif // POOL_OPERATOR_APP
 
 bool isHardened(uint32_t value);
 uint32_t unharden(uint32_t value);

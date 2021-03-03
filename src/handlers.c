@@ -30,10 +30,7 @@ handler_fn_t* lookupHandler(uint8_t ins)
 
 		// 0x2* -  signing related
 		CASE(0x21, signTx_handleAPDU);
-
-		#ifdef POOL_OPERATOR_APP
 		CASE(0x22, signOpCert_handleAPDU);
-		#endif // POOL_OPERATOR_APP
 
 		#ifdef DEVEL
 		// 0xF* -  debug_mode related

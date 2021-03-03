@@ -103,11 +103,7 @@ static struct {
 	}
 };
 
-#ifdef POOL_OPERATOR_APP
 static const char* expectedHex = "8d8344a54f788061068957e25dbfa580468562d412c5e3a30ebd66006f9f3721";
-#else
-static const char* expectedHex = "58dc0efc7a2d654795ae3b7c85518065bb123f17056406732c18d1553cc2510f";
-#endif // POOL_OPERATOR_APP
 
 
 static void addMultiassetOutput(tx_hash_builder_t* builder)
@@ -251,7 +247,6 @@ static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 	txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(builder, urlBuffer, urlSize, metadataHash, metadataHashSize);
 }
 
-#ifdef POOL_OPERATOR_APP
 static void addPoolRetirementCertificate(tx_hash_builder_t* builder)
 {
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
@@ -269,7 +264,6 @@ static void addPoolRetirementCertificate(tx_hash_builder_t* builder)
 	        epoch
 	);
 }
-#endif // POOL_OPERATOR_APP
 
 static void addCertificates(tx_hash_builder_t* builder)
 {
@@ -297,9 +291,7 @@ static void addCertificates(tx_hash_builder_t* builder)
 
 	addPoolRegistrationCertificate(builder);
 
-	#ifdef POOL_OPERATOR_APP
 	addPoolRetirementCertificate(builder);
-	#endif // POOL_OPERATOR_APP
 
 	ITERATE(it, delegationCertificates) {
 		uint8_t tmp_credential[70];
@@ -325,11 +317,7 @@ void run_txHashBuilder_test()
 	const size_t numCertificates = ARRAY_LEN(registrationCertificates) +
 	                               ARRAY_LEN(deregistrationCertificates) +
 	                               ARRAY_LEN(delegationCertificates) +
-
-	                               #ifdef POOL_OPERATOR_APP
 	                               1 + // stake pool retirement certificate
-	                               #endif // POOL_OPERATOR_APP
-
 	                               1;  // stake pool registration certificate
 
 	txHashBuilder_init(&builder,

@@ -41,9 +41,7 @@ bool is_tx_network_verifiable(
 
 	switch (signTxUsecase) {
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		#endif // POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		// pool registration certificate contains pool reward account
 		return true;
@@ -244,11 +242,9 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		ALLOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -275,9 +271,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 
 	switch (signTxUsecase) {
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		#endif // POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_ORDINARY_TX: {
 		switch (bip44_classifyPath(&params->spendingKeyPath)) {
 
@@ -338,9 +332,7 @@ security_policy_t policyForSignTxFee(
 {
 	switch (signTxUsecase) {
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		#endif // POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_ORDINARY_TX:
 		// always show the fee if it is paid by the signer
 		SHOW();
@@ -384,9 +376,7 @@ security_policy_t policyForSignTxCertificate(
 		ALLOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		#endif // POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
@@ -427,12 +417,11 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 )
 {
 	switch (signTxUsecase) {
-		#ifdef POOL_OPERATOR_APP
+
 	case SIGN_TX_USECASE_ORDINARY_TX:
 		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
 		PROMPT();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		// in other usecases, the tx containing pool retirement certificate
@@ -454,12 +443,10 @@ security_policy_t policyForSignTxStakePoolRegistrationPoolId(
 		SHOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_PATH);
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -477,11 +464,9 @@ security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
 		ALLOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -501,11 +486,9 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 		SHOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -528,12 +511,10 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 		SHOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(owner->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -551,11 +532,9 @@ security_policy_t policyForSignTxStakePoolRegistrationRelay(
 		ALLOW();
 		break;
 
-		#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
-		#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -640,7 +619,6 @@ security_policy_t policyForSignTxWitness(
 		break;
 	}
 
-	#ifdef POOL_OPERATOR_APP
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
 
 		switch (bip44_classifyPath(pathSpec)) {
@@ -661,7 +639,6 @@ security_policy_t policyForSignTxWitness(
 
 		break;
 	}
-	#endif // POOL_OPERATOR_APP
 
 	default:
 		ASSERT(false);
@@ -685,7 +662,6 @@ security_policy_t policyForSignTxConfirm()
 	PROMPT();
 }
 
-#ifdef POOL_OPERATOR_APP
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 {
 
@@ -706,4 +682,3 @@ security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 
 	DENY(); // should not be reached
 }
-#endif // POOL_OPERATOR_APP
