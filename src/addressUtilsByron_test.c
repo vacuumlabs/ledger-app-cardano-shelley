@@ -74,11 +74,6 @@ void testAddressDerivation()
 	        "82d818582183581c49dda88b3cdb4c9b60ad35699b2795a446120a2460f1a789c6152ce2a0001a00fb5684"
 	);
 
-	TESTCASE(
-	        (HD + 44, HD + 1815, HD + 0, 1, HD + 26, 32, 54, 61), MAINNET_PROTOCOL_MAGIC,
-	        "82d818582183581c7cef664fa8b2c01a9d31cfdc2b0ed662b3b16be4f5bcaf783c24c729a0001aab55fb52"
-	);
-
 	// Testnet
 	TESTCASE(
 	        (HD + 44, HD + 1815, HD + 0, 1, 55), 4747,

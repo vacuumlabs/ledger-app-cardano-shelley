@@ -220,14 +220,14 @@ size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 		size_t res = strlen(ptr); \
 		/* if snprintf filled all the remaining space, there is no space for '\0', */ \
 		/* i.e. outSize is insufficient, we messed something up */ \
-		/* usually, outSize >= 1 + BIP44_MAX_PATH_STRING_LENGTH */ \
+		/* usually, outSize >= BIP44_PATH_STRING_SIZE_MAX */ \
 		ASSERT(res + 1 <= availableSize); \
 		ptr += res; \
 	}
 
 	WRITE("m");
 
-	ASSERT(pathSpec->length < ARRAY_LEN(pathSpec->path));
+	ASSERT(pathSpec->length <= ARRAY_LEN(pathSpec->path));
 
 	for (size_t i = 0; i < pathSpec->length; i++) {
 		const uint32_t value = pathSpec->path[i];
@@ -318,7 +318,7 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 #ifdef DEVEL
 void bip44_PRINTF(const bip44_path_t* pathSpec)
 {
-	char tmp[1 + BIP44_MAX_PATH_STRING_LENGTH];
+	char tmp[BIP44_PATH_STRING_SIZE_MAX];
 	SIZEOF(*pathSpec);
 	bip44_printToStr(pathSpec, tmp, SIZEOF(tmp));
 	PRINTF("%s", tmp);

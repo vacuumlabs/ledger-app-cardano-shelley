@@ -17,7 +17,7 @@ void ui_displayPathScreen(
 	ASSERT(strlen(screenHeader) > 0);
 	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
 
-	char pathStr[1 + BIP44_MAX_PATH_STRING_LENGTH];
+	char pathStr[1 + BIP44_PATH_STRING_SIZE_MAX];
 	bip44_printToStr(path, pathStr, SIZEOF(pathStr));
 
 	ui_displayPaginatedText(
@@ -446,7 +446,7 @@ void ui_displayPoolOwnerScreen(
 		}
 	}
 
-	char ownerDescription[BIP44_MAX_PATH_STRING_LENGTH + MAX_HUMAN_REWARD_ACCOUNT_SIZE + 1];
+	char ownerDescription[BIP44_PATH_STRING_SIZE_MAX + MAX_HUMAN_REWARD_ACCOUNT_SIZE + 1];
 
 	explicit_bzero(ownerDescription, SIZEOF(ownerDescription));
 	size_t descLen = 0; // owner description length
@@ -457,7 +457,7 @@ void ui_displayPoolOwnerScreen(
 
 	{
 		// add owner (represented as bech32-encoded reward account for owner's staking key)
-		ASSERT(descLen <= BIP44_MAX_PATH_STRING_LENGTH);
+		ASSERT(descLen <= BIP44_PATH_STRING_SIZE_MAX);
 		ASSERT(descLen + 1 <= SIZEOF(ownerDescription));
 
 		if (descLen > 0) {

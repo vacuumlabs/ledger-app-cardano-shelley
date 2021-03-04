@@ -72,8 +72,10 @@ static void testcase_deriveAddressShelley(
 	} else {
 		PRINTF("testcase_deriveAddressShelley 0x%02x ", constructShelleyAddressHeader(type, (uint8_t) networkIdOrProtocolMagic));
 	}
+
 	bip44_PRINTF(&params.spendingKeyPath);
-	if (params.stakingKeyPath.length > 0) {
+
+	if (stakingChoice == STAKING_KEY_PATH) {
 		bip44_PRINTF(&params.stakingKeyPath);
 	}
 	if (stakingKeyHashHex != NULL) {

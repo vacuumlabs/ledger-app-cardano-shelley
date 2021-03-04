@@ -37,7 +37,7 @@ void derivePrivateKey(
 		THROW(ERR_INVALID_BIP44_PATH);
 	}
 	// Sanity check
-	ASSERT(pathSpec->length < ARRAY_LEN(pathSpec->path));
+	ASSERT(pathSpec->length <= ARRAY_LEN(pathSpec->path));
 
 	uint8_t privateKeyRawBuffer[64];
 

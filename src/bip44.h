@@ -3,10 +3,10 @@
 
 #include "common.h"
 
-#define BIP44_MAX_PATH_ELEMENTS 10u
+#define BIP44_MAX_PATH_ELEMENTS 5u
 // each element in path is uint32, so at most 10 decimal digits
-// plus ' for hardened plus / as a separator, plus the initial m
-#define BIP44_MAX_PATH_STRING_LENGTH (1 + 12 * BIP44_MAX_PATH_ELEMENTS)
+// plus ' for hardened plus / as a separator, plus the initial m and '\0'
+#define BIP44_PATH_STRING_SIZE_MAX (1 + 12 * BIP44_MAX_PATH_ELEMENTS + 1)
 
 typedef struct {
 	uint32_t path[BIP44_MAX_PATH_ELEMENTS];
