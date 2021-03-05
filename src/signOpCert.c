@@ -112,7 +112,7 @@ static void signOpCert_ui_runStep()
 {
 	ui_callback_fn_t* this_fn = signOpCert_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(UI_STEP_WARNING) {
 		ui_displayPaginatedText(

@@ -68,7 +68,7 @@ static void getPublicKeys_respondOneKey_ui_runStep()
 	TRACE("UI step %d", ctx->ui_step);
 	ui_callback_fn_t* this_fn = getPublicKeys_respondOneKey_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 	UI_STEP(GET_KEY_UI_STEP_WARNING) {
 		ui_displayPaginatedText(
 		        "Unusual request",
@@ -151,7 +151,7 @@ static void getPublicKeys_handleInit_ui_runStep()
 	TRACE("UI step %d", ctx->ui_step);
 	ui_callback_fn_t* this_fn = getPublicKeys_handleInit_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 	UI_STEP(HANDLE_INIT_UI_STEP_CONFIRM) {
 		char secondLine[100];
 		explicit_bzero(secondLine, SIZEOF(secondLine));

@@ -139,7 +139,7 @@ static void handlePoolInit_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolInit_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_POOL_INIT_STEP_DISPLAY) {
 		ui_displayPaginatedText(
@@ -260,7 +260,7 @@ static void handlePoolKey_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolKey_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH) {
 		ui_displayPathScreen(
@@ -399,7 +399,7 @@ static void handlePoolVrfKey_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolVrfKey_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_POOL_VRF_KEY_STEP_DISPLAY) {
 		ui_displayBech32Screen(
@@ -482,7 +482,7 @@ static void handlePoolFinancials_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolFinancials_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE) {
 		ui_displayAdaAmountScreen(
@@ -612,7 +612,7 @@ static void handlePoolRewardAccount_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolRewardAccount_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_PATH) {
 		ASSERT(subctx->stateData.poolRewardAccount.keyReferenceType == KEY_REFERENCE_PATH);
@@ -755,7 +755,7 @@ static void handleOwner_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleOwner_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_OWNER_STEP_DISPLAY) {
 		ui_displayPoolOwnerScreen(&subctx->stateData.owner, subctx->currentOwner, commonTxData->networkId, this_fn);
@@ -911,7 +911,7 @@ static void handleRelay_ip_ui_runStep()
 
 	pool_relay_t* relay = &subctx->stateData.relay;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_NUMBER) {
 		ui_displayRelaycreen(
@@ -967,7 +967,7 @@ static void handleRelay_dns_ui_runStep()
 
 	pool_relay_t* relay = &subctx->stateData.relay;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_NUMBER) {
 		ui_displayRelaycreen(
@@ -979,9 +979,7 @@ static void handleRelay_dns_ui_runStep()
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_PORT) {
 		if (relay->format == RELAY_MULTIPLE_HOST_NAME) {
 			// nothing to display in this step, so we skip it
-			subctx->ui_step = HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME;
-			this_fn();
-			return;
+			UI_STEP_JUMP(HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME);
 		}
 
 		ui_displayIpPortScreen(
@@ -1210,7 +1208,7 @@ static void handleNullMetadata_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleNullMetadata_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_NULL_METADATA_STEP_DISPLAY) {
 		ui_displayPaginatedText(
@@ -1241,7 +1239,7 @@ static void handleMetadata_ui_runStep()
 
 	pool_metadata_t* md = &subctx->stateData.metadata;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_URL) {
 		char metadataUrlStr[1 + POOL_METADATA_URL_LENGTH_MAX];
@@ -1399,7 +1397,7 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxPoolRegistration_handleConfirm_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(

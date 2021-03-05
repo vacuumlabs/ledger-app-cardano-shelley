@@ -229,7 +229,7 @@ static void signTx_handleInit_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleInit_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
 		if (is_tx_network_verifiable(ctx->commonTxData.signTxUsecase, ctx->numOutputs, ctx->numWithdrawals)) {
@@ -473,9 +473,9 @@ enum {
 static void signTx_handleInput_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
-	TRACE_STACK_USAGE();
+	ui_callback_fn_t* this_fn = signTx_handleInput_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_INPUT_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -593,7 +593,7 @@ static void signTx_handleFee_ui_runStep()
 
 	TRACE_ADA_AMOUNT("fee ", ctx->stageData.fee);
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_FEE_STEP_DISPLAY) {
 		ui_displayAdaAmountScreen("Transaction fee", ctx->stageData.fee, this_fn);
@@ -664,7 +664,7 @@ static void signTx_handleTtl_ui_runStep()
 	TRACE("UI step %d", ctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleTtl_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_TTL_STEP_DISPLAY) {
 		ui_displayValidityBoundaryScreen(
@@ -743,7 +743,7 @@ static void signTx_handleCertificate_ui_runStep()
 	TRACE("UI step %d", ctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleCertificate_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION) {
 		char title[50];
@@ -842,7 +842,7 @@ static void signTx_handleCertificatePoolRetirement_ui_runStep()
 	ASSERT(ctx->stageData.certificate.type == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
 	ui_callback_fn_t* this_fn = signTx_handleCertificatePoolRetirement_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION) {
 		char poolId[200];
@@ -1106,7 +1106,7 @@ static void signTx_handleWithdrawal_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleWithdrawal_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY) {
 		ui_displayAdaAmountScreen("Withdrawing rewards", ctx->stageData.withdrawal.amount, this_fn);
@@ -1213,7 +1213,7 @@ static void signTx_handleMetadata_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleMetadata_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY) {
 		char metadataHashHex[1 + 2 * METADATA_HASH_LENGTH];
@@ -1303,7 +1303,7 @@ static void signTx_handleValidityInterval_ui_runStep()
 	TRACE("UI step %d", ctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleValidityInterval_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_VALIDITY_INTERVAL_START_STEP_DISPLAY) {
 		ui_displayValidityBoundaryScreen(
@@ -1382,7 +1382,7 @@ static void signTx_handleConfirm_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleConfirm_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(
@@ -1464,7 +1464,7 @@ static void signTx_handleWitness_ui_runStep()
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTx_handleWitness_ui_runStep;
 
-	UI_STEP_BEGIN(ctx->ui_step);
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_WITNESS_STEP_WARNING) {
 		ui_displayPaginatedText(
