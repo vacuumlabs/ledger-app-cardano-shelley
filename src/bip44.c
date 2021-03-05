@@ -267,11 +267,11 @@ bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec)
 			const uint8_t chainType = bip44_getChainTypeValue(pathSpec);
 			switch (chainType) {
 
-			case 0:
-			case 1:
+			case CARDANO_CHAIN_INTERNAL:
+			case CARDANO_CHAIN_EXTERNAL:
 				return PATH_WALLET_SPENDING_KEY;
 
-			case 2:
+			case CARDANO_CHAIN_STAKING_KEY:
 				if (bip44_isValidStakingKeyPath(pathSpec)) {
 					return PATH_WALLET_STAKING_KEY;
 				} else {

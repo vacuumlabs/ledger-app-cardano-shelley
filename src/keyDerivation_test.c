@@ -55,7 +55,7 @@ void testPrivateKeyDerivation()
 	        (HD + 1852, HD + 1815, HD + 1, 0, HD + 55),
 
 	        "08671b6f39031f2fc7bcebff7b85aec4c27787fc6a12f7f8bbfb28902ae69d41"
-			"85751aae1484fb26c53f8e4c35b943d11449b52e5863779821fcc49cddf60792"
+	        "85751aae1484fb26c53f8e4c35b943d11449b52e5863779821fcc49cddf60792"
 	);
 #undef TESTCASE
 
