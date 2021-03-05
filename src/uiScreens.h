@@ -97,6 +97,12 @@ void ui_displayPoolOwnerScreen(
         ui_callback_fn_t callback
 );
 
+void ui_displayRelaycreen(
+        const pool_relay_t* relay,
+        size_t relayIndex,
+        ui_callback_fn_t callback
+);
+
 __noinline_due_to_stack__
 void ui_displayIpv4Screen(
         ipv4_t* ipv4,

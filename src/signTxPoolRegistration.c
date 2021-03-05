@@ -895,7 +895,8 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 // ============================== RELAY ==============================
 
 enum {
-	HANDLE_RELAY_IP_STEP_DISPLAY_IPV4 = 6700,
+	HANDLE_RELAY_IP_STEP_DISPLAY_NUMBER = 6700,
+	HANDLE_RELAY_IP_STEP_DISPLAY_IPV4,
 	HANDLE_RELAY_IP_STEP_DISPLAY_IPV6,
 	HANDLE_RELAY_IP_STEP_DISPLAY_PORT,
 	HANDLE_RELAY_IP_STEP_RESPOND,
@@ -912,6 +913,13 @@ static void handleRelay_ip_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
+	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_NUMBER) {
+		ui_displayRelaycreen(
+			relay,
+			subctx->currentRelay,
+			this_fn
+		);
+	}
 	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_IPV4) {
 		ui_displayIpv4Screen(
 		        &relay->ipv4,
@@ -944,7 +952,8 @@ static void handleRelay_ip_ui_runStep()
 }
 
 enum {
-	HANDLE_RELAY_DNS_STEP_DISPLAY_PORT = 6800,
+	HANDLE_RELAY_DNS_STEP_DISPLAY_NUMBER = 6800,
+	HANDLE_RELAY_DNS_STEP_DISPLAY_PORT,
 	HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME,
 	HANDLE_RELAY_DNS_STEP_RESPOND,
 	HANDLE_RELAY_DNS_STEP_INVALID,
@@ -960,7 +969,21 @@ static void handleRelay_dns_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
+	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_NUMBER) {
+		ui_displayRelaycreen(
+			relay,
+			subctx->currentRelay,
+			this_fn
+		);
+	}
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_PORT) {
+		if (relay->format == RELAY_MULTIPLE_HOST_NAME) {
+			// nothing to display in this step, so we skip it
+			subctx->ui_step = HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME;
+			this_fn();
+			return;
+		}
+
 		ui_displayIpPortScreen(
 		        &relay->port,
 		        this_fn
@@ -1137,21 +1160,15 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 
 		case RELAY_SINGLE_HOST_IP: {
 			respondStep = HANDLE_RELAY_IP_STEP_RESPOND;
-			displayStep = HANDLE_RELAY_IP_STEP_DISPLAY_IPV4;
+			displayStep = HANDLE_RELAY_IP_STEP_DISPLAY_NUMBER;
 			uiFn = handleRelay_ip_ui_runStep;
 			break;
 		}
 
-		case RELAY_SINGLE_HOST_NAME: {
-			respondStep = HANDLE_RELAY_DNS_STEP_RESPOND;
-			displayStep = HANDLE_RELAY_DNS_STEP_DISPLAY_PORT;
-			uiFn = handleRelay_dns_ui_runStep;
-			break;
-		}
-
+		case RELAY_SINGLE_HOST_NAME:
 		case RELAY_MULTIPLE_HOST_NAME: {
 			respondStep = HANDLE_RELAY_DNS_STEP_RESPOND;
-			displayStep = HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME;
+			displayStep = HANDLE_RELAY_DNS_STEP_DISPLAY_NUMBER;
 			uiFn = handleRelay_dns_ui_runStep;
 			break;
 		}

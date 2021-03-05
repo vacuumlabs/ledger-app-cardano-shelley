@@ -511,6 +511,25 @@ void ui_displayPoolOwnerScreen(
 	);
 }
 
+void ui_displayRelaycreen(
+		const pool_relay_t* relay MARK_UNUSED,
+        size_t relayIndex,
+        ui_callback_fn_t callback
+)
+{
+	char firstLine[20];
+	explicit_bzero(firstLine, SIZEOF(firstLine));
+	{
+		snprintf(firstLine, SIZEOF(firstLine), "Relay #%u", relayIndex + 1);
+	}
+
+	ui_displayPaginatedText(
+			firstLine,
+			"",
+			callback
+	);
+}
+
 void ui_displayIpv4Screen(
         ipv4_t* ipv4,
         ui_callback_fn_t callback
