@@ -76,20 +76,16 @@ typedef enum {
 	PATH_WALLET_ACCOUNT,
 
 	// hd wallet address
-	PATH_WALLET_ADDRESS,
+	PATH_WALLET_SPENDING_KEY,
 
 	// hd wallet reward adress, withdrawal witness, pool owner
 	PATH_WALLET_STAKING_KEY,
 
-	// unknown paths with wallet prefix
-	PATH_WALLET_INVALID,
-
 	// pool cold key in pool registrations and retirements
 	PATH_POOL_COLD_KEY,
-	// unknown paths with pool cold key prefix
-	PATH_POOL_COLD_KEY_INVALID,
 
-	PATH_UNKNOWN,
+	// not one of the above
+	PATH_INVALID,
 } bip44_path_type_t;
 
 bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec);

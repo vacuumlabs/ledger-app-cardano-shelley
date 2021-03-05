@@ -252,7 +252,7 @@ bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec)
 		if (bip44_isValidPoolColdKeyPath(pathSpec)) {
 			return PATH_POOL_COLD_KEY;
 		} else {
-			return PATH_POOL_COLD_KEY_INVALID;
+			return PATH_INVALID;
 		}
 	}
 
@@ -269,26 +269,26 @@ bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec)
 
 			case 0:
 			case 1:
-				return PATH_WALLET_ADDRESS;
+				return PATH_WALLET_SPENDING_KEY;
 
 			case 2:
 				if (bip44_isValidStakingKeyPath(pathSpec)) {
 					return PATH_WALLET_STAKING_KEY;
 				} else {
-					return PATH_WALLET_INVALID;
+					return PATH_INVALID;
 				}
 
 			default:
-				return PATH_WALLET_INVALID;
+				return PATH_INVALID;
 			}
 		}
 
 		default:
-			return PATH_WALLET_INVALID;
+			return PATH_INVALID;
 		}
 	}
 
-	return PATH_UNKNOWN;
+	return PATH_INVALID;
 }
 
 bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
@@ -298,7 +298,7 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 	case PATH_WALLET_ACCOUNT:
 		return bip44_hasReasonableAccount(pathSpec);
 
-	case PATH_WALLET_ADDRESS:
+	case PATH_WALLET_SPENDING_KEY:
 		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
 
 	case PATH_WALLET_STAKING_KEY:
