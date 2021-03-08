@@ -103,7 +103,7 @@ void ui_displayPoolOwnerScreen(
         ui_callback_fn_t callback
 );
 
-void ui_displayRelaycreen(
+void ui_displayPoolRelaycreen(
         const pool_relay_t* relay,
         size_t relayIndex,
         ui_callback_fn_t callback

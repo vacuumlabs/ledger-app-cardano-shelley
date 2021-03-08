@@ -222,7 +222,7 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 // ============================== POOL KEY HASH / ID ==============================
 
 __noinline_due_to_stack__
-static void _calculatePooKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
+static void _toPoolKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
 {
 	switch (poolId->keyReferenceType) {
 
@@ -271,7 +271,7 @@ static void handlePoolKey_ui_runStep()
 	}
 	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID) {
 		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
-		_calculatePooKeyHash(&subctx->stateData.poolId, poolKeyHash);
+		_toPoolKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
 		ui_displayBech32Screen(
 		        "Pool ID",
@@ -347,7 +347,7 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 	{
 		// key derivation must not be done before DENY security policy is enforced
 		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
-		_calculatePooKeyHash(&subctx->stateData.poolId, poolKeyHash);
+		_toPoolKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
 		txHashBuilder_poolRegistrationCertificate_poolKeyHash(
 		        txHashBuilder,
@@ -575,7 +575,7 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuf
 // ============================== POOL REWARD ACCOUNT ==============================
 
 __noinline_due_to_stack__
-static void _calculateRewardAccount(
+static void _toRewardAccountBuffer(
         const pool_reward_account_t* rewardAccount,
         uint8_t* rewardAccountBuffer
 )
@@ -624,7 +624,7 @@ static void handlePoolRewardAccount_ui_runStep()
 	}
 	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_HASH) {
 		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
-		_calculateRewardAccount(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
+		_toRewardAccountBuffer(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
 
 		ui_displayAddressScreen(
 		        "Reward account",
@@ -704,7 +704,7 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 	{
 		// key derivation must not be done before DENY security policy is enforced
 		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
-		_calculateRewardAccount(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
+		_toRewardAccountBuffer(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
 
 		txHashBuilder_poolRegistrationCertificate_rewardAccount(
 		        txHashBuilder,
@@ -913,7 +913,7 @@ static void handleRelay_ip_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_NUMBER) {
-		ui_displayRelaycreen(
+		ui_displayPoolRelaycreen(
 			relay,
 			subctx->currentRelay,
 			this_fn
@@ -969,7 +969,7 @@ static void handleRelay_dns_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_NUMBER) {
-		ui_displayRelaycreen(
+		ui_displayPoolRelaycreen(
 			relay,
 			subctx->currentRelay,
 			this_fn

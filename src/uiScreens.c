@@ -543,7 +543,7 @@ void ui_displayPoolOwnerScreen(
 	);
 }
 
-void ui_displayRelaycreen(
+void ui_displayPoolRelaycreen(
 		const pool_relay_t* relay MARK_UNUSED,
         size_t relayIndex,
         ui_callback_fn_t callback
