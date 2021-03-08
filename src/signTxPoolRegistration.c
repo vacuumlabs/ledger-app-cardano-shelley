@@ -617,8 +617,7 @@ static void handlePoolRewardAccount_ui_runStep()
 	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_PATH) {
 		ASSERT(subctx->stateData.poolRewardAccount.keyReferenceType == KEY_REFERENCE_PATH);
 
-		ui_displayPathScreen(
-		        "Reward account",
+		ui_displayRewardAccountScreen(
 		        &subctx->stateData.poolRewardAccount.path,
 		        this_fn
 		);

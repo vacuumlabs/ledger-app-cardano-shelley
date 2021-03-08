@@ -134,6 +134,38 @@ void ui_displayAddressScreen(
 	);
 }
 
+void ui_displayRewardAccountScreen(
+	const bip44_path_t* path,
+	ui_callback_fn_t callback
+)
+{
+	ASSERT(bip44_classifyPath(path) == PATH_WALLET_STAKING_KEY);
+
+	char firstLine[50];
+	explicit_bzero(firstLine, SIZEOF(firstLine));
+	char secondLine[BIP44_PATH_STRING_SIZE_MAX];
+	explicit_bzero(secondLine, SIZEOF(secondLine));
+
+	{
+		uint32_t account = unharden(bip44_getAccount(path));
+		snprintf(
+				firstLine, SIZEOF(firstLine),
+				"Reward account #%u  ", account + 1
+		);
+		ASSERT(strlen(firstLine) < SIZEOF(firstLine));
+	}
+	{
+		bip44_printToStr(path, secondLine, SIZEOF(secondLine));
+		ASSERT(strlen(secondLine) < SIZEOF(secondLine));
+	}
+
+	ui_displayPaginatedText(
+		firstLine,
+		secondLine,
+		callback
+	);
+}
+
 static const char STAKING_HEADING_PATH[]    = "Staking key path: ";
 static const char STAKING_HEADING_HASH[]    = "Staking key hash: ";
 static const char STAKING_HEADING_POINTER[] = "Staking key pointer: ";

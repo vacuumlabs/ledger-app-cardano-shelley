@@ -1095,7 +1095,8 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 // ============================== WITHDRAWALS ==============================
 
 enum {
-	HANDLE_WITHDRAWAL_STEP_DISPLAY = 700,
+	HANDLE_WITHDRAWAL_STEP_DISPLAY_AMOUNT = 700,
+	HANDLE_WITHDRAWAL_STEP_DISPLAY_PATH,
 	HANDLE_WITHDRAWAL_STEP_RESPOND,
 	HANDLE_WITHDRAWAL_STEP_INVALID,
 };
@@ -1108,8 +1109,11 @@ static void signTx_handleWithdrawal_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY) {
+	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY_AMOUNT) {
 		ui_displayAdaAmountScreen("Withdrawing rewards", ctx->stageData.withdrawal.amount, this_fn);
+	}
+	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY_PATH) {
+		ui_displayRewardAccountScreen(&ctx->stageData.withdrawal.path, this_fn);
 	}
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -1188,7 +1192,7 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 		// select UI steps
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_WITHDRAWAL_STEP_DISPLAY);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_WITHDRAWAL_STEP_DISPLAY_AMOUNT);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_WITHDRAWAL_STEP_RESPOND);
 #	undef   CASE
 		default:

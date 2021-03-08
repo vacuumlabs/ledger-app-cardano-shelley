@@ -27,6 +27,12 @@ void ui_displayAddressScreen(
 );
 
 __noinline_due_to_stack__
+void ui_displayRewardAccountScreen(
+	const bip44_path_t* path,
+	ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
 void ui_displayStakingInfoScreen(
         const addressParams_t* addressParams,
         ui_callback_fn_t callback
