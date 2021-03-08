@@ -477,15 +477,11 @@ security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
 
 security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
         sign_tx_usecase_t signTxUsecase,
-        const pool_reward_account_t* poolRewardAccount
+        const pool_reward_account_t* poolRewardAccount MARK_UNUSED
 )
 {
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-		DENY_UNLESS(poolRewardAccount->keyReferenceType == KEY_REFERENCE_HASH);
-		SHOW();
-		break;
-
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
@@ -553,8 +549,13 @@ security_policy_t policyForSignTxStakePoolRegistrationNoMetadata()
 	SHOW();
 }
 
-security_policy_t policyForSignTxStakePoolRegistrationConfirm()
+security_policy_t policyForSignTxStakePoolRegistrationConfirm(
+	uint32_t numOwners, uint32_t numRelays
+)
 {
+	PROMPT_IF(numOwners == 0);
+	PROMPT_IF(numRelays == 0);
+	
 	ALLOW();
 }
 

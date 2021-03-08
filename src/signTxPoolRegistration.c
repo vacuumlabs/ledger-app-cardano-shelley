@@ -952,8 +952,8 @@ static void handleRelay_ip_ui_runStep()
 
 enum {
 	HANDLE_RELAY_DNS_STEP_DISPLAY_NUMBER = 6800,
-	HANDLE_RELAY_DNS_STEP_DISPLAY_PORT,
 	HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME,
+	HANDLE_RELAY_DNS_STEP_DISPLAY_PORT,
 	HANDLE_RELAY_DNS_STEP_RESPOND,
 	HANDLE_RELAY_DNS_STEP_INVALID,
 };
@@ -975,17 +975,6 @@ static void handleRelay_dns_ui_runStep()
 			this_fn
 		);
 	}
-	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_PORT) {
-		if (relay->format == RELAY_MULTIPLE_HOST_NAME) {
-			// nothing to display in this step, so we skip it
-			UI_STEP_JUMP(HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME);
-		}
-
-		ui_displayIpPortScreen(
-		        &relay->port,
-		        this_fn
-		);
-	}
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME) {
 		char dnsNameStr[1 + DNS_NAME_SIZE_MAX];
 		ASSERT(relay->dnsNameSize <= DNS_NAME_SIZE_MAX);
@@ -994,8 +983,19 @@ static void handleRelay_dns_ui_runStep()
 		ASSERT(strlen(dnsNameStr) == relay->dnsNameSize);
 
 		ui_displayPaginatedText(
-		        "Dns name",
+		        "DNS name",
 		        dnsNameStr,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_PORT) {
+		if (relay->format == RELAY_MULTIPLE_HOST_NAME) {
+			// nothing to display in this step, so we skip it
+			UI_STEP_JUMP(HANDLE_RELAY_DNS_STEP_RESPOND);
+		}
+
+		ui_displayIpPortScreen(
+		        &relay->port,
 		        this_fn
 		);
 	}
@@ -1385,7 +1385,9 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 // ============================== CONFIRM ==============================
 
 enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 7100,
+	HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS = 7100,
+	HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS,
+	HANDLE_CONFIRM_STEP_FINAL_CONFIRM,
 	HANDLE_CONFIRM_STEP_RESPOND,
 	HANDLE_CONFIRM_STEP_INVALID,
 };
@@ -1398,6 +1400,31 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
+	// we display potencially suspicious facts about the certificate
+	// that have not been explicitly shown to the user before:
+	// missing owners or relays
+	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS) {
+		if (subctx->numOwners == 0) {
+			ui_displayPaginatedText(
+					"No pool owners",
+					"",
+					this_fn
+			);
+		} else {
+			UI_STEP_JUMP(HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS);
+		}
+	}
+	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS) {
+		if (subctx->numRelays == 0) {
+			ui_displayPaginatedText(
+					"No pool relays",
+					"",
+					this_fn
+			);
+		} else {
+			UI_STEP_JUMP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
+		}
+	}
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(
 		        "Confirm stake",
@@ -1429,7 +1456,7 @@ static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MAR
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForSignTxStakePoolRegistrationConfirm();
+	security_policy_t policy = policyForSignTxStakePoolRegistrationConfirm(subctx->numOwners, subctx->numRelays);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -1437,7 +1464,7 @@ static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MAR
 		// select UI step
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
 #	undef   CASE
 		default:

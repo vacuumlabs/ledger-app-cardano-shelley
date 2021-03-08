@@ -58,7 +58,6 @@ static void _printAccountDescription(
 	}
 }
 
-
 // the given path typically corresponds to an account
 // if it contains anything more, we display just the whole path
 void ui_displayPublicKeyPathScreen(

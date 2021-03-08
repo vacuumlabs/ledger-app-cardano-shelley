@@ -33,8 +33,6 @@ The key derivation scheme for pool cold keys used by a pool operator is describe
 
 - Pool id must be given by key hash.
 
-- Pool reward account must be given in binary, not as a derivation path.
-
 - Some details (VRF key, pool relays) are not shown to the user.
 
 ---

@@ -85,7 +85,9 @@ security_policy_t policyForSignTxStakePoolRegistrationRelay(
 );
 security_policy_t policyForSignTxStakePoolRegistrationMetadata();
 security_policy_t policyForSignTxStakePoolRegistrationNoMetadata();
-security_policy_t policyForSignTxStakePoolRegistrationConfirm();
+security_policy_t policyForSignTxStakePoolRegistrationConfirm(
+	uint32_t numOwners, uint32_t numRelays
+);
 
 security_policy_t policyForSignTxWithdrawal();
 
