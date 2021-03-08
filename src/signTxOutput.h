@@ -3,7 +3,6 @@
 
 #include "common.h"
 #include "cardano.h"
-#include "cardanoOutputs.h"
 #include "addressUtilsShelley.h"
 #include "securityPolicyType.h"
 

@@ -3,7 +3,6 @@
 
 #include "common.h"
 #include "cardano.h"
-#include "cardanoCertificates.h"
 #include "txHashBuilder.h"
 
 #define POOL_MAX_OWNERS 1000
@@ -31,14 +30,6 @@ typedef struct {
 		uint8_t hash[POOL_KEY_HASH_LENGTH];
 	};
 } pool_id_t;
-
-typedef struct {
-	key_reference_type_t keyReferenceType;
-	union {
-		bip44_path_t path;
-		uint8_t buffer[REWARD_ACCOUNT_SIZE];
-	};
-} pool_reward_account_t;
 
 typedef struct {
 	key_reference_type_t keyReferenceType;
@@ -77,7 +68,7 @@ typedef struct {
 			uint64_t marginNumerator;
 			uint64_t marginDenominator;
 		};
-		pool_reward_account_t poolRewardAccount;
+		reward_account_t poolRewardAccount;
 		pool_owner_t owner;
 		pool_relay_t relay;
 		pool_metadata_t metadata;

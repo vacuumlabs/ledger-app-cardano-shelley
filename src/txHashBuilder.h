@@ -1,7 +1,7 @@
 #ifndef H_CARDANO_APP_TX_HASH_BUILDER
 #define H_CARDANO_APP_TX_HASH_BUILDER
 
-#include "cardanoCertificates.h"
+#include "cardano.h"
 #include "hash.h"
 
 enum {

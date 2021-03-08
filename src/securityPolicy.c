@@ -1,6 +1,7 @@
 #include "addressUtilsShelley.h"
 #include "addressUtilsByron.h"
 #include "bip44.h"
+#include "cardano.h"
 
 #include "securityPolicy.h"
 
@@ -477,7 +478,7 @@ security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
 
 security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
         sign_tx_usecase_t signTxUsecase,
-        const pool_reward_account_t* poolRewardAccount MARK_UNUSED
+        const reward_account_t* poolRewardAccount MARK_UNUSED
 )
 {
 	switch (signTxUsecase) {
@@ -550,12 +551,12 @@ security_policy_t policyForSignTxStakePoolRegistrationNoMetadata()
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationConfirm(
-	uint32_t numOwners, uint32_t numRelays
+        uint32_t numOwners, uint32_t numRelays
 )
 {
 	PROMPT_IF(numOwners == 0);
 	PROMPT_IF(numRelays == 0);
-	
+
 	ALLOW();
 }
 

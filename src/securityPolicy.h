@@ -3,7 +3,7 @@
 
 #include "addressUtilsShelley.h"
 #include "bip44.h"
-#include "cardanoOutputs.h"
+#include "cardano.h"
 #include "securityPolicyType.h"
 #include "signTxPoolRegistration.h"
 #include "signTx.h"
@@ -73,7 +73,7 @@ security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
 );
 security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
         sign_tx_usecase_t signTxUsecase,
-        const pool_reward_account_t* poolRewardAccount
+        const reward_account_t* poolRewardAccount
 );
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const sign_tx_usecase_t signTxUsecase,
@@ -86,7 +86,7 @@ security_policy_t policyForSignTxStakePoolRegistrationRelay(
 security_policy_t policyForSignTxStakePoolRegistrationMetadata();
 security_policy_t policyForSignTxStakePoolRegistrationNoMetadata();
 security_policy_t policyForSignTxStakePoolRegistrationConfirm(
-	uint32_t numOwners, uint32_t numRelays
+        uint32_t numOwners, uint32_t numRelays
 );
 
 security_policy_t policyForSignTxWithdrawal();

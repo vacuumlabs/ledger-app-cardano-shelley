@@ -28,8 +28,9 @@ void ui_displayAddressScreen(
 
 __noinline_due_to_stack__
 void ui_displayRewardAccountScreen(
-	const bip44_path_t* path,
-	ui_callback_fn_t callback
+        const reward_account_t* rewardAccount,
+        uint8_t networkId,
+        ui_callback_fn_t callback
 );
 
 __noinline_due_to_stack__

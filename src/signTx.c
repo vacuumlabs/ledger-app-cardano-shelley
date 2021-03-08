@@ -1113,7 +1113,11 @@ static void signTx_handleWithdrawal_ui_runStep()
 		ui_displayAdaAmountScreen("Withdrawing rewards", ctx->stageData.withdrawal.amount, this_fn);
 	}
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY_PATH) {
-		ui_displayRewardAccountScreen(&ctx->stageData.withdrawal.path, this_fn);
+		reward_account_t rewardAccount = {
+			.keyReferenceType = KEY_REFERENCE_PATH,
+			.path = ctx->stageData.withdrawal.path
+		};
+		ui_displayRewardAccountScreen(&rewardAccount, ctx->commonTxData.networkId, this_fn);
 	}
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_RESPOND) {
 		respondSuccessEmptyMsg();

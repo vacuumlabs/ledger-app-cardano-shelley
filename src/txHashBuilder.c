@@ -3,7 +3,6 @@
 #include "hash.h"
 #include "cbor.h"
 #include "cardano.h"
-#include "cardanoCertificates.h"
 #include "crc32.h"
 #include "bufView.h"
 

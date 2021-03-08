@@ -574,34 +574,8 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuf
 
 // ============================== POOL REWARD ACCOUNT ==============================
 
-__noinline_due_to_stack__
-static void _toRewardAccountBuffer(
-        const pool_reward_account_t* rewardAccount,
-        uint8_t* rewardAccountBuffer
-)
-{
-	switch (rewardAccount->keyReferenceType) {
-
-	case KEY_REFERENCE_HASH: {
-		STATIC_ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
-		os_memmove(rewardAccountBuffer, rewardAccount->buffer, REWARD_ACCOUNT_SIZE);
-		break;
-	}
-	case KEY_REFERENCE_PATH: {
-		constructRewardAddressFromKeyPath(
-		        &rewardAccount->path, commonTxData->networkId,
-		        rewardAccountBuffer, REWARD_ACCOUNT_SIZE
-		);
-		break;
-	}
-	default:
-		ASSERT(false);
-	}
-}
-
 enum {
-	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_PATH = 6500,
-	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_HASH,
+	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY = 6500,
 	HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND,
 	HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID,
 };
@@ -614,22 +588,10 @@ static void handlePoolRewardAccount_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_PATH) {
-		ASSERT(subctx->stateData.poolRewardAccount.keyReferenceType == KEY_REFERENCE_PATH);
-
+	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY) {
 		ui_displayRewardAccountScreen(
-		        &subctx->stateData.poolRewardAccount.path,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_HASH) {
-		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
-		_toRewardAccountBuffer(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
-
-		ui_displayAddressScreen(
-		        "Reward account",
-		        rewardAccountBuffer,
-		        SIZEOF(rewardAccountBuffer),
+		        &subctx->stateData.poolRewardAccount,
+		        commonTxData->networkId,
 		        this_fn
 		);
 	}
@@ -642,7 +604,7 @@ static void handlePoolRewardAccount_ui_runStep()
 
 static void _parsePoolRewardAccount(read_view_t* view)
 {
-	pool_reward_account_t* rewardAccount = &subctx->stateData.poolRewardAccount;
+	reward_account_t* rewardAccount = &subctx->stateData.poolRewardAccount;
 
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	rewardAccount->keyReferenceType = parse_u1be(view);
@@ -704,7 +666,7 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 	{
 		// key derivation must not be done before DENY security policy is enforced
 		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
-		_toRewardAccountBuffer(&subctx->stateData.poolRewardAccount, rewardAccountBuffer);
+		rewardAccountToBuffer(&subctx->stateData.poolRewardAccount, commonTxData->networkId, rewardAccountBuffer);
 
 		txHashBuilder_poolRegistrationCertificate_rewardAccount(
 		        txHashBuilder,
@@ -713,23 +675,9 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 	}
 
 	{
-		// select UI steps
-		int displayStep = HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID;
-		switch (subctx->stateData.poolRewardAccount.keyReferenceType) {
-		case KEY_REFERENCE_PATH:
-			displayStep = HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_PATH;
-			break;
-		case KEY_REFERENCE_HASH:
-			displayStep = HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY_HASH;
-			break;
-		default:
-			ASSERT(false);
-		}
-		ASSERT(displayStep != HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID);
-
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, displayStep);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND);
 #	undef   CASE
 		default:
@@ -914,9 +862,9 @@ static void handleRelay_ip_ui_runStep()
 
 	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_NUMBER) {
 		ui_displayPoolRelaycreen(
-			relay,
-			subctx->currentRelay,
-			this_fn
+		        relay,
+		        subctx->currentRelay,
+		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_IPV4) {
@@ -970,9 +918,9 @@ static void handleRelay_dns_ui_runStep()
 
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_NUMBER) {
 		ui_displayPoolRelaycreen(
-			relay,
-			subctx->currentRelay,
-			this_fn
+		        relay,
+		        subctx->currentRelay,
+		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME) {
@@ -1406,9 +1354,9 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS) {
 		if (subctx->numOwners == 0) {
 			ui_displayPaginatedText(
-					"No pool owners",
-					"",
-					this_fn
+			        "No pool owners",
+			        "",
+			        this_fn
 			);
 		} else {
 			UI_STEP_JUMP(HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS);
@@ -1417,9 +1365,9 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS) {
 		if (subctx->numRelays == 0) {
 			ui_displayPaginatedText(
-					"No pool relays",
-					"",
-					this_fn
+			        "No pool relays",
+			        "",
+			        this_fn
 			);
 		} else {
 			UI_STEP_JUMP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM);

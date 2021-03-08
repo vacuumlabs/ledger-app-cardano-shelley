@@ -1,6 +1,6 @@
 #include "uiScreens.h"
 #include "bech32.h"
-#include "cardanoCertificates.h"
+#include "cardano.h"
 #include "hexUtils.h"
 #include "ipUtils.h"
 #include "textUtils.h"
@@ -133,37 +133,113 @@ void ui_displayAddressScreen(
 	);
 }
 
-void ui_displayRewardAccountScreen(
-	const bip44_path_t* path,
-	ui_callback_fn_t callback
+static void _displayDecoratedRewardAccountScreen(
+        const key_reference_type_t keyReferenceType,
+        const bip44_path_t* path,
+        const uint8_t* rewardAccountBuffer,
+        const char* firstLine,
+        ui_callback_fn_t callback
 )
 {
-	ASSERT(bip44_classifyPath(path) == PATH_WALLET_STAKING_KEY);
+	char description[BIP44_PATH_STRING_SIZE_MAX + MAX_HUMAN_REWARD_ACCOUNT_SIZE + 1];
+	explicit_bzero(description, SIZEOF(description));
+	size_t descLen = 0; // description length
 
-	char firstLine[50];
-	explicit_bzero(firstLine, SIZEOF(firstLine));
-	char secondLine[BIP44_PATH_STRING_SIZE_MAX];
-	explicit_bzero(secondLine, SIZEOF(secondLine));
-
-	{
-		uint32_t account = unharden(bip44_getAccount(path));
-		snprintf(
-				firstLine, SIZEOF(firstLine),
-				"Reward account #%u  ", account + 1
-		);
-		ASSERT(strlen(firstLine) < SIZEOF(firstLine));
+	if (keyReferenceType == KEY_REFERENCE_PATH) {
+		descLen += bip44_printToStr(path, description, SIZEOF(description));
 	}
 	{
-		bip44_printToStr(path, secondLine, SIZEOF(secondLine));
-		ASSERT(strlen(secondLine) < SIZEOF(secondLine));
+		// add bech32-encoded reward account
+		ASSERT(descLen <= BIP44_PATH_STRING_SIZE_MAX);
+		ASSERT(descLen + 1 <= SIZEOF(description));
+
+		if (descLen > 0) {
+			// add a space after path if the path is present
+			ASSERT(descLen + 2 <= SIZEOF(description));
+			description[descLen++] = ' ';
+			description[descLen] = '\0';
+		}
+
+		{
+			descLen += humanReadableAddress(
+			                   rewardAccountBuffer, REWARD_ACCOUNT_SIZE,
+			                   description + descLen, SIZEOF(description) - descLen
+			           );
+		}
+		ASSERT(descLen == strlen(description));
+		ASSERT(descLen + 1 <= SIZEOF(description));
 	}
 
 	ui_displayPaginatedText(
-		firstLine,
-		secondLine,
-		callback
+	        firstLine,
+	        description,
+	        callback
 	);
 }
+
+void ui_displayRewardAccountScreen(
+        const reward_account_t* rewardAccount,
+        uint8_t networkId,
+        ui_callback_fn_t callback
+)
+{
+	ASSERT(isValidNetworkId(networkId));
+
+	uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
+	char firstLine[20];
+	explicit_bzero(firstLine, SIZEOF(firstLine));
+
+	switch (rewardAccount->keyReferenceType) {
+
+	case KEY_REFERENCE_PATH: {
+		ASSERT(bip44_isValidStakingKeyPath(&rewardAccount->path));
+
+		{
+			uint32_t account = unharden(bip44_getAccount(&rewardAccount->path));
+			snprintf(
+			        firstLine, SIZEOF(firstLine),
+			        "Reward account #%u  ", account + 1
+			);
+		}
+
+		constructRewardAddressFromKeyPath(
+		        &rewardAccount->path, networkId,
+		        rewardAccountBuffer, SIZEOF(rewardAccountBuffer)
+		);
+		break;
+	}
+
+	case KEY_REFERENCE_HASH: {
+		snprintf(
+		        firstLine, SIZEOF(firstLine),
+		        "Reward account"
+		);
+
+		ASSERT(SIZEOF(rewardAccountBuffer) == REWARD_ACCOUNT_SIZE);
+		ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE);
+		os_memmove(rewardAccountBuffer, rewardAccount->buffer, REWARD_ACCOUNT_SIZE);
+		break;
+	}
+
+	default:
+		ASSERT(false);
+	}
+
+	{
+		const size_t len = strlen(firstLine);
+		ASSERT(len < SIZEOF(firstLine));
+		ASSERT(len > 0);
+	}
+
+	_displayDecoratedRewardAccountScreen(
+	        rewardAccount->keyReferenceType,
+	        &rewardAccount->path,
+	        rewardAccountBuffer,
+	        firstLine,
+	        callback
+	);
+}
+
 
 static const char STAKING_HEADING_PATH[]    = "Staking key path: ";
 static const char STAKING_HEADING_HASH[]    = "Staking key hash: ";
@@ -458,92 +534,51 @@ void ui_displayPoolOwnerScreen(
 )
 {
 	{
-		// assert inputs
 		ASSERT(isValidNetworkId(networkId));
 		ASSERT(ownerIndex < POOL_MAX_OWNERS);
+	}
+	{
+		uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 
 		switch (owner->keyReferenceType) {
-
-		case KEY_REFERENCE_HASH:
-			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
-			break;
-
-		case KEY_REFERENCE_PATH:
+		case KEY_REFERENCE_PATH: {
 			ASSERT(bip44_isValidStakingKeyPath(&owner->path));
-			break;
 
+			constructRewardAddressFromKeyPath(
+			        &owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)
+			);
+			break;
+		}
+		case KEY_REFERENCE_HASH: {
+			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
+
+			constructRewardAddressFromKeyHash(
+			        networkId,
+			        owner->keyHash, SIZEOF(owner->keyHash),
+			        rewardAddress, SIZEOF(rewardAddress)
+			);
+			break;
+		}
 		default:
 			ASSERT(false);
 		}
-	}
 
-	char ownerDescription[BIP44_PATH_STRING_SIZE_MAX + MAX_HUMAN_REWARD_ACCOUNT_SIZE + 1];
-
-	explicit_bzero(ownerDescription, SIZEOF(ownerDescription));
-	size_t descLen = 0; // owner description length
-
-	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
-		descLen += bip44_printToStr(&owner->path, ownerDescription, SIZEOF(ownerDescription));
-	}
-
-	{
-		// add owner (represented as bech32-encoded reward account for owner's staking key)
-		ASSERT(descLen <= BIP44_PATH_STRING_SIZE_MAX);
-		ASSERT(descLen + 1 <= SIZEOF(ownerDescription));
-
-		if (descLen > 0) {
-			// add a space after path if the path is present
-			ASSERT(descLen + 2 <= SIZEOF(ownerDescription));
-			ownerDescription[descLen++] = ' ';
-			ownerDescription[descLen] = '\0';
-		}
-
-		{
-			uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
-
-			switch (owner->keyReferenceType) {
-			case KEY_REFERENCE_PATH: {
-				constructRewardAddressFromKeyPath(
-				        &owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)
-				);
-				break;
-			}
-			case KEY_REFERENCE_HASH: {
-				constructRewardAddressFromKeyHash(
-				        networkId,
-				        owner->keyHash, SIZEOF(owner->keyHash),
-				        rewardAddress, SIZEOF(rewardAddress)
-				);
-				break;
-			}
-			default:
-				ASSERT(false);
-			}
-
-			descLen += humanReadableAddress(
-			                   rewardAddress, SIZEOF(rewardAddress),
-			                   ownerDescription + descLen, SIZEOF(ownerDescription) - descLen
-			           );
-		}
-		ASSERT(descLen == strlen(ownerDescription));
-		ASSERT(descLen + 1 <= SIZEOF(ownerDescription));
-	}
-
-	char firstLine[20];
-	explicit_bzero(firstLine, SIZEOF(firstLine));
-	{
+		char firstLine[20];
+		explicit_bzero(firstLine, SIZEOF(firstLine));
 		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
-	}
 
-	ui_displayPaginatedText(
-	        firstLine,
-	        ownerDescription,
-	        callback
-	);
+		_displayDecoratedRewardAccountScreen(
+		        owner->keyReferenceType,
+		        &owner->path,
+		        rewardAddress,
+		        firstLine,
+		        callback
+		);
+	}
 }
 
 void ui_displayPoolRelaycreen(
-		const pool_relay_t* relay MARK_UNUSED,
+        const pool_relay_t* relay MARK_UNUSED,
         size_t relayIndex,
         ui_callback_fn_t callback
 )
@@ -555,9 +590,9 @@ void ui_displayPoolRelaycreen(
 	}
 
 	ui_displayPaginatedText(
-			firstLine,
-			"",
-			callback
+	        firstLine,
+	        "",
+	        callback
 	);
 }
 
