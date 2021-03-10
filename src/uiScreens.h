@@ -29,7 +29,16 @@ void ui_displayStakingInfoScreen(
         ui_callback_fn_t callback
 );
 
-void ui_displayTokenNameScreen(
+size_t deriveAssetFingerprint(
+        uint8_t* policyId,
+        size_t policyIdSize,
+        uint8_t* assetName,
+        size_t assetNameSize,
+        char* fingerprint,
+        size_t fingerprintMaxSize
+);
+void ui_displayAssetFingerprintScreen(
+        token_group_t* tokenGroup,
         token_amount_t* token,
         ui_callback_fn_t callback
 );
@@ -83,5 +92,9 @@ void ui_displayPoolOwnerScreen(
         uint8_t networkId,
         ui_callback_fn_t callback
 );
+
+#ifdef DEVEL
+void run_uiScreens_test();
+#endif // DEVEL
 
 #endif

@@ -8,6 +8,7 @@
 // Note: We would like to make this static const but
 // it does not play well with inline functions
 enum {
+	BLAKE2B_160_SIZE = 20,
 	BLAKE2B_224_SIZE = 28,
 	BLAKE2B_256_SIZE = 32,
 	BLAKE2B_512_SIZE = 64,
@@ -82,6 +83,7 @@ enum {
 		cipher##_##bits##_finalize(&ctx, outBuffer, outSize); \
 	}
 
+__CIPHER_DECLARE(BLAKE2B, blake2b, 160)
 __CIPHER_DECLARE(BLAKE2B, blake2b, 224)
 __CIPHER_DECLARE(BLAKE2B, blake2b, 256)
 __CIPHER_DECLARE(BLAKE2B, blake2b, 512)
