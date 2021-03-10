@@ -1363,7 +1363,8 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 		}
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS) {
-		if (subctx->numRelays == 0) {
+		bool isOperator = commonTxData->signTxUsecase == SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR;
+		if ((subctx->numRelays == 0) && isOperator) {
 			ui_displayPaginatedText(
 			        "No pool relays",
 			        "",
