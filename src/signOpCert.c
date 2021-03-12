@@ -21,6 +21,7 @@ enum {
 	UI_STEP_WARNING = 100,
 	UI_STEP_CONFIRM_START,
 	UI_STEP_DISPLAY_POOL_COLD_KEY_PATH,
+	UI_STEP_DISPLAY_POOL_ID,
 	UI_STEP_DISPLAY_KES_PUBLIC_KEY,
 	UI_STEP_DISPLAY_KES_PERIOD,
 	UI_STEP_DISPLAY_ISSUE_COUNTER,
@@ -81,10 +82,19 @@ void signOpCert_handleAPDU(
 		write_view_t opCertBodyBufferView = make_write_view(opCertBodyBuffer, opCertBodyBuffer + OP_CERT_BODY_LENGTH);
 
 		view_appendData(&opCertBodyBufferView, (const uint8_t*) &ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey));
-		view_appendData(&opCertBodyBufferView, (uint8_t*) &ctx->issueCounter, sizeof(ctx->issueCounter));
-		view_appendData(&opCertBodyBufferView, (uint8_t*) &ctx->kesPeriod, sizeof(ctx->kesPeriod));
+		{
+			uint8_t chunk[8];
+			u8be_write(chunk, ctx->issueCounter);
+			view_appendData(&opCertBodyBufferView, chunk, SIZEOF(chunk));
+		}
+		{
+			uint8_t chunk[8];
+			u8be_write(chunk, ctx->kesPeriod);
+			view_appendData(&opCertBodyBufferView, chunk, SIZEOF(chunk));
+		}
 
 		ASSERT(view_processedSize(&opCertBodyBufferView) == OP_CERT_BODY_LENGTH);
+		TRACE_BUFFER(opCertBodyBuffer, SIZEOF(opCertBodyBuffer));
 
 		getOpCertSignature(
 		        &ctx->poolColdKeyPathSpec,
@@ -131,6 +141,17 @@ static void signOpCert_ui_runStep()
 	}
 	UI_STEP(UI_STEP_DISPLAY_POOL_COLD_KEY_PATH) {
 		ui_displayPathScreen("Pool cold key path", &ctx->poolColdKeyPathSpec, this_fn);
+	}
+	UI_STEP(UI_STEP_DISPLAY_POOL_ID) {
+		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+		bip44_pathToKeyHash(&ctx->poolColdKeyPathSpec, poolKeyHash, SIZEOF(poolKeyHash));
+
+		ui_displayBech32Screen(
+		        "Pool ID",
+		        "pool_vk",
+		        poolKeyHash, SIZEOF(poolKeyHash),
+		        this_fn
+		);
 	}
 	UI_STEP(UI_STEP_DISPLAY_KES_PUBLIC_KEY) {
 		ui_displayBech32Screen(

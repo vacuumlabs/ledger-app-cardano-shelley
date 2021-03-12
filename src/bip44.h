@@ -92,6 +92,9 @@ bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec);
 
 bool bip44_isPathReasonable(const bip44_path_t* pathSpec);
 
+__noinline_due_to_stack__
+void bip44_pathToKeyHash(const bip44_path_t* pathSpec, uint8_t* hash, size_t hashSize);
+
 
 #ifdef DEVEL
 void run_bip44_test();

@@ -671,7 +671,7 @@ security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 
 	case PATH_POOL_COLD_KEY:
 		if (bip44_isPathReasonable(poolColdKeyPathSpec)) {
-			ALLOW();
+			PROMPT();
 		} else {
 			WARN();
 		}

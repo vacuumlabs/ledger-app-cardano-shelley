@@ -1,6 +1,8 @@
 #include "common.h"
 #include "bip44.h"
 #include "endian.h"
+#include "hash.h"
+#include "keyDerivation.h"
 
 static const uint32_t CARDANO_CHAIN_EXTERNAL = 0;
 static const uint32_t CARDANO_CHAIN_INTERNAL = 1;
@@ -312,6 +314,26 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 		ASSERT(false);
 	}
 	return false;
+}
+
+void bip44_pathToKeyHash(const bip44_path_t* pathSpec, uint8_t* hash, size_t hashSize)
+{
+	extendedPublicKey_t extPubKey;
+	deriveExtendedPublicKey(pathSpec, &extPubKey);
+
+	switch (hashSize) {
+	case 28:
+		ASSERT(hashSize * 8 == 224);
+
+		blake2b_224_hash(
+		        extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
+		        hash, hashSize
+		);
+		return;
+
+	default:
+		ASSERT(false);
+	}
 }
 
 

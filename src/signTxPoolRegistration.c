@@ -232,14 +232,7 @@ static void _toPoolKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
 		break;
 	}
 	case KEY_REFERENCE_PATH: {
-		extendedPublicKey_t extPubKey;
-		deriveExtendedPublicKey(&poolId->path, &extPubKey);
-
-		STATIC_ASSERT(POOL_KEY_HASH_LENGTH * 8 == 224, "wrong pool key hash length");
-		blake2b_224_hash(
-		        extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
-		        poolKeyHash, POOL_KEY_HASH_LENGTH
-		);
+		bip44_pathToKeyHash(&poolId->path, poolKeyHash, POOL_KEY_HASH_LENGTH);
 		break;
 	}
 	default:
@@ -739,21 +732,15 @@ static void _addOwnerToTxHash()
 	uint8_t ownerKeyHash[ADDRESS_KEY_HASH_LENGTH];
 
 	switch (owner->keyReferenceType) {
-	case KEY_REFERENCE_PATH: {
-		extendedPublicKey_t extPubKey;
-		deriveExtendedPublicKey(&owner->path, &extPubKey);
 
-		STATIC_ASSERT(SIZEOF(ownerKeyHash) * 8 == 224, "wrong owner key hash length");
-		blake2b_224_hash(
-		        extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
-		        ownerKeyHash, SIZEOF(ownerKeyHash)
-		);
+	case KEY_REFERENCE_PATH:
+		bip44_pathToKeyHash(&owner->path, ownerKeyHash, SIZEOF(ownerKeyHash));
 		break;
-	}
-	case KEY_REFERENCE_HASH: {
+
+	case KEY_REFERENCE_HASH:
 		os_memmove(ownerKeyHash, owner->keyHash, SIZEOF(ownerKeyHash));
 		break;
-	}
+
 	default:
 		ASSERT(false);
 	}
