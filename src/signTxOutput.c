@@ -12,9 +12,9 @@
 // ctx / subctx
 // stage / state
 // from ctx, we only make the necessary parts available to avoid mistaken overwrites
-static output_context_t* subctx = &(instructionState.signTxContext.stageContext.output_subctx);
+static output_context_t* subctx = &(instructionState.signTxContext.txPartCtx.body_ctx.stageContext.output_subctx);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
-static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txHashBuilder);
+static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txPartCtx.body_ctx.txHashBuilder);
 
 bool signTxOutput_isFinished()
 {

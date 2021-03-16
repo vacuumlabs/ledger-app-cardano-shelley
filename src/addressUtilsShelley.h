@@ -20,6 +20,7 @@ uint8_t getAddressHeader(uint8_t* addressBuffer, size_t addressSize);
 
 address_type_t getAddressType(uint8_t addressHeader);
 bool isSupportedAddressType(uint8_t addressHeader);
+bool isShelleyAddressType(uint8_t addressType);
 uint8_t constructShelleyAddressHeader(address_type_t type, uint8_t networkId);
 
 uint8_t getNetworkId(uint8_t addressHeader);
@@ -86,7 +87,6 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 void view_parseAddressParams(read_view_t* view, addressParams_t* params);
 
 bool isValidAddressParams(const addressParams_t* addressParams);
-
 
 #ifdef DEVEL
 void run_addressUtilsShelley_test();

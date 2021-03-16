@@ -16,9 +16,9 @@
 // ctx / subctx
 // stage / state
 // from ctx, we only make the necessary parts available to avoid mistaken overwrites
-static pool_registration_context_t* subctx = &(instructionState.signTxContext.stageContext.pool_registration_subctx);
+static pool_registration_context_t* subctx = &(instructionState.signTxContext.txPartCtx.body_ctx.stageContext.pool_registration_subctx);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
-static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txHashBuilder);
+static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txPartCtx.body_ctx.txHashBuilder);
 
 bool signTxPoolRegistration_isFinished()
 {
@@ -42,8 +42,8 @@ bool signTxPoolRegistration_isFinished()
 void signTxPoolRegistration_init()
 {
 	{
-		ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
-		explicit_bzero(&ctx->stageContext.pool_registration_subctx, SIZEOF(ctx->stageContext.pool_registration_subctx));
+		ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.txPartCtx.body_ctx);
+		explicit_bzero(&txBodyCtx->stageContext.pool_registration_subctx, SIZEOF(txBodyCtx->stageContext.pool_registration_subctx));
 	}
 	subctx->state = STAKE_POOL_REGISTRATION_PARAMS;
 }
@@ -170,7 +170,7 @@ static void handlePoolParams_ui_runStep()
 	UI_STEP_END(HANDLE_POOLPARAMS_STEP_INVALID);
 }
 
-__noinline_due_to_stack__ 
+__noinline_due_to_stack__
 static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
@@ -629,7 +629,7 @@ static void handleMetadata_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_HASH) {
-		char metadataHashHex[1 + 2 * METADATA_HASH_LENGTH];
+		char metadataHashHex[1 + 2 * POOL_METADATA_HASH_LENGTH];
 		size_t len = str_formatMetadata(
 		                     md->hash, SIZEOF(md->hash),
 		                     metadataHashHex, SIZEOF(metadataHashHex)
@@ -711,9 +711,9 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 			}
 		}
 		{
-			VALIDATE(view_remainingSize(&view) >= METADATA_HASH_LENGTH, ERR_INVALID_DATA);
-			ASSERT(SIZEOF(md->hash) == METADATA_HASH_LENGTH);
-			view_memmove(md->hash, &view, METADATA_HASH_LENGTH);
+			VALIDATE(view_remainingSize(&view) >= POOL_METADATA_HASH_LENGTH, ERR_INVALID_DATA);
+			ASSERT(SIZEOF(md->hash) == POOL_METADATA_HASH_LENGTH);
+			view_memmove(md->hash, &view, POOL_METADATA_HASH_LENGTH);
 		}
 		{
 			md->urlSize = view_remainingSize(&view);

@@ -21,6 +21,12 @@ void ui_displayAccountScreen(
 );
 
 __noinline_due_to_stack__
+void ui_displayStakingKeyScreen(
+        const bip44_path_t* stakingPath,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
 void ui_displayAddressScreen(
         const char* screenHeader,
         const uint8_t* addressBuffer, size_t addressSize,
@@ -87,6 +93,13 @@ void ui_displayHexBufferScreen(
 );
 
 __noinline_due_to_stack__
+void ui_displayBech32Screen(
+        const char* screenHeader,
+        const char* bech32Prefix,
+        const uint8_t* buffer, size_t bufferSize,
+        ui_callback_fn_t callback
+);
+
 void ui_displayPoolIdScreen(
         const uint8_t* poolIdBuffer,
         size_t poolIdSize,

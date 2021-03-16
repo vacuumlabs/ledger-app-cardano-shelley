@@ -27,7 +27,7 @@ void str_traceUint64(uint64_t number);
 #define TRACE_UINT64(NUMBER)
 #endif // DEVEL
 
-size_t str_formatValidityBoundary(uint64_t ttl, char* out, size_t outSize);
+size_t str_formatValidityBoundary(uint64_t slotNumber, char* out, size_t outSize);
 
 size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, char* out, size_t outSize);
 
