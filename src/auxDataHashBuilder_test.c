@@ -1,0 +1,96 @@
+#ifdef DEVEL
+
+#include "auxDataHashBuilder.h"
+#include "cardano.h"
+#include "hexUtils.h"
+#include "textUtils.h"
+#include "test_utils.h"
+
+
+static const char* votingKey = "3B40265111D8BB3C3C608D95B3A0BF83461ACE32D79336579A1939B3AAD1C0B7";
+static const char* stakingKey = "BC65BE1B0B9D7531778A1317C2AA6DE936963C3F9AC7D5EE9E9EDA25E0C97C5E413A00F69B7700A96F67C149B7C8EEC88AFD7F0B9CFB4F86F4C5F1E56296ED90";
+static const char* votingRewardsAddress = "0180F9E2C88E6C817008F3A812ED889B4A4DA8E0BD103F86E7335422AA122A946B9AD3D2DDF029D3A828F0468AECE76895F15C9EFBD69B4277";
+static uint64_t nonce = 22634813;
+
+static const char* catalystRegistrationSignature = "0EA4A424522DD485F16466CD5A754F3C8DBD4D1976C912624E3465C540B1D0776C92633FC64BE057F947AAC561012FE55ACD3C54EF7BECE0DA0B90CF02DC760D";
+
+static const char* expectedCatalystVotingRegistrationPayloadHashHex = "17DA6DF636E88CF7D89D763DF586B980EB60DAB000144E2F3BB203260E0CB00A";
+static const char* expectedAuxDataHashHex = "F9E132C9D53E76B1490FECE69C768A03C4A8403E3CDC0040EE8FDCB3D908847C";
+
+void run_auxDataHashBuilder_test()
+{
+	PRINTF("auxDataHashBuilder test\n");
+	aux_data_hash_builder_t builder;
+
+	auxDataHashBuilder_init(&builder);
+	auxDataHashBuilder_catalystRegistration_enter(&builder);
+	auxDataHashBuilder_catalystRegistration_enterPayload(&builder);
+
+	{
+		uint8_t tmp[32];
+		size_t tmpSize = decode_hex(votingKey, tmp, SIZEOF(tmp));
+		auxDataHashBuilder_catalystRegistration_addVotingKey(
+		        &builder,
+		        tmp, tmpSize
+		);
+	}
+
+	{
+		uint8_t tmp[64];
+		size_t tmpSize = decode_hex(stakingKey, tmp, SIZEOF(tmp));
+		auxDataHashBuilder_catalystRegistration_addStakingKey(
+		        &builder,
+		        tmp, tmpSize
+		);
+	}
+
+	{
+		uint8_t tmp[86];
+		size_t tmpSize = decode_hex(votingRewardsAddress, tmp, SIZEOF(tmp));
+		auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
+		        &builder,
+		        tmp, tmpSize
+		);
+	}
+
+	auxDataHashBuilder_catalystRegistration_addNonce(&builder, nonce);
+
+	{
+		uint8_t result[METADATA_HASH_LENGTH];
+		auxDataHashBuilder_catalystRegistration_finalizePayload(&builder, result, SIZEOF(result));
+
+		uint8_t expected[METADATA_HASH_LENGTH];
+		decode_hex(expectedCatalystVotingRegistrationPayloadHashHex, expected, SIZEOF(expected));
+
+		PRINTF("Catalyst registration payload hash hex\n");
+		PRINTF("%.*h\n", 32, result);
+
+		EXPECT_EQ_BYTES(result, expected, 32);
+	}
+
+	{
+		uint8_t tmp[64];
+		size_t tmpSize = decode_hex(catalystRegistrationSignature, tmp, SIZEOF(tmp));
+		auxDataHashBuilder_catalystRegistration_addSignature(
+		        &builder,
+		        tmp, tmpSize
+		);
+	}
+
+	auxDataHashBuilder_catalystRegistration_addAuxiliaryScripts(&builder);
+
+	{
+		uint8_t result[METADATA_HASH_LENGTH];
+		auxDataHashBuilder_finalize(&builder, result, SIZEOF(result));
+
+		uint8_t expected[METADATA_HASH_LENGTH];
+		decode_hex(expectedAuxDataHashHex, expected, SIZEOF(expected));
+
+		PRINTF("Transaction auxiliary data hash hex\n");
+		PRINTF("%.*h\n", 32, result);
+
+		EXPECT_EQ_BYTES(result, expected, 32);
+	}
+}
+
+#endif // DEVEL

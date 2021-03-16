@@ -33,8 +33,6 @@ static void _printAccountDescription(
         size_t outSize
 )
 {
-	ASSERT(bip44_classifyPath(path) == PATH_WALLET_ACCOUNT);
-
 	uint32_t account = unharden(bip44_getAccount(path));
 	if (bip44_hasByronPrefix(path)) {
 		snprintf(
@@ -58,6 +56,29 @@ static void _printAccountDescription(
 	}
 }
 
+void ui_displayAccountDescriptionScreen(
+        const char* screenHeader,
+        const bip44_path_t* path,
+        ui_callback_fn_t callback
+)
+{
+	char accountDescription[160];
+	explicit_bzero(accountDescription, SIZEOF(accountDescription));
+	{
+		_printAccountDescription(path, accountDescription, SIZEOF(accountDescription));
+
+		size_t len = strlen(accountDescription);
+		ASSERT(len > 0);
+		ASSERT(len + 1 < SIZEOF(accountDescription));
+	}
+
+	ui_displayPaginatedText(
+	        screenHeader,
+	        accountDescription,
+	        callback
+	);
+}
+
 // the given path typically corresponds to an account
 // if it contains anything more, we display just the whole path
 void ui_displayPublicKeyPathScreen(
@@ -76,19 +97,10 @@ void ui_displayPublicKeyPathScreen(
 	}
 
 	case PATH_WALLET_ACCOUNT: {
-		char accountDescription[160];
-		explicit_bzero(accountDescription, SIZEOF(accountDescription));
-		{
-			_printAccountDescription(path, accountDescription, SIZEOF(accountDescription));
-
-			size_t len = strlen(accountDescription);
-			ASSERT(len > 0);
-			ASSERT(len + 1 < SIZEOF(accountDescription));
-		}
-
-		ui_displayPaginatedText(
+		ASSERT(bip44_classifyPath(path) == PATH_WALLET_ACCOUNT);
+		ui_displayAccountDescriptionScreen(
 		        "Export public key",
-		        accountDescription,
+		        path,
 		        callback
 		);
 		return;

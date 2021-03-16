@@ -9,7 +9,7 @@
 // this tracing is rarely needed
 // so we want to keep it turned off to avoid polluting the trace log
 
-//#define TRACE_TX_HASH_BUILDER
+#define TRACE_TX_HASH_BUILDER
 
 #ifdef TRACE_TX_HASH_BUILDER
 #define _TRACE(...) TRACE(__VA_ARGS__)
@@ -26,7 +26,7 @@
 	blake2b_256_append_and_trace(&builder->txHash, buffer, bufferSize)
 
 
-void blake2b_256_append_and_trace(
+static void blake2b_256_append_and_trace(
         blake2b_256_context_t* hashCtx,
         const uint8_t* buffer,
         size_t bufferSize
@@ -36,7 +36,7 @@ void blake2b_256_append_and_trace(
 	blake2b_256_append(hashCtx, buffer, bufferSize);
 }
 
-void blake2b_256_append_cbor(
+static void blake2b_256_append_cbor(
         blake2b_256_context_t* hashCtx,
         uint8_t type, uint64_t value
 )
@@ -54,17 +54,17 @@ void txHashBuilder_init(
         bool includeTtl,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
-        bool includeMetadata,
+        bool includeAuxData,
         bool includeValidityIntervalStart
 )
 {
 	TRACE("numInputs = %u", numInputs);
 	TRACE("numOutputs = %u", numOutputs);
-	TRACE("includeTtl = %u", includeMetadata);
+	TRACE("includeTtl = %u", includeTtl);
 	TRACE("numCertificates = %u", numCertificates);
 	TRACE("numWithdrawals  = %u", numWithdrawals);
-	TRACE("includeMetadata = %u", includeMetadata);
-	TRACE("includeValidityIntervalStart = %u", includeMetadata);
+	TRACE("includeAuxData = %u", includeAuxData);
+	TRACE("includeValidityIntervalStart = %u", includeValidityIntervalStart);
 
 	blake2b_256_init(&builder->txHash);
 
@@ -89,8 +89,8 @@ void txHashBuilder_init(
 		builder->remainingWithdrawals = numWithdrawals;
 		if (numWithdrawals > 0) numItems++;
 
-		builder->includeMetadata = includeMetadata;
-		if (includeMetadata) numItems++;
+		builder->includeAuxData = includeAuxData;
+		if (includeAuxData) numItems++;
 
 		builder->includeValidityIntervalStart = includeValidityIntervalStart;
 		if (includeValidityIntervalStart) numItems++;
@@ -966,27 +966,27 @@ static void txHashBuilder_assertCanLeaveWithdrawals(tx_hash_builder_t* builder)
 	ASSERT(builder->remainingWithdrawals == 0);
 }
 
-void txHashBuilder_addMetadata(tx_hash_builder_t* builder, const uint8_t* metadataHashBuffer, size_t metadataHashBufferSize)
+void txHashBuilder_addAuxData(tx_hash_builder_t* builder, const uint8_t* auxDataHashBuffer, size_t auxDataHashBufferSize)
 {
 	_TRACE("state = %d, remainingWithdrawals = %u", builder->state, builder->remainingWithdrawals);
 
 	txHashBuilder_assertCanLeaveWithdrawals(builder);
-	ASSERT(builder->includeMetadata);
+	ASSERT(builder->includeAuxData);
 
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 7);
-		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, metadataHashBufferSize);
-		BUILDER_APPEND_DATA(metadataHashBuffer, metadataHashBufferSize);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, auxDataHashBufferSize);
+		BUILDER_APPEND_DATA(auxDataHashBuffer, auxDataHashBufferSize);
 	}
-	builder->state = TX_HASH_BUILDER_IN_METADATA;
+	builder->state = TX_HASH_BUILDER_IN_AUX_DATA;
 }
 
-static void txHashBuilder_assertCanLeaveMetadata(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveAuxData(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d", builder->state);
 
 	switch (builder->state) {
-	case TX_HASH_BUILDER_IN_METADATA:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
 		break;
 
 	case TX_HASH_BUILDER_IN_WITHDRAWALS:
@@ -994,7 +994,7 @@ static void txHashBuilder_assertCanLeaveMetadata(tx_hash_builder_t* builder)
 	case TX_HASH_BUILDER_IN_TTL:
 	case TX_HASH_BUILDER_IN_FEE:
 		txHashBuilder_assertCanLeaveWithdrawals(builder);
-		ASSERT(!builder->includeMetadata);
+		ASSERT(!builder->includeAuxData);
 		break;
 
 	default:
@@ -1006,7 +1006,7 @@ void txHashBuilder_addValidityIntervalStart(tx_hash_builder_t* builder, uint64_t
 {
 	_TRACE("state = %d", builder->state);
 
-	txHashBuilder_assertCanLeaveMetadata(builder);
+	txHashBuilder_assertCanLeaveAuxData(builder);
 
 	// add fee item into the main tx body map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_VALIDITY_INTERVAL_START);
@@ -1023,12 +1023,12 @@ static void txHashBuilder_assertCanLeaveValidityIntervalStart(tx_hash_builder_t*
 	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
 		break;
 
-	case TX_HASH_BUILDER_IN_METADATA:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
 	case TX_HASH_BUILDER_IN_WITHDRAWALS:
 	case TX_HASH_BUILDER_IN_CERTIFICATES:
 	case TX_HASH_BUILDER_IN_TTL:
 	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveMetadata(builder);
+		txHashBuilder_assertCanLeaveAuxData(builder);
 		ASSERT(!builder->includeValidityIntervalStart);
 		break;
 

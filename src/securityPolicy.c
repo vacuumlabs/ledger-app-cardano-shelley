@@ -352,15 +352,8 @@ security_policy_t policyForSignTxFee(
 }
 
 // For transaction TTL
-security_policy_t policyForSignTxTtl(uint32_t ttl)
+security_policy_t policyForSignTxTtl(uint32_t ttl MARK_UNUSED)
 {
-	// ttl == 0 will not be accepted by a node
-	// and indicates a likely bug somewhere
-	DENY_IF(ttl == 0);
-
-	// might be changed to POLICY_ALLOW_WITHOUT_PROMPT
-	// to avoid bothering the user with TTL
-	// (Daedalus does not show this)
 	SHOW();
 }
 
@@ -649,7 +642,7 @@ security_policy_t policyForSignTxWitness(
 	DENY(); // should not be reached
 }
 
-security_policy_t policyForSignTxMetadata()
+security_policy_t policyForSignTxAuxData()
 {
 	SHOW();
 }
@@ -683,4 +676,28 @@ security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 	}
 
 	DENY(); // should not be reached
+}
+
+security_policy_t policyForCatalystRegistrationVotingRewardsAddressParams(
+        const addressParams_t* params,
+        const uint8_t networkId
+)
+{
+	DENY_UNLESS(isValidAddressParams(params));
+	DENY_UNLESS(isShelleyAddressType(params->type));
+	DENY_IF(params->networkId != networkId);
+
+	WARN_UNLESS(is_standard_base_address(params));
+
+	SHOW();
+}
+
+security_policy_t policyForCatalystRegistrationStakingKey(
+        const bip44_path_t* stakingKeyPath
+)
+{
+	DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
+	WARN_UNLESS(bip44_isPathReasonable(stakingKeyPath));
+
+	SHOW();
 }

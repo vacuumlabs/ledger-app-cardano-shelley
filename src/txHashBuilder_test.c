@@ -359,11 +359,11 @@ void run_txHashBuilder_test()
 	}
 
 	{
-		const char metadataHashHex[] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+		const char auxDataHashHex[] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 		uint8_t tmp[METADATA_HASH_LENGTH];
-		size_t tmpSize = decode_hex(metadataHashHex, tmp, SIZEOF(tmp));
+		size_t tmpSize = decode_hex(auxDataHashHex, tmp, SIZEOF(tmp));
 		ASSERT(tmpSize == METADATA_HASH_LENGTH);
-		txHashBuilder_addMetadata(&builder, tmp, tmpSize);
+		txHashBuilder_addAuxData(&builder, tmp, tmpSize);
 	}
 
 	txHashBuilder_addValidityIntervalStart(&builder, 33);

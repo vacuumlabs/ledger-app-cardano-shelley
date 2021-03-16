@@ -91,7 +91,7 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 
 security_policy_t policyForSignTxWithdrawal();
 
-security_policy_t policyForSignTxMetadata();
+security_policy_t policyForSignTxAuxData();
 
 security_policy_t policyForSignTxValidityIntervalStart();
 
@@ -103,5 +103,14 @@ security_policy_t policyForSignTxWitness(
 security_policy_t policyForSignTxConfirm();
 
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec);
+
+security_policy_t policyForCatalystRegistrationVotingRewardsAddressParams(
+        const addressParams_t* params,
+        const uint8_t networkId
+);
+
+security_policy_t policyForCatalystRegistrationStakingKey(
+        const bip44_path_t* stakingKeyPath
+);
 
 #endif // H_CARDANO_APP_SECURITY_POLICY

@@ -7,7 +7,7 @@ void signRawMessage(privateKey_t* privateKey,
                     const uint8_t* messageBuffer, size_t messageSize,
                     uint8_t* outBuffer, size_t outSize)
 {
-	uint8_t signature[64];
+	uint8_t signature[ED25519_SIGNATURE_LENGTH];
 	ASSERT(messageSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(outSize == SIZEOF(signature));
 
@@ -27,7 +27,7 @@ void signRawMessage(privateKey_t* privateKey,
 	        );
 	io_seproxyhal_io_heartbeat();
 
-	ASSERT(signatureSize == 64);
+	ASSERT(signatureSize == ED25519_SIGNATURE_LENGTH);
 	os_memmove(outBuffer, signature, signatureSize);
 }
 
@@ -63,6 +63,14 @@ void getTxWitness(bip44_path_t* pathSpec,
 {
 	ASSERT(txHashSize == TX_HASH_LENGTH);
 	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
+}
+
+void getCatalystVotingRegistrationSignature(bip44_path_t* pathSpec,
+        const uint8_t* payloadHashBuffer, size_t payloadHashSize,
+        uint8_t* outBuffer, size_t outSize)
+{
+	ASSERT(payloadHashSize == CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH);
+	signRawMessageWithPath(pathSpec, payloadHashBuffer, payloadHashSize, outBuffer, outSize);
 }
 
 void getOpCertSignature(bip44_path_t* pathSpec,

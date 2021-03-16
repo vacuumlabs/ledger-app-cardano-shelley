@@ -17,6 +17,8 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 #define VRF_KEY_HASH_LENGTH 32
 #define TX_HASH_LENGTH 32
 #define METADATA_HASH_LENGTH 32
+#define CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH 32
+#define ED25519_SIGNATURE_LENGTH 64
 
 #define MINTING_POLICY_ID_SIZE 28
 #define ASSET_NAME_SIZE_MAX 32
@@ -36,6 +38,7 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 // (previously, we used 128 bytes)
 // https://stackoverflow.com/questions/48333136/size-of-buffer-to-hold-base58-encoded-data
 #define MAX_ADDRESS_SIZE 128
+#define MAX_SHELLEY_ADDRESS_SIZE 57
 #define MAX_HUMAN_ADDRESS_SIZE 150
 #define MAX_HUMAN_REWARD_ACCOUNT_SIZE 65
 
@@ -50,6 +53,10 @@ typedef enum {
 	KEY_REFERENCE_HASH = 2,
 } key_reference_type_t;
 
+typedef enum {
+	ADDRESS_DEFINITION_BYTES = 1,
+	ADDRESS_DEFINITION_PARAMS = 2,
+} address_definition_type_t;
 
 typedef struct {
 	key_reference_type_t keyReferenceType;
@@ -132,5 +139,9 @@ typedef struct {
 	uint8_t dnsName[DNS_NAME_SIZE_MAX];
 } pool_relay_t;
 
+typedef enum {
+	AUX_DATA_TYPE_ARBITRARY_HASH = 0,
+	AUX_DATA_TYPE_CATALYST_VOTING_KEY_REGISTRATION = 1,
+} AUX_DATA_TYPE_t;
 
 #endif // H_CARDANO_APP_CARDANO

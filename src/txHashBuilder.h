@@ -48,7 +48,7 @@ typedef enum {
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS = 616,
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA = 617,
 	TX_HASH_BUILDER_IN_WITHDRAWALS = 700,
-	TX_HASH_BUILDER_IN_METADATA = 800,
+	TX_HASH_BUILDER_IN_AUX_DATA = 800,
 	TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START = 900,
 	TX_HASH_BUILDER_FINISHED = 1000,
 } tx_hash_builder_state_t;
@@ -59,7 +59,7 @@ typedef struct {
 	uint16_t remainingWithdrawals;
 	uint16_t remainingCertificates;
 	bool includeTtl;
-	bool includeMetadata;
+	bool includeAuxData;
 	bool includeValidityIntervalStart;
 
 	union {
@@ -86,7 +86,7 @@ void txHashBuilder_init(
         bool includeTtl,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
-        bool includeMetadata,
+        bool includeAuxData,
         bool includeValidityIntervalStart
 );
 
@@ -183,9 +183,9 @@ void txHashBuilder_addWithdrawal(
         uint64_t amount
 );
 
-void txHashBuilder_addMetadata(
+void txHashBuilder_addAuxData(
         tx_hash_builder_t* builder,
-        const uint8_t* metadataHashBuffer, size_t metadataHashSize
+        const uint8_t* auxDataHashBuffer, size_t auxDataHashSize
 );
 
 void txHashBuilder_addValidityIntervalStart(

@@ -91,17 +91,17 @@ static inline void advanceStage()
 		// we should have received all withdrawals
 		ASSERT(ctx->currentWithdrawal == ctx->numWithdrawals);
 
-		ctx->stage = SIGN_STAGE_METADATA;
+		ctx->stage = SIGN_STAGE_AUX_DATA;
 
-		if (ctx->includeMetadata) {
+		if (ctx->includeAuxData) {
 			break;
 		}
 
 	// intentional fallthrough
 
-	case SIGN_STAGE_METADATA:
-		if (ctx->includeMetadata) {
-			ASSERT(ctx->metadataReceived);
+	case SIGN_STAGE_AUX_DATA:
+		if (ctx->includeAuxData) {
+			ASSERT(ctx->auxDataReceived);
 		}
 
 		ctx->stage = SIGN_STAGE_VALIDITY_INTERVAL;
@@ -201,6 +201,16 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
+	case SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE:
+		if (signTxCatalystRegistration_isFinished()) {
+			TRACE();
+			ctx->stage = SIGN_STAGE_AUX_DATA;
+			ctx->auxDataReceived = true;
+
+			advanceStage();
+		}
+		break;
+
 	default:
 		break; // nothing to do otherwise
 	}
@@ -278,7 +288,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		// initialization
 		ctx->feeReceived = false;
 		ctx->ttlReceived = false;
-		ctx->metadataReceived = false;
+		ctx->auxDataReceived = false;
 		ctx->validityIntervalStartReceived = false;
 
 		ctx->currentInput = 0;
@@ -298,7 +308,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			uint8_t protocolMagic[4];
 
 			uint8_t includeTtl;
-			uint8_t includeMetadata;
+			uint8_t includeAuxData;
 			uint8_t includeValidityIntervalStart;
 			uint8_t signTxUsecase;
 
@@ -323,8 +333,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		ctx->includeTtl = signTx_parseIncluded(wireHeader->includeTtl);
 		TRACE("Include ttl %d", ctx->includeTtl);
 
-		ctx->includeMetadata = signTx_parseIncluded(wireHeader->includeMetadata);
-		TRACE("Include metadata %d", ctx->includeMetadata);
+		ctx->includeAuxData = signTx_parseIncluded(wireHeader->includeAuxData);
+		TRACE("Include auxiliary data %d", ctx->includeAuxData);
 
 		ctx->includeValidityIntervalStart = signTx_parseIncluded(wireHeader->includeValidityIntervalStart);
 		TRACE("Include validity interval start %d", ctx->includeValidityIntervalStart);
@@ -433,7 +443,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	        ctx->includeTtl,
 	        ctx->numCertificates,
 	        ctx->numWithdrawals,
-	        ctx->includeMetadata,
+	        ctx->includeAuxData,
 	        ctx->includeValidityIntervalStart
 	);
 
@@ -1057,8 +1067,8 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION: {
 		// pool registration certificates have a separate sub-machine for handling APDU and UI
 		// nothing more to be done with them here, we just init the sub-machine
-		ctx->stage = SIGN_STAGE_CERTIFICATES_POOL;
 		signTxPoolRegistration_init();
+		ctx->stage = SIGN_STAGE_CERTIFICATES_POOL;
 
 		respondSuccessEmptyMsg();
 		return;
@@ -1210,92 +1220,152 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 // ============================== METADATA ==============================
 
 enum {
-	HANDLE_METADATA_STEP_DISPLAY = 800,
-	HANDLE_METADATA_STEP_RESPOND,
-	HANDLE_METADATA_STEP_INVALID,
+	HANDLE_AUX_DATA_ARBITRARY_HASH_STEP_DISPLAY = 800,
+	HANDLE_AUX_DATA_ARBITRARY_HASH_STEP_RESPOND,
+	HANDLE_AUX_DATA_ARBITRARY_HASH_STEP_INVALID,
 };
 
-static void signTx_handleMetadata_ui_runStep()
+static void signTx_handleAuxDataArbitraryHash_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTx_handleMetadata_ui_runStep;
+	ui_callback_fn_t* this_fn = signTx_handleAuxDataArbitraryHash_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_METADATA_STEP_DISPLAY) {
-		char metadataHashHex[1 + 2 * METADATA_HASH_LENGTH];
-		size_t len = str_formatMetadata(
-		                     ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash),
-		                     metadataHashHex, SIZEOF(metadataHashHex)
-		             );
-		ASSERT(len + 1 == SIZEOF(metadataHashHex));
-
-		ui_displayPaginatedText(
-		        "Transaction metadata",
-		        metadataHashHex,
+	UI_STEP(HANDLE_AUX_DATA_ARBITRARY_HASH_STEP_DISPLAY) {
+		ui_displayHexBufferScreen(
+		        "Auxiliary data hash",
+		        ctx->stageData.auxData.auxDataHash,
+		        SIZEOF(ctx->stageData.auxData.auxDataHash),
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_METADATA_STEP_RESPOND) {
+	UI_STEP(HANDLE_AUX_DATA_ARBITRARY_HASH_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 		advanceStage();
 	}
-	UI_STEP_END(HANDLE_METADATA_STEP_INVALID);
+	UI_STEP_END(HANDLE_AUX_DATA_ARBITRARY_HASH_STEP_INVALID);
+}
+
+
+enum {
+	HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_DISPLAY = 850,
+	HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_RESPOND,
+	HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_INVALID,
+};
+static void signTx_handleAuxDataCatalystRegistration_ui_runStep()
+{
+	TRACE("UI step %d", ctx->ui_step);
+	TRACE_STACK_USAGE();
+	ui_callback_fn_t* this_fn = signTx_handleAuxDataCatalystRegistration_ui_runStep;
+
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_DISPLAY) {
+		ui_displayPrompt(
+		        "Register Catalyst",
+		        "voting key?",
+		        this_fn,
+		        respond_with_user_reject
+		);
+	}
+	UI_STEP(HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+		signTxCatalystRegistration_init();
+		ctx->stage = SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE;
+	}
+	UI_STEP_END(HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
-static void signTx_handleMetadataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	TRACE_STACK_USAGE();
 	{
-		// sanity checks
-		CHECK_STAGE(SIGN_STAGE_METADATA);
-		ASSERT(ctx->includeMetadata == true);
+		TRACE_STACK_USAGE();
+		ASSERT(ctx->includeAuxData == true);
 
-		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	}
+		// delegate to state sub-machine for stake pool registration certificate data
+		if (signTxCatalystRegistration_isValidInstruction(p2)) {
+			TRACE();
+			CHECK_STAGE(SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE);
 
-	explicit_bzero(&ctx->stageData.metadata, SIZEOF(ctx->stageData.metadata));
+			TRACE_STACK_USAGE();
 
-	{
-		// parse data
-		TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
-		VALIDATE(wireDataSize == METADATA_HASH_LENGTH, ERR_INVALID_DATA);
-		STATIC_ASSERT(SIZEOF(ctx->stageData.metadata.metadataHash) == METADATA_HASH_LENGTH, "wrong metadata hash length");
-		os_memmove(ctx->stageData.metadata.metadataHash, wireDataBuffer, SIZEOF(ctx->stageData.metadata.metadataHash));
-		ctx->metadataReceived = true;
-	}
-
-	security_policy_t policy = policyForSignTxMetadata();
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
-
-	{
-		// select UI step
-		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_METADATA_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_METADATA_STEP_RESPOND);
-#	undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
+			signTxCatalystRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
+			return;
+		} else {
+			CHECK_STAGE(SIGN_STAGE_AUX_DATA);
 		}
 	}
 
 	{
-		// add metadata to tx
-		TRACE("Adding metadata hash to tx hash");
-		txHashBuilder_addMetadata(
-		        &ctx->txHashBuilder,
-		        ctx->stageData.metadata.metadataHash, SIZEOF(ctx->stageData.metadata.metadataHash)
-		);
-		TRACE();
+		explicit_bzero(&ctx->stageData.auxData, SIZEOF(ctx->stageData.auxData));
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
+		ctx->stageData.auxData.type = parse_u1be(&view);
+
+		switch (ctx->stageData.auxData.type) {
+		case AUX_DATA_TYPE_ARBITRARY_HASH:
+			// parse data
+			VALIDATE(view_remainingSize(&view) == METADATA_HASH_LENGTH, ERR_INVALID_DATA);
+			STATIC_ASSERT(SIZEOF(ctx->stageData.auxData.auxDataHash) == METADATA_HASH_LENGTH, "wrong metadata hash length");
+			view_memmove(ctx->stageData.auxData.auxDataHash, &view, METADATA_HASH_LENGTH);
+			ctx->auxDataReceived = true;
+			break;
+		case AUX_DATA_TYPE_CATALYST_VOTING_KEY_REGISTRATION:
+			break;
+		default:
+			THROW(ERR_INVALID_DATA);
+		}
+
+		ASSERT(view_remainingSize(&view) == 0);
 	}
 
-	signTx_handleMetadata_ui_runStep();
+
+	security_policy_t policy = policyForSignTxAuxData();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	switch (ctx->stageData.auxData.type) {
+	case AUX_DATA_TYPE_ARBITRARY_HASH: {
+		// select UI step
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_AUX_DATA_ARBITRARY_HASH_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_AUX_DATA_ARBITRARY_HASH_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+		// add auxiliary data to tx
+		TRACE("Adding auxiliary data hash to tx hash");
+		txHashBuilder_addAuxData(
+		        &ctx->txHashBuilder,
+		        ctx->stageData.auxData.auxDataHash, SIZEOF(ctx->stageData.auxData.auxDataHash)
+		);
+		TRACE();
+		signTx_handleAuxDataArbitraryHash_ui_runStep();
+		break;
+	}
+	case AUX_DATA_TYPE_CATALYST_VOTING_KEY_REGISTRATION:
+		// select UI step
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+
+		signTx_handleAuxDataCatalystRegistration_ui_runStep();
+		break;
+	default:
+		ASSERT(false);
+	}
 }
 
 // ============================== VALIDITY INTERVAL START ==============================
@@ -1586,7 +1656,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x05, signTx_handleTtlAPDU);
 		CASE(0x06, signTx_handleCertificateAPDU);
 		CASE(0x07, signTx_handleWithdrawalAPDU);
-		CASE(0x08, signTx_handleMetadataAPDU);
+		CASE(0x08, signTx_handleAuxDataAPDU);
 		CASE(0x09, signTx_handleValidityIntervalStartAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
 		CASE(0x0f, signTx_handleWitnessAPDU);

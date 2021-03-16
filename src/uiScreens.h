@@ -20,6 +20,13 @@ void ui_displayPublicKeyPathScreen(
 );
 
 __noinline_due_to_stack__
+void ui_displayAccountDescriptionScreen(
+        const char* screenHeader,
+        const bip44_path_t* path,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
 void ui_displayAddressScreen(
         const char* screenHeader,
         const uint8_t* addressBuffer, size_t addressSize,

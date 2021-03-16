@@ -9,6 +9,7 @@
 #include "addressUtilsShelley.h"
 #include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
+#include "signTxCatalystRegistration.h"
 
 // the use case significantly affects restrictions on tx being signed
 typedef enum {
@@ -28,10 +29,11 @@ typedef enum {
 	SIGN_STAGE_CERTIFICATES = 29,
 	SIGN_STAGE_CERTIFICATES_POOL = 30, // pool registration certificate sub-machine
 	SIGN_STAGE_WITHDRAWALS = 31,
-	SIGN_STAGE_METADATA = 32,
-	SIGN_STAGE_VALIDITY_INTERVAL = 33,
-	SIGN_STAGE_CONFIRM = 34,
-	SIGN_STAGE_WITNESSES = 35,
+	SIGN_STAGE_AUX_DATA = 32,
+	SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE = 33,
+	SIGN_STAGE_VALIDITY_INTERVAL = 34,
+	SIGN_STAGE_CONFIRM = 35,
+	SIGN_STAGE_WITNESSES = 36,
 } sign_tx_stage_t;
 
 enum {
@@ -64,12 +66,15 @@ typedef struct {
 } sign_tx_withdrawal_data_t;
 
 typedef struct {
-	uint8_t metadataHash[METADATA_HASH_LENGTH];
-} sign_tx_metadata_data_t;
+	AUX_DATA_TYPE_t type;
+
+	// only for arbitrary metadata hash
+	uint8_t auxDataHash[METADATA_HASH_LENGTH];
+} sign_tx_aux_data_data_t;
 
 typedef struct {
 	bip44_path_t path;
-	uint8_t signature[64];
+	uint8_t signature[ED25519_SIGNATURE_LENGTH];
 } sign_tx_witness_data_t;
 
 typedef struct {
@@ -80,7 +85,7 @@ typedef struct {
 	bool includeTtl;
 	uint16_t numCertificates;
 	uint16_t numWithdrawals; // reward withdrawals
-	bool includeMetadata;
+	bool includeAuxData;
 	bool includeValidityIntervalStart;
 	uint16_t numWitnesses;
 
@@ -92,7 +97,7 @@ typedef struct {
 
 	bool feeReceived;
 	bool ttlReceived;
-	bool metadataReceived;
+	bool auxDataReceived;
 	bool validityIntervalStartReceived;
 
 	// TODO move these to commonTxData?
@@ -107,7 +112,7 @@ typedef struct {
 		uint64_t ttl;
 		sign_tx_certificate_data_t certificate;
 		sign_tx_withdrawal_data_t withdrawal;
-		sign_tx_metadata_data_t metadata;
+		sign_tx_aux_data_data_t auxData;
 		uint64_t validityIntervalStart;
 		sign_tx_witness_data_t witness;
 	} stageData;
@@ -115,6 +120,7 @@ typedef struct {
 	union {
 		pool_registration_context_t pool_registration_subctx;
 		output_context_t output_subctx;
+		catalyst_registration_context_t catalyst_registration_subctx;
 	} stageContext;
 
 	int ui_step;
