@@ -26,11 +26,11 @@ void ui_displayPathScreen(
 	);
 }
 
-// the given path typically corresponds to an account
-// if it contains anything more, we display just the whole path
-void ui_displayAccountScreen(
+__noinline_due_to_stack__
+static void _ui_displayPathAccountScreen(
         const char* screenHeader,
         const bip44_path_t* path,
+        bool showAccountDescription,
         ui_callback_fn_t callback
 )
 {
@@ -43,7 +43,7 @@ void ui_displayAccountScreen(
 	char accountDescription[160];
 	explicit_bzero(accountDescription, SIZEOF(accountDescription));
 
-	if (bip44_hasReasonableAccount(path) && !bip44_containsMoreThanAccount(path)) {
+	if (showAccountDescription) {
 		uint32_t account = unharden(bip44_getAccount(path));
 		if (bip44_hasByronPrefix(path)) {
 			snprintf(
@@ -76,6 +76,44 @@ void ui_displayAccountScreen(
 	ui_displayPaginatedText(
 	        screenHeader,
 	        accountDescription,
+	        callback
+	);
+}
+
+// the given path typically corresponds to an account
+// if it contains anything more, we display just the whole path
+void ui_displayAccountScreen(
+        const char* screenHeader,
+        const bip44_path_t* path,
+        ui_callback_fn_t callback
+)
+{
+	ASSERT(bip44_hasValidCardanoPrefix(path));
+	ASSERT(bip44_containsAccount(path));
+
+	bool showAccountDescription = bip44_hasReasonableAccount(path) && (!bip44_containsMoreThanAccount(path));
+
+	_ui_displayPathAccountScreen(
+	        screenHeader,
+	        path,
+	        showAccountDescription,
+	        callback
+	);
+}
+
+void ui_displayStakingKeyScreen(
+        const bip44_path_t* stakingPath,
+        ui_callback_fn_t callback
+)
+{
+	ASSERT(bip44_isValidStakingKeyPath(stakingPath));
+
+	bool showAccountDescription = bip44_hasReasonableAccount(stakingPath);
+
+	_ui_displayPathAccountScreen(
+	        "Staking key",
+	        stakingPath,
+	        showAccountDescription,
 	        callback
 	);
 }
@@ -345,6 +383,45 @@ void ui_displayHexBufferScreen(
 	ui_displayPaginatedText(
 	        screenHeader,
 	        bufferHex,
+	        callback
+	);
+}
+
+#define BECH32_BUFFER_SIZE_MAX 150
+#define BECH32_PREFIX_LENGTH_MAX 10
+
+// works for bufferSize <= 150 and prefix length <= 10
+void ui_displayBech32Screen(
+        const char* screenHeader,
+        const char* bech32Prefix,
+        const uint8_t* buffer, size_t bufferSize,
+        ui_callback_fn_t callback
+)
+{
+	{
+		// assert inputs
+		ASSERT(strlen(screenHeader) > 0);
+		ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+
+		ASSERT(strlen(bech32Prefix) > 0);
+		ASSERT(strlen(bech32Prefix) <= BECH32_PREFIX_LENGTH_MAX);
+
+		ASSERT(bufferSize <= BECH32_BUFFER_SIZE_MAX);
+	}
+
+	char encodedStr[10 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX]; // rough upper bound on required size
+	explicit_bzero(encodedStr, SIZEOF(encodedStr));
+
+	{
+		size_t len = bech32_encode(bech32Prefix, buffer, bufferSize, encodedStr, SIZEOF(encodedStr));
+
+		ASSERT(len == strlen(encodedStr));
+		ASSERT(len + 1 <= SIZEOF(encodedStr));
+	}
+
+	ui_displayPaginatedText(
+	        screenHeader,
+	        encodedStr,
 	        callback
 	);
 }

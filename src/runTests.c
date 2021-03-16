@@ -4,7 +4,7 @@
 #include "cbor.h"
 #include "base58.h"
 #include "bech32.h"
-#include "test_utils.h"
+#include "testUtils.h"
 #include "hexUtils.h"
 #include "hash.h"
 #include "bip44.h"
@@ -13,6 +13,7 @@
 #include "addressUtilsShelley.h"
 #include "crc32.h"
 #include "txHashBuilder.h"
+#include "auxDataHashBuilder.h"
 #include "textUtils.h"
 #include "uiHelpers.h"
 #include "uiScreens.h"
@@ -44,6 +45,7 @@ void handleRunTests(
 		run_addressUtilsShelley_test();
 		run_txHashBuilder_test();
 		run_uiScreens_test();
+		run_auxDataHashBuilder_test();
 		PRINTF("All tests done\n");
 	} END_ASSERT_NOEXCEPT;
 

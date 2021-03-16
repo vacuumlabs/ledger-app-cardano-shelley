@@ -2,7 +2,7 @@
 
 #include "common.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 #include "uiScreens.h"
 
 void testcase_assetFingerprint(
@@ -18,7 +18,7 @@ void testcase_assetFingerprint(
 
 	uint8_t assetName[32];
 	decode_hex(assetNameHex, assetName, SIZEOF(assetName));
-    size_t assetNameSize = strlen(assetNameHex) / 2;
+	size_t assetNameSize = strlen(assetNameHex) / 2;
 
 	char fingerprint[200];
 
@@ -33,7 +33,7 @@ void testcase_assetFingerprint(
 
 void test_assetFingerprint()
 {
-    // test vectors taken from CIP 14 proposal
+	// test vectors taken from CIP 14 proposal
 
 	testcase_assetFingerprint(
 	        "7eae28af2208be856f7a119668ae52a49b73725e326dc16579dcc373",

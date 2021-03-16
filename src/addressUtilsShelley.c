@@ -33,6 +33,19 @@ bool isSupportedAddressType(uint8_t addressType)
 	}
 }
 
+bool isShelleyAddressType(uint8_t addressType)
+{
+	switch (addressType) {
+	case BASE:
+	case POINTER:
+	case ENTERPRISE:
+	case REWARD:
+		return true;
+	default:
+		return false;
+	}
+}
+
 uint8_t constructShelleyAddressHeader(address_type_t type, uint8_t networkId)
 {
 	ASSERT(isSupportedAddressType(type));

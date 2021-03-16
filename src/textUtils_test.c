@@ -2,7 +2,7 @@
 
 #include "common.h"
 #include "textUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 void testcase_formatAda(
         uint64_t amount,
