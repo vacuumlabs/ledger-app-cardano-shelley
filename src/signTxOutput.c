@@ -354,19 +354,9 @@ enum {
 static void signTxOutput_handleAssetGroup_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxOutput_handleAssetGroup_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
 
-	UI_STEP(HANDLE_ASSET_GROUP_STEP_DISPLAY) {
-		STATIC_ASSERT(SIZEOF(subctx->stateData.tokenGroup.policyId) == MINTING_POLICY_ID_SIZE, "wrong minting policy id size");
-
-		ui_displayHexBufferScreen(
-		        "Token policy id",
-		        subctx->stateData.tokenGroup.policyId, MINTING_POLICY_ID_SIZE,
-		        this_fn
-		);
-	}
 	UI_STEP(HANDLE_ASSET_GROUP_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 
@@ -403,18 +393,6 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 	}
 
 	{
-		// select UI step
-		switch (subctx->outputSecurityPolicy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_ASSET_GROUP_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_ASSET_GROUP_STEP_RESPOND);
-#	undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
-	}
-
-	{
 		// add tokengroup to tx
 		TRACE("Adding token group hash to tx hash");
 		txHashBuilder_addOutput_tokenGroup(
@@ -425,6 +403,7 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		TRACE();
 	}
 
+	subctx->ui_step = HANDLE_ASSET_GROUP_STEP_RESPOND;
 	signTxOutput_handleAssetGroup_ui_runStep();
 }
 
@@ -445,7 +424,11 @@ static void signTxOutput_handleToken_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step);
 
 	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_NAME) {
-		ui_displayTokenNameScreen(&subctx->stateData.token, this_fn);
+		ui_displayAssetFingerprintScreen(
+		        &subctx->stateData.tokenGroup,
+		        &subctx->stateData.token,
+		        this_fn
+		);
 	}
 	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_AMOUNT) {
 		ui_displayUint64Screen(

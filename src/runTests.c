@@ -15,6 +15,8 @@
 #include "txHashBuilder.h"
 #include "textUtils.h"
 #include "uiHelpers.h"
+#include "uiScreens.h"
+
 
 void handleRunTests(
         uint8_t p1 MARK_UNUSED,
@@ -41,6 +43,7 @@ void handleRunTests(
 		run_addressUtilsByron_test();
 		run_addressUtilsShelley_test();
 		run_txHashBuilder_test();
+		run_uiScreens_test();
 		PRINTF("All tests done\n");
 	} END_ASSERT_NOEXCEPT;
 

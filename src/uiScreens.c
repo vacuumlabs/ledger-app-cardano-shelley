@@ -173,31 +173,58 @@ void ui_displayStakingInfoScreen(
 	);
 }
 
-void ui_displayTokenNameScreen(
+#define ASSET_FINGERPRINT_SIZE 20
+
+size_t deriveAssetFingerprint(
+        uint8_t* policyId,
+        size_t policyIdSize,
+        uint8_t* assetName,
+        size_t assetNameSize,
+        char* fingerprint,
+        size_t fingerprintMaxSize
+)
+{
+	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
+
+	uint8_t hashInput[MINTING_POLICY_ID_SIZE + ASSET_NAME_SIZE_MAX];
+	const size_t hashInputSize = policyIdSize + assetNameSize;
+	{
+		write_view_t view = make_write_view(hashInput, hashInput + SIZEOF(hashInput));
+		view_appendData(&view, policyId, policyIdSize);
+		view_appendData(&view, assetName, assetNameSize);
+		ASSERT(view_processedSize(&view) == hashInputSize);
+	}
+
+	uint8_t fingerprintBuffer[ASSET_FINGERPRINT_SIZE];
+	blake2b_160_hash(hashInput, hashInputSize, fingerprintBuffer, SIZEOF(fingerprintBuffer));
+
+	size_t len = bech32_encode("asset", fingerprintBuffer, SIZEOF(fingerprintBuffer), fingerprint, fingerprintMaxSize);
+	ASSERT(len == strlen(fingerprint));
+	ASSERT(len + 1 <= fingerprintMaxSize);
+
+	return len;
+}
+
+void ui_displayAssetFingerprintScreen(
+        token_group_t* tokenGroup,
         token_amount_t* token,
         ui_callback_fn_t callback
 )
 {
-	if (str_isAsciiPrintableBuffer(token->assetNameBytes, token->assetNameSize)) {
-		char name[ASSET_NAME_SIZE_MAX + 1];
-		ASSERT(token->assetNameSize + 1 <= SIZEOF(name));
-		os_memmove(name, token->assetNameBytes, token->assetNameSize);
-		name[token->assetNameSize] = '\0';
+	char fingerprint[200];
 
-		bool isEmpty = (token->assetNameSize == 0);
+	deriveAssetFingerprint(
+	        tokenGroup->policyId, SIZEOF(tokenGroup->policyId),
+	        token->assetNameBytes, token->assetNameSize,
+	        fingerprint, SIZEOF(fingerprint)
+	);
+	ASSERT(strlen(fingerprint) + 1 <= SIZEOF(fingerprint));
 
-		ui_displayPaginatedText(
-		        (isEmpty) ? "Asset name is empty" : "Asset name (ASCII):",
-		        name,
-		        callback
-		);
-	} else {
-		ui_displayHexBufferScreen(
-		        "Asset name (hex):",
-		        token->assetNameBytes, token->assetNameSize,
-		        callback
-		);
-	}
+	ui_displayPaginatedText(
+	        "Asset fingerprint",
+	        fingerprint,
+	        callback
+	);
 }
 
 void ui_displayAdaAmountScreen(

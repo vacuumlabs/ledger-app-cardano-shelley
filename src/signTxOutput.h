@@ -55,8 +55,10 @@ typedef struct {
 
 	union {
 		top_level_output_data_t output;
-		token_group_t tokenGroup;
-		token_amount_t token;
+		struct {
+			token_group_t tokenGroup;
+			token_amount_t token;
+		};
 	} stateData;
 
 } output_context_t;

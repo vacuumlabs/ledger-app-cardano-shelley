@@ -182,18 +182,6 @@ void str_validateTextBuffer(const uint8_t* text, size_t textSize)
 	}
 }
 
-// check if a non-null-terminated buffer contains printable ASCII between 33 and 126 (inclusive)
-bool str_isAsciiPrintableBuffer(const uint8_t* buffer, size_t bufferSize)
-{
-	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
-
-	for (size_t i = 0; i < bufferSize; i++) {
-		if (buffer[i] > 126) return false;
-		if (buffer[i] <  33) return false;
-	}
-
-	return true;
-}
 
 #ifdef DEVEL
 

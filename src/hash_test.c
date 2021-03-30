@@ -44,6 +44,21 @@ void testcase_blake2b_224(const char* inputHex, const char* expectedHex)
 	EXPECT_EQ_BYTES(expectedBuffer, outputBuffer, expectedSize);
 }
 
+void testcase_blake2b_160(const char* inputHex, const char* expectedHex)
+{
+	PRINTF("testcase_blake2b_160 %s\n", inputHex);
+	uint8_t inputBuffer[200];
+	size_t inputSize = decode_hex(inputHex, inputBuffer, SIZEOF(inputBuffer));
+
+	uint8_t expectedBuffer[20];
+	size_t expectedSize = decode_hex(expectedHex, expectedBuffer, SIZEOF(expectedBuffer));
+
+	ASSERT(expectedSize == 20);
+	uint8_t outputBuffer[20];
+	blake2b_160_hash(inputBuffer, inputSize, outputBuffer, SIZEOF(outputBuffer));
+	EXPECT_EQ_BYTES(expectedBuffer, outputBuffer, expectedSize);
+}
+
 void run_blake2b_test()
 {
 #define TESTCASE_CHUNKS_BLAKE2B_512(chunks_, expected_) \
@@ -93,6 +108,12 @@ void run_blake2b_test()
 		        "e7e4af2ceb822f11f02ad7fb2aa2822f880da89ea825e0557708def47ea3d88a",
 
 		        "8f9153cd38d46d90d4e88a7701af5f9fddb672d70c2ce6dc5face6e3"
+		);
+	} {
+		testcase_blake2b_160(
+		        "7eae28af2208be856f7a119668ae52a49b73725e326dc16579dcc373",
+
+		        "1cadfc0e7068801d51d240d14a4085f2a3673cbb"
 		);
 	}
 }
