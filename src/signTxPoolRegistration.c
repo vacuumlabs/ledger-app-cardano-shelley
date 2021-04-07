@@ -221,7 +221,6 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 
 // ============================== POOL KEY HASH / ID ==============================
 
-__noinline_due_to_stack__
 static void _toPoolKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
 {
 	switch (poolId->keyReferenceType) {

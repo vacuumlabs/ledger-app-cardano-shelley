@@ -91,6 +91,19 @@
 // but even then it can give you at least a rough idea.
 // The output of 'arm-none-eabi-objdump -d -S bin/app.elf'
 // gives more accurate info on the stack frames of individual function calls.
+// (Watch for lines like 'sub sp, #508' close to function headers.)
+
+// Another thing to check is the output of 'objdump -x app.elf'.
+// There are two important lines, looking like
+// 2 .bss          000009f8  20001800  20001800  00001800  2**3
+// 20002800 g       .text  00000000 END_STACK
+// In this particular example, stack starts at 0x2800,
+// data start at 0x1800 and have size 0x9f8.
+// Thus the space available for data + stack is 0x1000 (4096 B),
+// and data (.bss) take 0x9f8 (2552 B). This includes some Ledger
+// internal stuff for handling APDUs etc.
+// Unless some changes have been made, our global data usage is mostly
+// determined by sizeof(instructionState_t), see state.h.
 
 // The variable app_stack_canary is provided in the linker script 'script.ld'
 // in nanos-secure-sdk.
