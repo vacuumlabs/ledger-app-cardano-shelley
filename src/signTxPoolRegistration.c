@@ -268,7 +268,7 @@ static void handlePoolKey_ui_runStep()
 
 		ui_displayBech32Screen(
 		        "Pool ID",
-		        "pool_vk",
+		        "pool",
 		        poolKeyHash, SIZEOF(poolKeyHash),
 		        this_fn
 		);
