@@ -845,19 +845,10 @@ static void signTx_handleCertificatePoolRetirement_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION) {
-		char poolId[200];
-		explicit_bzero(poolId, SIZEOF(poolId));
-
-		size_t length = encode_hex(
-		                        ctx->stageData.certificate.poolKeyHash, SIZEOF(ctx->stageData.certificate.poolKeyHash),
-		                        poolId, SIZEOF(poolId)
-		                );
-		ASSERT(length == strlen(poolId));
-		ASSERT(length == 2 * SIZEOF(ctx->stageData.certificate.poolKeyHash));
-
-		ui_displayPaginatedText(
+		ui_displayBech32Screen(
 		        "Retire stake pool",
-		        poolId,
+		        "pool",
+		        ctx->stageData.certificate.poolKeyHash, SIZEOF(ctx->stageData.certificate.poolKeyHash),
 		        this_fn
 		);
 	}
@@ -945,43 +936,49 @@ static void _addCertificateDataToTx(
         tx_hash_builder_t* txHashBuilder
 )
 {
-
 	// data only added in the sub-machine, see signTxPoolRegistration.c
 	ASSERT(ctx->stageData.certificate.type != CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 
-	// compute hash of the public key determined by the given path
-	uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
-
-	{
-		write_view_t keyHashView = make_write_view(keyHash, keyHash + SIZEOF(keyHash));
-		size_t keyHashLength = view_appendPublicKeyHash(&keyHashView, &ctx->stageData.certificate.pathSpec);
-		ASSERT(keyHashLength == ADDRESS_KEY_HASH_LENGTH);
-	}
 	TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
+
+	uint8_t addressKeyHash[ADDRESS_KEY_HASH_LENGTH];
 
 	switch (ctx->stageData.certificate.type) {
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
+		bip44_pathToKeyHash(
+		        &ctx->stageData.certificate.pathSpec,
+		        addressKeyHash, SIZEOF(addressKeyHash)
+		);
 		txHashBuilder_addCertificate_stakingKey(
 		        txHashBuilder, certificateData->type,
-		        keyHash, SIZEOF(keyHash));
+		        addressKeyHash, SIZEOF(addressKeyHash)
+		);
 		break;
 	}
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
+		bip44_pathToKeyHash(
+		        &ctx->stageData.certificate.pathSpec,
+		        addressKeyHash, SIZEOF(addressKeyHash)
+		);
 		txHashBuilder_addCertificate_delegation(
 		        txHashBuilder,
-		        keyHash, SIZEOF(keyHash),
+		        addressKeyHash, SIZEOF(addressKeyHash),
 		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
 		);
 		break;
 	}
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
+		bip44_pathToKeyHash(
+		        &ctx->stageData.certificate.pathSpec,
+		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
+		);
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
-		        keyHash, SIZEOF(keyHash),
+		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash),
 		        certificateData->epoch
 		);
 		break;

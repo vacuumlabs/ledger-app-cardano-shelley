@@ -95,7 +95,8 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 #undef CONSISTENT_WITH
 }
 
-size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath)
+__noinline_due_to_stack__
+static size_t view_appendAddressPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath)
 {
 	TRACE_STACK_USAGE();
 
@@ -121,11 +122,11 @@ static size_t deriveAddress_base_stakingKeyPath(
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
-		view_appendPublicKeyHash(&out, spendingKeyPath);
+		view_appendAddressPublicKeyHash(&out, spendingKeyPath);
 	}
 	{
 		ASSERT(bip44_isValidStakingKeyPath(stakingKeyPath)); // TODO should we allow paths not corresponding to standard /2/0 staking keys?
-		view_appendPublicKeyHash(&out, stakingKeyPath);
+		view_appendAddressPublicKeyHash(&out, stakingKeyPath);
 	}
 
 	const int ADDRESS_LENGTH = 1 + 2 * ADDRESS_KEY_HASH_LENGTH;
@@ -148,7 +149,7 @@ static size_t deriveAddress_base_stakingKeyHash(
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
-		view_appendPublicKeyHash(&out, spendingKeyPath);
+		view_appendAddressPublicKeyHash(&out, spendingKeyPath);
 	}
 	{
 		ASSERT(stakingKeyHashSize == ADDRESS_KEY_HASH_LENGTH);
@@ -241,7 +242,7 @@ static size_t deriveAddress_pointer(
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
-		view_appendPublicKeyHash(&out, spendingKeyPath);
+		view_appendAddressPublicKeyHash(&out, spendingKeyPath);
 	}
 	{
 		view_appendVariableLengthUInt(&out, stakingKeyBlockchainPointer->blockIndex);
@@ -265,7 +266,7 @@ static size_t deriveAddress_enterprise(
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
-		view_appendPublicKeyHash(&out, spendingKeyPath);
+		view_appendAddressPublicKeyHash(&out, spendingKeyPath);
 	}
 	{
 		// no staking data
@@ -295,7 +296,7 @@ static size_t deriveAddress_reward(
 		// staking key path expected (corresponds to reward account)
 		ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath));
 
-		view_appendPublicKeyHash(&out, spendingKeyPath);
+		view_appendAddressPublicKeyHash(&out, spendingKeyPath);
 	}
 	{
 		// no staking data
