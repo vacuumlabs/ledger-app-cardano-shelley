@@ -13,6 +13,7 @@
 #include "addressUtilsShelley.h"
 #include "crc32.h"
 #include "txHashBuilder.h"
+#include "auxDataHashBuilder.h"
 #include "textUtils.h"
 #include "ipUtils.h"
 #include "uiHelpers.h"
@@ -29,7 +30,7 @@ void handleRunTests(
 	// as it interferes with tests verifying assertions
 	BEGIN_ASSERT_NOEXCEPT {
 		PRINTF("Running tests\n");
-		/*run_hex_test();
+		run_hex_test();
 		run_base58_test();
 		run_bech32_test();
 		run_crc32_test();
@@ -42,7 +43,7 @@ void handleRunTests(
 		run_key_derivation_test();
 		run_addressUtilsByron_test();
 		run_addressUtilsShelley_test();
-		run_txHashBuilder_test();*/
+		run_txHashBuilder_test();
 		run_auxDataHashBuilder_test();
 		PRINTF("All tests done\n");
 	} END_ASSERT_NOEXCEPT;

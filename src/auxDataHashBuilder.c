@@ -146,7 +146,7 @@ void auxDataHashBuilder_catalystRegistration_addStakingKey(
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_STAKING_KEY);
 		{
-			ASSERT(stakingPubKeySize == 64);
+			ASSERT(stakingPubKeySize == PUBLIC_KEY_SIZE);
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingPubKeySize);
 			BUILDER_APPEND_DATA(stakingPubKeyBuffer, stakingPubKeySize);
 		}

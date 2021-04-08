@@ -232,7 +232,7 @@ static void signTxCatalystRegistration_handleStakingKeyAPDU(uint8_t* wireDataBuf
 		extendedPublicKey_t extStakingPubKey;
 		deriveExtendedPublicKey(&subctx->stakingKeyPath, &extStakingPubKey);
 		auxDataHashBuilder_catalystRegistration_addStakingKey(
-		        auxDataHashBuilder, (uint8_t*) &extStakingPubKey, SIZEOF(extStakingPubKey)
+		        auxDataHashBuilder, extStakingPubKey.pubKey, SIZEOF(extStakingPubKey.pubKey)
 		);
 	}
 
