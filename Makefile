@@ -122,10 +122,12 @@ ifeq ($(GCCPATH),)
 $(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
 endif
 
-CC       := $(CLANGPATH)clang
-CFLAGS   += -O3 -Os -Wall -Wextra -Wuninitialized
+WERROR   := -Werror=incompatible-pointer-types -Werror=return-type
 
-AS     := $(GCCPATH)arm-none-eabi-gcc
+CC       := $(CLANGPATH)clang
+CFLAGS   += -std=gnu11 -O3 -Os -Wall -Wextra -Wuninitialized $(WERROR)
+
+AS       := $(GCCPATH)arm-none-eabi-gcc
 LD       := $(GCCPATH)arm-none-eabi-gcc
 
 LDFLAGS  += -O3 -Os -Wall

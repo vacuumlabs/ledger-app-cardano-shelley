@@ -24,6 +24,8 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 
 // for Shelley, address is at most 1 + 28 + 28 = 57 bytes,
 // encoded in bech32 as 10 (prefix) + 8/5 * 57 + 6 (checksum) = 108 chars
+// reward accounts are just 1 + 28 = 29 bytes,
+// so 10 + 8/5 * 29 + 6 = 65 chars at most
 
 // for Byron, the address can contain 64B of data (according to Duncan),
 // plus 46B with empty data; 100B in base58 has
@@ -32,6 +34,7 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 // https://stackoverflow.com/questions/48333136/size-of-buffer-to-hold-base58-encoded-data
 #define MAX_ADDRESS_SIZE 128
 #define MAX_HUMAN_ADDRESS_SIZE 150
+#define MAX_HUMAN_REWARD_ACCOUNT_SIZE 65
 
 #define MAINNET_PROTOCOL_MAGIC 764824073
 #define MAINNET_NETWORK_ID 1

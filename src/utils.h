@@ -101,6 +101,10 @@
 // start using such variable. deprecated deals with that.
 #define MARK_UNUSED __attribute__ ((unused, deprecated))
 
+// Note: inlining can increase stack memory usage
+// where we really do not want it
+#define __noinline_due_to_stack__ __attribute__((noinline))
+
 #ifdef DEVEL
 #define TRACE(...) \
 	do { \
@@ -120,5 +124,47 @@
 #define TRACE_BUFFER(BUF, SIZE)
 #endif // DEVEL
 
+
+#ifdef DEVEL
+// Note: this is an unreliable (potentially very misleading) way of checking
+// stack memory consumption because the compiler might allocate the space
+// for all the local variables at the beginning of a function call.
+// but even then it can give you at least a rough idea.
+// The output of 'arm-none-eabi-objdump -d -S bin/app.elf'
+// gives more accurate info on the stack frames of individual function calls.
+// (Watch for lines like 'sub sp, #508' close to function headers.)
+
+// Another thing to check is the output of 'objdump -x app.elf'.
+// There are two important lines, looking like
+// 2 .bss          000009f8  20001800  20001800  00001800  2**3
+// 20002800 g       .text  00000000 END_STACK
+// In this particular example, stack starts at 0x2800,
+// data start at 0x1800 and have size 0x9f8.
+// Thus the space available for data + stack is 0x1000 (4096 B),
+// and data (.bss) take 0x9f8 (2552 B). This includes some Ledger
+// internal stuff for handling APDUs etc.
+// Unless some changes have been made, our global data usage is mostly
+// determined by sizeof(instructionState_t), see state.h.
+
+// The variable app_stack_canary is provided in the linker script 'script.ld'
+// in nanos-secure-sdk.
+// There is also the flag HAVE_BOLOS_APP_STACK_CANARY in our Makefile
+// which turns on automatic checking of the stack canary in io_exchange()
+// (see os_io_seproxyhal.c in nanos-secure-sdk).
+#define APP_STACK_CANARY_MAGIC 0xDEAD0031
+extern unsigned int app_stack_canary;
+
+#define TRACE_STACK_USAGE() \
+	do { \
+		volatile uint32_t x = 0; \
+		TRACE("stack position = %d", (int)((uint8_t*)&x - (uint8_t*)&app_stack_canary)); \
+		if (app_stack_canary != APP_STACK_CANARY_MAGIC) { \
+			TRACE("===================== stack overflow ====================="); \
+		} \
+		\
+	} while(0)
+#else
+#define TRACE_STACK_USAGE()
+#endif // DEVEL
 
 #endif // H_CARDANO_APP_UTILS
