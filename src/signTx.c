@@ -26,6 +26,37 @@ static ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.
 static ins_sign_tx_aux_data_context_t* txAuxDataCtx = &(instructionState.signTxContext.txPartCtx.aux_data_ctx);
 static ins_sign_tx_witnesses_context_t* txWitnessesCtx = &(instructionState.signTxContext.txPartCtx.witnesses_ctx);
 
+// TODO - maybe add an enum to the global context which would specify the active tx part?
+static inline void initTxBodyCtx() {
+	explicit_bzero(&ctx->txPartCtx, SIZEOF(ctx->txPartCtx));
+
+	{
+		// initialization
+		txBodyCtx->validityIntervalStartReceived = false;
+		txBodyCtx->feeReceived = false;
+		txBodyCtx->ttlReceived = false;
+		txBodyCtx->currentInput = 0;
+		txBodyCtx->currentOutput = 0;
+		txBodyCtx->currentCertificate = 0;
+		txBodyCtx->currentWithdrawal = 0;
+	}
+}
+
+static inline void initTxAuxDataCtx() {
+	explicit_bzero(&ctx->txPartCtx, SIZEOF(ctx->txPartCtx));
+	{
+		txAuxDataCtx->auxDataReceived = false;
+		txAuxDataCtx->auxDataType = false;
+	}
+}
+
+static inline void initTxWitnessesCtx() {
+	explicit_bzero(&ctx->txPartCtx, SIZEOF(ctx->txPartCtx));
+	{
+		txWitnessesCtx->currentWitness = 0;
+	}
+}
+
 // advances the stage of the main state machine
 static inline void advanceStage()
 {
@@ -35,6 +66,7 @@ static inline void advanceStage()
 
 	case SIGN_STAGE_INIT:
 		ctx->stage = SIGN_STAGE_AUX_DATA;
+		initTxAuxDataCtx();
 
 		if (ctx->includeAuxData) {
 			// wait for aux data APDU(s)
@@ -48,30 +80,20 @@ static inline void advanceStage()
 		}
 
 		ctx->stage = SIGN_STAGE_BODY_INPUTS;
+		initTxBodyCtx();
 
-		{
-			// initialization
-			txBodyCtx->validityIntervalStartReceived = false;
-			txBodyCtx->feeReceived = false;
-			txBodyCtx->ttlReceived = false;
-			txBodyCtx->currentInput = 0;
-			txBodyCtx->currentOutput = 0;
-			txBodyCtx->currentCertificate = 0;
-			txBodyCtx->currentWithdrawal = 0;
-			txWitnessesCtx->currentWitness = 0;
-		}
 		{
 			// Note: make sure that everything in ctx is initialized properly
 			txHashBuilder_init(
-			        &txBodyCtx->txHashBuilder,
-			        ctx->numInputs,
-			        ctx->numOutputs,
-			        ctx->includeTtl,
-			        ctx->numCertificates,
-			        ctx->numWithdrawals,
-			        ctx->includeAuxData,
-			        ctx->includeValidityIntervalStart
-			);
+					&txBodyCtx->txHashBuilder,
+					ctx->numInputs,
+					ctx->numOutputs,
+					ctx->includeTtl,
+					ctx->numCertificates,
+					ctx->numWithdrawals,
+					ctx->includeAuxData,
+					ctx->includeValidityIntervalStart
+			);	
 			txHashBuilder_enterInputs(&txBodyCtx->txHashBuilder);
 		}
 		break;
@@ -142,6 +164,8 @@ static inline void advanceStage()
 		ASSERT(txBodyCtx->currentWithdrawal == ctx->numWithdrawals);
 
 		if (ctx->includeAuxData) {
+			ASSERT(txAuxDataCtx->auxDataReceived);
+
 			// add auxiliary data to tx
 			TRACE("Adding auxiliary data hash to tx hash");
 			txHashBuilder_addAuxData(
@@ -167,9 +191,9 @@ static inline void advanceStage()
 		break;
 
 	case SIGN_STAGE_CONFIRM:
-		// TODO a more explicit way to clean/initialize tx part context
-		explicit_bzero(&ctx->txPartCtx, SIZEOF(ctx->txPartCtx));
 		ctx->stage = SIGN_STAGE_WITNESSES;
+		initTxWitnessesCtx();
+
 		break;
 
 	case SIGN_STAGE_WITNESSES:
@@ -1529,13 +1553,14 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 #	define  CASE(P1, HANDLER) case P1: return HANDLER;
 #	define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(0x01, signTx_handleInitAPDU);
+		// APDU flow out of original order to optimize memory usage related to serializing auxiliary data
+		CASE(0x08, signTx_handleAuxDataAPDU);
 		CASE(0x02, signTx_handleInputAPDU);
 		CASE(0x03, signTx_handleOutputAPDU);
 		CASE(0x04, signTx_handleFeeAPDU);
 		CASE(0x05, signTx_handleTtlAPDU);
 		CASE(0x06, signTx_handleCertificateAPDU);
 		CASE(0x07, signTx_handleWithdrawalAPDU);
-		CASE(0x08, signTx_handleAuxDataAPDU);
 		CASE(0x09, signTx_handleValidityIntervalStartAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
 		CASE(0x0f, signTx_handleWitnessAPDU);

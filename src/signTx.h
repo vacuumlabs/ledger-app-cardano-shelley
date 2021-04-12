@@ -113,6 +113,8 @@ typedef struct {
 typedef struct {
 	sign_tx_stage_t stage;
 
+	common_tx_data_t commonTxData;
+
 	uint16_t numInputs;
 	uint16_t numOutputs;
 	bool includeTtl;
@@ -122,10 +124,8 @@ typedef struct {
 	uint16_t numWitnesses;
 	bool includeAuxData;
 
-	uint8_t auxDataHash[TX_HASH_LENGTH];
+	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
 	uint8_t txHash[TX_HASH_LENGTH];
-
-	common_tx_data_t commonTxData;
 
 	union {
 		ins_sign_tx_aux_data_context_t aux_data_ctx;
