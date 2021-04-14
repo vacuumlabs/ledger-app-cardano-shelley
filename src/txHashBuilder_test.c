@@ -5,7 +5,7 @@
 #include "cardanoCertificates.h"
 #include "hexUtils.h"
 #include "textUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 
 static struct {

@@ -4,7 +4,7 @@
 #include "cardano.h"
 #include "bip44.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 #define HD HARDENED_BIP32
 #define MAX_ADDRESS_LENGTH 128

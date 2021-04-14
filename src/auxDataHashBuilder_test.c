@@ -4,7 +4,7 @@
 #include "cardano.h"
 #include "hexUtils.h"
 #include "textUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 
 static const char* votingKey = "3B40265111D8BB3C3C608D95B3A0BF83461ACE32D79336579A1939B3AAD1C0B7";

@@ -2,7 +2,7 @@
 
 #include "common.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 #include "uiScreens.h"
 
 void testcase_assetFingerprint(

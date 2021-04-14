@@ -3,7 +3,7 @@
 #include "base58.h"
 #include "assert.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 void testcase_base58(const char* inputHex, const char* expectedStr)
 {

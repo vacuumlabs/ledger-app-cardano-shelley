@@ -4,7 +4,7 @@
 #include "cbor.h"
 #include "base58.h"
 #include "bech32.h"
-#include "test_utils.h"
+#include "testUtils.h"
 #include "hexUtils.h"
 #include "hash.h"
 #include "bip44.h"
