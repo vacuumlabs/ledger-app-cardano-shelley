@@ -45,7 +45,7 @@ void run_auxDataHashBuilder_test()
 	}
 
 	{
-		uint8_t tmp[86];
+		uint8_t tmp[57];
 		size_t tmpSize = decode_hex(votingRewardsAddress, tmp, SIZEOF(tmp));
 		auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
 		        &builder,
