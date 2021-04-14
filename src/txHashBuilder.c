@@ -37,7 +37,7 @@ static void blake2b_256_append_and_trace(
 	blake2b_256_append(hashCtx, buffer, bufferSize);
 }
 
- __noinline_due_to_stack__
+__noinline_due_to_stack__
 static void blake2b_256_append_cbor(
         blake2b_256_context_t* hashCtx,
         uint8_t type, uint64_t value

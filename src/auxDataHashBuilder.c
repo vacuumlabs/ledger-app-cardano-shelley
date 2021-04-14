@@ -17,19 +17,19 @@
 #define _TRACE(...)
 #endif // DEVEL
 
+static enum {
+	HASH_CTX_AUX_DATA = (1u << 0),
+	HASH_CTX_CATALYST_PAYLOAD = (1u << 1)
+};
 
 // Syntactic sugar
-#define BUILDER_APPEND_CBOR(type, value) \
-	blake2b_256_append_cbor(&builder->auxDataHash, type, value, true); \
-	if (auxDataHashBuilder_isInCatalystRegistrationPayload(builder)) { \
-		blake2b_256_append_cbor(&builder->catalystRegistrationData.payloadHash, type, value, false); \
-	}
+#define APPEND_CBOR(hashContexts, type, value) \
+	if (hashContexts & HASH_CTX_AUX_DATA) blake2b_256_append_cbor(&builder->auxDataHash, type, value, true); \
+	if (hashContexts & HASH_CTX_CATALYST_PAYLOAD) blake2b_256_append_cbor(&builder->catalystRegistrationData.payloadHash, type, value, false);
 
-#define BUILDER_APPEND_DATA(buffer, bufferSize) \
-	blake2b_256_append_and_trace(&builder->auxDataHash, buffer, bufferSize); \
-	if (auxDataHashBuilder_isInCatalystRegistrationPayload(builder)) { \
-		blake2b_256_append(&builder->catalystRegistrationData.payloadHash, buffer, bufferSize); \
-	}
+#define APPEND_DATA(hashContexts, buffer, bufferSize) \
+	if (hashContexts & HASH_CTX_AUX_DATA) blake2b_256_append_and_trace(&builder->auxDataHash, buffer, bufferSize); \
+	if (hashContexts & HASH_CTX_CATALYST_PAYLOAD) blake2b_256_append(&builder->catalystRegistrationData.payloadHash, buffer, bufferSize);
 
 
 __noinline_due_to_stack__
@@ -58,22 +58,6 @@ static void blake2b_256_append_and_trace(
 	blake2b_256_append(hashCtx, buffer, bufferSize);
 }
 
-static bool auxDataHashBuilder_isInCatalystRegistrationPayload(aux_data_hash_builder_t* builder)
-{
-	switch (builder->state) {
-	case AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_INIT:
-	case AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_INIT:
-	case AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_KEY:
-	case AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_STAKING_KEY:
-	case AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_REWARDS_ADDRESS:
-	case AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_NONCE:
-		return true;
-
-	default:
-		return false;
-	}
-}
-
 void auxDataHashBuilder_init(
         aux_data_hash_builder_t* builder
 )
@@ -83,7 +67,7 @@ void auxDataHashBuilder_init(
 	blake2b_256_init(&builder->catalystRegistrationData.payloadHash);
 
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+		APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_ARRAY, 2);
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_INIT;
 }
@@ -94,7 +78,7 @@ void auxDataHashBuilder_catalystRegistration_enter(aux_data_hash_builder_t* buil
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_INIT);
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 2);
+		APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_MAP, 2);
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_INIT;
 }
@@ -107,12 +91,12 @@ void auxDataHashBuilder_catalystRegistration_enterPayload(aux_data_hash_builder_
 	{
 		// map {61284: <payload>} is being hashed and signed in the catalyst voting registration
 		// this instruction introduces the beginning of this single-key dictionary
-		// the remainder of the payload serialization shares the tokens with the top-level structure
-		blake2b_256_append_cbor(&builder->catalystRegistrationData.payloadHash, CBOR_TYPE_MAP, 1, false);
+		// the remainder of the payload serialization shares the tokens with the overall auxiliary data CBOR
+		APPEND_CBOR(HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_MAP, 1)
 
 		// Enter the Catalyst voting key registration payload inner map
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, METADATA_KEY_CATALYST_REGISTRATION_PAYLOAD);
-		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 4);
+		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, METADATA_KEY_CATALYST_REGISTRATION_PAYLOAD);
+		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_MAP, 4);
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_INIT;
 }
@@ -126,11 +110,11 @@ void auxDataHashBuilder_catalystRegistration_addVotingKey(
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_INIT);
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_KEY);
+		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_KEY);
 		{
 			ASSERT(votingPubKeySize == 32);
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, votingPubKeySize);
-			BUILDER_APPEND_DATA(votingPubKeyBuffer, votingPubKeySize);
+			APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_BYTES, votingPubKeySize);
+			APPEND_DATA(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, votingPubKeyBuffer, votingPubKeySize);
 		}
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_KEY;
@@ -145,11 +129,11 @@ void auxDataHashBuilder_catalystRegistration_addStakingKey(
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_KEY);
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_STAKING_KEY);
+		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_STAKING_KEY);
 		{
 			ASSERT(stakingPubKeySize == PUBLIC_KEY_SIZE);
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingPubKeySize);
-			BUILDER_APPEND_DATA(stakingPubKeyBuffer, stakingPubKeySize);
+			APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_BYTES, stakingPubKeySize);
+			APPEND_DATA(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, stakingPubKeyBuffer, stakingPubKeySize);
 		}
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_STAKING_KEY;
@@ -164,10 +148,10 @@ void auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_STAKING_KEY);
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_REWARDS_ADDRESS);
+		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_REWARDS_ADDRESS);
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
-			BUILDER_APPEND_DATA(addressBuffer, addressSize);
+			APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_BYTES, addressSize);
+			APPEND_DATA(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, addressBuffer, addressSize);
 		}
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_REWARDS_ADDRESS;
@@ -182,8 +166,8 @@ void auxDataHashBuilder_catalystRegistration_addNonce(
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_REWARDS_ADDRESS);
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_NONCE);
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, nonce);
+		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_NONCE);
+		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, nonce);
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_NONCE;
 }
@@ -209,13 +193,13 @@ void auxDataHashBuilder_catalystRegistration_addSignature(
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_NONCE);
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, METADATA_KEY_CATALYST_REGISTRATION_SIGNATURE);
+		APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_UNSIGNED, METADATA_KEY_CATALYST_REGISTRATION_SIGNATURE);
 		{
 			ASSERT(signatureSize == 64);
-			BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 1);
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_SIGNATURE_KEY);
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, signatureSize);
-			BUILDER_APPEND_DATA(signatureBuffer, signatureSize);
+			APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_MAP, 1);
+			APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_SIGNATURE_KEY);
+			APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_BYTES, signatureSize);
+			APPEND_DATA(HASH_CTX_AUX_DATA, signatureBuffer, signatureSize);
 		}
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_SIGNATURE;
@@ -230,7 +214,7 @@ void auxDataHashBuilder_catalystRegistration_addAuxiliaryScripts(
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_SIGNATURE);
 	{
 		// auxiliary scripts currently hard-coded to an empty list
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 0);
+		APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_ARRAY, 0);
 	}
 
 	builder->state = AUX_DATA_HASH_BUILDER_IN_AUXILIARY_SCRIPTS;

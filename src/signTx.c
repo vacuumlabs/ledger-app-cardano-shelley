@@ -27,7 +27,8 @@ static ins_sign_tx_aux_data_context_t* txAuxDataCtx = &(instructionState.signTxC
 static ins_sign_tx_witnesses_context_t* txWitnessesCtx = &(instructionState.signTxContext.txPartCtx.witnesses_ctx);
 
 // TODO - maybe add an enum to the global context which would specify the active tx part?
-static inline void initTxBodyCtx() {
+static inline void initTxBodyCtx()
+{
 	explicit_bzero(&ctx->txPartCtx, SIZEOF(ctx->txPartCtx));
 
 	{
@@ -42,7 +43,8 @@ static inline void initTxBodyCtx() {
 	}
 }
 
-static inline void initTxAuxDataCtx() {
+static inline void initTxAuxDataCtx()
+{
 	explicit_bzero(&ctx->txPartCtx, SIZEOF(ctx->txPartCtx));
 	{
 		txAuxDataCtx->auxDataReceived = false;
@@ -50,7 +52,8 @@ static inline void initTxAuxDataCtx() {
 	}
 }
 
-static inline void initTxWitnessesCtx() {
+static inline void initTxWitnessesCtx()
+{
 	explicit_bzero(&ctx->txPartCtx, SIZEOF(ctx->txPartCtx));
 	{
 		txWitnessesCtx->currentWitness = 0;
@@ -85,15 +88,15 @@ static inline void advanceStage()
 		{
 			// Note: make sure that everything in ctx is initialized properly
 			txHashBuilder_init(
-					&txBodyCtx->txHashBuilder,
-					ctx->numInputs,
-					ctx->numOutputs,
-					ctx->includeTtl,
-					ctx->numCertificates,
-					ctx->numWithdrawals,
-					ctx->includeAuxData,
-					ctx->includeValidityIntervalStart
-			);	
+			        &txBodyCtx->txHashBuilder,
+			        ctx->numInputs,
+			        ctx->numOutputs,
+			        ctx->includeTtl,
+			        ctx->numCertificates,
+			        ctx->numWithdrawals,
+			        ctx->includeAuxData,
+			        ctx->includeValidityIntervalStart
+			);
 			txHashBuilder_enterInputs(&txBodyCtx->txHashBuilder);
 		}
 		break;
