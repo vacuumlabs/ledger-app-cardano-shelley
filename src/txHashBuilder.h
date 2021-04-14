@@ -25,9 +25,6 @@ enum {
  * Pool registration certificates have an inner state loop which is implemented
  * in a similar fashion with the exception that when all pool certificate data
  * have been entered, the state is changed to TX_HASH_BUILDER_IN_CERTIFICATES.
- *
- * WARNING: the state machine relies on inequality comparisons between states
- * in certain places, so be careful when changing the enum values.
  */
 typedef enum {
 	TX_HASH_BUILDER_INIT = 100,

@@ -21,10 +21,6 @@ enum {
 	CATALYST_REGISTRATION_SIGNATURE_KEY = 1,
 };
 
-/*
- * WARNING: the state machine relies on inequality comparisons between states
- * in certain places, so be careful when changing the enum values.
- */
 typedef enum {
 	AUX_DATA_HASH_BUILDER_INIT = 100,
 	AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_INIT = 200,
