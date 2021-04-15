@@ -18,18 +18,26 @@
 #endif // DEVEL
 
 static enum {
-	HC_AUX_DATA = (1u << 0),
-	HC_CATALYST_PAYLOAD = (1u << 1)
+	HC_AUX_DATA = (1u << 0), // aux data hash context
+	HC_CATALYST_PAYLOAD = (1u << 1) // catalyst voting registration payload hash context
 };
 
 // Syntactic sugar
 #define APPEND_CBOR(hashContexts, type, value) \
-	if (hashContexts & HC_AUX_DATA) blake2b_256_append_cbor(&builder->auxDataHash, type, value, true); \
-	if (hashContexts & HC_CATALYST_PAYLOAD) blake2b_256_append_cbor(&builder->catalystRegistrationData.payloadHash, type, value, false);
+	if (hashContexts & HC_AUX_DATA) { \
+		blake2b_256_append_cbor(&builder->auxDataHash, type, value, true); \
+	} \
+	if (hashContexts & HC_CATALYST_PAYLOAD) { \
+		blake2b_256_append_cbor(&builder->catalystRegistrationData.payloadHash, type, value, false); \
+	}
 
 #define APPEND_DATA(hashContexts, buffer, bufferSize) \
-	if (hashContexts & HC_AUX_DATA) blake2b_256_append_and_trace(&builder->auxDataHash, buffer, bufferSize); \
-	if (hashContexts & HC_CATALYST_PAYLOAD) blake2b_256_append(&builder->catalystRegistrationData.payloadHash, buffer, bufferSize);
+	if (hashContexts & HC_AUX_DATA) { \
+		blake2b_256_append_and_trace(&builder->auxDataHash, buffer, bufferSize); \
+	} \
+	if (hashContexts & HC_CATALYST_PAYLOAD) { \
+		blake2b_256_append(&builder->catalystRegistrationData.payloadHash, buffer, bufferSize); \
+	}
 
 
 __noinline_due_to_stack__
@@ -159,7 +167,7 @@ void auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
 
 void auxDataHashBuilder_catalystRegistration_addNonce(
         aux_data_hash_builder_t* builder,
-        const uint64_t nonce
+        uint64_t nonce
 )
 {
 	_TRACE("state = %d", builder->state);
