@@ -18,18 +18,18 @@
 #endif // DEVEL
 
 static enum {
-	HASH_CTX_AUX_DATA = (1u << 0),
-	HASH_CTX_CATALYST_PAYLOAD = (1u << 1)
+	HC_AUX_DATA = (1u << 0),
+	HC_CATALYST_PAYLOAD = (1u << 1)
 };
 
 // Syntactic sugar
 #define APPEND_CBOR(hashContexts, type, value) \
-	if (hashContexts & HASH_CTX_AUX_DATA) blake2b_256_append_cbor(&builder->auxDataHash, type, value, true); \
-	if (hashContexts & HASH_CTX_CATALYST_PAYLOAD) blake2b_256_append_cbor(&builder->catalystRegistrationData.payloadHash, type, value, false);
+	if (hashContexts & HC_AUX_DATA) blake2b_256_append_cbor(&builder->auxDataHash, type, value, true); \
+	if (hashContexts & HC_CATALYST_PAYLOAD) blake2b_256_append_cbor(&builder->catalystRegistrationData.payloadHash, type, value, false);
 
 #define APPEND_DATA(hashContexts, buffer, bufferSize) \
-	if (hashContexts & HASH_CTX_AUX_DATA) blake2b_256_append_and_trace(&builder->auxDataHash, buffer, bufferSize); \
-	if (hashContexts & HASH_CTX_CATALYST_PAYLOAD) blake2b_256_append(&builder->catalystRegistrationData.payloadHash, buffer, bufferSize);
+	if (hashContexts & HC_AUX_DATA) blake2b_256_append_and_trace(&builder->auxDataHash, buffer, bufferSize); \
+	if (hashContexts & HC_CATALYST_PAYLOAD) blake2b_256_append(&builder->catalystRegistrationData.payloadHash, buffer, bufferSize);
 
 
 __noinline_due_to_stack__
@@ -67,7 +67,7 @@ void auxDataHashBuilder_init(
 	blake2b_256_init(&builder->catalystRegistrationData.payloadHash);
 
 	{
-		APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_ARRAY, 2);
+		APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_ARRAY, 2);
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_INIT;
 }
@@ -78,7 +78,7 @@ void auxDataHashBuilder_catalystRegistration_enter(aux_data_hash_builder_t* buil
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_INIT);
 	{
-		APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_MAP, 2);
+		APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_MAP, 2);
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_INIT;
 }
@@ -92,13 +92,13 @@ void auxDataHashBuilder_catalystRegistration_enterPayload(aux_data_hash_builder_
 		// map {61284: <payload>} is being hashed and signed in the catalyst voting registration
 		// this instruction introduces the beginning of this single-key dictionary
 		// the remainder of the payload serialization shares the tokens with the overall auxiliary data CBOR
-		APPEND_CBOR(HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_MAP, 1)
+		APPEND_CBOR(HC_CATALYST_PAYLOAD, CBOR_TYPE_MAP, 1)
 
 		// Enter the Catalyst voting key registration payload inner map
-		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, METADATA_KEY_CATALYST_REGISTRATION_PAYLOAD);
-		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_MAP, 4);
+		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, METADATA_KEY_CATALYST_REGISTRATION_PAYLOAD);
+		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_MAP, 4);
 	}
-	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_INIT;
+	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_INIT;
 }
 
 void auxDataHashBuilder_catalystRegistration_addVotingKey(
@@ -108,16 +108,16 @@ void auxDataHashBuilder_catalystRegistration_addVotingKey(
 {
 	_TRACE("state = %d", builder->state);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_INIT);
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_INIT);
 	{
-		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_KEY);
+		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_KEY);
 		{
-			ASSERT(votingPubKeySize == 32);
-			APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_BYTES, votingPubKeySize);
-			APPEND_DATA(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, votingPubKeyBuffer, votingPubKeySize);
+			ASSERT(votingPubKeySize == PUBLIC_KEY_SIZE);
+			APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_BYTES, votingPubKeySize);
+			APPEND_DATA(HC_AUX_DATA | HC_CATALYST_PAYLOAD, votingPubKeyBuffer, votingPubKeySize);
 		}
 	}
-	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_KEY;
+	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_VOTING_KEY;
 }
 
 void auxDataHashBuilder_catalystRegistration_addStakingKey(
@@ -127,16 +127,16 @@ void auxDataHashBuilder_catalystRegistration_addStakingKey(
 {
 	_TRACE("state = %d", builder->state);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_KEY);
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_VOTING_KEY);
 	{
-		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_STAKING_KEY);
+		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_STAKING_KEY);
 		{
 			ASSERT(stakingPubKeySize == PUBLIC_KEY_SIZE);
-			APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_BYTES, stakingPubKeySize);
-			APPEND_DATA(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, stakingPubKeyBuffer, stakingPubKeySize);
+			APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_BYTES, stakingPubKeySize);
+			APPEND_DATA(HC_AUX_DATA | HC_CATALYST_PAYLOAD, stakingPubKeyBuffer, stakingPubKeySize);
 		}
 	}
-	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_STAKING_KEY;
+	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_STAKING_KEY;
 }
 
 void auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
@@ -146,15 +146,15 @@ void auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
 {
 	_TRACE("state = %d", builder->state);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_STAKING_KEY);
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_STAKING_KEY);
 	{
-		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_REWARDS_ADDRESS);
+		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_REWARDS_ADDRESS);
 		{
-			APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_BYTES, addressSize);
-			APPEND_DATA(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, addressBuffer, addressSize);
+			APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_BYTES, addressSize);
+			APPEND_DATA(HC_AUX_DATA | HC_CATALYST_PAYLOAD, addressBuffer, addressSize);
 		}
 	}
-	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_REWARDS_ADDRESS;
+	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_VOTING_REWARDS_ADDRESS;
 }
 
 void auxDataHashBuilder_catalystRegistration_addNonce(
@@ -164,21 +164,21 @@ void auxDataHashBuilder_catalystRegistration_addNonce(
 {
 	_TRACE("state = %d", builder->state);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_VOTING_REWARDS_ADDRESS);
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_VOTING_REWARDS_ADDRESS);
 	{
-		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_NONCE);
-		APPEND_CBOR(HASH_CTX_AUX_DATA | HASH_CTX_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, nonce);
+		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_NONCE);
+		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, nonce);
 	}
-	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_NONCE;
+	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_NONCE;
 }
 
 void auxDataHashBuilder_catalystRegistration_finalizePayload(aux_data_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
 {
 	_TRACE("state = %d", builder->state);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_NONCE);
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_NONCE);
 
-	ASSERT(outSize == 32);
+	ASSERT(outSize == CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH);
 	{
 		blake2b_256_finalize(&builder->catalystRegistrationData.payloadHash, outBuffer, outSize);
 	}
@@ -191,18 +191,18 @@ void auxDataHashBuilder_catalystRegistration_addSignature(
 {
 	_TRACE("state = %d", builder->state);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_PAYLOAD_NONCE);
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_NONCE);
 	{
-		APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_UNSIGNED, METADATA_KEY_CATALYST_REGISTRATION_SIGNATURE);
+		APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_UNSIGNED, METADATA_KEY_CATALYST_SIGNATURE);
 		{
-			ASSERT(signatureSize == 64);
-			APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_MAP, 1);
-			APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_SIGNATURE_KEY);
-			APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_BYTES, signatureSize);
-			APPEND_DATA(HASH_CTX_AUX_DATA, signatureBuffer, signatureSize);
+			ASSERT(signatureSize == ED25519_SIGNATURE_LENGTH);
+			APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_MAP, 1);
+			APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_UNSIGNED, CATALYST_SIGNATURE_KEY);
+			APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_BYTES, signatureSize);
+			APPEND_DATA(HC_AUX_DATA, signatureBuffer, signatureSize);
 		}
 	}
-	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_SIGNATURE;
+	builder->state = AUX_DATA_HASH_BUILDER_IN_CATALYST_SIGNATURE;
 }
 
 void auxDataHashBuilder_catalystRegistration_addAuxiliaryScripts(
@@ -211,10 +211,10 @@ void auxDataHashBuilder_catalystRegistration_addAuxiliaryScripts(
 {
 	_TRACE("state = %d", builder->state);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_REGISTRATION_SIGNATURE);
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_SIGNATURE);
 	{
 		// auxiliary scripts currently hard-coded to an empty list
-		APPEND_CBOR(HASH_CTX_AUX_DATA, CBOR_TYPE_ARRAY, 0);
+		APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_ARRAY, 0);
 	}
 
 	builder->state = AUX_DATA_HASH_BUILDER_IN_AUXILIARY_SCRIPTS;
@@ -226,7 +226,7 @@ void auxDataHashBuilder_finalize(aux_data_hash_builder_t* builder, uint8_t* outB
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_AUXILIARY_SCRIPTS);
 
-	ASSERT(outSize == 32);
+	ASSERT(outSize == AUX_DATA_HASH_LENGTH);
 	{
 		blake2b_256_finalize(&builder->auxDataHash, outBuffer, outSize);
 	}

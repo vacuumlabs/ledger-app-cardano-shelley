@@ -26,7 +26,7 @@ static void signRawMessage(privateKey_t* privateKey,
 	        );
 	io_seproxyhal_io_heartbeat();
 
-	ASSERT(signatureSize == 64);
+	ASSERT(signatureSize == ED25519_SIGNATURE_LENGTH);
 	os_memmove(outBuffer, signature, signatureSize);
 }
 
