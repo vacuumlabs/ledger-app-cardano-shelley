@@ -277,7 +277,7 @@ static void signTxCatalystRegistration_handleVotingRewardsAddress_addressParams_
 		);
 	}
 	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
-		uint8_t addressBuffer[MAX_SHELLEY_ADDRESS_SIZE];
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE];
 		size_t addressSize;
 		addressSize = deriveAddress(
 		                      &subctx->stateData.votingRewardsAddressParams,
@@ -335,7 +335,7 @@ static void signTxCatalystRegistration_handleVotingRewardsAddressAPDU(uint8_t* w
 
 	{
 		ASSERT(isShelleyAddressType(subctx->stateData.votingRewardsAddressParams.type));
-		uint8_t addressBuffer[MAX_SHELLEY_ADDRESS_SIZE];
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE];
 		size_t addressSize;
 		addressSize = deriveAddress(
 		                      &subctx->stateData.votingRewardsAddressParams,

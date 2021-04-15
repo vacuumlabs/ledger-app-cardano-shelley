@@ -36,7 +36,6 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 // (previously, we used 128 bytes)
 // https://stackoverflow.com/questions/48333136/size-of-buffer-to-hold-base58-encoded-data
 #define MAX_ADDRESS_SIZE 128
-#define MAX_SHELLEY_ADDRESS_SIZE 57
 #define MAX_HUMAN_ADDRESS_SIZE 150
 #define MAX_HUMAN_REWARD_ACCOUNT_SIZE 65
 

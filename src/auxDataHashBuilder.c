@@ -155,6 +155,7 @@ void auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
 	_TRACE("state = %d", builder->state);
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_STAKING_KEY);
+	ASSERT(addressSize <= BUFFER_SIZE_PARANOIA);
 	{
 		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_REWARDS_ADDRESS);
 		{
