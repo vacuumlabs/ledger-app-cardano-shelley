@@ -31,6 +31,8 @@ typedef struct {
 	* in the registration payload)
 	*/
 	bip44_path_t stakingKeyPath;
+	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
+
 	union {
 		uint8_t votingPubKey[CATALYST_VOTING_PUBLIC_KEY_LENGTH];
 		addressParams_t votingRewardsAddressParams;

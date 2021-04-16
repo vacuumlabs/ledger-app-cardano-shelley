@@ -282,6 +282,10 @@ static inline void checkForFinishedSubmachines()
 			ctx->stage = SIGN_STAGE_AUX_DATA;
 			txAuxDataCtx->auxDataReceived = true;
 
+			STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
+			STATIC_ASSERT(SIZEOF(txAuxDataCtx->stageContext.catalyst_registration_subctx.auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
+			os_memmove(ctx->auxDataHash, txAuxDataCtx->stageContext.catalyst_registration_subctx.auxDataHash, AUX_DATA_HASH_LENGTH);
+
 			advanceStage();
 		}
 		break;

@@ -14,7 +14,6 @@
 // ctx / subctx
 // stage / state
 // from ctx, we only make the necessary parts available to avoid mistaken overwrites
-static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 static catalyst_registration_context_t* subctx = &(instructionState.signTxContext.txPartCtx.aux_data_ctx.stageContext.catalyst_registration_subctx);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 static aux_data_hash_builder_t* auxDataHashBuilder = &(instructionState.signTxContext.txPartCtx.aux_data_ctx.auxDataHashBuilder);
@@ -43,7 +42,7 @@ void signTxCatalystRegistration_init()
 {
 	{
 		ins_sign_tx_aux_data_context_t* auxDataCtx = &(instructionState.signTxContext.txPartCtx.aux_data_ctx);
-		explicit_bzero(&auxDataCtx->stageContext.catalyst_registration_subctx, SIZEOF(auxDataCtx->stageContext.catalyst_registration_subctx));
+		explicit_bzero(&auxDataCtx->stageContext, SIZEOF(auxDataCtx->stageContext));
 	}
 
 	auxDataHashBuilder_init(auxDataHashBuilder);
@@ -485,8 +484,8 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 	UI_STEP(HANDLE_CONFIRM_STEP_DISPLAY_HASH) {
 		ui_displayHexBufferScreen(
 		        "Auxiliary data hash",
-		        ctx->auxDataHash,
-		        SIZEOF(ctx->auxDataHash),
+		        subctx->auxDataHash,
+		        SIZEOF(subctx->auxDataHash),
 		        this_fn
 		);
 	}
@@ -496,8 +495,8 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 			uint8_t signature[ED25519_SIGNATURE_LENGTH];
 		} wireResponse;
 
-		STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong aux data hash length");
-		os_memmove(wireResponse.auxDataHash, ctx->auxDataHash, AUX_DATA_HASH_LENGTH);
+		STATIC_ASSERT(SIZEOF(subctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong aux data hash length");
+		os_memmove(wireResponse.auxDataHash, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 
 		STATIC_ASSERT(SIZEOF(subctx->stateData.registrationSignature) == ED25519_SIGNATURE_LENGTH, "Wrong Catalyst registration signature length");
 		os_memmove(wireResponse.signature, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
@@ -540,7 +539,7 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 		auxDataHashBuilder_catalystRegistration_addSignature(auxDataHashBuilder, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
 		auxDataHashBuilder_catalystRegistration_addAuxiliaryScripts(auxDataHashBuilder);
 
-		auxDataHashBuilder_finalize(auxDataHashBuilder, ctx->auxDataHash, AUX_DATA_HASH_LENGTH);
+		auxDataHashBuilder_finalize(auxDataHashBuilder, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 	}
 
 

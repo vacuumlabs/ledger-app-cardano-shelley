@@ -43,7 +43,7 @@ void signTxPoolRegistration_init()
 {
 	{
 		ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.txPartCtx.body_ctx);
-		explicit_bzero(&txBodyCtx->stageContext.pool_registration_subctx, SIZEOF(txBodyCtx->stageContext.pool_registration_subctx));
+		explicit_bzero(&txBodyCtx->stageContext, SIZEOF(txBodyCtx->stageContext));
 	}
 	subctx->state = STAKE_POOL_REGISTRATION_PARAMS;
 }
