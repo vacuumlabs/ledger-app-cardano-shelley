@@ -611,7 +611,6 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
-		TRACE();
 		signTx_handleAuxDataArbitraryHash_ui_runStep();
 		break;
 	}
@@ -1471,8 +1470,6 @@ static void signTx_handleWitness_ui_runStep()
 		TRACE_BUFFER(txWitnessesCtx->stageData.witness.signature, SIZEOF(txWitnessesCtx->stageData.witness.signature));
 		io_send_buf(SUCCESS, txWitnessesCtx->stageData.witness.signature, SIZEOF(txWitnessesCtx->stageData.witness.signature));
 		ui_displayBusy(); // needs to happen after I/O
-
-		TRACE("CUR WIT %d vs NUM WIT %d", txWitnessesCtx->currentWitness, ctx->numWitnesses);
 
 		txWitnessesCtx->currentWitness++;
 		if (txWitnessesCtx->currentWitness == ctx->numWitnesses) {
