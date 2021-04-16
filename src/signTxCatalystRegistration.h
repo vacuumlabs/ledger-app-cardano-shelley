@@ -24,6 +24,12 @@ typedef struct {
 	sign_tx_catalyst_registration_state_t state;
 	int ui_step;
 
+	/*
+	* Staking key path kept outside of stateData to produce the Catalyst registration
+	* signature at the end of the flow without re-requesting the staking key path
+	* (with the undesired side-effect of allowing signing with a different key than included
+	* in the registration payload)
+	*/
 	bip44_path_t stakingKeyPath;
 	union {
 		uint8_t votingPubKey[CATALYST_VOTING_PUBLIC_KEY_LENGTH];

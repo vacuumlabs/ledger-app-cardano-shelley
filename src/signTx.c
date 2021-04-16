@@ -582,7 +582,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		case AUX_DATA_TYPE_ARBITRARY_HASH:
 			// parse data
 			VALIDATE(view_remainingSize(&view) == AUX_DATA_HASH_LENGTH, ERR_INVALID_DATA);
-			STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "wrong metadata hash length");
+			STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "wrong auxiliary data hash length");
 			view_memmove(ctx->auxDataHash, &view, AUX_DATA_HASH_LENGTH);
 			txAuxDataCtx->auxDataReceived = true;
 			break;
