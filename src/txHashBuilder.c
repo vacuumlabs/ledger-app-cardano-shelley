@@ -902,7 +902,7 @@ void txHashBuilder_addValidityIntervalStart(tx_hash_builder_t* builder, uint64_t
 
 	txHashBuilder_assertCanLeaveAuxData(builder);
 
-	// add fee item into the main tx body map
+	// add validity interval start item into the main tx body map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_VALIDITY_INTERVAL_START);
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, validityIntervalStart);
 

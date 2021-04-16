@@ -451,7 +451,7 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 	UI_STEP(HANDLE_CONFIRM_STEP_DISPLAY_HASH) {
 		ui_displayHexBufferScreen(
 		        "Auxiliary data hash",
-		        (uint8_t*) &ctx->auxDataHash,
+		        ctx->auxDataHash,
 		        SIZEOF(ctx->auxDataHash),
 		        this_fn
 		);
@@ -500,13 +500,13 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 			getCatalystVotingRegistrationSignature(
 			        &subctx->stakingKeyPath,
 			        votingPayloadHashBuffer, CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH,
-			        (uint8_t*) &subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH
+			        subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH
 			);
 		}
-		auxDataHashBuilder_catalystRegistration_addSignature(auxDataHashBuilder, (uint8_t*) &subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
+		auxDataHashBuilder_catalystRegistration_addSignature(auxDataHashBuilder, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
 		auxDataHashBuilder_catalystRegistration_addAuxiliaryScripts(auxDataHashBuilder);
 
-		auxDataHashBuilder_finalize(auxDataHashBuilder, (uint8_t*) &ctx->auxDataHash, AUX_DATA_HASH_LENGTH);
+		auxDataHashBuilder_finalize(auxDataHashBuilder, ctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 	}
 
 	// TODO - is it worth declaring a policy for this?
