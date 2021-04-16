@@ -37,7 +37,10 @@ bool signTxOutput_isFinished()
 
 void signTxOutput_init()
 {
-	explicit_bzero(subctx, SIZEOF(*subctx));
+	{
+		ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.txPartCtx.body_ctx);
+		explicit_bzero(&txBodyCtx->stageContext.output_subctx, SIZEOF(txBodyCtx->stageContext.output_subctx));
+	}
 
 	subctx->state = STATE_OUTPUT_TOP_LEVEL_DATA;
 }

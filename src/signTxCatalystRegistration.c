@@ -41,7 +41,11 @@ bool signTxCatalystRegistration_isFinished()
 
 void signTxCatalystRegistration_init()
 {
-	explicit_bzero(subctx, SIZEOF(*subctx));
+	{
+		ins_sign_tx_aux_data_context_t* auxDataCtx = &(instructionState.signTxContext.txPartCtx.aux_data_ctx);
+		explicit_bzero(&auxDataCtx->stageContext.catalyst_registration_subctx, SIZEOF(auxDataCtx->stageContext.catalyst_registration_subctx));
+	}
+
 	auxDataHashBuilder_init(auxDataHashBuilder);
 
 	subctx->state = STATE_CATALYST_REGISTRATION_VOTING_KEY;
