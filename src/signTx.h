@@ -10,7 +10,7 @@
 #include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
 #include "signTxCatalystRegistration.h"
-#include "auxData.h"
+#include "signTxAuxData.h"
 
 typedef enum {
 	SIGN_STAGE_NONE = 0,
