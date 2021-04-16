@@ -1556,7 +1556,12 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 #	define  CASE(P1, HANDLER) case P1: return HANDLER;
 #	define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(0x01, signTx_handleInitAPDU);
-		// APDU flow out of original order to optimize memory usage related to serializing auxiliary data
+		/*
+		* Auxiliary data have to be handled before tx body because of memory consumption:
+		* in certain cases we need compute a rolling hash, 
+		* and that cannot be done while the computation of tx body hash is in progress
+		* without prohibitively bloating the instruction state.
+		*/
 		CASE(0x08, signTx_handleAuxDataAPDU);
 		CASE(0x02, signTx_handleInputAPDU);
 		CASE(0x03, signTx_handleOutputAPDU);
