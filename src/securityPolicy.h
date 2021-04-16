@@ -99,9 +99,11 @@ security_policy_t policyForCatalystRegistrationVotingRewardsAddressParams(
         const addressParams_t* params,
         const uint8_t networkId
 );
-
 security_policy_t policyForCatalystRegistrationStakingKey(
         const bip44_path_t* stakingKeyPath
 );
+security_policy_t policyForCatalystRegistrationVotingKey();
+security_policy_t policyForCatalystRegistrationNonce();
+security_policy_t policyForCatalystRegistrationConfirm();
 
 #endif // H_CARDANO_APP_SECURITY_POLICY

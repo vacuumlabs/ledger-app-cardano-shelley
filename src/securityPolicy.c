@@ -442,3 +442,18 @@ security_policy_t policyForCatalystRegistrationStakingKey(
 
 	SHOW();
 }
+
+security_policy_t policyForCatalystRegistrationVotingKey()
+{
+	SHOW();
+}
+
+security_policy_t policyForCatalystRegistrationNonce()
+{
+	SHOW();
+}
+
+security_policy_t policyForCatalystRegistrationConfirm()
+{
+	PROMPT();
+}

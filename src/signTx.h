@@ -23,7 +23,7 @@ typedef enum {
 	SIGN_STAGE_BODY_FEE = 29,
 	SIGN_STAGE_BODY_TTL = 30,
 	SIGN_STAGE_BODY_CERTIFICATES = 31,
-	SIGN_STAGE_BODY_CERTIFICATES_POOL = 32, // pool registration certificate sub-machine
+	SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE = 32, // pool registration certificate sub-machine
 	SIGN_STAGE_BODY_WITHDRAWALS = 33,
 	SIGN_STAGE_BODY_VALIDITY_INTERVAL = 34,
 	SIGN_STAGE_CONFIRM = 35,
@@ -111,6 +111,7 @@ typedef struct {
 
 	common_tx_data_t commonTxData;
 
+	bool includeAuxData;
 	uint16_t numInputs;
 	uint16_t numOutputs;
 	bool includeTtl;
@@ -118,7 +119,6 @@ typedef struct {
 	uint16_t numWithdrawals; // reward withdrawals
 	bool includeValidityIntervalStart;
 	uint16_t numWitnesses;
-	bool includeAuxData;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
 	uint8_t txHash[TX_HASH_LENGTH];

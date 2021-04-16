@@ -77,6 +77,8 @@ static inline void advanceStage()
 			break;
 		}
 
+	// intentional fallthrough
+
 	case SIGN_STAGE_AUX_DATA:
 		if (ctx->includeAuxData) {
 			ASSERT(txAuxDataCtx->auxDataReceived);
@@ -100,8 +102,6 @@ static inline void advanceStage()
 			txHashBuilder_enterInputs(&txBodyCtx->txHashBuilder);
 		}
 		break;
-
-	// intentional fallthrough
 
 	case SIGN_STAGE_BODY_INPUTS:
 		// we should have received all inputs
@@ -235,7 +235,7 @@ static inline void advanceCertificatesStateIfAppropriate()
 		break;
 
 	default:
-		ASSERT(ctx->stage == SIGN_STAGE_BODY_CERTIFICATES_POOL);
+		ASSERT(ctx->stage == SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE);
 	}
 }
 
@@ -266,7 +266,7 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
-	case SIGN_STAGE_BODY_CERTIFICATES_POOL:
+	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
 		if (signTxPoolRegistration_isFinished()) {
 			TRACE();
 			ASSERT(txBodyCtx->currentCertificate < ctx->numCertificates);
@@ -1097,7 +1097,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	// delegate to state sub-machine for stake pool registration certificate data
 	if (signTxPoolRegistration_isValidInstruction(p2)) {
 		TRACE();
-		VALIDATE(ctx->stage == SIGN_STAGE_BODY_CERTIFICATES_POOL, ERR_INVALID_DATA);
+		VALIDATE(ctx->stage == SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE, ERR_INVALID_DATA);
 
 		TRACE_STACK_USAGE();
 		signTxPoolRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
@@ -1132,7 +1132,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 		// pool registration certificates have a separate sub-machine for handling APDU and UI
 		// nothing more to be done with them here, we just init the sub-machine
 		signTxPoolRegistration_init();
-		ctx->stage = SIGN_STAGE_BODY_CERTIFICATES_POOL;
+		ctx->stage = SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE;
 
 		respondSuccessEmptyMsg();
 		return;

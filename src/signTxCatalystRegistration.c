@@ -151,8 +151,23 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 		);
 	}
 
-	// TODO - is it worth declaring a policy for this?
-	subctx->ui_step = HANDLE_VOTING_KEY_STEP_DISPLAY;
+	security_policy_t policy = policyForCatalystRegistrationVotingKey();
+
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VOTING_KEY_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VOTING_KEY_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
 	signTxCatalystRegistration_handleVotingKey_ui_runStep();
 }
 
@@ -419,8 +434,23 @@ static void signTxCatalystRegistration_handleNonceAPDU(uint8_t* wireDataBuffer, 
 		auxDataHashBuilder_catalystRegistration_addNonce(auxDataHashBuilder, subctx->stateData.nonce);
 	}
 
-	// TODO - is it worth declaring a policy for this?
-	subctx->ui_step = HANDLE_NONCE_STEP_DISPLAY;
+	security_policy_t policy = policyForCatalystRegistrationNonce();
+
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_NONCE_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_NONCE_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
 	signTxCatalystRegistration_handleNonce_ui_runStep();
 }
 
@@ -509,8 +539,24 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 		auxDataHashBuilder_finalize(auxDataHashBuilder, ctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 	}
 
-	// TODO - is it worth declaring a policy for this?
-	subctx->ui_step = HANDLE_CONFIRM_STEP_FINAL_CONFIRM;
+
+	security_policy_t policy = policyForCatalystRegistrationConfirm();
+
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
 	signTxCatalystRegistration_handleConfirm_ui_runStep();
 }
 
