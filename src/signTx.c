@@ -24,7 +24,7 @@ enum {
 static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 static ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.txPartCtx.body_ctx);
 static ins_sign_tx_aux_data_context_t* txAuxDataCtx = &(instructionState.signTxContext.txPartCtx.aux_data_ctx);
-static ins_sign_tx_witnesses_context_t* txWitnessesCtx = &(instructionState.signTxContext.txPartCtx.witnesses_ctx);
+static ins_sign_tx_witness_context_t* txWitnessCtx = &(instructionState.signTxContext.txPartCtx.witnesses_ctx);
 
 // TODO - maybe add an enum to the global context which would specify the active tx part?
 static inline void initTxBodyCtx()
@@ -52,11 +52,11 @@ static inline void initTxAuxDataCtx()
 	}
 }
 
-static inline void initTxWitnessesCtx()
+static inline void initTxWitnessCtx()
 {
 	explicit_bzero(&ctx->txPartCtx, SIZEOF(ctx->txPartCtx));
 	{
-		txWitnessesCtx->currentWitness = 0;
+		txWitnessCtx->currentWitness = 0;
 	}
 }
 
@@ -195,7 +195,7 @@ static inline void advanceStage()
 
 	case SIGN_STAGE_CONFIRM:
 		ctx->stage = SIGN_STAGE_WITNESSES;
-		initTxWitnessesCtx();
+		initTxWitnessCtx();
 
 		break;
 
@@ -1455,7 +1455,7 @@ static void signTx_handleWitness_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_DISPLAY) {
-		ui_displayPathScreen("Witness path", &txWitnessesCtx->stageData.witness.path, this_fn);
+		ui_displayPathScreen("Witness path", &txWitnessCtx->stageData.witness.path, this_fn);
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_CONFIRM) {
 		ui_displayPrompt(
@@ -1467,12 +1467,12 @@ static void signTx_handleWitness_ui_runStep()
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_RESPOND) {
 		TRACE("Sending witness data");
-		TRACE_BUFFER(txWitnessesCtx->stageData.witness.signature, SIZEOF(txWitnessesCtx->stageData.witness.signature));
-		io_send_buf(SUCCESS, txWitnessesCtx->stageData.witness.signature, SIZEOF(txWitnessesCtx->stageData.witness.signature));
+		TRACE_BUFFER(txWitnessCtx->stageData.witness.signature, SIZEOF(txWitnessCtx->stageData.witness.signature));
+		io_send_buf(SUCCESS, txWitnessCtx->stageData.witness.signature, SIZEOF(txWitnessCtx->stageData.witness.signature));
 		ui_displayBusy(); // needs to happen after I/O
 
-		txWitnessesCtx->currentWitness++;
-		if (txWitnessesCtx->currentWitness == ctx->numWitnesses) {
+		txWitnessCtx->currentWitness++;
+		if (txWitnessCtx->currentWitness == ctx->numWitnesses) {
 			advanceStage();
 		}
 	}
@@ -1489,17 +1489,17 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
-		TRACE("Witness no. %d out of %d", txWitnessesCtx->currentWitness, ctx->numWitnesses);
-		ASSERT(txWitnessesCtx->currentWitness < ctx->numWitnesses);
+		TRACE("Witness no. %d out of %d", txWitnessCtx->currentWitness, ctx->numWitnesses);
+		ASSERT(txWitnessCtx->currentWitness < ctx->numWitnesses);
 	}
 
-	explicit_bzero(&txWitnessesCtx->stageData.witness, SIZEOF(txWitnessesCtx->stageData.witness));
+	explicit_bzero(&txWitnessCtx->stageData.witness, SIZEOF(txWitnessCtx->stageData.witness));
 
 	{
 		// parse
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-		size_t parsedSize = bip44_parseFromWire(&txWitnessesCtx->stageData.witness.path, wireDataBuffer, wireDataSize);
+		size_t parsedSize = bip44_parseFromWire(&txWitnessCtx->stageData.witness.path, wireDataBuffer, wireDataSize);
 		VALIDATE(parsedSize == wireDataSize, ERR_INVALID_DATA);
 	}
 
@@ -1508,7 +1508,7 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		// get policy
 		policy = policyForSignTxWitness(
 		                 ctx->commonTxData.isSigningPoolRegistrationAsOwner,
-		                 &txWitnessesCtx->stageData.witness.path
+		                 &txWitnessCtx->stageData.witness.path
 		         );
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
@@ -1522,9 +1522,9 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		TRACE("END TX HASH");
 
 		getTxWitness(
-		        &txWitnessesCtx->stageData.witness.path,
+		        &txWitnessCtx->stageData.witness.path,
 		        ctx->txHash, SIZEOF(ctx->txHash),
-		        txWitnessesCtx->stageData.witness.signature, SIZEOF(txWitnessesCtx->stageData.witness.signature)
+		        txWitnessCtx->stageData.witness.signature, SIZEOF(txWitnessCtx->stageData.witness.signature)
 		);
 	}
 

@@ -64,6 +64,16 @@ typedef struct {
 } sign_tx_withdrawal_data_t;
 
 typedef struct {
+	aux_data_type_t auxDataType;
+	aux_data_hash_builder_t auxDataHashBuilder;
+	bool auxDataReceived;
+
+	struct {
+		catalyst_registration_context_t catalyst_registration_subctx;
+	} stageContext;
+} ins_sign_tx_aux_data_context_t;
+
+typedef struct {
 	uint16_t currentInput;
 	uint16_t currentOutput;
 	uint16_t currentCertificate;
@@ -94,17 +104,7 @@ typedef struct {
 	struct {
 		sign_tx_witness_data_t witness;
 	} stageData;
-} ins_sign_tx_witnesses_context_t;
-
-typedef struct {
-	aux_data_type_t auxDataType;
-	aux_data_hash_builder_t auxDataHashBuilder;
-	bool auxDataReceived;
-
-	struct {
-		catalyst_registration_context_t catalyst_registration_subctx;
-	} stageContext;
-} ins_sign_tx_aux_data_context_t;
+} ins_sign_tx_witness_context_t;
 
 typedef struct {
 	sign_tx_stage_t stage;
@@ -126,7 +126,7 @@ typedef struct {
 	union {
 		ins_sign_tx_aux_data_context_t aux_data_ctx;
 		ins_sign_tx_body_context_t body_ctx;
-		ins_sign_tx_witnesses_context_t witnesses_ctx;
+		ins_sign_tx_witness_context_t witnesses_ctx;
 	} txPartCtx;
 
 	int ui_step;
