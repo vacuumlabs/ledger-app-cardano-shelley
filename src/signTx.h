@@ -64,9 +64,9 @@ typedef struct {
 } sign_tx_withdrawal_data_t;
 
 typedef struct {
+	bool auxDataReceived;
 	aux_data_type_t auxDataType;
 	aux_data_hash_builder_t auxDataHashBuilder;
-	bool auxDataReceived;
 
 	struct {
 		catalyst_registration_context_t catalyst_registration_subctx;
