@@ -45,7 +45,6 @@ void signTxCatalystRegistration_init()
 	auxDataHashBuilder_init(auxDataHashBuilder);
 
 	subctx->state = STATE_CATALYST_REGISTRATION_VOTING_KEY;
-
 }
 
 static inline void CHECK_STATE(sign_tx_catalyst_registration_state_t expected)
@@ -179,8 +178,7 @@ static void signTxCatalystRegistration_handleStakingKey_ui_runStep()
 		        "Proceed with care",
 		        this_fn
 		);
-	}
-
+	}s
 	UI_STEP(HANDLE_STAKING_KEY_STEP_DISPLAY) {
 		ui_displayStakingKeyScreen(
 		        &subctx->stakingKeyPath,
@@ -374,7 +372,6 @@ enum {
 	HANDLE_NONCE_STEP_INVALID,
 };
 
-__noinline_due_to_stack__
 static void signTxCatalystRegistration_handleNonce_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
@@ -384,8 +381,6 @@ static void signTxCatalystRegistration_handleNonce_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step);
 
 	UI_STEP(HANDLE_NONCE_STEP_DISPLAY) {
-		STATIC_ASSERT(SIZEOF(subctx->stateData.votingPubKey) == CATALYST_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
-
 		ui_displayUint64Screen(
 		        "Nonce",
 		        subctx->stateData.nonce,
