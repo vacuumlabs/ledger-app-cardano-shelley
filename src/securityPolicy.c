@@ -404,7 +404,7 @@ security_policy_t policyForSignTxWitness(
 	ALLOW();
 }
 
-security_policy_t policyForSignTxAuxData()
+security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType MARK_UNUSED)
 {
 	SHOW();
 }

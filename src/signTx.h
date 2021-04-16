@@ -10,6 +10,7 @@
 #include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
 #include "signTxCatalystRegistration.h"
+#include "auxData.h"
 
 typedef enum {
 	SIGN_STAGE_NONE = 0,
@@ -61,11 +62,6 @@ typedef struct {
 	bip44_path_t path;
 	uint64_t amount;
 } sign_tx_withdrawal_data_t;
-
-typedef enum {
-	AUX_DATA_TYPE_ARBITRARY_HASH = 0,
-	AUX_DATA_TYPE_CATALYST_VOTING_KEY_REGISTRATION = 1,
-} aux_data_type_t;
 
 typedef struct {
 	uint16_t currentInput;

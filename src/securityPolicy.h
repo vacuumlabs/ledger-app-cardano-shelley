@@ -5,6 +5,7 @@
 #include "bip44.h"
 #include "cardanoOutputs.h"
 #include "signTxPoolRegistration.h"
+#include "auxData.h"
 
 typedef enum {
 	POLICY_DENY = 1,
@@ -69,7 +70,7 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm();
 
 security_policy_t policyForSignTxWithdrawal();
 
-security_policy_t policyForSignTxAuxData();
+security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType);
 
 security_policy_t policyForSignTxValidityIntervalStart();
 

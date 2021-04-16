@@ -135,11 +135,12 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 	{
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-		VALIDATE(wireDataSize == SIZEOF(subctx->stateData.votingPubKey), ERR_INVALID_DATA);
-
+		STATIC_ASSERT(SIZEOF(subctx->stateData.votingPubKey) == CATALYST_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
 		{
-			STATIC_ASSERT(SIZEOF(subctx->stateData.votingPubKey) == CATALYST_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
-			os_memmove(subctx->stateData.votingPubKey, wireDataBuffer, CATALYST_VOTING_PUBLIC_KEY_LENGTH);
+			VALIDATE(wireDataSize == SIZEOF(subctx->stateData.votingPubKey), ERR_INVALID_DATA);
+			read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+			view_memmove(subctx->stateData.votingPubKey, &view, CATALYST_VOTING_PUBLIC_KEY_LENGTH);
+			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		}
 	}
 	{
@@ -461,10 +462,10 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 			uint8_t signature[ED25519_SIGNATURE_LENGTH];
 		} wireResponse;
 
-		ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH);
+		STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong aux data hash length");
 		os_memmove(wireResponse.auxDataHash, ctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 
-		ASSERT(SIZEOF(subctx->stateData.registrationSignature) == ED25519_SIGNATURE_LENGTH);
+		STATIC_ASSERT(SIZEOF(subctx->stateData.registrationSignature) == ED25519_SIGNATURE_LENGTH, "Wrong Catalyst registration signature length");
 		os_memmove(wireResponse.signature, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
 
 		io_send_buf(SUCCESS, (uint8_t*) &wireResponse, SIZEOF(wireResponse));

@@ -596,7 +596,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 	}
 
 
-	security_policy_t policy = policyForSignTxAuxData();
+	security_policy_t policy = policyForSignTxAuxData(txAuxDataCtx->auxDataType);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
