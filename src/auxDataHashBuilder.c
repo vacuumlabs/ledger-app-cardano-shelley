@@ -17,9 +17,9 @@
 #define _TRACE(...)
 #endif // DEVEL
 
-static enum {
-	HC_AUX_DATA = (1u << 0), // aux data hash context
-	HC_CATALYST_PAYLOAD = (1u << 1) // catalyst voting registration payload hash context
+enum {
+	HC_AUX_DATA =         (1u << 0), // aux data hash context
+	HC_CATALYST_PAYLOAD = (1u << 1)  // catalyst voting registration payload hash context
 };
 
 // Syntactic sugar

@@ -178,7 +178,7 @@ static void signTxCatalystRegistration_handleStakingKey_ui_runStep()
 		        "Proceed with care",
 		        this_fn
 		);
-	}s
+	}
 	UI_STEP(HANDLE_STAKING_KEY_STEP_DISPLAY) {
 		ui_displayStakingKeyScreen(
 		        &subctx->stakingKeyPath,
