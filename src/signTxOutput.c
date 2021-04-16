@@ -231,12 +231,11 @@ static void signTx_handleOutput_addressParams()
 	{
 		// add to tx
 		uint8_t addressBuffer[MAX_ADDRESS_SIZE];
-		size_t addressSize;
-		addressSize = deriveAddress(
-		                      &subctx->stateData.output.params,
-		                      addressBuffer,
-		                      SIZEOF(addressBuffer)
-		              );
+		size_t addressSize = deriveAddress(
+		                             &subctx->stateData.output.params,
+		                             addressBuffer,
+		                             SIZEOF(addressBuffer)
+		                     );
 		ASSERT(addressSize > 0);
 		ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 

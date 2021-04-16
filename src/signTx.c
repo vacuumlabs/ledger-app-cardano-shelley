@@ -1555,7 +1555,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x01, signTx_handleInitAPDU);
 		/*
 		* Auxiliary data have to be handled before tx body because of memory consumption:
-		* in certain cases we need compute a rolling hash, 
+		* in certain cases we need compute a rolling hash,
 		* and that cannot be done while the computation of tx body hash is in progress
 		* without prohibitively bloating the instruction state.
 		*/
