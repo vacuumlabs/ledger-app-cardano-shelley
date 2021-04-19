@@ -62,4 +62,4 @@ enum {
 
 };
 
-#endif
+#endif // H_CARDANO_APP_ERRORS

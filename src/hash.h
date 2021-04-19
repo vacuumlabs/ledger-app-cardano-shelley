@@ -1,5 +1,5 @@
-#ifndef H_CARDANO_APP_BLAKE2B
-#define H_CARDANO_APP_BLAKE2B
+#ifndef H_CARDANO_APP_HASH
+#define H_CARDANO_APP_HASH
 
 #include "common.h"
 
@@ -93,6 +93,6 @@ __CIPHER_DECLARE(SHA3, sha3, 256)
 
 #ifdef DEVEL
 void run_hash_test();
-#endif
+#endif // DEVEL
 
-#endif // H_CARDANO_APP_BLAKE2B
+#endif // H_CARDANO_APP_HASH

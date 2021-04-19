@@ -2,9 +2,9 @@
 #include "cardano.h"
 #include "keyDerivation.h"
 
-void signRawMessage(privateKey_t* privateKey,
-                    const uint8_t* messageBuffer, size_t messageSize,
-                    uint8_t* outBuffer, size_t outSize)
+static void signRawMessage(privateKey_t* privateKey,
+                           const uint8_t* messageBuffer, size_t messageSize,
+                           uint8_t* outBuffer, size_t outSize)
 {
 	uint8_t signature[64];
 	ASSERT(messageSize < BUFFER_SIZE_PARANOIA);
@@ -26,13 +26,13 @@ void signRawMessage(privateKey_t* privateKey,
 	        );
 	io_seproxyhal_io_heartbeat();
 
-	ASSERT(signatureSize == 64);
+	ASSERT(signatureSize == ED25519_SIGNATURE_LENGTH);
 	os_memmove(outBuffer, signature, signatureSize);
 }
 
-void getTxWitness(bip44_path_t* pathSpec,
-                  const uint8_t* txHashBuffer, size_t txHashSize,
-                  uint8_t* outBuffer, size_t outSize)
+static void signRawMessageWithPath(bip44_path_t* pathSpec,
+                                   const uint8_t* messageBuffer, size_t messageSize,
+                                   uint8_t* outBuffer, size_t outSize)
 {
 	chain_code_t chainCode;
 	privateKey_t privateKey;
@@ -43,11 +43,9 @@ void getTxWitness(bip44_path_t* pathSpec,
 		TRY {
 			derivePrivateKey(pathSpec, &chainCode, &privateKey);
 
-			ASSERT(txHashSize == TX_HASH_LENGTH);
-
 			signRawMessage(
 			        &privateKey,
-			        txHashBuffer, txHashSize,
+			        messageBuffer, messageSize,
 			        outBuffer, outSize
 			);
 		}
@@ -56,4 +54,20 @@ void getTxWitness(bip44_path_t* pathSpec,
 			explicit_bzero(&chainCode, SIZEOF(chainCode));
 		}
 	} END_TRY;
+}
+
+void getTxWitness(bip44_path_t* pathSpec,
+                  const uint8_t* txHashBuffer, size_t txHashSize,
+                  uint8_t* outBuffer, size_t outSize)
+{
+	ASSERT(txHashSize == TX_HASH_LENGTH);
+	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
+}
+
+void getCatalystVotingRegistrationSignature(bip44_path_t* pathSpec,
+        const uint8_t* payloadHashBuffer, size_t payloadHashSize,
+        uint8_t* outBuffer, size_t outSize)
+{
+	ASSERT(payloadHashSize == CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH);
+	signRawMessageWithPath(pathSpec, payloadHashBuffer, payloadHashSize, outBuffer, outSize);
 }

@@ -142,7 +142,9 @@ bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec)
 // path is valid as the spending path in all addresses except REWARD
 bool bip44_isValidAddressPath(const bip44_path_t* pathSpec)
 {
-	return bip44_hasValidChainTypeForAddress(pathSpec) && bip44_containsAddress(pathSpec);
+	return bip44_hasValidCardanoPrefix(pathSpec) &&
+	       bip44_hasValidChainTypeForAddress(pathSpec) &&
+	       bip44_containsAddress(pathSpec);
 }
 
 // Staking keys (one per account, should end with /2/0 after account)
@@ -218,4 +220,4 @@ void bip44_PRINTF(const bip44_path_t* pathSpec)
 	bip44_printToStr(pathSpec, tmp, SIZEOF(tmp));
 	PRINTF("%s", tmp);
 };
-#endif
+#endif // DEVEL

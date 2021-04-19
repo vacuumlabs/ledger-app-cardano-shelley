@@ -2,7 +2,7 @@
 
 #include "cbor.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 // Test vectors are taken from
 // https://tools.ietf.org/html/rfc7049#appendix-A
@@ -154,4 +154,4 @@ void run_cbor_test()
 	test_cbor_serialization();
 }
 
-#endif
+#endif // DEVEL

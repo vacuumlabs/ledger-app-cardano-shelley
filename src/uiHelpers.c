@@ -72,7 +72,7 @@ void uiCallback_reject(ui_callback_t* cb)
 }
 
 #ifdef HEADLESS
-static int HEADLESS_DELAY = 100;
+static int HEADLESS_DELAY = 20;
 
 void ui_displayPrompt_headless_cb(bool ux_allowed)
 {
@@ -122,7 +122,7 @@ void autoconfirmPaginatedText()
 	#endif
 }
 
-#endif
+#endif // HEADLESS
 
 static void uiCallback_init(ui_callback_t* cb, ui_callback_fn_t* confirm, ui_callback_fn_t* reject)
 {
@@ -137,6 +137,10 @@ void ui_displayPrompt(
         ui_callback_fn_t* confirm,
         ui_callback_fn_t* reject)
 {
+	TRACE_STACK_USAGE();
+	TRACE("%s", headerStr);
+	TRACE("%s", bodyStr);
+
 	size_t header_len = strlen(headerStr);
 	size_t text_len = strlen(bodyStr);
 	// sanity checks, keep 1 byte for null terminator
@@ -162,7 +166,7 @@ void ui_displayPrompt(
 	if (confirm) {
 		autoconfirmPrompt();
 	}
-	#endif
+	#endif // HEADLESS
 }
 
 void ui_displayPaginatedText(
@@ -170,7 +174,10 @@ void ui_displayPaginatedText(
         const char* bodyStr,
         ui_callback_fn_t* callback)
 {
-	TRACE();
+	TRACE_STACK_USAGE();
+	TRACE("%s", headerStr);
+	TRACE("%s", bodyStr);
+
 	paginatedTextState_t* ctx = paginatedTextState;
 	size_t header_len = strlen(headerStr);
 	size_t body_len = strlen(bodyStr);
@@ -206,7 +213,7 @@ void ui_displayPaginatedText(
 	if (callback) {
 		autoconfirmPaginatedText();
 	}
-	#endif
+	#endif // HEADLESS
 }
 
 void respond_with_user_reject()

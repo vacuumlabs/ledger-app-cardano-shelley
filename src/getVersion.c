@@ -45,7 +45,7 @@ void getVersion_handleAPDU(
 
 	#ifdef DEVEL
 	response.flags |= FLAG_DEVEL;
-	#endif
+	#endif // DEVEL
 
 	io_send_buf(SUCCESS, (uint8_t *) &response, sizeof(response));
 	ui_idle();

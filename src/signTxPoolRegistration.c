@@ -16,9 +16,9 @@
 // ctx / subctx
 // stage / state
 // from ctx, we only make the necessary parts available to avoid mistaken overwrites
-static pool_registration_context_t* subctx = &(instructionState.signTxContext.stageContext.pool_registration_subctx);
+static pool_registration_context_t* subctx = &(instructionState.signTxContext.txPartCtx.body_ctx.stageContext.pool_registration_subctx);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
-static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txHashBuilder);
+static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txPartCtx.body_ctx.txHashBuilder);
 
 bool signTxPoolRegistration_isFinished()
 {
@@ -42,8 +42,8 @@ bool signTxPoolRegistration_isFinished()
 void signTxPoolRegistration_init()
 {
 	{
-		ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
-		explicit_bzero(&ctx->stageContext.pool_registration_subctx, SIZEOF(ctx->stageContext.pool_registration_subctx));
+		ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.txPartCtx.body_ctx);
+		explicit_bzero(&txBodyCtx->stageContext, SIZEOF(txBodyCtx->stageContext));
 	}
 	subctx->state = STAKE_POOL_REGISTRATION_PARAMS;
 }
@@ -117,6 +117,7 @@ enum {
 static void handlePoolParams_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolParams_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
@@ -169,6 +170,7 @@ static void handlePoolParams_ui_runStep()
 	UI_STEP_END(HANDLE_POOLPARAMS_STEP_INVALID);
 }
 
+__noinline_due_to_stack__
 static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
@@ -429,8 +431,10 @@ format 1 single_host_name:
 format 2 multi_host_name:
 [0-64B dns_name]
 */
+__noinline_due_to_stack__
 static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_RELAYS);
@@ -575,6 +579,7 @@ enum {
 static void handleNullMetadata_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleNullMetadata_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
@@ -603,6 +608,7 @@ enum {
 static void handleMetadata_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleMetadata_ui_runStep;
 
 	pool_metadata_t* md = &subctx->metadata;
@@ -623,7 +629,7 @@ static void handleMetadata_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_HASH) {
-		char metadataHashHex[1 + 2 * METADATA_HASH_LENGTH];
+		char metadataHashHex[1 + 2 * POOL_METADATA_HASH_LENGTH];
 		size_t len = str_formatMetadata(
 		                     md->hash, SIZEOF(md->hash),
 		                     metadataHashHex, SIZEOF(metadataHashHex)
@@ -669,8 +675,10 @@ static void handleNullMetadata()
 	handleNullMetadata_ui_runStep();
 }
 
+__noinline_due_to_stack__
 static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_METADATA);
@@ -703,9 +711,9 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 			}
 		}
 		{
-			VALIDATE(view_remainingSize(&view) >= METADATA_HASH_LENGTH, ERR_INVALID_DATA);
-			ASSERT(SIZEOF(md->hash) == METADATA_HASH_LENGTH);
-			view_memmove(md->hash, &view, METADATA_HASH_LENGTH);
+			VALIDATE(view_remainingSize(&view) >= POOL_METADATA_HASH_LENGTH, ERR_INVALID_DATA);
+			ASSERT(SIZEOF(md->hash) == POOL_METADATA_HASH_LENGTH);
+			view_memmove(md->hash, &view, POOL_METADATA_HASH_LENGTH);
 		}
 		{
 			md->urlSize = view_remainingSize(&view);
@@ -758,6 +766,7 @@ enum {
 static void signTxPoolRegistration_handleConfirm_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxPoolRegistration_handleConfirm_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step);
@@ -777,8 +786,10 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
+__noinline_due_to_stack__
 static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
+	TRACE_STACK_USAGE();
 	{
 		//sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_CONFIRM);
@@ -838,7 +849,8 @@ bool signTxPoolRegistration_isValidInstruction(uint8_t p2)
 
 void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	TRACE("p2 = %d", p2);
+	TRACE_STACK_USAGE();
+	TRACE("p2 = 0x%x", p2);
 
 	switch (p2) {
 	case APDU_INSTRUCTION_PARAMS:

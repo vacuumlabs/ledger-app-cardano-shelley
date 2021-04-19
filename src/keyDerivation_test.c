@@ -2,7 +2,7 @@
 
 #include "keyDerivation.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
 {
@@ -208,4 +208,4 @@ void run_key_derivation_test()
 	testChainCodeDerivation();
 }
 
-#endif
+#endif // DEVEL

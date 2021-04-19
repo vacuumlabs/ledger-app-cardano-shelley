@@ -13,4 +13,4 @@ typedef void handler_fn_t(
 
 handler_fn_t* lookupHandler(uint8_t ins);
 
-#endif
+#endif // H_CARDANO_APP_HANDLERS

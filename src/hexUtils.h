@@ -14,6 +14,6 @@ size_t encode_hex(const uint8_t* bytes, size_t bytesLength, char* outString, siz
 
 #ifdef DEVEL
 void run_hex_test();
-#endif
+#endif // DEVEL
 
-#endif
+#endif // H_CARDANO_APP_HEX_UTILS

@@ -7,12 +7,12 @@
 #define IPV6_SIZE 16
 
 // there are other types we do not support
-enum {
+typedef enum {
 	CERTIFICATE_TYPE_STAKE_REGISTRATION = 0,
 	CERTIFICATE_TYPE_STAKE_DEREGISTRATION = 1,
 	CERTIFICATE_TYPE_STAKE_DELEGATION = 2,
 	CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3
-};
+} certificate_type_t;
 
 typedef struct {
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
@@ -21,7 +21,7 @@ typedef struct {
 	uint64_t cost;
 	uint64_t marginNumerator;
 	uint64_t marginDenominator;
-	uint8_t rewardAccount[1 + ADDRESS_KEY_HASH_LENGTH];
+	uint8_t rewardAccount[REWARD_ACCOUNT_SIZE];
 } pool_registration_params_t;
 
 typedef struct {

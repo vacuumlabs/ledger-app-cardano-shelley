@@ -33,6 +33,19 @@ bool isSupportedAddressType(uint8_t addressType)
 	}
 }
 
+bool isShelleyAddressType(uint8_t addressType)
+{
+	switch (addressType) {
+	case BASE:
+	case POINTER:
+	case ENTERPRISE:
+	case REWARD:
+		return true;
+	default:
+		return false;
+	}
+}
+
 uint8_t constructShelleyAddressHeader(address_type_t type, uint8_t networkId)
 {
 	ASSERT(isSupportedAddressType(type));
@@ -97,10 +110,13 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 
 size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath)
 {
+	TRACE_STACK_USAGE();
+
 	extendedPublicKey_t extPubKey;
 	deriveExtendedPublicKey(keyDerivationPath, &extPubKey);
 
 	uint8_t hashedPubKey[ADDRESS_KEY_HASH_LENGTH];
+	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH * 8 == 224, "wrong address key hash length");
 	blake2b_224_hash(
 	        extPubKey.pubKey, SIZEOF(extPubKey.pubKey),
 	        hashedPubKey, SIZEOF(hashedPubKey)
@@ -286,6 +302,8 @@ static size_t deriveAddress_reward(
         uint8_t* outBuffer, size_t outSize
 )
 {
+	TRACE_STACK_USAGE();
+
 	ASSERT(getAddressType(addressHeader) == REWARD);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
@@ -295,20 +313,37 @@ static size_t deriveAddress_reward(
 	}
 	{
 		// staking key path expected (corresponds to reward account)
-		ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath)); // TODO check for unusual account?
+		ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath));
+
 		view_appendPublicKeyHash(&out, spendingKeyPath);
 	}
 	{
 		// no staking data
 	}
 
-	const int ADDRESS_LENGTH = 1 + ADDRESS_KEY_HASH_LENGTH;
+	const int ADDRESS_LENGTH = REWARD_ACCOUNT_SIZE;
 	ASSERT(view_processedSize(&out) == ADDRESS_LENGTH);
 
 	return ADDRESS_LENGTH;
 }
 
-size_t constructRewardAddress(
+size_t constructRewardAddressFromKeyPath(
+        const bip44_path_t* path, uint8_t networkId, uint8_t* outBuffer, size_t outSize
+)
+{
+	ASSERT(outSize == REWARD_ACCOUNT_SIZE);
+	ASSERT(bip44_isValidStakingKeyPath(path));
+
+	TRACE_STACK_USAGE();
+
+	const uint8_t header = constructShelleyAddressHeader(REWARD, networkId);
+	return deriveAddress_reward(
+	               header, path,
+	               outBuffer, outSize
+	       );
+}
+
+size_t constructRewardAddressFromKeyHash(
         uint8_t networkId,
         const uint8_t* stakingKeyHashBuffer, size_t stakingKeyHashSize,
         uint8_t* outBuffer, size_t outSize
@@ -327,7 +362,7 @@ size_t constructRewardAddress(
 		view_appendData(&out, stakingKeyHashBuffer, stakingKeyHashSize);
 	}
 
-	const int ADDRESS_LENGTH = 1 + ADDRESS_KEY_HASH_LENGTH;
+	const int ADDRESS_LENGTH = REWARD_ACCOUNT_SIZE;
 	ASSERT(view_processedSize(&out) == ADDRESS_LENGTH);
 
 	return ADDRESS_LENGTH;
@@ -502,4 +537,42 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	default:
 		ASSERT(false);
 	}
+}
+
+static inline bool isSpendingPathConsistentWithAddressType(const address_type_t addressType, const bip44_path_t* spendingPath)
+{
+#define CHECK(cond) if (!(cond)) return false
+	// Byron derivation path is only valid for a Byron address
+	// the rest should be Shelley derivation scheme
+	if (addressType == BYRON) {
+		CHECK(bip44_hasByronPrefix(spendingPath));
+	} else {
+		CHECK(bip44_hasShelleyPrefix(spendingPath));
+	}
+
+	if (addressType == REWARD) {
+		CHECK(bip44_isValidStakingKeyPath(spendingPath));
+	} else {
+		CHECK(bip44_isValidAddressPath(spendingPath));
+	}
+
+	return true;
+#undef CHECK
+}
+
+static inline bool isValidStakingInfo(const addressParams_t* addressParams)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(isStakingInfoConsistentWithAddressType(addressParams));
+	if (addressParams->stakingChoice == STAKING_KEY_PATH) {
+		CHECK(bip44_isValidStakingKeyPath(&addressParams->stakingKeyPath));
+	}
+	return true;
+#undef CHECK
+}
+
+bool isValidAddressParams(const addressParams_t* addressParams)
+{
+	return isSpendingPathConsistentWithAddressType(addressParams->type, &addressParams->spendingKeyPath) &&
+	       isValidStakingInfo(addressParams);
 }

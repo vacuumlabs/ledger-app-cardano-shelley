@@ -28,8 +28,8 @@ PIN = 5555
 
 APPNAME      = "Cardano ADA"
 APPVERSION_M = 2
-APPVERSION_N = 2
-APPVERSION_P = 1
+APPVERSION_N = 3
+APPVERSION_P = 0
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'"
@@ -122,10 +122,12 @@ ifeq ($(GCCPATH),)
 $(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
 endif
 
-CC       := $(CLANGPATH)clang
-CFLAGS   += -O3 -Os -Wall -Wextra -Wuninitialized
+WERROR   := -Werror=incompatible-pointer-types -Werror=return-type
 
-AS     := $(GCCPATH)arm-none-eabi-gcc
+CC       := $(CLANGPATH)clang
+CFLAGS   += -std=gnu11 -O3 -Os -Wall -Wextra -Wuninitialized $(WERROR)
+
+AS       := $(GCCPATH)arm-none-eabi-gcc
 LD       := $(GCCPATH)arm-none-eabi-gcc
 
 LDFLAGS  += -O3 -Os -Wall

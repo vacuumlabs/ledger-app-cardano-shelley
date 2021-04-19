@@ -12,7 +12,7 @@ enum {
 	TX_BODY_KEY_CERTIFICATES = 4,
 	TX_BODY_KEY_WITHDRAWALS = 5,
 	// TX_BODY_KEY_UPDATE = 6, // not used
-	TX_BODY_KEY_METADATA = 7,
+	TX_BODY_KEY_AUX_DATA = 7,
 	TX_BODY_KEY_VALIDITY_INTERVAL_START = 8,
 };
 
@@ -25,9 +25,6 @@ enum {
  * Pool registration certificates have an inner state loop which is implemented
  * in a similar fashion with the exception that when all pool certificate data
  * have been entered, the state is changed to TX_HASH_BUILDER_IN_CERTIFICATES.
- *
- * WARNING: the state machine relies on inequality comparisons between states
- * in certain places, so be careful when changing the enum values.
  */
 typedef enum {
 	TX_HASH_BUILDER_INIT = 100,
@@ -44,7 +41,7 @@ typedef enum {
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS = 612,
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA = 613,
 	TX_HASH_BUILDER_IN_WITHDRAWALS = 700,
-	TX_HASH_BUILDER_IN_METADATA = 800,
+	TX_HASH_BUILDER_IN_AUX_DATA = 800,
 	TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START = 900,
 	TX_HASH_BUILDER_FINISHED = 1000,
 } tx_hash_builder_state_t;
@@ -55,7 +52,7 @@ typedef struct {
 	uint16_t remainingWithdrawals;
 	uint16_t remainingCertificates;
 	bool includeTtl;
-	bool includeMetadata;
+	bool includeAuxData;
 	bool includeValidityIntervalStart;
 
 	union {
@@ -82,7 +79,7 @@ void txHashBuilder_init(
         bool includeTtl,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
-        bool includeMetadata,
+        bool includeAuxData,
         bool includeValidityIntervalStart
 );
 
@@ -118,7 +115,7 @@ void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl);
 void txHashBuilder_enterCertificates(tx_hash_builder_t* builder);
 void txHashBuilder_addCertificate_stakingKey(
         tx_hash_builder_t* builder,
-        const int certificateType,
+        const certificate_type_t certificateType,
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize
 );
 void txHashBuilder_addCertificate_delegation(
@@ -169,9 +166,9 @@ void txHashBuilder_addWithdrawal(
         uint64_t amount
 );
 
-void txHashBuilder_addMetadata(
+void txHashBuilder_addAuxData(
         tx_hash_builder_t* builder,
-        const uint8_t* metadataHashBuffer, size_t metadataHashSize
+        const uint8_t* auxDataHashBuffer, size_t auxDataHashSize
 );
 
 void txHashBuilder_addValidityIntervalStart(
@@ -187,6 +184,6 @@ void txHashBuilder_finalize(
 
 #ifdef DEVEL
 void run_txHashBuilder_test();
-#endif
+#endif // DEVEL
 
 #endif // H_CARDANO_APP_TX_HASH_BUILDER

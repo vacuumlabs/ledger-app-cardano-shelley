@@ -3,7 +3,7 @@
 #include "addressUtilsByron.h"
 #include "cardano.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 #define HD HARDENED_BIP32
 
@@ -171,4 +171,4 @@ void run_addressUtilsByron_test()
 	testProtocolMagicExtractionThrows();
 }
 
-#endif
+#endif // DEVEL

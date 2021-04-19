@@ -2,7 +2,7 @@
 
 #include "crc32.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 void run_crc32_test()
 {
@@ -35,4 +35,4 @@ void run_crc32_test()
 	}
 }
 
-#endif
+#endif // DEVEL

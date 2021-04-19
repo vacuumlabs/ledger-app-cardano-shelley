@@ -5,7 +5,7 @@
 #include "cardanoCertificates.h"
 #include "hexUtils.h"
 #include "textUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 
 static struct {
@@ -328,11 +328,11 @@ void run_txHashBuilder_test()
 	}
 
 	{
-		const char metadataHashHex[] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-		uint8_t tmp[METADATA_HASH_LENGTH];
-		size_t tmpSize = decode_hex(metadataHashHex, tmp, SIZEOF(tmp));
-		ASSERT(tmpSize == METADATA_HASH_LENGTH);
-		txHashBuilder_addMetadata(&builder, tmp, tmpSize);
+		const char auxDataHashHex[] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
+		uint8_t tmp[AUX_DATA_HASH_LENGTH];
+		size_t tmpSize = decode_hex(auxDataHashHex, tmp, SIZEOF(tmp));
+		ASSERT(tmpSize == AUX_DATA_HASH_LENGTH);
+		txHashBuilder_addAuxData(&builder, tmp, tmpSize);
 	}
 
 	txHashBuilder_addValidityIntervalStart(&builder, 33);
@@ -349,4 +349,4 @@ void run_txHashBuilder_test()
 	EXPECT_EQ_BYTES(result, expected, 32);
 }
 
-#endif
+#endif // DEVEL

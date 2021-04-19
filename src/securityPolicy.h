@@ -5,6 +5,7 @@
 #include "bip44.h"
 #include "cardanoOutputs.h"
 #include "signTxPoolRegistration.h"
+#include "signTxAuxData.h"
 
 typedef enum {
 	POLICY_DENY = 1,
@@ -54,10 +55,10 @@ security_policy_t policyForSignTxTtl(uint32_t ttl);
 
 security_policy_t policyForSignTxCertificate(
         const bool includeStakePoolRegistrationCertificate,
-        const uint8_t certificateType
+        const certificate_type_t certificateType
 );
 security_policy_t policyForSignTxCertificateStaking(
-        const uint8_t certificateType,
+        const certificate_type_t certificateType,
         const bip44_path_t* stakingKeyPath
 );
 security_policy_t policyForSignTxCertificateStakePoolRegistration(
@@ -69,7 +70,7 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm();
 
 security_policy_t policyForSignTxWithdrawal();
 
-security_policy_t policyForSignTxMetadata();
+security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType);
 
 security_policy_t policyForSignTxValidityIntervalStart();
 
@@ -94,4 +95,15 @@ static inline void ENSURE_NOT_DENIED(security_policy_t policy)
 	}
 }
 
-#endif
+security_policy_t policyForCatalystRegistrationVotingRewardsAddressParams(
+        const addressParams_t* params,
+        const uint8_t networkId
+);
+security_policy_t policyForCatalystRegistrationStakingKey(
+        const bip44_path_t* stakingKeyPath
+);
+security_policy_t policyForCatalystRegistrationVotingKey();
+security_policy_t policyForCatalystRegistrationNonce();
+security_policy_t policyForCatalystRegistrationConfirm();
+
+#endif // H_CARDANO_APP_SECURITY_POLICY

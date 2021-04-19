@@ -3,6 +3,9 @@
 #include "hexUtils.h"
 #include "textUtils.h"
 #include "cardanoCertificates.h"
+#include "signTx.h"
+#include "signTxPoolRegistration.h"
+
 
 void ui_displayPathScreen(
         const char* screenHeader,
@@ -23,11 +26,11 @@ void ui_displayPathScreen(
 	);
 }
 
-// the given path typically corresponds to an account
-// if it contains anything more, we display just the whole path
-void ui_displayAccountScreen(
+__noinline_due_to_stack__
+static void _ui_displayPathAccountScreen(
         const char* screenHeader,
         const bip44_path_t* path,
+        bool showAccountDescription,
         ui_callback_fn_t callback
 )
 {
@@ -40,7 +43,7 @@ void ui_displayAccountScreen(
 	char accountDescription[160];
 	explicit_bzero(accountDescription, SIZEOF(accountDescription));
 
-	if (bip44_hasReasonableAccount(path) && !bip44_containsMoreThanAccount(path)) {
+	if (showAccountDescription) {
 		uint32_t account = unharden(bip44_getAccount(path));
 		if (bip44_hasByronPrefix(path)) {
 			snprintf(
@@ -73,6 +76,44 @@ void ui_displayAccountScreen(
 	ui_displayPaginatedText(
 	        screenHeader,
 	        accountDescription,
+	        callback
+	);
+}
+
+// the given path typically corresponds to an account
+// if it contains anything more, we display just the whole path
+void ui_displayAccountScreen(
+        const char* screenHeader,
+        const bip44_path_t* path,
+        ui_callback_fn_t callback
+)
+{
+	ASSERT(bip44_hasValidCardanoPrefix(path));
+	ASSERT(bip44_containsAccount(path));
+
+	bool showAccountDescription = bip44_hasReasonableAccount(path) && (!bip44_containsMoreThanAccount(path));
+
+	_ui_displayPathAccountScreen(
+	        screenHeader,
+	        path,
+	        showAccountDescription,
+	        callback
+	);
+}
+
+void ui_displayStakingKeyScreen(
+        const bip44_path_t* stakingPath,
+        ui_callback_fn_t callback
+)
+{
+	ASSERT(bip44_isValidStakingKeyPath(stakingPath));
+
+	bool showAccountDescription = bip44_hasReasonableAccount(stakingPath);
+
+	_ui_displayPathAccountScreen(
+	        "Staking key",
+	        stakingPath,
+	        showAccountDescription,
 	        callback
 	);
 }
@@ -346,6 +387,45 @@ void ui_displayHexBufferScreen(
 	);
 }
 
+#define BECH32_BUFFER_SIZE_MAX 150
+#define BECH32_PREFIX_LENGTH_MAX 10
+
+// works for bufferSize <= 150 and prefix length <= 10
+void ui_displayBech32Screen(
+        const char* screenHeader,
+        const char* bech32Prefix,
+        const uint8_t* buffer, size_t bufferSize,
+        ui_callback_fn_t callback
+)
+{
+	{
+		// assert inputs
+		ASSERT(strlen(screenHeader) > 0);
+		ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+
+		ASSERT(strlen(bech32Prefix) > 0);
+		ASSERT(strlen(bech32Prefix) <= BECH32_PREFIX_LENGTH_MAX);
+
+		ASSERT(bufferSize <= BECH32_BUFFER_SIZE_MAX);
+	}
+
+	char encodedStr[10 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX]; // rough upper bound on required size
+	explicit_bzero(encodedStr, SIZEOF(encodedStr));
+
+	{
+		size_t len = bech32_encode(bech32Prefix, buffer, bufferSize, encodedStr, SIZEOF(encodedStr));
+
+		ASSERT(len == strlen(encodedStr));
+		ASSERT(len + 1 <= SIZEOF(encodedStr));
+	}
+
+	ui_displayPaginatedText(
+	        screenHeader,
+	        encodedStr,
+	        callback
+	);
+}
+
 void ui_displayPoolIdScreen(
         const uint8_t* poolIdBuffer,
         size_t poolIdSize,
@@ -379,10 +459,6 @@ void ui_displayPoolMarginScreen(
         ui_callback_fn_t callback
 )
 {
-	TRACE("%d %d", marginNumerator, marginDenominator);
-	TRACE_BUFFER((uint8_t *) &marginNumerator, 8);
-	TRACE_BUFFER((uint8_t *) &marginDenominator, 8);
-
 	ASSERT(marginDenominator != 0);
 	ASSERT(marginNumerator <= marginDenominator);
 	ASSERT(marginDenominator <= MARGIN_DENOMINATOR_MAX);
@@ -438,37 +514,7 @@ void ui_displayPoolOwnerScreen(
 		}
 	}
 
-	// we display the owner as bech32-encoded reward address for his staking key
-	uint8_t rewardAddress[1 + ADDRESS_KEY_HASH_LENGTH];
-	{
-		if (owner->ownerType == SIGN_TX_POOL_OWNER_TYPE_PATH) {
-			addressParams_t rewardAddressParams = {
-				.type = REWARD,
-				.networkId = networkId,
-				.spendingKeyPath = owner->path,
-				.stakingChoice = NO_STAKING,
-			};
-
-			deriveAddress(
-			        &rewardAddressParams,
-			        rewardAddress, SIZEOF(rewardAddress)
-			);
-		} else {
-			constructRewardAddress(
-			        networkId,
-			        owner->keyHash, SIZEOF(owner->keyHash),
-			        rewardAddress, SIZEOF(rewardAddress)
-			);
-		}
-	}
-
-	char firstLine[20];
-	explicit_bzero(firstLine, SIZEOF(firstLine));
-	{
-		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
-	}
-
-	char ownerDescription[BIP44_MAX_PATH_STRING_LENGTH + MAX_HUMAN_ADDRESS_SIZE + 1];
+	char ownerDescription[BIP44_MAX_PATH_STRING_LENGTH + MAX_HUMAN_REWARD_ACCOUNT_SIZE + 1];
 	explicit_bzero(ownerDescription, SIZEOF(ownerDescription));
 	size_t descLen = 0; // owner description length
 
@@ -488,12 +534,41 @@ void ui_displayPoolOwnerScreen(
 			ownerDescription[descLen] = '\0';
 		}
 
-		descLen += humanReadableAddress(
-		                   rewardAddress, SIZEOF(rewardAddress),
-		                   ownerDescription + descLen, SIZEOF(ownerDescription) - descLen
-		           );
+		{
+			uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
+
+			switch (owner->ownerType) {
+			case SIGN_TX_POOL_OWNER_TYPE_PATH: {
+				constructRewardAddressFromKeyPath(
+				        &owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)
+				);
+				break;
+			}
+			case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH: {
+				constructRewardAddressFromKeyHash(
+				        networkId,
+				        owner->keyHash, SIZEOF(owner->keyHash),
+				        rewardAddress, SIZEOF(rewardAddress)
+				);
+				break;
+			}
+			default:
+				ASSERT(false);
+			}
+
+			descLen += humanReadableAddress(
+			                   rewardAddress, SIZEOF(rewardAddress),
+			                   ownerDescription + descLen, SIZEOF(ownerDescription) - descLen
+			           );
+		}
 		ASSERT(descLen == strlen(ownerDescription));
 		ASSERT(descLen + 1 <= SIZEOF(ownerDescription));
+	}
+
+	char firstLine[20];
+	explicit_bzero(firstLine, SIZEOF(firstLine));
+	{
+		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
 	}
 
 	ui_displayPaginatedText(

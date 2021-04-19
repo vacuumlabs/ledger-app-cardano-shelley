@@ -20,10 +20,12 @@ uint8_t getAddressHeader(uint8_t* addressBuffer, size_t addressSize);
 
 address_type_t getAddressType(uint8_t addressHeader);
 bool isSupportedAddressType(uint8_t addressHeader);
+bool isShelleyAddressType(uint8_t addressType);
 uint8_t constructShelleyAddressHeader(address_type_t type, uint8_t networkId);
 
 uint8_t getNetworkId(uint8_t addressHeader);
 bool isValidNetworkId(uint8_t networkId);
+
 
 // describes which staking info should be incorporated into address
 // (see stakingChoice in addressParams_t)
@@ -62,11 +64,17 @@ typedef struct {
 
 bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams);
 
+__noinline_due_to_stack__
 size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath);
 
 size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize);
 
-size_t constructRewardAddress(
+__noinline_due_to_stack__
+size_t constructRewardAddressFromKeyPath(
+        const bip44_path_t* path, uint8_t networkId, uint8_t* outBuffer, size_t outSize
+);
+__noinline_due_to_stack__
+size_t constructRewardAddressFromKeyHash(
         uint8_t networkId,
         const uint8_t* stakingKeyHashBuffer, size_t stakingKeyHashSize,
         uint8_t* outBuffer, size_t outSize
@@ -78,9 +86,10 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 
 void view_parseAddressParams(read_view_t* view, addressParams_t* params);
 
+bool isValidAddressParams(const addressParams_t* addressParams);
 
 #ifdef DEVEL
 void run_addressUtilsShelley_test();
-#endif
+#endif // DEVEL
 
 #endif // H_CARDANO_APP_ADDRESS_UTILS_SHELLEY

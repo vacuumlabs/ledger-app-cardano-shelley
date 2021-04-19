@@ -15,7 +15,7 @@
 		}, \
 		"HEADLESS " \
 	}
-#endif
+#endif // HEADLESS
 
 enum {
 	ID_UNSPECIFIED = 0x00,
@@ -138,7 +138,7 @@ static const bagl_element_t ui_paginatedText[] = {
 	UI_TEXT(ID_UNSPECIFIED, 0, 26, 128, &displayState.paginatedText.currentText),
 	#ifdef HEADLESS
 	HEADLESS_UI_ELEMENT(),
-	#endif
+	#endif // HEADLESS
 };
 
 static const bagl_element_t* ui_prepro_paginatedText(const bagl_element_t *element)
@@ -172,7 +172,7 @@ static const bagl_element_t ui_prompt[] = {
 	UI_TEXT(ID_UNSPECIFIED, 0, 26, 128, displayState.prompt.text),
 	#ifdef HEADLESS
 	HEADLESS_UI_ELEMENT(),
-	#endif
+	#endif // HEADLESS
 };
 
 static const bagl_element_t* ui_prepro_prompt(const bagl_element_t *element)

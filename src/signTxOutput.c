@@ -12,9 +12,9 @@
 // ctx / subctx
 // stage / state
 // from ctx, we only make the necessary parts available to avoid mistaken overwrites
-static output_context_t* subctx = &(instructionState.signTxContext.stageContext.output_subctx);
+static output_context_t* subctx = &(instructionState.signTxContext.txPartCtx.body_ctx.stageContext.output_subctx);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
-static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txHashBuilder);
+static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txPartCtx.body_ctx.txHashBuilder);
 
 bool signTxOutput_isFinished()
 {
@@ -37,7 +37,10 @@ bool signTxOutput_isFinished()
 
 void signTxOutput_init()
 {
-	explicit_bzero(subctx, SIZEOF(*subctx));
+	{
+		ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.txPartCtx.body_ctx);
+		explicit_bzero(&txBodyCtx->stageContext, SIZEOF(txBodyCtx->stageContext));
+	}
 
 	subctx->state = STATE_OUTPUT_TOP_LEVEL_DATA;
 }
@@ -231,12 +234,11 @@ static void signTx_handleOutput_addressParams()
 	{
 		// add to tx
 		uint8_t addressBuffer[MAX_ADDRESS_SIZE];
-		size_t addressSize;
-		addressSize = deriveAddress(
-		                      &subctx->stateData.output.params,
-		                      addressBuffer,
-		                      SIZEOF(addressBuffer)
-		              );
+		size_t addressSize = deriveAddress(
+		                             &subctx->stateData.output.params,
+		                             addressBuffer,
+		                             SIZEOF(addressBuffer)
+		                     );
 		ASSERT(addressSize > 0);
 		ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 

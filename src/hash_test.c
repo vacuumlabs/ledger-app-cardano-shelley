@@ -2,7 +2,7 @@
 
 #include "hash.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 void testcase_chunks_blake2b_512(
         const char* chunksHex[],
@@ -123,4 +123,4 @@ void run_hash_test()
 	run_blake2b_test();
 }
 
-#endif
+#endif // DEVEL

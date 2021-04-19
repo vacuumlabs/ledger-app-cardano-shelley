@@ -9,7 +9,7 @@
 #define POOL_MAX_OWNERS 1000
 #define POOL_MAX_RELAYS 1000
 
-// SIGN_STAGE_CERTIFICATES = 28
+// SIGN_STAGE_BODY_CERTIFICATES = 28
 // CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3
 typedef enum {
 	STAKE_POOL_REGISTRATION_PARAMS = 2830,
@@ -28,7 +28,7 @@ enum {
 typedef struct {
 	uint8_t url[POOL_METADATA_URL_MAX_LENGTH];
 	size_t urlSize;
-	uint8_t hash[METADATA_HASH_LENGTH];
+	uint8_t hash[POOL_METADATA_HASH_LENGTH];
 } pool_metadata_t;
 
 typedef struct {
@@ -62,4 +62,4 @@ void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size
 
 bool signTxPoolRegistration_isFinished();
 
-#endif
+#endif // H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION

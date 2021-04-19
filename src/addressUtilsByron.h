@@ -35,6 +35,6 @@ uint32_t extractProtocolMagic(
 
 #ifdef DEVEL
 void run_addressUtilsByron_test();
-#endif
+#endif // DEVEL
 
 #endif // H_CARDANO_APP_ADDRESS_UTILS_BYRON

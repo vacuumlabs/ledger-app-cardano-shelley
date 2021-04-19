@@ -115,12 +115,12 @@ void str_traceUint64(uint64_t number)
 	str_formatUint64(number, numberStr, SIZEOF(numberStr));
 	TRACE("%s", numberStr);
 }
-#endif
+#endif // DEVEL
 
 
 // TODO: This is valid only for mainnet
 static struct {
-	uint64_t startBlockNumber;
+	uint64_t startSlotNumber;
 	uint64_t startEpoch;
 	uint64_t slotsInEpoch;
 } EPOCH_SLOTS_CONFIG[] = {
@@ -133,19 +133,19 @@ size_t str_formatValidityBoundary(uint64_t slotNumber, char* out, size_t outSize
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	unsigned i = 0;
-	while (slotNumber < EPOCH_SLOTS_CONFIG[i].startBlockNumber) {
+	while (slotNumber < EPOCH_SLOTS_CONFIG[i].startSlotNumber) {
 		i++;
 		ASSERT(i < ARRAY_LEN(EPOCH_SLOTS_CONFIG));
 	}
 
-	ASSERT(slotNumber >= EPOCH_SLOTS_CONFIG[i].startBlockNumber);
+	ASSERT(slotNumber >= EPOCH_SLOTS_CONFIG[i].startSlotNumber);
 
-	uint64_t startBlockNumber = EPOCH_SLOTS_CONFIG[i].startBlockNumber;
+	uint64_t startSlotNumber = EPOCH_SLOTS_CONFIG[i].startSlotNumber;
 	uint64_t startEpoch = EPOCH_SLOTS_CONFIG[i].startEpoch;
 	uint64_t slotsInEpoch = EPOCH_SLOTS_CONFIG[i].slotsInEpoch;
 
-	uint64_t epoch = startEpoch + (slotNumber - startBlockNumber) / slotsInEpoch;
-	uint64_t slotInEpoch = (slotNumber - startBlockNumber) % slotsInEpoch;
+	uint64_t epoch = startEpoch + (slotNumber - startSlotNumber) / slotsInEpoch;
+	uint64_t slotInEpoch = (slotNumber - startSlotNumber) % slotsInEpoch;
 
 	ASSERT(sizeof(int) >= sizeof(uint32_t));
 
@@ -202,4 +202,4 @@ size_t str_textToBuffer(const char* text, uint8_t* buffer, size_t bufferSize)
 	return textLength;
 }
 
-#endif
+#endif // DEVEL

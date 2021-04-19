@@ -2,7 +2,7 @@
 
 #include "cardano.h"
 #include "bip44.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 #define HD HARDENED_BIP32
 
@@ -60,4 +60,4 @@ void run_bip44_test()
 #undef TESTCASE
 }
 
-#endif
+#endif // DEVEL

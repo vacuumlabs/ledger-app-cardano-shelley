@@ -2,7 +2,7 @@
 
 #include "bech32.h"
 #include "hexUtils.h"
-#include "test_utils.h"
+#include "testUtils.h"
 
 void testcase_bech32(const char* hrp, const char* inputBytesHex, const char* expectedStr)
 {
@@ -48,4 +48,4 @@ void run_bech32_test()
 	}
 }
 
-#endif
+#endif // DEVEL
