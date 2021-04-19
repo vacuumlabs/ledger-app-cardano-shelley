@@ -122,7 +122,11 @@ ifeq ($(GCCPATH),)
 $(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
 endif
 
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+WERROR   := -Werror=return-type
+else
 WERROR   := -Werror=incompatible-pointer-types -Werror=return-type
+endif
 
 CC       := $(CLANGPATH)clang
 CFLAGS   += -std=gnu11 -O3 -Os -Wall -Wextra -Wuninitialized $(WERROR)
