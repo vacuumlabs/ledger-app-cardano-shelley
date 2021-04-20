@@ -37,7 +37,7 @@ By BIP44, we refer here both to the original BIP44 scheme and its Cardano Shelle
 |  P1 | signing phase |
 |  P2 | (specific for each subcall) |
 
-### 1 - Initialize signing
+### Initialize signing
 
 Initializes signing request.
 
@@ -64,7 +64,33 @@ Initializes signing request.
 | number of tx withdrawals                  | 4 | Big endian |
 | number of tx witnesses                    | 4 | Big endian |
 
-### 2 - Set UTxO inputs
+### Auxiliary data
+
+Optional.
+
+|Field|Value|
+|-----|-----|
+|  P1 | `0x08` |
+|  P2 | (unused / see [Catalyst Registration](ins_sign_catalyst_registration.md)) |
+
+**Data for AUX_DATA_TYPE_ARBITRARY_HASH**
+
+Ledger cannot parse and display generic auxiliary data in full because their structure is too loose and their memory footprint potentially too big.
+So only the hash is transferred and displayed and the user has to use other means of verification that the hash is correct.
+
+|Field| Length | Comments|
+|-----|--------|--------|
+| Auxiliary data type | 1 | `AUX_DATA_TYPE_ARBITRARY_HASH=0x00` |
+| Auxiliary data hash | 32 | |
+
+**Data for AUX_DATA_TYPE_CATALYST_REGISTRATION**
+|Field| Length | Comments|
+|-----|--------|--------|
+| Auxiliary data type | 1 | `AUX_DATA_TYPE_CATALYST_REGISTRATION=0x01` |
+
+This only describes the initial message. All the data for this type of auxiliary data are obtained via a series of additional APDU messages; see [Catalyst Registration](ins_sign_catalyst_registration.md) for the details.
+
+### Set UTxO inputs
 
 **Command**
 
@@ -82,7 +108,7 @@ Initializes signing request.
 |output index |  4 | Big endian |
 
 
-### 3 - Set outputs
+### Set outputs
 
 For each output, at least two messages are required: the first one with top-level data and the last one for confirmation. The messages in between them describe multiasset tokens if such are included in the output (one message for each asset group, followed by messages for tokens included in the group). The asset groups and tokens are serialized into their respective CBOR maps in the same order as they are received.
 
@@ -159,7 +185,7 @@ This output type is used for change addresses. Depending (mostly) on staking inf
 
 
  
-### 4 - Fee
+### Fee
 
 User needs to confirm the given fee.
 
@@ -174,7 +200,7 @@ User needs to confirm the given fee.
 |-----|--------|--------|
 |Amount| 8| Big endian. Amount in Lovelace|
 
-### 5 - TTL
+### TTL
 
 Optional.
 
@@ -189,7 +215,7 @@ Optional.
 |-----|--------|--------|
 |TTL| 8| Big endian. Absolute slot number (not relative to epoch)|
 
-### 6 - Certificate
+### Certificate
 
 We support three types of certificates: stake key registration, stake key deregistration, stake delegation.
 
@@ -221,7 +247,7 @@ We support three types of certificates: stake key registration, stake key deregi
 |Pool key hash| 28 | Hash of staking pool public key|
 
 
-### 7 - Reward withdrawal
+### Reward withdrawal
 
 Withdrawals from reward accounts.
 
@@ -237,25 +263,7 @@ Withdrawals from reward accounts.
 | Amount | 8 | Big endian |
 | Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_extended_public_key.md) for a format example |
 
-### 8 - Metadata
-
-Optional.
-
-Ledger cannot parse and display metadata in full because their structure is too loose and their memory footprint potentially too big.
-So only the hash is transferred and displayed and the user has to use other means of verification that the hash is correct.
-
-|Field|Value|
-|-----|-----|
-|  P1 | `0x08` |
-|  P2 | (unused) |
-
-*Data*
-
-|Field| Length | Comments|
-|-----|--------|--------|
-| Metadata hash | 32 | |
-
-### 9 - Validity interval start
+### Validity interval start
 
 Optional.
 
@@ -270,7 +278,7 @@ Optional.
 |-----|--------|--------|
 |Validity interval start| 8| Big endian. Absolute slot number (not relative to epoch)|
 
-### 9 - Final confirmation
+### Final confirmation
 
 Depending on `policyForSignTxConfirm` in [src/securityPolicy.c](../src/securityPolicy.c), the user is asked to confirm the transaction after seeing all its components.
 
@@ -280,7 +288,7 @@ Depending on `policyForSignTxConfirm` in [src/securityPolicy.c](../src/securityP
 |  P2 | (unused) |
 | data | (none) |
 
-### 10 - Compute witnesses
+### Compute witnesses
 
 Given a valid BIP44 path (or its Shelley analogue), sign TxHash by Ledger. Return the signature.
 
@@ -298,4 +306,4 @@ The caller is responsible for assembling the actual witness (the format is diffe
 
 |Field|Length| Comments|
 |-----|-----|-----|
-|Signature|32| Witness signature.|
+|Signature|64| Witness signature.|
