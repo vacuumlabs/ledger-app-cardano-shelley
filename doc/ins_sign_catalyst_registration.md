@@ -2,7 +2,7 @@
 
 ## Description
 
-Cardano uses a sidechain for its treasury system. One needs to "register" to participate on this sidechain by submitting a registration transaction on the mainnet chain. This is done by submitting a transaction with specific auxiliary data attached alongside the transaction body. These auxiliary data contain a signature by user's staking key, hence serialization of the auxiliary data by Ledger is required which in turn returns that signature.
+Cardano uses a sidechain for its treasury system a.k.a. Catalyst. One needs to "register" to participate on this sidechain by submitting a registration transaction on the Cardano blockchain. This is done by submitting a transaction with specific auxiliary data attached to the transaction body. These auxiliary data contain a signature by user's staking key, hence serialization of the it by Ledger is required which after confirming by the user returns that signature for the client software to be able to assemble the full serialized transaction.
 
 For more details about Catalyst registration see [CIP-0015](https://github.com/cardano-foundation/CIPs/blob/master/CIP-0015/CIP-0015.md)
 
