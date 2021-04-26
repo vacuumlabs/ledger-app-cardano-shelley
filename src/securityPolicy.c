@@ -25,6 +25,13 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 #undef CHECK
 }
 
+static inline bool is_reward_address(const addressParams_t* addressParams)
+{
+	ASSERT(isValidAddressParams(addressParams));
+
+	return addressParams->type == REWARD;
+}
+
 static inline bool has_cardano_prefix_and_any_account(const bip44_path_t* pathSpec)
 {
 	return bip44_hasValidCardanoPrefix(pathSpec) &&
@@ -428,7 +435,7 @@ security_policy_t policyForCatalystRegistrationVotingRewardsAddressParams(
 	DENY_UNLESS(isShelleyAddressType(params->type));
 	DENY_IF(params->networkId != networkId);
 
-	WARN_UNLESS(is_standard_base_address(params));
+	WARN_UNLESS(is_reward_address(params) || is_standard_base_address(params));
 
 	SHOW();
 }
