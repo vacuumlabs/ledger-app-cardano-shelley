@@ -4,7 +4,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [2.2.0](https://github.com/LedgerHQ/app-cardano/compare/2.1.0...LedgerHQ:2.2.0) - [TBD]
+## [2.3.1](https://github.com/LedgerHQ/app-cardano/compare/2.2.1...LedgerHQ:2.3.1) - [TBD]
+
+Add Catalyst voting registration metadata support
+
+### Added
+
+- Renamed metadata to auxiliary data (as per Mary-era [https://github.com/input-output-hk/cardano-ledger-specs/blob/e8f19bcc9c8f405131cb95ca6ada26b2b4eac638/shelley-ma/shelley-ma-test/cddl-files/shelley-ma.cddl#L16](CDDL)) and introduced a new type of auxiliary data, the Catalyst voting registration: https://github.com/LedgerHQ/app-cardano/pull/8
+
+### Changed
+
+### Fixed
+
+## [2.2.1](https://github.com/LedgerHQ/app-cardano/compare/2.2.0...LedgerHQ:2.2.1) - [March 30th 2021]
+
+Minor release updating the way of showing multiassed identifiers. No API changes.
+
+### Added
+ 
+### Changed
+
+- In multiasset outputs, show bech32 asset fingerprints instead of their raw representation, complying with [https://github.com/cardano-foundation/CIPs/blob/master/CIP-0014/CIP-0014.md](CIP-0014): https://github.com/LedgerHQ/app-cardano/pull/7
+
+### Fixed
+
+## [2.2.0](https://github.com/LedgerHQ/app-cardano/compare/2.1.0...LedgerHQ:2.2.0) - [February 15th 2021]
 
 Mary and Allegra hardfork-related changes. `signTransaction` call APDU changes are breaking, therefore it won't work properly with [https://www.npmjs.com/package/@cardano-foundation/ledgerjs-hw-app-cardano](ledgerjs-hw-app-cardano) version 2.1.0 and older.
 
@@ -22,7 +46,7 @@ Mary and Allegra hardfork-related changes. `signTransaction` call APDU changes a
 
 ### Fixed
 
-## [2.1.0](https://github.com/LedgerHQ/app-cardano/compare/2.0.5...LedgerHQ:2.1.0) - [January 7th 2020]
+## [2.1.0](https://github.com/LedgerHQ/app-cardano/compare/2.0.5...LedgerHQ:2.1.0) - [January 7th 2021]
 
 Introduced support for stake pool registration certificates for stake pool owners. `signTransaction` call APDU changes are breaking, therefore it won't work properly with [https://www.npmjs.com/package/@cardano-foundation/ledgerjs-hw-app-cardano](ledgerjs-hw-app-cardano) 2.0.1 and older.
 
