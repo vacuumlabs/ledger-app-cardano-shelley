@@ -13,7 +13,7 @@
 
 // encodes a buffer into bech32 and displays it (works for bufferSize <= 150 and prefix length <= 12)
 void ui_displayBech32Screen(
-        const char* screenHeader,
+        const char* firstLine,
         const char* bech32Prefix,
         const uint8_t* buffer, size_t bufferSize,
         ui_callback_fn_t callback
@@ -21,8 +21,8 @@ void ui_displayBech32Screen(
 {
 	{
 		// assert inputs
-		ASSERT(strlen(screenHeader) > 0);
-		ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+		ASSERT(strlen(firstLine) > 0);
+		ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
 		ASSERT(strlen(bech32Prefix) > 0);
 		ASSERT(strlen(bech32Prefix) <= BECH32_PREFIX_LENGTH_MAX);
@@ -41,20 +41,20 @@ void ui_displayBech32Screen(
 	}
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        encodedStr,
 	        callback
 	);
 }
 
 void ui_displayHexBufferScreen(
-        const char* screenHeader,
+        const char* firstLine,
         const uint8_t* buffer, size_t bufferSize,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 	ASSERT(bufferSize > 0);
 	ASSERT(bufferSize <= 32); // this is used for hashes, all are <= 32 bytes
 
@@ -69,26 +69,26 @@ void ui_displayHexBufferScreen(
 	ASSERT(length == 2 * bufferSize);
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        bufferHex,
 	        callback
 	);
 }
 
 void ui_displayPathScreen(
-        const char* screenHeader,
+        const char* firstLine,
         const bip44_path_t* path,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
 	char pathStr[1 + BIP44_PATH_STRING_SIZE_MAX];
 	bip44_printToStr(path, pathStr, SIZEOF(pathStr));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        pathStr,
 	        callback
 	);
@@ -96,14 +96,14 @@ void ui_displayPathScreen(
 
 __noinline_due_to_stack__
 static void _ui_displayAccountWithDescriptionScreen(
-        const char* screenHeader,
+        const char* firstLine,
         const bip44_path_t* path,
         bool showAccountDescription,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
 	ASSERT(bip44_hasValidCardanoWalletPrefix(path));
 	ASSERT(bip44_containsAccount(path));
@@ -142,7 +142,7 @@ static void _ui_displayAccountWithDescriptionScreen(
 	}
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        accountDescription,
 	        callback
 	);
@@ -192,13 +192,13 @@ void ui_displayStakingKeyScreen(
 
 // bech32 for Shelley, base58 for Byron
 void ui_displayAddressScreen(
-        const char* screenHeader,
+        const char* firstLine,
         const uint8_t* addressBuffer, size_t addressSize,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 	ASSERT(addressSize > 0);
 	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 
@@ -213,7 +213,7 @@ void ui_displayAddressScreen(
 	ASSERT(strlen(humanAddress) == length);
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        humanAddress,
 	        callback
 	);
@@ -452,26 +452,26 @@ void ui_displayAssetFingerprintScreen(
 }
 
 void ui_displayAdaAmountScreen(
-        const char* screenHeader,
+        const char* firstLine,
         uint64_t amount,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
 	char adaAmountStr[50];
 	str_formatAdaAmount(amount, adaAmountStr, SIZEOF(adaAmountStr));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        adaAmountStr,
 	        callback
 	);
 }
 
 void ui_displayUint64Screen(
-        const char* screenHeader,
+        const char* firstLine,
         uint64_t value,
         ui_callback_fn_t callback
 )
@@ -480,14 +480,14 @@ void ui_displayUint64Screen(
 	str_formatUint64(value, valueStr, SIZEOF(valueStr));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        valueStr,
 	        callback
 	);
 }
 
 void ui_displayValidityBoundaryScreen(
-        const char* screenHeader,
+        const char* firstLine,
         uint64_t boundary,
         uint8_t networkId, uint32_t protocolMagic,
         ui_callback_fn_t callback
@@ -501,13 +501,13 @@ void ui_displayValidityBoundaryScreen(
 		// since it depends on network params that could differ for testnets
 		str_formatValidityBoundary(boundary, boundaryStr, SIZEOF(boundaryStr));
 		ui_displayPaginatedText(
-		        screenHeader,
+		        firstLine,
 		        boundaryStr,
 		        callback
 		);
 	} else {
 		ui_displayUint64Screen(
-		        screenHeader,
+		        firstLine,
 		        boundary,
 		        callback
 		);
@@ -515,14 +515,14 @@ void ui_displayValidityBoundaryScreen(
 }
 
 void ui_displayNetworkParamsScreen(
-        const char* screenHeader,
+        const char* firstLine,
         uint8_t networkId,
         uint32_t protocolMagic,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 	ASSERT(isValidNetworkId(networkId));
 
 	char networkParams[100];
@@ -536,7 +536,7 @@ void ui_displayNetworkParamsScreen(
 	ASSERT(strlen(networkParams) + 1 < SIZEOF(networkParams));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        networkParams,
 	        callback
 	);
