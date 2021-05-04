@@ -18,15 +18,20 @@
 #endif // DEVEL
 
 
-// Syntactic sugar
+/*
+The following macros and functions have dual purpose:
+1. syntactic sugar for neat recording of hash computations;
+2. tracing of hash computations (allows to reconstruct bytestrings we are hashing via usbtool).
+*/
+
 #define BUILDER_APPEND_CBOR(type, value) \
-	blake2b_256_append_cbor(&builder->txHash, type, value)
+	blake2b_256_append_cbor_tx_body(&builder->txHash, type, value)
 
 #define BUILDER_APPEND_DATA(buffer, bufferSize) \
-	blake2b_256_append_and_trace(&builder->txHash, buffer, bufferSize)
+	blake2b_256_append_buffer_tx_body(&builder->txHash, buffer, bufferSize)
 
 
-static void blake2b_256_append_and_trace(
+static void blake2b_256_append_buffer_tx_body(
         blake2b_256_context_t* hashCtx,
         const uint8_t* buffer,
         size_t bufferSize
@@ -37,7 +42,7 @@ static void blake2b_256_append_and_trace(
 }
 
 __noinline_due_to_stack__
-static void blake2b_256_append_cbor(
+static void blake2b_256_append_cbor_tx_body(
         blake2b_256_context_t* hashCtx,
         uint8_t type, uint64_t value
 )
@@ -47,6 +52,8 @@ static void blake2b_256_append_cbor(
 	TRACE_BUFFER(buffer, size);
 	blake2b_256_append(hashCtx, buffer, size);
 }
+
+/* End of hash computation utilities. */
 
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
