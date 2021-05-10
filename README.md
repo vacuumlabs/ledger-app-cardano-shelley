@@ -55,8 +55,24 @@ The build process is managed with [Make](https://www.gnu.org/software/make/).
 * `delete`: Remove the application from the device
 * `build`: Build obj and bin api artefacts without loading
 * `format`: Format source code.
+* `analyze`: Run clang static analyzer (requires clang-tools)
+* `size`: Prints the app size.
 
 See `Makefile` for list of included functions.
+
+`make load` results in an exception in the following cases (there might be others):
+* the Ledger device is not connected
+* the device is locked
+* the device is in some intermediary state (e.g. processing an APDU message)
+* the app is too big to fit on the device (try `make size`)
+
+### Before merging a pull request
+
+_Before merging a PR, one should make sure that:_
+* `make format` does not change anything (except possibly some glyph* files)
+* `make clean load` runs without errors and warnings (except those reported for nanos-secure-sdk repo) for production build
+* `make clean load` runs without errors and warnings (except those reported for nanos-secure-sdk repo) for development build (see Debug version above)
+* `make analyze` does not report errors or warnings
 
 ## How to get a transaction body computed by Ledger
 

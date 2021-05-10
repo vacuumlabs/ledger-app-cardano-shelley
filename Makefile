@@ -15,40 +15,50 @@
 #  limitations under the License.
 #*******************************************************************************
 
-ifeq ($(BOLOS_SDK),)
-$(error Environment variable BOLOS_SDK is not set)
-endif
-include $(BOLOS_SDK)/Makefile.defines
-
-SIGNKEY = `cat sign.key`
-APPSIG = `cat bin/app.sig`
-NANOS_ID = 1
-WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-PIN = 5555
-
 APPNAME      = "Cardano ADA"
 APPVERSION_M = 3
 APPVERSION_N = 0
 APPVERSION_P = 0
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
-APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'" --path "1853'/1815'" --path "1854'/1815'" --path "1855'/1815'"
-APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
-
+# used in Makefile.defines below
 ifeq ($(TARGET_NAME),TARGET_NANOX)
 	ICONNAME=icon_ada_nanox.gif
 else
 	ICONNAME=icon_ada_nanos.gif
 endif
 
-################
-# Default rule #
-################
-all: default
+
+ifeq ($(BOLOS_SDK),)
+$(error Environment variable BOLOS_SDK is not set)
+endif
+
+include $(BOLOS_SDK)/Makefile.defines
+
+
+##############
+#  Compiler  #
+##############
+
+ifeq ($(TARGET_NAME),TARGET_NANOX)
+WERROR   := -Werror=return-type
+else
+WERROR   := -Werror=incompatible-pointer-types -Werror=return-type
+endif
+
+CC       := $(CLANGPATH)clang
+CFLAGS   += -std=gnu99 -Wall -Wextra -Wuninitialized $(WERROR)
+
+AS       := $(GCCPATH)arm-none-eabi-gcc
+LD       := $(GCCPATH)arm-none-eabi-gcc
+LDFLAGS  += -Wall
+LDLIBS   += -lm -lgcc -lc
+
 
 ############
 # Platform #
 ############
+
 DEFINES += OS_IO_SEPROXYHAL
 DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 DEFINES += APPVERSION=\"$(APPVERSION)\"
@@ -105,40 +115,6 @@ else
 	DEFINES += PRINTF\(...\)=
 endif
 
-##############
-#  Compiler  #
-##############
-ifneq ($(BOLOS_ENV),)
-$(info BOLOS_ENV=$(BOLOS_ENV))
-CLANGPATH := $(BOLOS_ENV)/clang-arm-fropi/bin/
-GCCPATH   := $(BOLOS_ENV)/gcc-arm-none-eabi-5_3-2016q1/bin/
-else
-$(info BOLOS_ENV is not set: falling back to CLANGPATH and GCCPATH)
-endif
-ifeq ($(CLANGPATH),)
-$(info CLANGPATH is not set: clang will be used from PATH)
-endif
-ifeq ($(GCCPATH),)
-$(info GCCPATH is not set: arm-none-eabi-* will be used from PATH)
-endif
-
-ifeq ($(TARGET_NAME),TARGET_NANOX)
-WERROR   := -Werror=return-type
-else
-WERROR   := -Werror=incompatible-pointer-types -Werror=return-type
-endif
-
-CC       := $(CLANGPATH)clang
-CFLAGS   += -std=gnu99 -O3 -Os -Wall -Wextra -Wuninitialized $(WERROR)
-
-AS       := $(GCCPATH)arm-none-eabi-gcc
-LD       := $(GCCPATH)arm-none-eabi-gcc
-
-LDFLAGS  += -O3 -Os -Wall
-LDLIBS   += -lm -lgcc -lc
-
-##Enable to strip debug info from app
-#LDFLAGS  += -Wl,-s
 
 ##################
 #  Dependencies  #
@@ -155,9 +131,41 @@ ifeq ($(TARGET_NAME),TARGET_NANOX)
 	SDK_SOURCE_PATH  += lib_ux
 endif
 
+
+################
+# Default rule #
+################
+
+all: default
+
+
 ##############
 #   Build    #
 ##############
+
+# import generic rules from the sdk
+include $(BOLOS_SDK)/Makefile.rules
+
+#add dependency on custom makefile filename
+dep/%.d: %.c Makefile
+
+listvariants:
+	@echo VARIANTS COIN cardano_ada
+
+# part of CI
+analyze: clean
+	scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make default
+
+##############
+#   Load     #
+##############
+
+NANOS_ID = 1
+WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+PIN = 5555
+
+APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'"
+APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
 load: all
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
@@ -169,19 +177,20 @@ seed:
 	python -m ledgerblue.hostOnboard --id $(NANOS_ID) --words $(WORDS) --pin $(PIN)
 
 
-# import generic rules from the sdk
-include $(BOLOS_SDK)/Makefile.rules
-
-#add dependency on custom makefile filename
-dep/%.d: %.c Makefile
-
-listvariants:
-	@echo VARIANTS COIN cardano_ada
-
 ##############
 #   Style    #
 ##############
 
-# better to run this manually to avoid irrelevant dependencies processing
 format:
-	astyle --options=.astylerc src/*.h src/*.c
+	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c
+
+
+##############
+#    Size    #
+##############
+
+# prints app size, max is about 140K
+
+size: all
+	$(GCCPATH)arm-none-eabi-size --format=gnu bin/app.elf
+
