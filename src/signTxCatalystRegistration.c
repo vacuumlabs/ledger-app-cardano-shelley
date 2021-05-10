@@ -496,10 +496,10 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 		} wireResponse;
 
 		STATIC_ASSERT(SIZEOF(subctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong aux data hash length");
-		os_memmove(wireResponse.auxDataHash, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
+		memmove(wireResponse.auxDataHash, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 
 		STATIC_ASSERT(SIZEOF(subctx->stateData.registrationSignature) == ED25519_SIGNATURE_LENGTH, "Wrong Catalyst registration signature length");
-		os_memmove(wireResponse.signature, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
+		memmove(wireResponse.signature, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
 
 		io_send_buf(SUCCESS, (uint8_t*) &wireResponse, SIZEOF(wireResponse));
 		advanceState();

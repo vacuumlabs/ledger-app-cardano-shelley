@@ -152,8 +152,8 @@ void ui_displayPrompt(
 	promptState_t* ctx = promptState;
 
 	// Copy data
-	os_memmove(ctx->header, headerStr, header_len + 1);
-	os_memmove(ctx->text, bodyStr, text_len + 1);
+	memmove(ctx->header, headerStr, header_len + 1);
+	memmove(ctx->text, bodyStr, text_len + 1);
 
 	uiCallback_init(&ctx->callback, confirm, reject);
 	ctx->initMagic = INIT_MAGIC_PROMPT;
@@ -189,12 +189,12 @@ void ui_displayPaginatedText(
 	explicit_bzero(ctx, SIZEOF(*ctx));
 
 	// Copy data
-	os_memmove(ctx->header, headerStr, header_len);
-	os_memmove(ctx->fullText, bodyStr, body_len);
+	memmove(ctx->header, headerStr, header_len);
+	memmove(ctx->fullText, bodyStr, body_len);
 
 	ctx->scrollIndex = 0;
 
-	os_memmove(
+	memmove(
 	        ctx->currentText,
 	        ctx->fullText,
 	        SIZEOF(ctx->currentText) - 1

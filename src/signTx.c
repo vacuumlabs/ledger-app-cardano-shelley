@@ -284,7 +284,7 @@ static inline void checkForFinishedSubmachines()
 
 			STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
 			STATIC_ASSERT(SIZEOF(txAuxDataCtx->stageContext.catalyst_registration_subctx.auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
-			os_memmove(ctx->auxDataHash, txAuxDataCtx->stageContext.catalyst_registration_subctx.auxDataHash, AUX_DATA_HASH_LENGTH);
+			memmove(ctx->auxDataHash, txAuxDataCtx->stageContext.catalyst_registration_subctx.auxDataHash, AUX_DATA_HASH_LENGTH);
 
 			advanceStage();
 		}
@@ -694,7 +694,7 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 
 		VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
 
-		os_memmove(input.txHashBuffer, wireUtxo->txHash, SIZEOF(input.txHashBuffer));
+		memmove(input.txHashBuffer, wireUtxo->txHash, SIZEOF(input.txHashBuffer));
 		input.parsedIndex =  u4be_read(wireUtxo->index);
 	}
 

@@ -62,7 +62,7 @@ void io_send_buf(uint16_t code, uint8_t* buffer, size_t bufferSize)
 {
 	CHECK_RESPONSE_SIZE(bufferSize);
 
-	os_memmove(G_io_apdu_buffer, buffer, bufferSize);
+	memmove(G_io_apdu_buffer, buffer, bufferSize);
 	_io_send_G_io_apdu_buffer(code, bufferSize);
 }
 

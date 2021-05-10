@@ -212,12 +212,12 @@ static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer,
 
 			TRACE_BUFFER(wireHeader->poolKeyHash, SIZEOF(wireHeader->poolKeyHash));
 			STATIC_ASSERT(SIZEOF(wireHeader->poolKeyHash) == SIZEOF(p->poolKeyHash), "wrong poolKeyHash size");
-			os_memmove(p->poolKeyHash, wireHeader->poolKeyHash, SIZEOF(p->poolKeyHash));
+			memmove(p->poolKeyHash, wireHeader->poolKeyHash, SIZEOF(p->poolKeyHash));
 			// nothing to validate, all values are valid
 
 			TRACE_BUFFER(wireHeader->vrfKeyHash, SIZEOF(wireHeader->vrfKeyHash));
 			STATIC_ASSERT(SIZEOF(wireHeader->vrfKeyHash) == SIZEOF(p->vrfKeyHash), "wrong vrfKeyHash size");
-			os_memmove(p->vrfKeyHash, wireHeader->vrfKeyHash, SIZEOF(p->vrfKeyHash));
+			memmove(p->vrfKeyHash, wireHeader->vrfKeyHash, SIZEOF(p->vrfKeyHash));
 			// nothing to validate, all values are valid
 
 			ASSERT_TYPE(p->pledge, uint64_t);
@@ -244,7 +244,7 @@ static void signTxPoolRegistration_handlePoolParamsAPDU(uint8_t* wireDataBuffer,
 
 			TRACE_BUFFER(wireHeader->rewardAccount, SIZEOF(wireHeader->rewardAccount));
 			STATIC_ASSERT(SIZEOF(wireHeader->rewardAccount) == SIZEOF(p->rewardAccount), "wrong reward account size");
-			os_memmove(p->rewardAccount, wireHeader->rewardAccount, SIZEOF(p->rewardAccount));
+			memmove(p->rewardAccount, wireHeader->rewardAccount, SIZEOF(p->rewardAccount));
 			const uint8_t header = getAddressHeader(p->rewardAccount, SIZEOF(p->rewardAccount));
 			VALIDATE(getAddressType(header) == REWARD, ERR_INVALID_DATA);
 			VALIDATE(getNetworkId(header) == commonTxData->networkId, ERR_INVALID_DATA);
@@ -346,7 +346,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
 			VALIDATE(view_remainingSize(&view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 			STATIC_ASSERT(SIZEOF(subctx->owner.keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong owner.keyHash size");
-			os_memmove(subctx->owner.keyHash, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
+			memmove(subctx->owner.keyHash, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view));
 			TRACE_BUFFER(subctx->owner.keyHash, SIZEOF(subctx->owner.keyHash));
 			break;
 
@@ -618,7 +618,7 @@ static void handleMetadata_ui_runStep()
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_URL) {
 		char metadataUrlStr[1 + POOL_METADATA_URL_MAX_LENGTH];
 		ASSERT(md->urlSize <= POOL_METADATA_URL_MAX_LENGTH);
-		os_memcpy(metadataUrlStr, md->url, md->urlSize);
+		memcpy(metadataUrlStr, md->url, md->urlSize);
 		metadataUrlStr[md->urlSize] = '\0';
 		ASSERT(strlen(metadataUrlStr) == md->urlSize);
 
