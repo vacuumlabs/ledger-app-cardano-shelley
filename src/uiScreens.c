@@ -118,6 +118,7 @@ void ui_displayStakingKeyScreen(
 	);
 }
 
+// bech32 for Shelley, base58 for Byron
 void ui_displayAddressScreen(
         const char* screenHeader,
         const uint8_t* addressBuffer, size_t addressSize,

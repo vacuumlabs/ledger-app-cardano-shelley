@@ -425,6 +425,7 @@ void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* ou
 	ASSERT(len + 1 < outSize);
 }
 
+// bech32 for Shelley, base58 for Byron
 size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* out, size_t outSize)
 {
 	ASSERT(addressSize > 0);

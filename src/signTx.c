@@ -590,7 +590,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 			view_memmove(ctx->auxDataHash, &view, AUX_DATA_HASH_LENGTH);
 			txAuxDataCtx->auxDataReceived = true;
 			break;
-		case AUX_DATA_TYPE_CATALYST_VOTING_KEY_REGISTRATION:
+		case AUX_DATA_TYPE_CATALYST_REGISTRATION:
 			break;
 		default:
 			THROW(ERR_INVALID_DATA);
@@ -618,7 +618,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		signTx_handleAuxDataArbitraryHash_ui_runStep();
 		break;
 	}
-	case AUX_DATA_TYPE_CATALYST_VOTING_KEY_REGISTRATION:
+	case AUX_DATA_TYPE_CATALYST_REGISTRATION:
 		// select UI step
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
