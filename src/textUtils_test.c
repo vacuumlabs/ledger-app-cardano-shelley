@@ -31,7 +31,7 @@ void test_formatAda()
 	{
 		PRINTF("test_formatAda edge cases");
 		char tmp[16];
-		os_memset(tmp, 'X', SIZEOF(tmp));
+		memset(tmp, 'X', SIZEOF(tmp));
 		str_formatAdaAmount(0, tmp, 13);
 		EXPECT_EQ(tmp[12], 0);
 		EXPECT_EQ(tmp[13], 'X');

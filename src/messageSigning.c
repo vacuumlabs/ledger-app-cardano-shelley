@@ -27,7 +27,7 @@ static void signRawMessage(privateKey_t* privateKey,
 	io_seproxyhal_io_heartbeat();
 
 	ASSERT(signatureSize == ED25519_SIGNATURE_LENGTH);
-	os_memmove(outBuffer, signature, signatureSize);
+	memmove(outBuffer, signature, signatureSize);
 }
 
 static void signRawMessageWithPath(bip44_path_t* pathSpec,

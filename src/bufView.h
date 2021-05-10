@@ -89,7 +89,7 @@ static inline void view_appendData(write_view_t* view, const uint8_t* dataBuffer
 {
 	view_check(view);
 	VALIDATE(dataSize <= view_remainingSize(view), ERR_DATA_TOO_LARGE);
-	os_memcpy(view->ptr, dataBuffer, dataSize);
+	memcpy(view->ptr, dataBuffer, dataSize);
 	view->ptr += dataSize;
 	view_check(view);
 }
@@ -101,12 +101,12 @@ static inline cbor_token_t view_readToken(read_view_t* view)
 	return token;
 }
 
-// moves <length> bytes from the view to the buffer via os_memmove
+// moves <length> bytes from the view to the buffer via memmove
 // (view.ptr is advanced accordingly)
 static inline void view_memmove(uint8_t* destBuffer, read_view_t* view, size_t length)
 {
 	ASSERT(length <= view_remainingSize(view));
-	os_memmove(destBuffer, view->ptr, length);
+	memmove(destBuffer, view->ptr, length);
 	view_skipBytes(view, length);
 }
 

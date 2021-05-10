@@ -7,7 +7,7 @@
 static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
 {
 	pathSpec->length = pathLength;
-	os_memmove(pathSpec->path, pathArray, pathLength * 4);
+	memmove(pathSpec->path, pathArray, pathLength * 4);
 }
 
 void testcase_derivePrivateKey(uint32_t* path, uint32_t pathLen, const char* expectedHex)

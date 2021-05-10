@@ -37,7 +37,7 @@ size_t base58_encode(
 	ASSERT(inSize <= SIZEOF(tmpBuffer));
 	ASSERT(outMaxSize < BUFFER_SIZE_PARANOIA);
 
-	os_memmove(tmpBuffer, inBuffer, inSize);
+	memmove(tmpBuffer, inBuffer, inSize);
 
 	while ((zeroCount < inSize) && (tmpBuffer[zeroCount] == 0)) {
 		++zeroCount;
@@ -71,7 +71,7 @@ size_t base58_encode(
 
 	ASSERT(outSize < outMaxSize);
 
-	os_memmove(outStr, (buffer + j), outSize);
+	memmove(outStr, (buffer + j), outSize);
 	outStr[outSize] = 0;
 	return outSize;
 }
