@@ -330,6 +330,7 @@ static void signTx_handleInit_ui_runStep()
 			);
 		}
 	}
+	#ifndef FUZZING
 	UI_STEP(HANDLE_INIT_STEP_CONFIRM) {
 		ui_displayPrompt(
 		        "Start new",
@@ -338,6 +339,7 @@ static void signTx_handleInit_ui_runStep()
 		        respond_with_user_reject
 		);
 	}
+	#endif
 	UI_STEP(HANDLE_INIT_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 		advanceStage();

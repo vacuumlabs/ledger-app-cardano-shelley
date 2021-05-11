@@ -43,12 +43,12 @@ typedef enum {
 extern io_state_t io_state;
 
 // Everything below this point is Ledger magic
-
+#ifndef FUZZING
 void io_seproxyhal_display(const bagl_element_t *element);
 unsigned char io_event(unsigned char channel);
 
 bool device_is_unlocked();
-
+#endif
 #if defined(TARGET_NANOS)
 typedef void timeout_callback_fn_t(bool ux_allowed);
 void nanos_set_timer(int ms, timeout_callback_fn_t* cb);

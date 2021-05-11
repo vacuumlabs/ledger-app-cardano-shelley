@@ -77,6 +77,7 @@ void io_seproxyhal_display(const bagl_element_t *element)
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
+#ifndef FUZZING
 unsigned char io_event(unsigned char channel MARK_UNUSED)
 {
 	// can't have more than one tag in the reply, not supported yet.
@@ -124,6 +125,7 @@ unsigned char io_event(unsigned char channel MARK_UNUSED)
 	// command has been processed, DO NOT reset the current APDU transport
 	return 1;
 }
+#endif
 
 unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len)
 {
