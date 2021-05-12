@@ -933,6 +933,8 @@ void txHashBuilder_addWithdrawal(
         uint64_t amount
 )
 {
+	// should call cbor_mapKeyFulfillsCanonicalOrdering for withdrawals,
+	// but storing the previous withdrawal would increase the memory footprint of tx_hash_builder_t too much
 	_TRACE("state = %d, remainingWithdrawals = %u", builder->state, builder->remainingWithdrawals);
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_WITHDRAWALS);
