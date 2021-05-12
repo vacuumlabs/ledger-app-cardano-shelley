@@ -386,8 +386,19 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		STATIC_ASSERT(SIZEOF(tokenGroup->policyId) == MINTING_POLICY_ID_SIZE, "wrong policy id size");
-		view_copyWireToBuffer(tokenGroup->policyId, &view, MINTING_POLICY_ID_SIZE);
+		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE];
+		view_copyWireToBuffer(candidatePolicyId, &view, MINTING_POLICY_ID_SIZE);
+
+		if (subctx->currentAssetGroup > 0) {
+			// compare with previous value before overwriting it
+			VALIDATE(cbor_mapKeyFulfillsCanonicalOrdering(
+			                 tokenGroup->policyId, MINTING_POLICY_ID_SIZE,
+			                 candidatePolicyId, MINTING_POLICY_ID_SIZE
+			         ), ERR_INVALID_DATA);
+		}
+
+		STATIC_ASSERT(SIZEOF(tokenGroup->policyId) >= MINTING_POLICY_ID_SIZE, "wrong policyId length");
+		memmove(tokenGroup->policyId, candidatePolicyId, MINTING_POLICY_ID_SIZE);
 
 		uint32_t numTokens = parse_u4be(&view);
 		VALIDATE(numTokens <= OUTPUT_TOKENS_IN_GROUP_MAX, ERR_INVALID_DATA);
@@ -472,11 +483,22 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		token->assetNameSize = parse_u4be(&view);
-		VALIDATE(token->assetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
+		const size_t candidateAssetNameSize = parse_u4be(&view);
+		VALIDATE(candidateAssetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
+		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX];
+		view_copyWireToBuffer(candidateAssetNameBytes, &view, candidateAssetNameSize);
 
-		ASSERT(token->assetNameSize <= SIZEOF(token->assetNameBytes));
-		view_copyWireToBuffer(token->assetNameBytes, &view, token->assetNameSize);
+		if (subctx->currentToken > 0) {
+			// compare with previous value before overwriting it
+			VALIDATE(cbor_mapKeyFulfillsCanonicalOrdering(
+			                 token->assetNameBytes, token->assetNameSize,
+			                 candidateAssetNameBytes, candidateAssetNameSize
+			         ), ERR_INVALID_DATA);
+		}
+
+		token->assetNameSize = candidateAssetNameSize;
+		STATIC_ASSERT(SIZEOF(token->assetNameBytes) >= ASSET_NAME_SIZE_MAX, "wrong asset name buffer size");
+		memmove(token->assetNameBytes, candidateAssetNameBytes, candidateAssetNameSize);
 
 		token->amount = parse_u8be(&view);
 		TRACE_UINT64(token->amount);

@@ -85,6 +85,7 @@ typedef struct {
 typedef struct {
 	stake_credential_t stakeCredential;
 	uint64_t amount;
+	uint8_t previousRewardAccount[REWARD_ACCOUNT_SIZE];
 } sign_tx_withdrawal_data_t;
 
 typedef struct {
