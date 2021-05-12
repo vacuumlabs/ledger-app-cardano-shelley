@@ -1380,7 +1380,7 @@ static void signTx_handleWithdrawal_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void _addWithdrawalToTxHash()
+static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 {
 	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 
@@ -1406,6 +1406,22 @@ static void _addWithdrawalToTxHash()
 	default:
 		ASSERT(false);
 		return;
+	}
+
+	{
+		STATIC_ASSERT(SIZEOF(txBodyCtx->stageData.withdrawal.previousRewardAccount) == REWARD_ACCOUNT_SIZE, "wrong reward account buffer size");
+		STATIC_ASSERT(SIZEOF(rewardAddress) == REWARD_ACCOUNT_SIZE, "wrong reward account buffer size");
+
+		if (validateCanonicalOrdering) {
+			// compare with previous map entry
+			VALIDATE(cbor_mapKeyFulfillsCanonicalOrdering(
+			                 txBodyCtx->stageData.withdrawal.previousRewardAccount, REWARD_ACCOUNT_SIZE,
+			                 rewardAddress, REWARD_ACCOUNT_SIZE
+			         ), ERR_INVALID_DATA);
+		}
+
+		// update the value for potential future comparison
+		memmove(txBodyCtx->stageData.withdrawal.previousRewardAccount, rewardAddress, REWARD_ACCOUNT_SIZE);
 	}
 
 	TRACE("Adding withdrawal to tx hash");
@@ -1444,7 +1460,8 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 
 	}
 
-	_addWithdrawalToTxHash();
+	const bool validateCanonicalOrdering = txBodyCtx->currentWithdrawal > 0;
+	_addWithdrawalToTxHash(validateCanonicalOrdering);
 
 	security_policy_t policy = policyForSignTxWithdrawal(
 	                                   ctx->commonTxData.txSigningMode,
