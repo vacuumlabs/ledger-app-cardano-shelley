@@ -153,6 +153,13 @@ listvariants:
 #   Load     #
 ##############
 
+NANOS_ID = 1
+WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+PIN = 5555
+
+APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'"
+APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
+
 # TODO do we need this?
 ifeq ($(TARGET_NAME),TARGET_NANOX)
 	ICONNAME=icon_ada_nanox.gif
@@ -160,12 +167,6 @@ else
 	ICONNAME=icon_ada_nanos.gif
 endif
 
-NANOS_ID = 1
-WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-PIN = 5555
-
-APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'"
-APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
 load: all
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
