@@ -59,40 +59,79 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	return rawSize + suffixLength;
 }
 
+static size_t stringifyUint64ToBufferReverse(uint64_t number, char* buffer, size_t bufferSize)
+{
+	char* currChar = buffer;
+	char* const end = buffer + bufferSize;
+
+	// We print in reverse
+	// We want at least one iteration
+	size_t printedChars = 0;
+	do {
+		WRITE_CHAR(currChar, end, '0' + (number % 10));
+		number /= 10;
+		++printedChars;
+	} while (number > 0);
+	WRITE_CHAR(currChar, end, '\0');
+	return printedChars;
+}
+
+static void printReversedStringToBuffer(const char* reversed, char* out, size_t outSize)
+{
+	const size_t reversedSize = strlen(reversed);
+	if (reversedSize + 1 > outSize) {
+		THROW(ERR_DATA_TOO_LARGE);
+	}
+	for (size_t i = 0; i < reversedSize; i++) {
+		out[i] = reversed[reversedSize - 1 - i];
+	}
+	out[reversedSize] = 0;
+
+	ASSERT(strlen(out) == reversedSize);
+}
+
 size_t str_formatUint64(uint64_t number, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	char scratchBuffer[30];
-	char* ptr = BEGIN(scratchBuffer);
-	char* end = END(scratchBuffer);
+	{
+		char tmpReversed[30];
 
-	// We print in reverse
-	// We want at least one iteration
-	int place = 0;
-	do {
-		WRITE_CHAR(ptr, end, '0' + (number % 10));
-		number /= 10;
-		place++;
-	} while (number > 0);
-
-	// Size without terminating character
-	STATIC_ASSERT(sizeof(ptr - scratchBuffer) == sizeof(size_t), "bad size_t size");
-	size_t rawSize = (size_t) (ptr - scratchBuffer);
-
-	if (rawSize + 1 > outSize) {
-		THROW(ERR_DATA_TOO_LARGE);
+		stringifyUint64ToBufferReverse(number, tmpReversed, SIZEOF(tmpReversed));
+		const size_t reversedSize = strlen(tmpReversed);
+		printReversedStringToBuffer(tmpReversed, out, outSize);
+		ASSERT(strlen(out) == reversedSize);
 	}
+	return strlen(out);
+}
 
-	// Copy reversed & append terminator
-	for (size_t i = 0; i < rawSize; i++) {
-		out[i] = scratchBuffer[rawSize - 1 - i];
+size_t str_formatInt64(int64_t number, char* out, size_t outSize)
+{
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
+	uint64_t signlessNumber;
+	if (number < 0) {
+		if (INT64_MIN == number) {
+			signlessNumber = ((uint64_t)INT64_MAX) + 1;
+		} else {
+			signlessNumber = (uint64_t)(-number);
+		}
+	} else {
+		signlessNumber = (uint64_t)number;
 	}
-	out[rawSize] = 0;
-
-	ASSERT(strlen(out) == rawSize);
-
-	return rawSize;
+	{
+		char tmpReversed[30];
+		//size without the potential '-' sign
+		stringifyUint64ToBufferReverse(signlessNumber, tmpReversed, SIZEOF(tmpReversed) - 1);
+		size_t reversedLength = strlen(tmpReversed);
+		if (number < 0) {
+			snprintf(tmpReversed + reversedLength, SIZEOF(tmpReversed) - reversedLength, "%c", '-');
+			++reversedLength;
+		}
+		printReversedStringToBuffer(tmpReversed, out, outSize);
+		ASSERT(strlen(out) == reversedLength);
+	}
+	return strlen(out);
 }
 
 #ifdef DEVEL
