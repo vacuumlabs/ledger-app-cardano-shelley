@@ -9,4 +9,5 @@ src/glyphs.c
 .vscode
 fuzz/build
 fuzz/corpus
+fuzz/coverage
 

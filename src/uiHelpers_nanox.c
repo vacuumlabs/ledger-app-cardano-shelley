@@ -1,7 +1,7 @@
 #include <bolos_target.h> // we need target definitions
-#if defined(TARGET_NANOX)
+#if defined(TARGET_NANOX) || defined(HAVE_UX_FLOW)
 
-#include <os_io_seproxyhal.h>
+#include "ux.h"
 #include "uiHelpers.h"
 
 // Helper macro for better astyle formatting of UX_FLOW definitions
@@ -50,13 +50,18 @@ UX_FLOW(
 
 void ui_displayPaginatedText_run()
 {
+        ux_flow_init(0, ux_short_text_flow, NULL);
+        #ifdef FUZZING
+        ux_stack_push();
+        #endif
+        /*
 	if (strlen((const char*) &displayState.paginatedText.fullText) < 18 ) {
 		ux_flow_init(0, ux_short_text_flow, NULL);
 	} else {
 		ux_layout_bnnn_paging_reset();
 		ux_flow_init(0, ux_paginated_text_flow, NULL);
 
-	}
+	}*/
 }
 
 

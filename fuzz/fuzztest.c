@@ -1,85 +1,74 @@
-// cmake -Bbuild -GNinja -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-// .\fuzzer.exe ../corpus/
-// .\fuzzer_coverage.exe $(ls ../corpus/* | % {$_.FullName})
-// llvm-profdata merge -sparse *.profraw -o default.profdata 
-// llvm-cov report fuzzer_coverage.exe -instr-profile="default.profdata"
-// llvm-cov show fuzzer_coverage.exe -instr-profile="default.profdata" --format=html > report.html
-
 #include <stdint.h>
 #include <string.h>
-#include "lcx_hash.h"
-#include "lcx_blake2.h"
-#include "lcx_sha3.h"
+#include "cx.h"
+
 #include "signTx.h"
+#include "getPublicKeys.h"
 
-io_seph_app_t G_io_app;
 ux_state_t G_ux;
-bolos_ux_params_t G_ux_params;
-unsigned char G_io_apdu_buffer[260];
+uint8_t G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
 
-void os_longjmp(unsigned int exception) {
-    longjmp(try_context_get()->jmp_buf, exception);
-}
-try_context_t *current_context = NULL;
-try_context_t *try_context_get(void) {
-    return current_context;
-}
-try_context_t *try_context_set(try_context_t *ctx) {
-    try_context_t *previous_ctx = current_context;
-    current_context = ctx;
-    return previous_ctx;
-}
+#ifdef DEVEL
+#include "utils.h"
+unsigned int app_stack_canary = APP_STACK_CANARY_MAGIC;
+#endif
 
-bolos_task_status_t os_sched_last_status(unsigned int task_idx) {return 0;};
-unsigned short io_exchange(unsigned char chan, unsigned short tx_len) {return 0;};
-void * pic(void * linked_addr) {return linked_addr;}
-
-void io_seproxyhal_display_default(const bagl_element_t * bagl) {
-  char buf[256];
-  sprintf(buf, "%s", bagl->text);
-}
-
-void ui_idle() {};
-// void respondSuccessEmptyMsg() {};
-// bool device_is_unlocked() { return true; };
-
-unsigned int os_ux(bolos_ux_params_t * params) {return 0;};
-void io_seproxyhal_init_ux(void) {};
-void io_seproxyhal_init_button(void) {};
-unsigned int io_seph_is_status_sent (void) {return 1;};
-bolos_bool_t os_perso_isonboarded(void) {return 1;};
-void io_seproxyhal_general_status(void) {};
-void io_seph_send(const unsigned char * buffer, unsigned short length) {};
-unsigned short io_seph_recv ( unsigned char * buffer, unsigned short maxlength, unsigned int flags ) {return 0;};
-void halt() { for(;;); };
-bolos_bool_t os_global_pin_is_validated(void) {return 1;};
-cx_err_t cx_hash_no_throw(cx_hash_t *hash, uint32_t mode, const uint8_t *in, size_t len, uint8_t *out, size_t out_len) { return 0;};
-size_t cx_hash_get_size(const cx_hash_t *ctx) { return 32;};
-cx_err_t cx_blake2b_init_no_throw(cx_blake2b_t *hash, size_t size) {return 0;};
-cx_err_t cx_sha3_init_no_throw(cx_sha3_t *hash, size_t size) {return 0;};
-
-int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
-  uint8_t * data_ptr = Data;
-  size_t total_size = Size;
-
-  uint8_t commands[11] = {0x01, 0x08, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x09, 0x0a, 0x0f};
-  bool is_first = true;
-  if (Size > 2) {
-    BEGIN_TRY {
+void signTx_handleAPDU_no_throw(uint8_t p1, uint8_t p2, uint8_t *wireBuffer, size_t wireSize, bool isNewCall) {
+      BEGIN_TRY {
         TRY {
-          for (size_t i = 0; i<sizeof(commands); i++) {
-            size_t cur_size = MIN(256, total_size);
-            signTx_handleAPDU(commands[i], data_ptr[0], (uint8_t *)&data_ptr[1], cur_size-1, is_first);
-            is_first = false;
-            total_size -= cur_size; 
-            data_ptr += cur_size; 
-          }
-        }
+            signTx_handleAPDU(p1, p2, wireBuffer, wireSize, isNewCall);
+            }
         CATCH_ALL {
         } 
         FINALLY {
         }
     } END_TRY;
+}
+
+#if 0
+/*
+d721020024d25007ac021c5c18ca0ed4159497bdf072885342f6f69d8ea8123914909509fd00000000
+d72103304a0100000039010c3dad3a4d39ff842118de330532832976ed3745706ed4683c0865d7afe6e51594bf57d3abb6226f8325595ebac4775c7b9e860bb0acbe2700000000002b2cbd00000000
+d721033300
+d7210400080000000000029a03
+d7210500080000000001bd47cf
+d7210a0000
+*/
+int main() {
+  uint8_t Data[] = {1, 0, 0x1d, 0x01, 0x2d, 0x96, 0x4a, 0x09, 0x02, 0x01, 0x01, 0x03, 0x00, 0x00,
+    0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x01,
+    0x02, 0x00, 0x24, 0xD2, 0x50, 0x07, 0xAC, 0x02, 0x1C, 0x5C,
+    0x18, 0xCA, 0x0E, 0xD4, 0x15, 0x94, 0x97, 0xBD, 0xF0, 0x72, 0x88, 0x53,
+    0x42, 0xF6, 0xF6, 0x9D, 0x8E, 0xA8, 0x12, 0x39, 0x14, 0x90, 0x95, 0x09,
+    0xFD, 0x00, 0x00, 0x00, 0x00,
+    0x03, 0x30, 0x4a, 0x01, 0x00, 0x00, 0x00, 0x39, 0x01, 0x0C,
+    0x3D, 0xAD, 0x3A, 0x4D, 0x39, 0xFF, 0x84, 0x21, 0x18, 0xDE, 0x33, 0x05,
+    0x32, 0x83, 0x29, 0x76, 0xED, 0x37, 0x45, 0x70, 0x6E, 0xD4, 0x68, 0x3C,
+    0x08, 0x65, 0xD7, 0xAF, 0xE6, 0xE5, 0x15, 0x94, 0xBF, 0x57, 0xD3, 0xAB,
+    0xB6, 0x22, 0x6F, 0x83, 0x25, 0x59, 0x5E, 0xBA, 0xC4, 0x77, 0x5C, 0x7B,
+    0x9E, 0x86, 0x0B, 0xB0, 0xAC, 0xBE, 0x27, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x2B, 0x2C, 0xBD, 0x00, 0x00, 0x00, 0x00,
+    0x03, 0x33, 0x00,
+    0x04, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x9a, 0x03,
+    0x05, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x01, 0xbd, 0x47, 0xcf,
+    0x0a, 0x00, 0x00};
+  size_t Size = sizeof(Data);
+#else
+int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
+#endif
+
+  UX_INIT();
+
+  bool is_first = true;
+  uint8_t * input = Data;
+  size_t size = Size;
+  while ((size > 4) && (input[2] < size-4)) {
+    io_state = IO_EXPECT_NONE;
+    signTx_handleAPDU_no_throw(input[0], input[1], &input[3], input[2], is_first);
+    is_first = false;
+    size -= input[2] + 3;
+    input += input[2] + 3;
   }
   return 0;
 }

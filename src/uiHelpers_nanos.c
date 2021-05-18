@@ -1,5 +1,5 @@
 #include <bolos_target.h> // we need target definitions
-#ifdef TARGET_NANOS
+#if defined(TARGET_NANOS) && !defined(HAVE_UX_FLOW)
 
 #include "common.h"
 #include "uiHelpers.h"
