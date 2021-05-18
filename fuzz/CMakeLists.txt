@@ -19,7 +19,6 @@ if (FUZZ)
 add_compile_options(-O3)
 add_compile_options(-fsanitize=fuzzer,address)
 add_link_options(-fsanitize=fuzzer,address)
-else()
 add_compile_definitions(HAVE_PRINTF DEVEL PRINTF=printf)
 endif()
 

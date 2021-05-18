@@ -13,7 +13,7 @@ make
 ```shell
 mkdir ../corpus
 cp ../ref_corpus/* ../corpus/
-./fuzzer ../corpus/
+./fuzzer ../corpus/ -close_fd_mask=1
 ```
 
 ### Windows
@@ -28,7 +28,7 @@ ninja
 ```shell
 mkdir ../corpus
 copy ../ref_corpus/valid_tx ../corpus/valid_tx
-./fuzzer.exe ../corpus/
+./fuzzer.exe ../corpus/ -close_fd_mask=1
 ```
 
 ## Coverage information
