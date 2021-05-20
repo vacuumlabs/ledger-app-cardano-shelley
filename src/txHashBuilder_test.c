@@ -105,6 +105,53 @@ static struct {
 
 static const char* expectedHex = "58dc0efc7a2d654795ae3b7c85518065bb123f17056406732c18d1553cc2510f";
 
+typedef void(*addTokenGroupFun)(tx_hash_builder_t* builder,
+                                const uint8_t* policyIdBuffer, size_t policyIdSize,
+                                uint16_t numTokens);
+typedef void(*addTokenFun)(tx_hash_builder_t* builder,
+                           const uint8_t* assetNameBuffer, size_t assetNameSize,
+                           uint64_t amount);
+
+static void addTwoMultiassetTokengroups(tx_hash_builder_t* builder,
+                                        addTokenGroupFun tokenGroupAdder, addTokenFun tokenAdder)
+{
+	// we reuse the buffers to avoid wasting stack
+	uint8_t policy[MINTING_POLICY_ID_SIZE];
+	explicit_bzero(policy, SIZEOF(policy));
+
+	uint8_t assetNameBuffer[ASSET_NAME_SIZE_MAX];
+	explicit_bzero(assetNameBuffer, SIZEOF(assetNameBuffer));
+
+	policy[0] = 1;
+	tokenGroupAdder(builder, policy, SIZEOF(policy), 2);
+
+	assetNameBuffer[0] = 11;
+	tokenAdder(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 110);
+	assetNameBuffer[0] = 12;
+	tokenAdder(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 120);
+
+	policy[0] = 2;
+	tokenGroupAdder(builder, policy, SIZEOF(policy), 2);
+
+	assetNameBuffer[0] = 21;
+	tokenAdder(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 210);
+	assetNameBuffer[0] = 22;
+	// use a short buffer on purpose
+	tokenAdder(builder, assetNameBuffer, 1, 220);
+}
+
+static void addMintTokenProxy(tx_hash_builder_t* builder,
+                              const uint8_t* assetNameBuffer, size_t assetNameSize,
+                              uint64_t amount)
+{
+	txHashBuilder_addMint_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
+}
+
+static void addMultiassetMint(tx_hash_builder_t* builder)
+{
+	txHashBuilder_addMint_topLevelData(builder, 2);
+	addTwoMultiassetTokengroups(builder, &txHashBuilder_addMint_tokenGroup, &addMintTokenProxy);
+}
 
 static void addMultiassetOutput(tx_hash_builder_t* builder)
 {
@@ -117,29 +164,7 @@ static void addMultiassetOutput(tx_hash_builder_t* builder)
 	        2
 	);
 
-	// we reuse the buffers to avoid wasting stack
-	uint8_t policy[MINTING_POLICY_ID_SIZE];
-	explicit_bzero(policy, SIZEOF(policy));
-
-	uint8_t assetNameBuffer[ASSET_NAME_SIZE_MAX];
-	explicit_bzero(assetNameBuffer, SIZEOF(assetNameBuffer));
-
-	policy[0] = 1;
-	txHashBuilder_addOutput_tokenGroup(builder, policy, SIZEOF(policy), 2);
-
-	assetNameBuffer[0] = 11;
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 110);
-	assetNameBuffer[0] = 12;
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 120);
-
-	policy[0] = 2;
-	txHashBuilder_addOutput_tokenGroup(builder, policy, SIZEOF(policy), 2);
-
-	assetNameBuffer[0] = 21;
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 210);
-	assetNameBuffer[0] = 22;
-	// use a short buffer on purpose
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, 1, 220);
+	addTwoMultiassetTokengroups(builder, &txHashBuilder_addOutput_tokenGroup, &txHashBuilder_addOutput_token);
 }
 
 static void addOutputs(tx_hash_builder_t* builder)
@@ -278,6 +303,17 @@ static void addCertificates(tx_hash_builder_t* builder)
 	}
 }
 
+static void addMint(tx_hash_builder_t* builder)
+{
+	txHashBuilder_enterMint(builder);
+
+	addMultiassetMint(builder);
+
+	// added for the second time to more thoroughly check the state machine
+	// addMultiassetOutput(builder);
+
+}
+
 void run_txHashBuilder_test()
 {
 	PRINTF("txHashBuilder test\n");
@@ -293,7 +329,8 @@ void run_txHashBuilder_test()
 	                   true, // ttl
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
-	                   true // validity interval start
+	                   true, // validity interval start
+					   false
 	                  );
 
 	txHashBuilder_enterInputs(&builder);
@@ -326,6 +363,8 @@ void run_txHashBuilder_test()
 		        it->amount
 		);
 	}
+
+	// addMint(&builder);
 
 	{
 		const char auxDataHashHex[] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";

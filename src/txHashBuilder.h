@@ -14,6 +14,7 @@ enum {
 	// TX_BODY_KEY_UPDATE = 6, // not used
 	TX_BODY_KEY_AUX_DATA = 7,
 	TX_BODY_KEY_VALIDITY_INTERVAL_START = 8,
+	TX_BODY_KEY_MINT = 9,
 };
 
 /* The state machine of the tx hash builder is driven by user calls.
@@ -41,9 +42,13 @@ typedef enum {
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS = 612,
 	TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA = 613,
 	TX_HASH_BUILDER_IN_WITHDRAWALS = 700,
-	TX_HASH_BUILDER_IN_AUX_DATA = 800,
-	TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START = 900,
-	TX_HASH_BUILDER_FINISHED = 1000,
+	TX_HASH_BUILDER_IN_MINT = 800,
+	TX_HASH_BUILDER_IN_MINT_TOP_LEVEL_DATA = 810,
+	TX_HASH_BUILDER_IN_MINT_ASSET_GROUP = 811,
+	TX_HASH_BUILDER_IN_MINT_TOKEN = 812,
+	TX_HASH_BUILDER_IN_AUX_DATA = 900,
+	TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START = 1000,
+	TX_HASH_BUILDER_FINISHED = 1100,
 } tx_hash_builder_state_t;
 
 typedef struct {
@@ -54,6 +59,7 @@ typedef struct {
 	bool includeTtl;
 	bool includeAuxData;
 	bool includeValidityIntervalStart;
+	bool includeMint;
 
 	union {
 		struct {
@@ -64,7 +70,7 @@ typedef struct {
 		struct {
 			uint16_t remainingAssetGroups;
 			uint16_t remainingTokens;
-		} outputData;
+		} multiAssetData;
 	};
 
 	tx_hash_builder_state_t state;
@@ -80,7 +86,8 @@ void txHashBuilder_init(
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeAuxData,
-        bool includeValidityIntervalStart
+        bool includeValidityIntervalStart,
+        bool includeMint
 );
 
 void txHashBuilder_enterInputs(tx_hash_builder_t* builder);
@@ -174,6 +181,21 @@ void txHashBuilder_addAuxData(
 void txHashBuilder_addValidityIntervalStart(
         tx_hash_builder_t* builder,
         uint64_t validityIntervalStart
+);
+
+void txHashBuilder_enterMint(tx_hash_builder_t* builder);
+void txHashBuilder_addMint_topLevelData(
+        tx_hash_builder_t* builder, uint16_t numAssetGroups
+);
+void txHashBuilder_addMint_tokenGroup(
+        tx_hash_builder_t* builder,
+        const uint8_t* policyIdBuffer, size_t policyIdSize,
+        uint16_t numTokens
+);
+void txHashBuilder_addMint_token(
+        tx_hash_builder_t* builder,
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
+        int64_t amount
 );
 
 void txHashBuilder_finalize(

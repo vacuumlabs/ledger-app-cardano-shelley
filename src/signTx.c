@@ -97,7 +97,8 @@ static inline void advanceStage()
 			        ctx->numCertificates,
 			        ctx->numWithdrawals,
 			        ctx->includeAuxData,
-			        ctx->includeValidityIntervalStart
+			        ctx->includeValidityIntervalStart,
+					false
 			);
 			txHashBuilder_enterInputs(&txBodyCtx->txHashBuilder);
 		}
