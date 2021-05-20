@@ -91,7 +91,8 @@ static inline void advanceStage()
 			        ctx->numCertificates,
 			        ctx->numWithdrawals,
 			        ctx->includeAuxData,
-			        ctx->includeValidityIntervalStart
+			        ctx->includeValidityIntervalStart,
+			        false	//TODO: ledgerJs will send this info down later
 			);
 			txHashBuilder_enterInputs(&txBodyCtx->txHashBuilder);
 		}
