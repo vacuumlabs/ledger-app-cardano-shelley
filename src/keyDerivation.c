@@ -47,7 +47,7 @@ void derivePrivateKey(
 			// should work with the new SDK
 			privateKey->curve = CX_CURVE_Ed25519;
 			privateKey->d_len = 64;
-			os_memmove(privateKey->d, privateKeyRawBuffer, 64);
+			memmove(privateKey->d, privateKeyRawBuffer, 64);
 		}
 		FINALLY {
 			explicit_bzero(privateKeyRawBuffer, SIZEOF(privateKeyRawBuffer));
@@ -125,7 +125,7 @@ void deriveExtendedPublicKey(
 			// Chain code (we copy it second to avoid mid-updates extractRawPublicKey throws
 			STATIC_ASSERT(CHAIN_CODE_SIZE == SIZEOF(out->chainCode), "bad chain code size");
 			STATIC_ASSERT(CHAIN_CODE_SIZE == SIZEOF(chainCode.code), "bad chain code size");
-			os_memmove(out->chainCode, chainCode.code, CHAIN_CODE_SIZE);
+			memmove(out->chainCode, chainCode.code, CHAIN_CODE_SIZE);
 		}
 		FINALLY {
 			explicit_bzero(&privateKey, SIZEOF(privateKey));

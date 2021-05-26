@@ -46,7 +46,7 @@ static void scroll_update_display_content()
 	assert_uiPaginatedText_magic();
 	ASSERT(ctx->currentText[SIZEOF(ctx->currentText) - 1] == '\0');
 	ASSERT(ctx->scrollIndex + SIZEOF(ctx->currentText) <= SIZEOF(ctx->fullText));
-	os_memmove(
+	memmove(
 	        ctx->currentText,
 	        ctx->fullText + ctx->scrollIndex,
 	        SIZEOF(ctx->currentText) - 1
