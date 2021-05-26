@@ -58,7 +58,7 @@ void txHashBuilder_init(
         uint16_t numWithdrawals,
         bool includeAuxData,
         bool includeValidityIntervalStart,
-		bool includeMint
+        bool includeMint
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -205,7 +205,7 @@ void txHashBuilder_addOutput_topLevelData(
 		}
 		builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
 	} else {
-		builder->multiAssetData.remainingAssetGroups = numAssetGroups;
+		builder->multiassetData.remainingAssetGroups = numAssetGroups;
 		// Array(2)[
 		//   Bytes[address]
 		//   Array(2)[]
@@ -240,14 +240,14 @@ static void addTokenGroup(tx_hash_builder_t* builder,
                           tx_hash_builder_state_t mandatoryState,
                           tx_hash_builder_state_t nextState)
 {
-	_TRACE("state = %u, remainingAssetGroups = %u", builder->state, builder->multiAssetData.remainingAssetGroups);
+	_TRACE("state = %u, remainingAssetGroups = %u", builder->state, builder->multiassetData.remainingAssetGroups);
 
 	ASSERT(builder->state == mandatoryState);
-	ASSERT(builder->multiAssetData.remainingAssetGroups > 0);
-	builder->multiAssetData.remainingAssetGroups--;
+	ASSERT(builder->multiassetData.remainingAssetGroups > 0);
+	builder->multiassetData.remainingAssetGroups--;
 
 	ASSERT(numTokens > 0);
-	builder->multiAssetData.remainingTokens = numTokens;
+	builder->multiassetData.remainingTokens = numTokens;
 
 	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
 
@@ -275,11 +275,11 @@ static void addToken(tx_hash_builder_t* builder,
                      tx_hash_builder_state_t nextGroupState,
                      tx_hash_builder_state_t leaveState)
 {
-	_TRACE("state = %u, remainingTokens = %u", builder->state, builder->multiAssetData.remainingTokens);
+	_TRACE("state = %u, remainingTokens = %u", builder->state, builder->multiassetData.remainingTokens);
 
 	ASSERT(builder->state == mandatoryState);
-	ASSERT(builder->multiAssetData.remainingTokens > 0);
-	builder->multiAssetData.remainingTokens--;
+	ASSERT(builder->multiassetData.remainingTokens > 0);
+	builder->multiassetData.remainingTokens--;
 
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 
@@ -296,8 +296,8 @@ static void addToken(tx_hash_builder_t* builder,
 		}
 	}
 
-	if (builder->multiAssetData.remainingTokens == 0) {
-		if (builder->multiAssetData.remainingAssetGroups == 0)
+	if (builder->multiassetData.remainingTokens == 0) {
+		if (builder->multiassetData.remainingAssetGroups == 0)
 			builder->state = leaveState;
 		else
 			builder->state = nextGroupState;
@@ -979,7 +979,7 @@ void txHashBuilder_addMint_topLevelData(
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_MINT);
 
-	builder->multiAssetData.remainingAssetGroups = numAssetGroups;
+	builder->multiassetData.remainingAssetGroups = numAssetGroups;
 	// Map(numAssetGroups)[
 	//   { * policy_id => { * asset_name => uint } }
 	// ]
@@ -1018,7 +1018,7 @@ void txHashBuilder_addMint_token(
 static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %u, remainingMintAssetGroups = %u, remainingMintTokens = %u",
-	       builder->state, builder->multiAssetData.remainingAssetGroups, builder->multiAssetData.remainingTokens);
+	       builder->state, builder->multiassetData.remainingAssetGroups, builder->multiassetData.remainingTokens);
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_MINT:
@@ -1038,8 +1038,8 @@ static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 		ASSERT(false);
 	}
 
-	ASSERT(builder->multiAssetData.remainingAssetGroups == 0);
-	ASSERT(builder->multiAssetData.remainingTokens == 0);
+	ASSERT(builder->multiassetData.remainingAssetGroups == 0);
+	ASSERT(builder->multiassetData.remainingTokens == 0);
 }
 
 

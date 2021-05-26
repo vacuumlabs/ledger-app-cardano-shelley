@@ -112,7 +112,7 @@ typedef void(*addTokenFun)(tx_hash_builder_t* builder,
                            const uint8_t* assetNameBuffer, size_t assetNameSize,
                            uint64_t amount);
 
-static void addTwoMultiassetTokengroups(tx_hash_builder_t* builder,
+static void addTwoMultiassetTokenGroups(tx_hash_builder_t* builder,
                                         addTokenGroupFun tokenGroupAdder, addTokenFun tokenAdder)
 {
 	// we reuse the buffers to avoid wasting stack
@@ -150,7 +150,7 @@ static void addMintTokenProxy(tx_hash_builder_t* builder,
 static void addMultiassetMint(tx_hash_builder_t* builder)
 {
 	txHashBuilder_addMint_topLevelData(builder, 2);
-	addTwoMultiassetTokengroups(builder, &txHashBuilder_addMint_tokenGroup, &addMintTokenProxy);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addMint_tokenGroup, &addMintTokenProxy);
 }
 
 static void addMultiassetOutput(tx_hash_builder_t* builder)
@@ -164,7 +164,7 @@ static void addMultiassetOutput(tx_hash_builder_t* builder)
 	        2
 	);
 
-	addTwoMultiassetTokengroups(builder, &txHashBuilder_addOutput_tokenGroup, &txHashBuilder_addOutput_token);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &txHashBuilder_addOutput_token);
 }
 
 static void addOutputs(tx_hash_builder_t* builder)
@@ -330,7 +330,7 @@ void run_txHashBuilder_test()
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
 	                   true, // validity interval start
-					   false
+	                   false // mint
 	                  );
 
 	txHashBuilder_enterInputs(&builder);
