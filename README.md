@@ -71,10 +71,12 @@ Ordinarily, Ledger computes a rolling hash of the serialized transaction body, b
 
 4. Send a single `signTx` call to Ledger (e.g. by running `yarn test-integration --grep "<some-signTx-test>"`).
 
-5. After the call is processed, the terminal running console printing now contains all log messages resulting from that `signTx` call. (See the `TRACE*` macros.) Extract the transaction body logs (dumped by the function computing the rolling tx hash; you can identify them by function names following the pattern `blake2b_256_append*tx_body`) and merge them into a single hexstring like this:
+5. After the call is processed, the terminal running console printing now contains all log messages resulting from that `signTx` call. (See the `TRACE*` macros.) Extract the transaction body logs (dumped by the function computing the rolling tx hash; you can identify them by function names following the pattern `blake2b_256_append*tx_body`) and merge them into a single hexstring. You can use the following javascript to achieve it:
 
-       const x = <content of the log file>
-       console.log(x.split('\n').filter((x) => x.includes('blake2b_256_append'))
+```javascript
+       const logfile = "<content of the log file>"
+       console.log(logfile.split('\n').filter((x) => x.includes('blake2b_256_append'))
            .map((x) => x.split(' ')[1]).join(''))
+```
 
 6. Analyze the obtained output via https://cbor.me.
