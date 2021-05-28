@@ -56,7 +56,7 @@ typedef struct {
 		top_level_output_data_t output;
 		struct {
 			token_group_t tokenGroup;
-			token_amount_t token;
+			output_token_amount_t token;
 		};
 	} stateData;
 

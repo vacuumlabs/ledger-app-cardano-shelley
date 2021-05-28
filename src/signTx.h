@@ -9,6 +9,7 @@
 #include "txHashBuilder.h"
 #include "bip44.h"
 #include "addressUtilsShelley.h"
+#include "signTxMint.h"
 #include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
 #include "signTxCatalystRegistration.h"
@@ -35,8 +36,10 @@ typedef enum {
 	SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE = 32, // pool registration certificate sub-machine
 	SIGN_STAGE_BODY_WITHDRAWALS = 33,
 	SIGN_STAGE_BODY_VALIDITY_INTERVAL = 34,
-	SIGN_STAGE_CONFIRM = 35,
-	SIGN_STAGE_WITNESSES = 36,
+	SIGN_STAGE_BODY_MINT = 35,
+	SIGN_STAGE_BODY_MINT_SUBMACHINE = 36,
+	SIGN_STAGE_CONFIRM = 37,
+	SIGN_STAGE_WITNESSES = 38,
 } sign_tx_stage_t;
 
 enum {
@@ -91,7 +94,8 @@ typedef struct {
 
 	bool feeReceived;
 	bool ttlReceived;
-	bool validityIntervalStartReceived;
+	bool validityIntervalStartReceived;	////////////////////////////////////////////////////////////////
+	bool mintReceived;
 
 	// TODO move these to commonTxData?
 	tx_hash_builder_t txHashBuilder;
@@ -108,6 +112,7 @@ typedef struct {
 	union {
 		pool_registration_context_t pool_registration_subctx;
 		output_context_t output_subctx;
+		mint_context_t mint_subctx;
 	} stageContext;
 } ins_sign_tx_body_context_t;
 
@@ -129,7 +134,8 @@ typedef struct {
 	bool includeTtl;
 	uint16_t numCertificates;
 	uint16_t numWithdrawals; // reward withdrawals
-	bool includeValidityIntervalStart;
+	bool includeValidityIntervalStart;////////////////////////////////////////////////////////////////
+	bool includeMint;
 	uint16_t numWitnesses;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];

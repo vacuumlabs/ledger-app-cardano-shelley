@@ -431,7 +431,7 @@ size_t deriveAssetFingerprint(
 
 void ui_displayAssetFingerprintScreen(
         token_group_t* tokenGroup,
-        token_amount_t* token,
+        uint8_t* assetNameBytes, size_t assetNameSize,
         ui_callback_fn_t callback
 )
 {
@@ -439,7 +439,7 @@ void ui_displayAssetFingerprintScreen(
 
 	deriveAssetFingerprint(
 	        tokenGroup->policyId, SIZEOF(tokenGroup->policyId),
-	        token->assetNameBytes, token->assetNameSize,
+	        assetNameBytes, assetNameSize,
 	        fingerprint, SIZEOF(fingerprint)
 	);
 	ASSERT(strlen(fingerprint) + 1 <= SIZEOF(fingerprint));

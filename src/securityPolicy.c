@@ -663,6 +663,31 @@ security_policy_t policyForSignTxValidityIntervalStart()
 	SHOW();
 }
 
+security_policy_t policyForSignTxMintDefault()
+{
+	ALLOW();
+}
+
+security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy)
+{
+	switch (outputPolicy) {
+	case POLICY_ALLOW_WITHOUT_PROMPT:
+		ALLOW();
+		break;
+
+	case POLICY_SHOW_BEFORE_RESPONSE:
+		PROMPT();
+		ALLOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
+
 security_policy_t policyForSignTxConfirm()
 {
 	PROMPT();
