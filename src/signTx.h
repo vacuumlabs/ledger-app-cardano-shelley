@@ -94,7 +94,7 @@ typedef struct {
 
 	bool feeReceived;
 	bool ttlReceived;
-	bool validityIntervalStartReceived;	////////////////////////////////////////////////////////////////
+	bool validityIntervalStartReceived;
 	bool mintReceived;
 
 	// TODO move these to commonTxData?

@@ -1786,6 +1786,8 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
 	case SIGN_STAGE_BODY_WITHDRAWALS:
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
+	case SIGN_STAGE_BODY_MINT:
+	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
 		explicit_bzero(&txBodyCtx->stageData, SIZEOF(txBodyCtx->stageData));
 		break;
 	default:
