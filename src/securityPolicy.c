@@ -103,6 +103,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 		break;
 
 	default:
+		// TODO should multisig keys be allowed here?
 		DENY();
 		break;
 	}
@@ -134,6 +135,7 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 		break;
 
 	default:
+		// TODO should multisig keys be allowed here?
 		DENY();
 		break;
 	}

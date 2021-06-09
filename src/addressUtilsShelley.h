@@ -14,6 +14,7 @@ typedef enum {
 	ENTERPRISE = 0b0110,  // 0x6
 	BYRON      = 0b1000,  // 0x8
 	REWARD     = 0b1110,  // 0xE
+	MULTISIG   = 0b1111,  // 0xF TODO
 } address_type_t;
 
 uint8_t getAddressHeader(uint8_t* addressBuffer, size_t addressSize);
