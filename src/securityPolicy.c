@@ -13,7 +13,7 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 	ASSERT(isValidAddressParams(addressParams));
 
 #define CHECK(cond) if (!(cond)) return false
-	CHECK(addressParams->type == BASE);
+	CHECK(addressParams->type == BASE_STAKE_KEY_PAYMENT_KEY);
 	CHECK(addressParams->stakingChoice == STAKING_KEY_PATH);
 
 	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_WALLET_SPENDING_KEY);
@@ -35,7 +35,7 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 {
 	ASSERT(isValidAddressParams(addressParams));
 
-	return addressParams->type == REWARD;
+	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
 bool is_tx_network_verifiable(
@@ -237,7 +237,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	} else { // shelley
 		uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
 		DENY_IF(addressNetworkId != networkId);
-		DENY_IF(addressType == REWARD);
+		DENY_IF(addressType == REWARD_KEY || addressType == REWARD_SCRIPT);
 	}
 
 	switch (signTxUsecase) {

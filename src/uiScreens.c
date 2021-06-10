@@ -350,11 +350,11 @@ void ui_displayStakingInfoScreen(
 			heading = STAKING_HEADING_WARNING;
 			strncpy(stakingInfo, "legacy Byron address (no staking rewards)", SIZEOF(stakingInfo));
 
-		} else if (addressParams->type == ENTERPRISE) {
+		} else if (addressParams->type == ENTERPRISE_KEY || addressParams->type == ENTERPRISE_SCRIPT) {
 			heading = STAKING_HEADING_WARNING;
 			strncpy(stakingInfo, "no staking rewards", SIZEOF(stakingInfo));
 
-		} else if (addressParams->type == REWARD) {
+		} else if (addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT) {
 			heading = STAKING_HEADING_WARNING;
 			strncpy(stakingInfo, "reward account", SIZEOF(stakingInfo));
 

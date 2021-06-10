@@ -22,11 +22,17 @@ address_type_t getAddressType(uint8_t addressHeader)
 bool isSupportedAddressType(uint8_t addressType)
 {
 	switch (addressType) {
-	case BASE:
-	case POINTER:
-	case ENTERPRISE:
+	case BASE_STAKE_KEY_PAYMENT_KEY:
+	case BASE_STAKE_KEY_PAYMENT_SCRIPT:
+	case BASE_STAKE_SCRIPT_PAYMENT_KEY:
+	case BASE_STAKE_SCRIPT_PAYMENT_SCRIPT:
+	case POINTER_KEY:
+	case POINTER_SCRIPT:
+	case ENTERPRISE_KEY:
+	case ENTERPRISE_SCRIPT:
 	case BYRON:
-	case REWARD:
+	case REWARD_KEY:
+	case REWARD_SCRIPT:
 		return true;
 	default:
 		return false;
@@ -36,10 +42,16 @@ bool isSupportedAddressType(uint8_t addressType)
 bool isShelleyAddressType(uint8_t addressType)
 {
 	switch (addressType) {
-	case BASE:
-	case POINTER:
-	case ENTERPRISE:
-	case REWARD:
+	case BASE_STAKE_KEY_PAYMENT_KEY:
+	case BASE_STAKE_KEY_PAYMENT_SCRIPT:
+	case BASE_STAKE_SCRIPT_PAYMENT_KEY:
+	case BASE_STAKE_SCRIPT_PAYMENT_SCRIPT:
+	case POINTER_KEY:
+	case POINTER_SCRIPT:
+	case ENTERPRISE_KEY:
+	case ENTERPRISE_SCRIPT:
+	case REWARD_KEY:
+	case REWARD_SCRIPT:
 		return true;
 	default:
 		return false;
@@ -84,18 +96,26 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 
 	switch (addressParams->type) {
 
-	case BASE:
+	case BASE_STAKE_KEY_PAYMENT_KEY:
+	case BASE_STAKE_KEY_PAYMENT_SCRIPT:
 		CONSISTENT_WITH(STAKING_KEY_HASH);
 		CONSISTENT_WITH(STAKING_KEY_PATH);
 		break;
 
-	case POINTER:
+	// TODO KoMa ???
+	// case BASE_STAKE_SCRIPT_PAYMENT_KEY:
+	// case BASE_STAKE_SCRIPT_PAYMENT_SCRIPT:
+
+	case POINTER_KEY:
+	case POINTER_SCRIPT:
 		CONSISTENT_WITH(BLOCKCHAIN_POINTER);
 		break;
 
-	case ENTERPRISE:
+	case ENTERPRISE_KEY:
+	case ENTERPRISE_SCRIPT:
 	case BYRON:
-	case REWARD:
+	case REWARD_KEY:
+	case REWARD_SCRIPT:
 		CONSISTENT_WITH(NO_STAKING);
 		break;
 
@@ -154,7 +174,7 @@ static size_t deriveAddress_base_stakingKeyHash(
         uint8_t* outBuffer, size_t outSize
 )
 {
-	ASSERT(getAddressType(addressHeader) == BASE);
+	ASSERT(getAddressType(addressHeader) == BASE_STAKE_KEY_PAYMENT_KEY);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
@@ -177,7 +197,7 @@ static size_t deriveAddress_base_stakingKeyHash(
 
 static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize)
 {
-	ASSERT(addressParams->type == BASE);
+	ASSERT(addressParams->type == BASE_STAKE_KEY_PAYMENT_KEY || addressParams->type == BASE_STAKE_KEY_PAYMENT_SCRIPT);
 
 	const uint8_t header = constructShelleyAddressHeader(
 	                               addressParams->type, addressParams->networkId
@@ -247,7 +267,10 @@ static size_t deriveAddress_pointer(
         uint8_t* outBuffer, size_t outSize
 )
 {
-	ASSERT(getAddressType(addressHeader) == POINTER);
+	// TODO spendingKeyPath means the address should be constructed with a keyhash
+	// (so the _SCRIPT version is not good here)
+	// same for the other address types
+	ASSERT(getAddressType(addressHeader) == POINTER_KEY || getAddressType(addressHeader) == POINTER_SCRIPT);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
@@ -271,7 +294,7 @@ static size_t deriveAddress_enterprise(
         uint8_t* outBuffer, size_t outSize
 )
 {
-	ASSERT(getAddressType(addressHeader) == ENTERPRISE);
+	ASSERT(getAddressType(addressHeader) == ENTERPRISE_KEY);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
@@ -298,7 +321,7 @@ static size_t deriveAddress_reward(
 {
 	TRACE_STACK_USAGE();
 
-	ASSERT(getAddressType(addressHeader) == REWARD);
+	ASSERT(getAddressType(addressHeader) == REWARD_KEY || getAddressType(addressHeader) == REWARD_SCRIPT);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
@@ -330,7 +353,7 @@ size_t constructRewardAddressFromKeyPath(
 
 	TRACE_STACK_USAGE();
 
-	const uint8_t header = constructShelleyAddressHeader(REWARD, networkId);
+	const uint8_t header = constructShelleyAddressHeader(REWARD_KEY, networkId);
 	return deriveAddress_reward(
 	               header, path,
 	               outBuffer, outSize
@@ -349,7 +372,7 @@ size_t constructRewardAddressFromKeyHash(
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
-		const uint8_t addressHeader = constructShelleyAddressHeader(REWARD, networkId);
+		const uint8_t addressHeader = constructShelleyAddressHeader(REWARD_KEY, networkId);
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
@@ -374,14 +397,20 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 	const uint8_t header = constructShelleyAddressHeader(addressParams->type, addressParams->networkId);
 
 	switch (addressParams->type) {
-	case BASE:
+	case BASE_STAKE_KEY_PAYMENT_KEY:
+	case BASE_STAKE_KEY_PAYMENT_SCRIPT:
+	// case BASE_STAKE_SCRIPT_PAYMENT_KEY:
+	// case BASE_STAKE_SCRIPT_PAYMENT_SCRIPT:
 		return deriveAddress_base(addressParams, outBuffer, outSize);
-	case POINTER:
+	case POINTER_KEY:
+	// case POINTER_SCRIPT:
 		ASSERT(addressParams->stakingChoice == BLOCKCHAIN_POINTER);
 		return deriveAddress_pointer(header, spendingPath, &addressParams->stakingKeyBlockchainPointer, outBuffer, outSize);
-	case ENTERPRISE:
+	case ENTERPRISE_KEY:
+	// case ENTERPRISE_SCRIPT:
 		return deriveAddress_enterprise(header, spendingPath, outBuffer, outSize);
-	case REWARD:
+	case REWARD_KEY:
+	// case REWARD_SCRIPT:
 		return deriveAddress_reward(header, spendingPath, outBuffer, outSize);
 	case BYRON:
 		ASSERT(false);
@@ -428,23 +457,23 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 	const uint8_t networkId = getNetworkId(address[0]);
 	ASSERT(isValidNetworkId(networkId));
 
+	// TODO: for base addresses do we construct the "stake cred" or the "payment cred" address here?
 	switch (addressType) {
 	case BYRON:
 		return base58_encode(address, addressSize, out, outSize);
 
-	case REWARD:
+	case REWARD_KEY:
 		if (networkId == TESTNET_NETWORK_ID)
 			return bech32_encode("stake_test", address, addressSize, out, outSize);
 		else
 			return bech32_encode("stake", address, addressSize, out, outSize);
 
-/*
-	case MULTISIG:
+	case REWARD_SCRIPT:
 		if (networkId == TESTNET_NETWORK_ID)
-			return bech32_encode("addr_shared_test", address, addressSize, out, outSize);
+			return bech32_encode("stake_shared_test", address, addressSize, out, outSize);
 		else
-			return bech32_encode("addr_shared", address, addressSize, out, outSize);
-*/
+			return bech32_encode("stake_shared", address, addressSize, out, outSize);
+
 	default: // all other shelley addresses
 		if (networkId == TESTNET_NETWORK_ID)
 			return bech32_encode("addr_test", address, addressSize, out, outSize);
@@ -552,7 +581,7 @@ static inline bool isSpendingPathConsistentWithAddressType(const address_type_t 
 	} else {
 		CHECK(bip44_hasShelleyPrefix(spendingPath));
 	}
-
+	//TODO KoMa
 	if (addressType == REWARD) {
 		CHECK(bip44_isValidStakingKeyPath(spendingPath));
 	} else {

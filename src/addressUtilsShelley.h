@@ -7,12 +7,24 @@
 #include "bufView.h"
 
 // supported address types
-// (we avoid all types related to scripts)
+// (we avoid all types related to scripts) NOT ANYMORE, BABY!
 typedef enum {
+	BASE_STAKE_KEY_PAYMENT_KEY 			= 0b0000,
+	BASE_STAKE_KEY_PAYMENT_SCRIPT 		= 0b0001,
+	BASE_STAKE_SCRIPT_PAYMENT_KEY 		= 0b0010,
+	BASE_STAKE_SCRIPT_PAYMENT_SCRIPT 	= 0b0011,
+	POINTER_KEY							= 0b0100,
+	POINTER_SCRIPT						= 0b0101,
+	ENTERPRISE_KEY						= 0b0110,
+	ENTERPRISE_SCRIPT					= 0b0111,
+	BYRON								= 0b1000,
+	REWARD_KEY							= 0b1110,
+	REWARD_SCRIPT						= 0b1111,
+
 	BASE       = 0b0000,  // 0x0
 	POINTER    = 0b0100,  // 0x4
 	ENTERPRISE = 0b0110,  // 0x6
-	BYRON      = 0b1000,  // 0x8
+	// BYRON      = 0b1000,  // 0x8
 	REWARD     = 0b1110,  // 0xE
 	MULTISIG   = 0b1111,  // 0xF TODO
 } address_type_t;
