@@ -134,7 +134,7 @@ typedef struct {
 	bool includeTtl;
 	uint16_t numCertificates;
 	uint16_t numWithdrawals; // reward withdrawals
-	bool includeValidityIntervalStart;////////////////////////////////////////////////////////////////
+	bool includeValidityIntervalStart;
 	bool includeMint;
 	uint16_t numWitnesses;
 

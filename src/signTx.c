@@ -27,14 +27,14 @@ static inline void initTxBodyCtx()
 
 	{
 		// initialization
-		txBodyCtx->mintReceived = false;
-		txBodyCtx->validityIntervalStartReceived = false;
-		txBodyCtx->feeReceived = false;
-		txBodyCtx->ttlReceived = false;
 		txBodyCtx->currentInput = 0;
 		txBodyCtx->currentOutput = 0;
 		txBodyCtx->currentCertificate = 0;
 		txBodyCtx->currentWithdrawal = 0;
+		txBodyCtx->feeReceived = false;
+		txBodyCtx->ttlReceived = false;
+		txBodyCtx->validityIntervalStartReceived = false;
+		txBodyCtx->mintReceived = false;
 	}
 }
 
@@ -188,6 +188,8 @@ static inline void advanceStage()
 		ctx->stage = SIGN_STAGE_BODY_MINT;
 		if (ctx->includeMint) {
 			// wait for mint APDU
+			txHashBuilder_enterMint(&txBodyCtx->txHashBuilder);
+			signTxMint_init();
 			break;
 		}
 
@@ -1517,8 +1519,6 @@ static void signTx_handleMintAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	}
 
 	if (ctx->stage == SIGN_STAGE_BODY_MINT) {
-		txHashBuilder_enterMint(&txBodyCtx->txHashBuilder);
-		signTxMint_init();
 		ctx->stage = SIGN_STAGE_BODY_MINT_SUBMACHINE;
 	}
 

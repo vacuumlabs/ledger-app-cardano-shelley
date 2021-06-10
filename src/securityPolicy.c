@@ -677,7 +677,6 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy)
 
 	case POLICY_SHOW_BEFORE_RESPONSE:
 		PROMPT();
-		ALLOW();
 		break;
 
 	default:
