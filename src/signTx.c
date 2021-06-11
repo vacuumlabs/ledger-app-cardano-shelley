@@ -187,9 +187,9 @@ static inline void advanceStage()
 		}
 		ctx->stage = SIGN_STAGE_BODY_MINT;
 		if (ctx->includeMint) {
-			// wait for mint APDU
 			txHashBuilder_enterMint(&txBodyCtx->txHashBuilder);
 			signTxMint_init();
+			// wait for mint APDU
 			break;
 		}
 

@@ -283,7 +283,8 @@ static void addToken(tx_hash_builder_t* builder,
                      uint64_t amount,
                      tx_hash_builder_state_t mandatoryState,
                      tx_hash_builder_state_t nextGroupState,
-                     tx_hash_builder_state_t leaveState)
+                     tx_hash_builder_state_t leaveState,
+                     cbor_type_tag_t typeTag)
 {
 	_TRACE("state = %d, remainingTokens = %u", builder->state, builder->multiassetData.remainingTokens);
 
@@ -302,7 +303,7 @@ static void addToken(tx_hash_builder_t* builder,
 			BUILDER_APPEND_DATA(assetNameBuffer, assetNameSize);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
+			BUILDER_APPEND_CBOR(typeTag, amount);
 		}
 	}
 
@@ -336,7 +337,8 @@ void txHashBuilder_addOutput_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         TX_HASH_BUILDER_IN_OUTPUTS_TOKEN,
 	         TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP,
-	         TX_HASH_BUILDER_IN_OUTPUTS);
+	         TX_HASH_BUILDER_IN_OUTPUTS,
+	         CBOR_TYPE_UNSIGNED);
 }
 
 static void txHashBuilder_assertCanLeaveOutputs(tx_hash_builder_t* builder)
@@ -1127,7 +1129,8 @@ void txHashBuilder_addMint_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         TX_HASH_BUILDER_IN_MINT_TOKEN,
 	         TX_HASH_BUILDER_IN_MINT_ASSET_GROUP,
-	         TX_HASH_BUILDER_IN_MINT);
+	         TX_HASH_BUILDER_IN_MINT,
+	         amount < 0 ? CBOR_TYPE_NEGATIVE : CBOR_TYPE_UNSIGNED);
 }
 
 static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
