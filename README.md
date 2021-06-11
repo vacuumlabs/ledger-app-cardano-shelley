@@ -16,8 +16,8 @@ Builds and loads the application into connected device. Just make sure to close 
 
 In `Makefile`, uncomment
 
-    #DEFINE+=DEVEL
-    #DEFINE+=HEADLESS
+    #DEVEL = 1
+    #DEFINES += HEADLESS
 
 also comment out
 
