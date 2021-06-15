@@ -92,8 +92,11 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 	switch (bip44_classifyPath(pathSpec)) {
 
 	case PATH_WALLET_ACCOUNT:
+	case PATH_MULTISIG_ACCOUNT:
 	case PATH_WALLET_SPENDING_KEY:
+	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_WALLET_STAKING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_POOL_COLD_KEY:
 		if (bip44_isPathReasonable(pathSpec)) {
 			PROMPT();
@@ -117,8 +120,11 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	switch (bip44_classifyPath(pathSpec)) {
 
 	case PATH_WALLET_ACCOUNT:
+	case PATH_MULTISIG_ACCOUNT:
 	case PATH_WALLET_SPENDING_KEY:
+	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_WALLET_STAKING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
 		if (bip44_isPathReasonable(pathSpec)) {
 			ALLOW();
 		} else {
@@ -151,7 +157,9 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
 	case PATH_WALLET_SPENDING_KEY:
+	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_WALLET_STAKING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
 		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
 			PROMPT();
 		} else {
@@ -175,7 +183,9 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
 	case PATH_WALLET_SPENDING_KEY:
+	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_WALLET_STAKING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
 		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
 			SHOW();
 		} else {
@@ -590,7 +600,9 @@ security_policy_t policyForSignTxWitness(
 		switch (bip44_classifyPath(pathSpec)) {
 
 		case PATH_WALLET_SPENDING_KEY:
+		case PATH_MULTISIG_SPENDING_KEY:
 		case PATH_WALLET_STAKING_KEY:
+		case PATH_MULTISIG_STAKING_KEY:
 		case PATH_POOL_COLD_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
 				ALLOW();

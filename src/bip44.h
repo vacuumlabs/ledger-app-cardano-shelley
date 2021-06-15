@@ -16,7 +16,7 @@ typedef struct {
 
 static const uint32_t PURPOSE_BYRON = 44;
 static const uint32_t PURPOSE_SHELLEY = 1852;
-static const uint32_t PURPOSE_SHELLEY_MULTISIG = 1854;
+static const uint32_t PURPOSE_MULTISIG = 1854;
 
 static const uint32_t PURPOSE_POOL_COLD_KEY = 1853;
 
@@ -47,7 +47,7 @@ enum {
 
 bool bip44_hasByronPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec);
-bool bip44_hasShellyMultisigPrefix(const bip44_path_t* pathSpec);
+bool bip44_hasMultisigPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasValidCardanoWalletPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
@@ -76,18 +76,18 @@ size_t bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
 typedef enum {
 	// hd wallet account
 	PATH_WALLET_ACCOUNT,
+	PATH_MULTISIG_ACCOUNT,
 
 	// hd wallet address
 	PATH_WALLET_SPENDING_KEY,
+	PATH_MULTISIG_SPENDING_KEY,
 
 	// hd wallet reward adress, withdrawal witness, pool owner
 	PATH_WALLET_STAKING_KEY,
+	PATH_MULTISIG_STAKING_KEY,
 
 	// pool cold key in pool registrations and retirements
 	PATH_POOL_COLD_KEY,
-
-	// multisig key
-	PATH_MULTISIG_KEY,
 
 	// not one of the above
 	PATH_INVALID,
