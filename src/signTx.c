@@ -432,6 +432,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		case SIGN_TX_USECASE_ORDINARY_TX:
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		case SIGN_TX_USECASE_MULTISIG:
 			// these usecases are allowed
 			break;
 
@@ -473,6 +474,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			break;
 
 		case SIGN_TX_USECASE_ORDINARY_TX:
+		case SIGN_TX_USECASE_MULTISIG:
 			// no additional validation
 			break;
 
@@ -512,6 +514,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 				                  (size_t) ctx->numCertificates +
 				                  (size_t) ctx->numWithdrawals;
 				break;
+
+			case SIGN_TX_USECASE_MULTISIG:
+				maxNumWitnesses = SIGN_MAX_WITNESSES;
 
 			default:
 				ASSERT(false);

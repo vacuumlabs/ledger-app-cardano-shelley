@@ -20,6 +20,7 @@ typedef enum {
 	SIGN_TX_USECASE_ORDINARY_TX = 3, // enum value 3 is needed for backwards compatibility
 	SIGN_TX_USECASE_POOL_REGISTRATION_OWNER = 4,
 	SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR = 5,
+	SIGN_TX_USECASE_MULTISIG = 6,	// TODO this comes from the wire directly, so need to look up the specification
 } sign_tx_usecase_t;
 
 typedef enum {
@@ -46,7 +47,8 @@ enum {
 	SIGN_MAX_INPUTS = 1000,
 	SIGN_MAX_OUTPUTS = 1000,
 	SIGN_MAX_CERTIFICATES = 1000,
-	SIGN_MAX_REWARD_WITHDRAWALS = 1000
+	SIGN_MAX_REWARD_WITHDRAWALS = 1000,
+	SIGN_MAX_WITNESSES = SIGN_MAX_INPUTS + SIGN_MAX_OUTPUTS + SIGN_MAX_CERTIFICATES + SIGN_MAX_REWARD_WITHDRAWALS,
 };
 
 typedef struct {

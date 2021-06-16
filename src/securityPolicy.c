@@ -266,6 +266,10 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		SHOW();
 		break;
 
+	case SIGN_TX_USECASE_MULTISIG:
+		SHOW();
+		break;
+
 	default:
 		ASSERT(false);
 	}
@@ -292,7 +296,8 @@ security_policy_t policyForSignTxOutputAddressParams(
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_ORDINARY_TX: {
+	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG: {
 		switch (bip44_classifyPath(&params->spendingKeyPath)) {
 
 		case PATH_WALLET_SPENDING_KEY:
@@ -354,6 +359,7 @@ security_policy_t policyForSignTxFee(
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG:
 		// always show the fee if it is paid by the signer
 		SHOW();
 		break;
@@ -389,6 +395,7 @@ security_policy_t policyForSignTxCertificate(
 {
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
@@ -436,6 +443,7 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG:
 		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
 		PROMPT();
 		break;
@@ -595,7 +603,8 @@ security_policy_t policyForSignTxWitness(
 {
 	switch (signTxUsecase) {
 
-	case SIGN_TX_USECASE_ORDINARY_TX: {
+	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG: {
 
 		switch (bip44_classifyPath(pathSpec)) {
 
@@ -624,6 +633,7 @@ security_policy_t policyForSignTxWitness(
 		switch (bip44_classifyPath(pathSpec)) {
 
 		case PATH_WALLET_STAKING_KEY:
+		case PATH_MULTISIG_STAKING_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
 				ALLOW();
 			} else {
@@ -644,6 +654,7 @@ security_policy_t policyForSignTxWitness(
 		switch (bip44_classifyPath(pathSpec)) {
 
 		case PATH_WALLET_SPENDING_KEY:
+		case PATH_MULTISIG_SPENDING_KEY:
 		case PATH_POOL_COLD_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
 				ALLOW();
