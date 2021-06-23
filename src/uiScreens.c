@@ -369,19 +369,26 @@ void ui_displayStakingInfoScreen(
 		break;
 
 	case STAKING_KEY_HASH:
+	case STAKING_SCRIPT_HASH: {
+		const uint8_t* const stakingHash = (STAKING_KEY_HASH == addressParams->stakingChoice ? addressParams->stakingKeyHash : addressParams->stakingScriptHash);
 		heading = STAKING_HEADING_HASH;
+		STATIC_ASSERT(SCRIPT_HASH_LENGTH == ADDRESS_KEY_HASH_LENGTH, "incompatible hash lengths");
+		STATIC_ASSERT(SCRIPT_HASH_LENGTH == SIZEOF(addressParams->stakingKeyHash), "staking key hash length is wrong");
+		STATIC_ASSERT(SCRIPT_HASH_LENGTH == SIZEOF(addressParams->stakingScriptHash), "staking script hash length is wrong");
 		size_t length = encode_hex(
-		                        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
+		                        stakingHash, SCRIPT_HASH_LENGTH,
 		                        stakingInfo, SIZEOF(stakingInfo)
 		                );
 		ASSERT(length == strlen(stakingInfo));
-		ASSERT(length == 2 * SIZEOF(addressParams->stakingKeyHash));
+		ASSERT(length == 2 * SCRIPT_HASH_LENGTH);
 		break;
+	}
 
 	case BLOCKCHAIN_POINTER:
 		heading = STAKING_HEADING_POINTER;
 		printBlockchainPointerToStr(addressParams->stakingKeyBlockchainPointer, stakingInfo, SIZEOF(stakingInfo));
 		break;
+
 
 	default:
 		ASSERT(false);

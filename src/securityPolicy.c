@@ -13,7 +13,7 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 	ASSERT(isValidAddressParams(addressParams));
 
 #define CHECK(cond) if (!(cond)) return false
-	CHECK(addressParams->type == BASE_STAKE_KEY_PAYMENT_KEY);
+	CHECK(addressParams->type == BASE_PAYMENT_KEY_STAKE_KEY);
 	CHECK(addressParams->stakingChoice == STAKING_KEY_PATH);
 
 	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_WALLET_SPENDING_KEY);
@@ -154,21 +154,45 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
-	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
+	switch (addressParams->type)
+	{
+	case BASE_PAYMENT_KEY_STAKE_KEY:		
+	case BASE_PAYMENT_KEY_STAKE_SCRIPT: 	
+	case POINTER_KEY:	
+	case ENTERPRISE_KEY:
+	case BYRON:
+	case REWARD_KEY:
+		switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_MULTISIG_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
-	case PATH_MULTISIG_STAKING_KEY:
-		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
-			PROMPT();
-		} else {
-			WARN();
+		case PATH_WALLET_SPENDING_KEY:
+		case PATH_MULTISIG_SPENDING_KEY:
+		case PATH_WALLET_STAKING_KEY:
+		case PATH_MULTISIG_STAKING_KEY:
+			if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
+				PROMPT();
+			} else {
+				WARN();
+			}
+			break;
+
+		default:
+			DENY();
+			break;
 		}
 		break;
-
+	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
+	case POINTER_SCRIPT:
+	case ENTERPRISE_SCRIPT:
+		//TODO prepare UI machines properly
+		PROMPT();
+		break;
+	case REWARD_SCRIPT:
+		//TODO do reward staking scripts need this at all?
+		PROMPT();
+		break;
+	
 	default:
-		DENY();
 		break;
 	}
 
@@ -180,22 +204,27 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
-	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
+	if (SPENDING_PATH == determineSpendingChoice(addressParams)) {
+		switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_MULTISIG_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
-	case PATH_MULTISIG_STAKING_KEY:
-		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
-			SHOW();
-		} else {
-			WARN();
+		case PATH_WALLET_SPENDING_KEY:
+		case PATH_MULTISIG_SPENDING_KEY:
+		case PATH_WALLET_STAKING_KEY:
+		case PATH_MULTISIG_STAKING_KEY:
+			if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
+				SHOW();
+			} else {
+				WARN();
+			}
+			break;
+
+		default:
+			DENY();
+			break;
 		}
-		break;
-
-	default:
-		DENY();
-		break;
+	} else {
+		//TODO work out UI machines to handle PROMPT/WARN
+		WARN();
 	}
 
 	DENY(); // should not be reached
@@ -605,7 +634,6 @@ security_policy_t policyForSignTxWitness(
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
 	case SIGN_TX_USECASE_MULTISIG: {
-
 		switch (bip44_classifyPath(pathSpec)) {
 
 		case PATH_WALLET_SPENDING_KEY:
@@ -629,11 +657,9 @@ security_policy_t policyForSignTxWitness(
 	}
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
-
 		switch (bip44_classifyPath(pathSpec)) {
 
 		case PATH_WALLET_STAKING_KEY:
-		case PATH_MULTISIG_STAKING_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
 				ALLOW();
 			} else {
@@ -650,11 +676,9 @@ security_policy_t policyForSignTxWitness(
 	}
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
-
 		switch (bip44_classifyPath(pathSpec)) {
 
 		case PATH_WALLET_SPENDING_KEY:
-		case PATH_MULTISIG_SPENDING_KEY:
 		case PATH_POOL_COLD_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
 				ALLOW();
@@ -758,7 +782,6 @@ security_policy_t policyForCatalystRegistrationConfirm()
 
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 {
-
 	switch (bip44_classifyPath(poolColdKeyPathSpec)) {
 
 	case PATH_POOL_COLD_KEY:

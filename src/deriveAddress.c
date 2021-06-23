@@ -75,11 +75,19 @@ static void deriveAddress_return_ui_runStep()
 		);
 	}
 	UI_STEP(RETURN_UI_STEP_SPENDING_PATH) {
-		ui_displayPathScreen(
-		        "Export address",
-		        &ctx->addressParams.spendingKeyPath,
-		        this_fn
-		);
+		if (SPENDING_PATH == determineSpendingChoice(&ctx->addressParams)) {
+			ui_displayPathScreen(
+					"Export address",
+					&ctx->addressParams.spendingKeyPath,
+					this_fn
+			);
+		} else {
+			ui_displayHexBufferScreen(
+				"Script hash",
+				ctx->addressParams.spendingScriptHash,
+				SCRIPT_HASH_LENGTH,
+				this_fn);
+		}
 	}
 	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
 		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
@@ -108,7 +116,7 @@ static void deriveAddress_display_ui_runStep();
 enum {
 	DISPLAY_UI_STEP_WARNING = 200,
 	DISPLAY_UI_STEP_INSTRUCTIONS,
-	DISPLAY_UI_STEP_PATH,
+	DISPLAY_UI_SPENDING_INFO,
 	DISPLAY_UI_STEP_STAKING_INFO,
 	DISPLAY_UI_STEP_ADDRESS,
 	DISPLAY_UI_STEP_RESPOND,
@@ -157,12 +165,20 @@ static void deriveAddress_display_ui_runStep()
 		        this_fn
 		);
 	}
-	UI_STEP(DISPLAY_UI_STEP_PATH) {
-		ui_displayPathScreen(
-		        "Address path",
-		        &ctx->addressParams.spendingKeyPath,
-		        this_fn
-		);
+	UI_STEP(DISPLAY_UI_SPENDING_INFO) {
+		if (SPENDING_PATH == determineSpendingChoice(&ctx->addressParams)) {
+			ui_displayPathScreen(
+					"Address path",
+					&ctx->addressParams.spendingKeyPath,
+					this_fn
+			);
+		} else {
+			ui_displayHexBufferScreen(
+				"Script hash",
+				ctx->addressParams.spendingScriptHash,
+				SCRIPT_HASH_LENGTH,
+				this_fn);
+		}
 	}
 	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
 		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);

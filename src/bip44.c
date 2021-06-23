@@ -86,7 +86,7 @@ bool bip44_hasValidCardanoWalletPrefix(const bip44_path_t* pathSpec)
 {
 	// TODO should bip44_hasMultisigPrefix come here? does it fulfill the
 	// "path is valid as the spending path in all addresses except REWARD" ?
-	return bip44_hasByronPrefix(pathSpec) || bip44_hasShelleyPrefix(pathSpec);
+	return bip44_hasByronPrefix(pathSpec) || bip44_hasShelleyPrefix(pathSpec) || bip44_hasMultisigPrefix(pathSpec);
 }
 
 bool bip44_hasValidCardanoPoolColdKeyPrefix(const bip44_path_t* pathSpec)
@@ -300,7 +300,7 @@ bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec)
 		}
 	}
 
-	if (bip44_hasValidCardanoWalletPrefix(pathSpec) || bip44_hasMultisigPrefix(pathSpec)) {
+	if (bip44_hasValidCardanoWalletPrefix(pathSpec)) {
 		return bip44_classifyCardanoWalletPath(pathSpec);
 	}
 

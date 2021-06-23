@@ -1220,6 +1220,7 @@ static void _addCertificateDataToTx(
 __noinline_due_to_stack__
 static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	// scripthash must be added next to paths
 	TRACE_STACK_USAGE();
 
 	ASSERT(txBodyCtx->currentCertificate < ctx->numCertificates);
