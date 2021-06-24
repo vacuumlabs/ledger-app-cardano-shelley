@@ -19,7 +19,7 @@ if (FUZZ)
 add_compile_options(-O3)
 add_compile_options(-fsanitize=fuzzer,address)
 add_link_options(-fsanitize=fuzzer,address)
-add_compile_definitions(HAVE_PRINTF DEVEL PRINTF=printf)
+add_compile_definitions(HAVE_PRINTF PRINTF=printf)
 endif()
 
 add_compile_definitions(
@@ -82,9 +82,11 @@ set(SOURCES
 		../src/base58.c
 		../src/bech32.c
 		../src/bip44.c
+		../src/cardano.c
 		../src/cbor.c
 		../src/crc32.c
 		../src/io.c
+		../src/ipUtils.c
 		../src/keyDerivation.c
 		../src/hexUtils.c
 		../src/messageSigning.c

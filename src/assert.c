@@ -18,7 +18,7 @@ void assert(
 	io_seproxyhal_se_reset();
 	#else
 	{
-		#ifdef DEVEL
+		#if defined(DEVEL) || defined(FUZZING)
 		{
 			PRINTF("Assertion failed %s\n", msgStr);
 			ui_displayPaginatedText("Assertion failed", msgStr, NULL);
