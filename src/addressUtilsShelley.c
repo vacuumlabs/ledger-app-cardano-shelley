@@ -77,9 +77,9 @@ bool isValidNetworkId(uint8_t networkId)
 	return networkId <= 0b1111;
 }
 
-bool isValidStakingChoice(staking_choice_t stakingChoice)
+bool isValidStakingChoice(staking_data_source_t stakingDataSource)
 {
-	switch (stakingChoice) {
+	switch (stakingDataSource) {
 	case NO_STAKING:
 	case STAKING_KEY_PATH:
 	case STAKING_KEY_HASH:
@@ -93,18 +93,20 @@ bool isValidStakingChoice(staking_choice_t stakingChoice)
 
 bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams)
 {
-#define CONSISTENT_WITH(STAKING_CHOICE) if (addressParams->stakingChoice == (STAKING_CHOICE)) return true
+#define CONSISTENT_WITH(STAKING_CHOICE) if (addressParams->stakingDataSource == (STAKING_CHOICE)) return true
 
 	switch (addressParams->type) {
 
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+	case REWARD_KEY:
 		CONSISTENT_WITH(STAKING_KEY_HASH);
 		CONSISTENT_WITH(STAKING_KEY_PATH);
 		break;
 
 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
 	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
+	case REWARD_SCRIPT:
 		CONSISTENT_WITH(STAKING_SCRIPT_HASH);
 
 	case POINTER_KEY:
@@ -115,8 +117,6 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 	case ENTERPRISE_KEY:
 	case ENTERPRISE_SCRIPT:
 	case BYRON:
-	case REWARD_KEY:
-	case REWARD_SCRIPT:
 		CONSISTENT_WITH(NO_STAKING);
 		break;
 
@@ -159,46 +159,41 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 	STATIC_ASSERT(SIZEOF(addressParams->spendingScriptHash) == SCRIPT_HASH_LENGTH, "bad spending script hash size");
 	switch (addressParams->type) {
 	case BASE_PAYMENT_KEY_STAKE_KEY:
-	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
-		{
-			view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
-			size += ADDRESS_KEY_HASH_LENGTH;
-		}
-		break;
+	case BASE_PAYMENT_KEY_STAKE_SCRIPT: {
+		view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
+		size += ADDRESS_KEY_HASH_LENGTH;
+	}
+	break;
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
-	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
-		{
-			view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
-			size += SCRIPT_HASH_LENGTH;
-		}
-		break;
+	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT: {
+		view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+		size += SCRIPT_HASH_LENGTH;
+	}
+	break;
 	default:
 		ASSERT(false);
 	}
 
 	STATIC_ASSERT(SIZEOF(addressParams->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "bad staking key hash size");
 	STATIC_ASSERT(SIZEOF(addressParams->stakingScriptHash) == SCRIPT_HASH_LENGTH, "bad staking script hash size");
-	switch (addressParams->stakingChoice) {
-	case STAKING_KEY_PATH:
-		{
-			view_appendAddressPublicKeyHash(&out, &addressParams->stakingKeyPath);
-			size += ADDRESS_KEY_HASH_LENGTH;
-		}
-		break;
+	switch (addressParams->stakingDataSource) {
+	case STAKING_KEY_PATH: {
+		view_appendAddressPublicKeyHash(&out, &addressParams->stakingKeyPath);
+		size += ADDRESS_KEY_HASH_LENGTH;
+	}
+	break;
 
-	case STAKING_KEY_HASH:
-		{
-			view_appendData(&out, addressParams->stakingKeyHash, ADDRESS_KEY_HASH_LENGTH);
-			size += ADDRESS_KEY_HASH_LENGTH;
-		}
-		break;
+	case STAKING_KEY_HASH: {
+		view_appendData(&out, addressParams->stakingKeyHash, ADDRESS_KEY_HASH_LENGTH);
+		size += ADDRESS_KEY_HASH_LENGTH;
+	}
+	break;
 
-	case STAKING_SCRIPT_HASH:
-		{
-			view_appendData(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
-			size += SCRIPT_HASH_LENGTH;
-		}
-		break;
+	case STAKING_SCRIPT_HASH: {
+		view_appendData(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
+		size += SCRIPT_HASH_LENGTH;
+	}
+	break;
 	default:
 		ASSERT(false);
 	}
@@ -323,17 +318,17 @@ static size_t deriveAddress_reward(
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
-		if (addressType == REWARD_KEY) {
-			const bip44_path_t* spendingKeyPath = &addressParams->spendingKeyPath;
-			// staking key path expected (corresponds to reward account)
-			ASSERT(bip44_isValidStakingKeyPath(spendingKeyPath));
-			view_appendAddressPublicKeyHash(&out, spendingKeyPath);
-		} else {
-			view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
-		}
+		// no spending data
 	}
 	{
-		// no staking data
+		if (addressType == REWARD_KEY) {
+			const bip44_path_t* stakingKeyPath = &addressParams->stakingKeyPath;
+			// staking key path expected (corresponds to reward account)
+			ASSERT(bip44_isValidStakingKeyPath(stakingKeyPath));
+			view_appendAddressPublicKeyHash(&out, stakingKeyPath);
+		} else {
+			view_appendData(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
+		}
 	}
 
 	STATIC_ASSERT(SCRIPT_HASH_LENGTH == ADDRESS_KEY_HASH_LENGTH, "incompatible hash lengths");
@@ -355,8 +350,8 @@ size_t constructRewardAddressFromKeyPath(
 	addressParams_t addressParamsStub;
 	addressParamsStub.type = REWARD_KEY;
 	addressParamsStub.networkId = networkId;
-	addressParamsStub.spendingKeyPath = *path;
-	addressParamsStub.stakingChoice = NO_STAKING;
+	addressParamsStub.stakingDataSource = STAKING_KEY_HASH;
+	addressParamsStub.stakingKeyPath = *path;
 	return deriveAddress_reward(
 	               &addressParamsStub,
 	               outBuffer, outSize
@@ -405,7 +400,7 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 		return deriveAddress_base(addressParams, outBuffer, outSize);
 	case POINTER_KEY:
 	case POINTER_SCRIPT:
-		ASSERT(addressParams->stakingChoice == BLOCKCHAIN_POINTER);
+		ASSERT(addressParams->stakingDataSource == BLOCKCHAIN_POINTER);
 		return deriveAddress_pointer(addressParams, outBuffer, outSize);
 	case ENTERPRISE_KEY:
 	case ENTERPRISE_SCRIPT:
@@ -469,16 +464,28 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 			return bech32_encode("stake", address, addressSize, out, outSize);
 
 	case REWARD_SCRIPT:
+		// TODO how would a stake_script HRP look like?
 		if (networkId == TESTNET_NETWORK_ID)
 			return bech32_encode("stake_shared_test", address, addressSize, out, outSize);
 		else
 			return bech32_encode("stake_shared", address, addressSize, out, outSize);
 
 	default: // all other shelley addresses
-		if (networkId == TESTNET_NETWORK_ID)
-			return bech32_encode("addr_test", address, addressSize, out, outSize);
-		else
-			return bech32_encode("addr", address, addressSize, out, outSize);
+		switch (determineSpendingChoice(addressType)) {
+		case SPENDING_PATH:
+			if (networkId == TESTNET_NETWORK_ID)
+				return bech32_encode("addr_test", address, addressSize, out, outSize);
+			else
+				return bech32_encode("addr", address, addressSize, out, outSize);
+		case SPENDING_SCRIPT_HASH:
+			if (networkId == TESTNET_NETWORK_ID)
+				return bech32_encode("script_test", address, addressSize, out, outSize);
+			else
+				return bech32_encode("script", address, addressSize, out, outSize);
+		default:
+			ASSERT(false);
+			return 0;
+		}
 	}
 }
 
@@ -530,31 +537,32 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 		TRACE("Network id: 0x%x", params->networkId);
 		VALIDATE(params->networkId <= 0b1111, ERR_INVALID_DATA);
 	}
-
 	// spending part
-	switch (params->type)
-	{
+	switch (params->type) {
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
 	case POINTER_KEY:
 	case ENTERPRISE_KEY:
 	case BYRON:
-	case REWARD_KEY:
 		view_skipBytes(view, bip44_parseFromWire(&params->spendingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 		BIP44_PRINTF(&params->spendingKeyPath);
 		break;
-	
+
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
 	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
 	case POINTER_SCRIPT:
-	case ENTERPRISE_SCRIPT:
-	case REWARD_SCRIPT: {
+	case ENTERPRISE_SCRIPT: {
 		STATIC_ASSERT(SIZEOF(params->spendingScriptHash) == SCRIPT_HASH_LENGTH, "Wrong address key hash length");
 		readHashToBufferFromView(params->spendingScriptHash, SCRIPT_HASH_LENGTH, view);
 		TRACE("Spending script hash: ");
 		TRACE_BUFFER(params->spendingScriptHash, SIZEOF(params->spendingScriptHash));
 		break;
 	}
+
+	case REWARD_KEY:
+	case REWARD_SCRIPT:
+		// no spending info for reward address types
+		break;
 
 	default:
 		ASSERT(false);
@@ -563,12 +571,12 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 
 	// staking choice
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
-	params->stakingChoice = parse_u1be(view);
-	TRACE("Staking choice: 0x%x", (unsigned int) params->stakingChoice);
-	VALIDATE(isValidStakingChoice(params->stakingChoice), ERR_INVALID_DATA);
+	params->stakingDataSource = parse_u1be(view);
+	TRACE("Staking choice: 0x%x", (unsigned int) params->stakingDataSource);
+	VALIDATE(isValidStakingChoice(params->stakingDataSource), ERR_INVALID_DATA);
 
 	// staking choice determines what to parse next
-	switch (params->stakingChoice) {
+	switch (params->stakingDataSource) {
 
 	case NO_STAKING:
 		break;
@@ -583,9 +591,9 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 		STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "Different key- and script hash lengths");
 		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
 		STATIC_ASSERT(SIZEOF(params->stakingScriptHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
-		const bool script = STAKING_SCRIPT_HASH == params->stakingChoice;
+		const bool script = STAKING_SCRIPT_HASH == params->stakingDataSource;
 		readHashToBufferFromView(script ? params->stakingScriptHash : params->stakingKeyHash,
-			ADDRESS_KEY_HASH_LENGTH, view);
+		                         ADDRESS_KEY_HASH_LENGTH, view);
 		TRACE("Staking %s hash: ", script ? "script" : "key");
 		TRACE_BUFFER(script ? params->stakingScriptHash : params->stakingKeyHash, SIZEOF(params->stakingKeyHash));
 		break;
@@ -614,12 +622,11 @@ static inline bool isSpendingPathConsistentWithAddressType(const address_type_t 
 #define CHECK(cond) if (!(cond)) return false
 	// Byron derivation path is only valid for a Byron address
 	// the rest should be Shelley derivation scheme
-	switch (addressType)
-	{
+	switch (addressType) {
 	case BYRON:
 		CHECK(bip44_hasByronPrefix(spendingPath));
 		break;
-	
+
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
 	case POINTER_KEY:
@@ -638,7 +645,7 @@ static inline bool isSpendingPathConsistentWithAddressType(const address_type_t 
 	case POINTER_SCRIPT:
 	case ENTERPRISE_SCRIPT:
 	case REWARD_SCRIPT:
-		//we shouldn't even be here
+	//we shouldn't even be here
 	default:
 		ASSERT(false);
 		break;
@@ -651,7 +658,7 @@ static inline bool isValidStakingInfo(const addressParams_t* addressParams)
 {
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(isStakingInfoConsistentWithAddressType(addressParams));
-	if (addressParams->stakingChoice == STAKING_KEY_PATH) {
+	if (addressParams->stakingDataSource == STAKING_KEY_PATH) {
 		CHECK(bip44_isValidStakingKeyPath(&addressParams->stakingKeyPath));
 	}
 	return true;
@@ -661,29 +668,29 @@ static inline bool isValidStakingInfo(const addressParams_t* addressParams)
 bool isValidAddressParams(const addressParams_t* addressParams)
 {
 	//TODO how to validate script hashes
-	return (determineSpendingChoice(addressParams) == SPENDING_SCRIPT_HASH || isSpendingPathConsistentWithAddressType(addressParams->type, &addressParams->spendingKeyPath)) &&
+	return (determineSpendingChoice(addressParams->type) != SPENDING_PATH || isSpendingPathConsistentWithAddressType(addressParams->type, &addressParams->spendingKeyPath)) &&
 	       isValidStakingInfo(addressParams);
 }
 
-spending_choice_t determineSpendingChoice(const addressParams_t* addressParams)
+spending_choice_t determineSpendingChoice(address_type_t addressType)
 {
-	switch (addressParams->type)
-	{
+	switch (addressType) {
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
 	case POINTER_KEY:
 	case ENTERPRISE_KEY:
 	case BYRON:
-	case REWARD_KEY:	//TODO rework REWARDs to not contain spending at all
 		return SPENDING_PATH;
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
 	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
 	case POINTER_SCRIPT:
 	case ENTERPRISE_SCRIPT:
-	case REWARD_SCRIPT:
 		return SPENDING_SCRIPT_HASH;
 	default:
 		ASSERT(false);
+	// intentional fallthrough
+	case REWARD_KEY:
+	case REWARD_SCRIPT:
 		return SPENDING_NONE;
 	}
 }

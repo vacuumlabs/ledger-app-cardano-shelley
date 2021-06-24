@@ -325,7 +325,7 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 
 	case PATH_POOL_COLD_KEY:
 		return bip44_hasReasonablePoolColdKeyIndex(pathSpec);
-	
+
 	default:
 		// we are not supposed to call this for invalid paths
 		ASSERT(false);

@@ -18,12 +18,12 @@ static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uin
 // networkIdOrProtocolMagic is used as networkId for Shelley addresses and as protocol magic for Byron addresses
 static void testcase_deriveAddressShelley(
         uint8_t type, uint32_t networkIdOrProtocolMagic, const uint32_t* spendingPathArray, size_t spendingPathLen,
-        uint8_t stakingChoice, const uint32_t* stakingPathArray, size_t stakingPathLen,
+        uint8_t stakingDataSource, const uint32_t* stakingPathArray, size_t stakingPathLen,
         const char* stakingKeyHashHex, const blockchainPointer_t* stakingKeyBlockchainPointer,
         const char* expectedHex)
 {
 	// avoid inconsistent tests
-	switch (stakingChoice) {
+	switch (stakingDataSource) {
 	case NO_STAKING:
 		ASSERT(stakingPathLen == 0 && stakingKeyHashHex == NULL && stakingKeyBlockchainPointer == NULL);
 		break;
@@ -46,13 +46,13 @@ static void testcase_deriveAddressShelley(
 		params = (addressParams_t) {
 			.type = type,
 			.protocolMagic = networkIdOrProtocolMagic,
-			.stakingChoice = stakingChoice
+			.stakingDataSource = stakingDataSource
 		};
 	} else {
 		params = (addressParams_t) {
 			.type = type,
 			.networkId = (uint8_t) networkIdOrProtocolMagic,
-			.stakingChoice = stakingChoice
+			.stakingDataSource = stakingDataSource
 		};
 	}  // the rest of params is initialized to zero
 
@@ -75,7 +75,7 @@ static void testcase_deriveAddressShelley(
 
 	bip44_PRINTF(&params.spendingKeyPath);
 
-	if (stakingChoice == STAKING_KEY_PATH) {
+	if (stakingDataSource == STAKING_KEY_PATH) {
 		bip44_PRINTF(&params.stakingKeyPath);
 	}
 	if (stakingKeyHashHex != NULL) {

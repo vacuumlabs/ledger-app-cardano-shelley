@@ -14,7 +14,7 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(addressParams->type == BASE_PAYMENT_KEY_STAKE_KEY);
-	CHECK(addressParams->stakingChoice == STAKING_KEY_PATH);
+	CHECK(addressParams->stakingDataSource == STAKING_KEY_PATH);
 
 	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_WALLET_SPENDING_KEY);
 	CHECK(bip44_isPathReasonable(&addressParams->spendingKeyPath));
@@ -154,14 +154,12 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
-	switch (addressParams->type)
-	{
-	case BASE_PAYMENT_KEY_STAKE_KEY:		
-	case BASE_PAYMENT_KEY_STAKE_SCRIPT: 	
-	case POINTER_KEY:	
+	switch (addressParams->type) {
+	case BASE_PAYMENT_KEY_STAKE_KEY:
+	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+	case POINTER_KEY:
 	case ENTERPRISE_KEY:
 	case BYRON:
-	case REWARD_KEY:
 		switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
 		case PATH_WALLET_SPENDING_KEY:
@@ -187,11 +185,12 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 		//TODO prepare UI machines properly
 		PROMPT();
 		break;
+	case REWARD_KEY:
 	case REWARD_SCRIPT:
-		//TODO do reward staking scripts need this at all?
+		//TODO do reward need this at all?
 		PROMPT();
 		break;
-	
+
 	default:
 		break;
 	}
@@ -204,7 +203,7 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
-	if (SPENDING_PATH == determineSpendingChoice(addressParams)) {
+	if (SPENDING_PATH == determineSpendingChoice(addressParams->type)) {
 		switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
 		case PATH_WALLET_SPENDING_KEY:

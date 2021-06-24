@@ -36,16 +36,16 @@ bool isValidNetworkId(uint8_t networkId);
 
 
 // describes which staking info should be incorporated into address
-// (see stakingChoice in addressParams_t)
+// (see stakingDataSource in addressParams_t)
 typedef enum {
 	NO_STAKING = 0x11,
 	STAKING_KEY_PATH = 0x22,
 	STAKING_KEY_HASH = 0x33,
 	BLOCKCHAIN_POINTER = 0x44,
 	STAKING_SCRIPT_HASH = 0x55,
-} staking_choice_t;
+} staking_data_source_t;
 
-bool isValidStakingChoice(staking_choice_t stakingChoice);
+bool isValidStakingChoice(staking_data_source_t stakingDataSource);
 
 typedef enum {
 	SPENDING_PATH,
@@ -71,7 +71,7 @@ typedef struct {
 		bip44_path_t spendingKeyPath;
 		uint8_t spendingScriptHash[SCRIPT_HASH_LENGTH];
 	};
-	staking_choice_t stakingChoice;
+	staking_data_source_t stakingDataSource;
 	union {
 		bip44_path_t stakingKeyPath;
 		uint8_t stakingKeyHash[ADDRESS_KEY_HASH_LENGTH];
@@ -102,7 +102,7 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 void view_parseAddressParams(read_view_t* view, addressParams_t* params);
 
 bool isValidAddressParams(const addressParams_t* addressParams);
-spending_choice_t determineSpendingChoice(const addressParams_t* addressParams);
+spending_choice_t determineSpendingChoice(address_type_t addressType);
 
 #ifdef DEVEL
 void run_addressUtilsShelley_test();

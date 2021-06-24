@@ -343,7 +343,7 @@ void ui_displayStakingInfoScreen(
 	char stakingInfo[120];
 	explicit_bzero(stakingInfo, SIZEOF(stakingInfo));
 
-	switch (addressParams->stakingChoice) {
+	switch (addressParams->stakingDataSource) {
 
 	case NO_STAKING:
 		if (addressParams->type == BYRON) {
@@ -370,7 +370,7 @@ void ui_displayStakingInfoScreen(
 
 	case STAKING_KEY_HASH:
 	case STAKING_SCRIPT_HASH: {
-		const uint8_t* const stakingHash = (STAKING_KEY_HASH == addressParams->stakingChoice ? addressParams->stakingKeyHash : addressParams->stakingScriptHash);
+		const uint8_t* const stakingHash = (STAKING_KEY_HASH == addressParams->stakingDataSource ? addressParams->stakingKeyHash : addressParams->stakingScriptHash);
 		heading = STAKING_HEADING_HASH;
 		STATIC_ASSERT(SCRIPT_HASH_LENGTH == ADDRESS_KEY_HASH_LENGTH, "incompatible hash lengths");
 		STATIC_ASSERT(SCRIPT_HASH_LENGTH == SIZEOF(addressParams->stakingKeyHash), "staking key hash length is wrong");
