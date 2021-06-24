@@ -22,12 +22,6 @@ typedef enum {
 	REWARD_SCRIPT						= 0b1111,
 
 	BASE_MASK							= 0b1100,
-	BASE       = 0b0000,  // 0x0
-	POINTER    = 0b0100,  // 0x4
-	ENTERPRISE = 0b0110,  // 0x6
-	// BYRON      = 0b1000,  // 0x8
-	REWARD     = 0b1110,  // 0xE
-	MULTISIG   = 0b1111,  // 0xF TODO
 } address_type_t;
 
 uint8_t getAddressHeader(uint8_t* addressBuffer, size_t addressSize);

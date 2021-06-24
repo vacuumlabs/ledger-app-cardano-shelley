@@ -453,7 +453,6 @@ void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* ou
 size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* out, size_t outSize)
 {
 	ASSERT(addressSize > 0);
-	// TODO what is the first byte for multisig addresses?
 	const uint8_t addressType = getAddressType(address[0]);
 	const uint8_t networkId = getNetworkId(address[0]);
 	ASSERT(isValidNetworkId(networkId));
