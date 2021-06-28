@@ -199,17 +199,24 @@ bool str_isPrintableAsciiWithSpaces(const uint8_t* buffer, size_t bufferSize)
 
 bool str_isAllowedDnsName(const uint8_t* buffer, size_t bufferSize)
 {
+	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
+
+	// must not be empty
+	if (bufferSize == 0) return false;
+
 	// no non-printable characters except spaces
 	if (!str_isPrintableAsciiWithSpaces(buffer, bufferSize)) return false;
 
 	// no leading spaces
+	ASSERT(bufferSize >= 1);
 	if (buffer[0] == ' ') return false;
 
 	// no trailing spaces
+	ASSERT(bufferSize >= 1);
 	if (buffer[bufferSize - 1] == ' ') return false;
 
 	// only single spaces
-	for (size_t i = 0; i < bufferSize - 1; i++) {
+	for (size_t i = 0; i + 1 < bufferSize; i++) {
 		if ((buffer[i] == ' ') && (buffer[i + 1] == ' '))
 			return false;
 	}
