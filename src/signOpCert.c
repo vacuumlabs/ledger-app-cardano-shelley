@@ -85,12 +85,20 @@ void signOpCert_handleAPDU(
 		{
 			uint8_t chunk[8];
 			u8be_write(chunk, ctx->issueCounter);
+			#ifdef FUZZING
+			view_appendData(&opCertBodyBufferView, chunk, 8);
+			#else
 			view_appendData(&opCertBodyBufferView, chunk, SIZEOF(chunk));
+			#endif
 		}
 		{
 			uint8_t chunk[8];
 			u8be_write(chunk, ctx->kesPeriod);
+			#ifdef FUZZING
+			view_appendData(&opCertBodyBufferView, chunk, 8);
+			#else
 			view_appendData(&opCertBodyBufferView, chunk, SIZEOF(chunk));
+			#endif
 		}
 
 		ASSERT(view_processedSize(&opCertBodyBufferView) == OP_CERT_BODY_LENGTH);

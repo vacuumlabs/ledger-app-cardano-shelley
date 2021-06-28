@@ -91,6 +91,7 @@ set(SOURCES
 		../src/hexUtils.c
 		../src/messageSigning.c
 		../src/securityPolicy.c
+		../src/signOpCert.c
 		../src/signTx.c
 		../src/signTxOutput.c
 		../src/state.c

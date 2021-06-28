@@ -13,7 +13,7 @@ def extract_profiles(corpus_path, cov_executable):
     file_list = glob(os.path.join(corpus_path, "*"))
     N = 512
     for p in range(0, len(file_list), N):
-        subprocess.run([cov_executable, *file_list[p : p + N]])
+        subprocess.run([cov_executable, "-close_fd_mask=1", *file_list[p : p + N]])
 
 
 def merge_profile_data():
