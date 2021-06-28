@@ -12,17 +12,32 @@
 #include "endian.h"
 #include "cardano.h"
 
+static bool _isPathAllowed(const bip44_path_t* pathSpec)
+{
+	switch (bip44_classifyPath(pathSpec)) {
+
+	case PATH_WALLET_ACCOUNT:
+	case PATH_WALLET_SPENDING_KEY:
+	case PATH_WALLET_STAKING_KEY:
+	case PATH_POOL_COLD_KEY:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
 void derivePrivateKey(
         const bip44_path_t* pathSpec,
         chain_code_t* chainCode,
         privateKey_t* privateKey
 )
 {
-	if (!bip44_hasValidCardanoPrefix(pathSpec)) {
+	if (!_isPathAllowed(pathSpec)) {
 		THROW(ERR_INVALID_BIP44_PATH);
 	}
 	// Sanity check
-	ASSERT(pathSpec->length < ARRAY_LEN(pathSpec->path));
+	ASSERT(pathSpec->length <= ARRAY_LEN(pathSpec->path));
 
 	uint8_t privateKeyRawBuffer[64];
 
@@ -47,7 +62,7 @@ void derivePrivateKey(
 			// should work with the new SDK
 			privateKey->curve = CX_CURVE_Ed25519;
 			privateKey->d_len = 64;
-			os_memmove(privateKey->d, privateKeyRawBuffer, 64);
+			memmove(privateKey->d, privateKeyRawBuffer, 64);
 		}
 		FINALLY {
 			explicit_bzero(privateKeyRawBuffer, SIZEOF(privateKeyRawBuffer));
@@ -125,7 +140,7 @@ void deriveExtendedPublicKey(
 			// Chain code (we copy it second to avoid mid-updates extractRawPublicKey throws
 			STATIC_ASSERT(CHAIN_CODE_SIZE == SIZEOF(out->chainCode), "bad chain code size");
 			STATIC_ASSERT(CHAIN_CODE_SIZE == SIZEOF(chainCode.code), "bad chain code size");
-			os_memmove(out->chainCode, chainCode.code, CHAIN_CODE_SIZE);
+			memmove(out->chainCode, chainCode.code, CHAIN_CODE_SIZE);
 		}
 		FINALLY {
 			explicit_bzero(&privateKey, SIZEOF(privateKey));

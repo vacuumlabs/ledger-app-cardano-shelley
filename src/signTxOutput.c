@@ -105,7 +105,7 @@ static inline void advanceState()
 // ============================== TOP LEVEL DATA ==============================
 
 enum {
-	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS = 300,
+	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS = 3100,
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT,
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND,
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
@@ -118,7 +118,7 @@ static void signTx_handleOutput_address_ui_runStep()
 
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
 		ASSERT(subctx->stateData.output.address.size <= SIZEOF(subctx->stateData.output.address.buffer));
@@ -145,7 +145,7 @@ static void signTx_handleOutput_addressBytes()
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
 
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
-	                                   commonTxData->isSigningPoolRegistrationAsOwner,
+	                                   commonTxData->signTxUsecase,
 	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );
@@ -184,7 +184,7 @@ static void signTx_handleOutput_addressBytes()
 }
 
 enum {
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH = 350,
+	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH = 3200,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND,
@@ -198,7 +198,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS);
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
 		ui_displayPathScreen("Send to address", &subctx->stateData.output.params.spendingKeyPath, this_fn);
@@ -222,7 +222,7 @@ static void signTx_handleOutput_addressParams()
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS);
 
 	security_policy_t policy = policyForSignTxOutputAddressParams(
-	                                   commonTxData->isSigningPoolRegistrationAsOwner,
+	                                   commonTxData->signTxUsecase,
 	                                   &subctx->stateData.output.params,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );
@@ -348,7 +348,7 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 // ============================== ASSET GROUP ==============================
 
 enum {
-	HANDLE_ASSET_GROUP_STEP_DISPLAY = 800, // TODO
+	HANDLE_ASSET_GROUP_STEP_DISPLAY = 3300,
 	HANDLE_ASSET_GROUP_STEP_RESPOND,
 	HANDLE_ASSET_GROUP_STEP_INVALID,
 };
@@ -356,8 +356,9 @@ enum {
 static void signTxOutput_handleAssetGroup_ui_runStep()
 {
 	TRACE("UI step %d", subctx->ui_step);
+	ui_callback_fn_t* this_fn = signTxOutput_handleAssetGroup_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_ASSET_GROUP_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -412,7 +413,7 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 // ============================== TOKEN ==============================
 
 enum {
-	HANDLE_TOKEN_STEP_DISPLAY_NAME = 800, // TODO
+	HANDLE_TOKEN_STEP_DISPLAY_NAME = 3400,
 	HANDLE_TOKEN_STEP_DISPLAY_AMOUNT,
 	HANDLE_TOKEN_STEP_RESPOND,
 	HANDLE_TOKEN_STEP_INVALID,
@@ -423,7 +424,7 @@ static void signTxOutput_handleToken_ui_runStep()
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTxOutput_handleToken_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_NAME) {
 		ui_displayAssetFingerprintScreen(
@@ -508,7 +509,7 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 // ============================== CONFIRM ==============================
 
 enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 6360,
+	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 3500,
 	HANDLE_CONFIRM_STEP_RESPOND,
 	HANDLE_CONFIRM_STEP_INVALID,
 };
@@ -518,7 +519,7 @@ static void signTxOutput_handleConfirm_ui_runStep()
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTxOutput_handleConfirm_ui_runStep;
 
-	UI_STEP_BEGIN(subctx->ui_step);
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(

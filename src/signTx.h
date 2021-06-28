@@ -12,6 +12,13 @@
 #include "signTxCatalystRegistration.h"
 #include "signTxAuxData.h"
 
+// the use case significantly affects restrictions on tx being signed
+typedef enum {
+	SIGN_TX_USECASE_ORDINARY_TX = 3, // enum value 3 is needed for backwards compatibility
+	SIGN_TX_USECASE_POOL_REGISTRATION_OWNER = 4,
+	SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR = 5,
+} sign_tx_usecase_t;
+
 typedef enum {
 	SIGN_STAGE_NONE = 0,
 	SIGN_STAGE_INIT = 23,
@@ -38,9 +45,8 @@ enum {
 };
 
 typedef struct {
-	// the presence of a stake pool registration certificate
-	// significantly affects restrictions on the whole tx
-	bool isSigningPoolRegistrationAsOwner;
+	// significantly affects restrictions on the tx
+	sign_tx_usecase_t signTxUsecase;
 
 	uint8_t networkId; // part of Shelley address
 	uint32_t protocolMagic; // part of Byron address
@@ -48,9 +54,11 @@ typedef struct {
 
 typedef struct {
 	certificate_type_t type;
-	bip44_path_t keyPath;
+	bip44_path_t pathSpec; // interpretation depends on type // TODO rename to keyPath?
+
 	// only for specific types
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+	uint64_t epoch;
 } sign_tx_certificate_data_t;
 
 typedef struct {
@@ -83,15 +91,17 @@ typedef struct {
 	bool ttlReceived;
 	bool validityIntervalStartReceived;
 
+	// TODO move these to commonTxData?
 	tx_hash_builder_t txHashBuilder;
 
+	// this holds data valid only through the processing of a single APDU
 	union {
 		uint64_t fee;
 		uint64_t ttl;
 		sign_tx_certificate_data_t certificate;
 		sign_tx_withdrawal_data_t withdrawal;
 		uint64_t validityIntervalStart;
-	} stageData;
+	} stageData; // TODO rename to reflect single-APDU scope
 
 	union {
 		pool_registration_context_t pool_registration_subctx;
@@ -134,18 +144,13 @@ typedef struct {
 
 handler_fn_t signTx_handleAPDU;
 
-enum {
-	SIGN_TX_INCLUDED_NO = 1,
-	SIGN_TX_INCLUDED_YES = 2
-};
-
 inline bool signTx_parseIncluded(uint8_t value)
 {
 	switch (value) {
-	case SIGN_TX_INCLUDED_YES:
+	case ITEM_INCLUDED_YES:
 		return true;
 
-	case SIGN_TX_INCLUDED_NO:
+	case ITEM_INCLUDED_NO:
 		return false;
 
 	default:

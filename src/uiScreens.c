@@ -1,43 +1,111 @@
 #include "uiScreens.h"
 #include "bech32.h"
+#include "cardano.h"
 #include "hexUtils.h"
+#include "ipUtils.h"
 #include "textUtils.h"
-#include "cardanoCertificates.h"
 #include "signTx.h"
 #include "signTxPoolRegistration.h"
 
 
+#define BECH32_BUFFER_SIZE_MAX 150
+#define BECH32_PREFIX_LENGTH_MAX 12
+
+// encodes a buffer into bech32 and displays it (works for bufferSize <= 150 and prefix length <= 12)
+void ui_displayBech32Screen(
+        const char* firstLine,
+        const char* bech32Prefix,
+        const uint8_t* buffer, size_t bufferSize,
+        ui_callback_fn_t callback
+)
+{
+	{
+		// assert inputs
+		ASSERT(strlen(firstLine) > 0);
+		ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
+
+		ASSERT(strlen(bech32Prefix) > 0);
+		ASSERT(strlen(bech32Prefix) <= BECH32_PREFIX_LENGTH_MAX);
+
+		ASSERT(bufferSize <= BECH32_BUFFER_SIZE_MAX);
+	}
+
+	char encodedStr[10 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX]; // rough upper bound on required size
+	explicit_bzero(encodedStr, SIZEOF(encodedStr));
+
+	{
+		size_t len = bech32_encode(bech32Prefix, buffer, bufferSize, encodedStr, SIZEOF(encodedStr));
+
+		ASSERT(len == strlen(encodedStr));
+		ASSERT(len + 1 <= SIZEOF(encodedStr));
+	}
+
+	ui_displayPaginatedText(
+	        firstLine,
+	        encodedStr,
+	        callback
+	);
+}
+
+void ui_displayHexBufferScreen(
+        const char* firstLine,
+        const uint8_t* buffer, size_t bufferSize,
+        ui_callback_fn_t callback
+)
+{
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
+	ASSERT(bufferSize > 0);
+	ASSERT(bufferSize <= 32); // this is used for hashes, all are <= 32 bytes
+
+	char bufferHex[2 * 32 + 1];
+	explicit_bzero(bufferHex, SIZEOF(bufferHex));
+
+	size_t length = encode_hex(
+	                        buffer, bufferSize,
+	                        bufferHex, SIZEOF(bufferHex)
+	                );
+	ASSERT(length == strlen(bufferHex));
+	ASSERT(length == 2 * bufferSize);
+
+	ui_displayPaginatedText(
+	        firstLine,
+	        bufferHex,
+	        callback
+	);
+}
+
 void ui_displayPathScreen(
-        const char* screenHeader,
+        const char* firstLine,
         const bip44_path_t* path,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
-	char pathStr[1 + BIP44_MAX_PATH_STRING_LENGTH];
+	char pathStr[1 + BIP44_PATH_STRING_SIZE_MAX];
 	bip44_printToStr(path, pathStr, SIZEOF(pathStr));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        pathStr,
 	        callback
 	);
 }
 
 __noinline_due_to_stack__
-static void _ui_displayPathAccountScreen(
-        const char* screenHeader,
+static void _ui_displayAccountWithDescriptionScreen(
+        const char* firstLine,
         const bip44_path_t* path,
         bool showAccountDescription,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(bip44_hasValidCardanoPrefix(path));
+	ASSERT(bip44_hasValidCardanoWalletPrefix(path));
 	ASSERT(bip44_containsAccount(path));
 
 	char accountDescription[160];
@@ -74,7 +142,7 @@ static void _ui_displayPathAccountScreen(
 	}
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        accountDescription,
 	        callback
 	);
@@ -82,23 +150,27 @@ static void _ui_displayPathAccountScreen(
 
 // the given path typically corresponds to an account
 // if it contains anything more, we display just the whole path
-void ui_displayAccountScreen(
-        const char* screenHeader,
+void ui_displayGetPublicKeyPathScreen(
         const bip44_path_t* path,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(bip44_hasValidCardanoPrefix(path));
-	ASSERT(bip44_containsAccount(path));
+	switch (bip44_classifyPath(path)) {
+	case PATH_POOL_COLD_KEY: {
+		ui_displayPathScreen("Export cold public key", path, callback);
+		return;
+	}
 
-	bool showAccountDescription = bip44_hasReasonableAccount(path) && (!bip44_containsMoreThanAccount(path));
+	case PATH_WALLET_ACCOUNT: {
+		_ui_displayAccountWithDescriptionScreen("Export public key", path, true, callback);
+		return;
+	}
 
-	_ui_displayPathAccountScreen(
-	        screenHeader,
-	        path,
-	        showAccountDescription,
-	        callback
-	);
+	default:
+		ui_displayPathScreen("Export public key", path,	callback);
+		return;
+	}
+
 }
 
 void ui_displayStakingKeyScreen(
@@ -110,7 +182,7 @@ void ui_displayStakingKeyScreen(
 
 	bool showAccountDescription = bip44_hasReasonableAccount(stakingPath);
 
-	_ui_displayPathAccountScreen(
+	_ui_displayAccountWithDescriptionScreen(
 	        "Staking key",
 	        stakingPath,
 	        showAccountDescription,
@@ -120,13 +192,13 @@ void ui_displayStakingKeyScreen(
 
 // bech32 for Shelley, base58 for Byron
 void ui_displayAddressScreen(
-        const char* screenHeader,
+        const char* firstLine,
         const uint8_t* addressBuffer, size_t addressSize,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 	ASSERT(addressSize > 0);
 	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 
@@ -141,11 +213,121 @@ void ui_displayAddressScreen(
 	ASSERT(strlen(humanAddress) == length);
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        humanAddress,
 	        callback
 	);
 }
+
+// display bech32-encoded reward account preceded by staking key derivation path (if given)
+static void _displayRewardAccountWithDescriptionScreen(
+        const key_reference_type_t keyReferenceType,
+        const bip44_path_t* path,
+        const uint8_t* rewardAccountBuffer,
+        const char* firstLine,
+        ui_callback_fn_t callback
+)
+{
+	char description[BIP44_PATH_STRING_SIZE_MAX + MAX_HUMAN_REWARD_ACCOUNT_SIZE + 1];
+	explicit_bzero(description, SIZEOF(description));
+	size_t descLen = 0; // description length
+
+	if (keyReferenceType == KEY_REFERENCE_PATH) {
+		descLen += bip44_printToStr(path, description, SIZEOF(description));
+	}
+	{
+		// add bech32-encoded reward account
+		ASSERT(descLen <= BIP44_PATH_STRING_SIZE_MAX);
+		ASSERT(descLen + 1 <= SIZEOF(description));
+
+		if (descLen > 0) {
+			// add a space after path if the path is present
+			ASSERT(descLen + 2 <= SIZEOF(description));
+			description[descLen++] = ' ';
+			description[descLen] = '\0';
+		}
+
+		{
+			descLen += humanReadableAddress(
+			                   rewardAccountBuffer, REWARD_ACCOUNT_SIZE,
+			                   description + descLen, SIZEOF(description) - descLen
+			           );
+		}
+		ASSERT(descLen == strlen(description));
+		ASSERT(descLen + 1 <= SIZEOF(description));
+	}
+
+	ui_displayPaginatedText(
+	        firstLine,
+	        description,
+	        callback
+	);
+}
+
+// displays bech32-encoded reward account preceded by path (if given)
+void ui_displayRewardAccountScreen(
+        const reward_account_t* rewardAccount,
+        uint8_t networkId,
+        ui_callback_fn_t callback
+)
+{
+	ASSERT(isValidNetworkId(networkId));
+
+	uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
+	char firstLine[20];
+	explicit_bzero(firstLine, SIZEOF(firstLine));
+
+	switch (rewardAccount->keyReferenceType) {
+
+	case KEY_REFERENCE_PATH: {
+		ASSERT(bip44_isValidStakingKeyPath(&rewardAccount->path));
+
+		{
+			uint32_t account = unharden(bip44_getAccount(&rewardAccount->path));
+			snprintf(
+			        firstLine, SIZEOF(firstLine),
+			        "Reward account #%u  ", account + 1
+			);
+		}
+
+		constructRewardAddressFromKeyPath(
+		        &rewardAccount->path, networkId,
+		        rewardAccountBuffer, SIZEOF(rewardAccountBuffer)
+		);
+		break;
+	}
+
+	case KEY_REFERENCE_HASH: {
+		snprintf(
+		        firstLine, SIZEOF(firstLine),
+		        "Reward account"
+		);
+
+		ASSERT(SIZEOF(rewardAccountBuffer) == REWARD_ACCOUNT_SIZE);
+		ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE);
+		memmove(rewardAccountBuffer, rewardAccount->buffer, REWARD_ACCOUNT_SIZE);
+		break;
+	}
+
+	default:
+		ASSERT(false);
+	}
+
+	{
+		const size_t len = strlen(firstLine);
+		ASSERT(len < SIZEOF(firstLine));
+		ASSERT(len > 0);
+	}
+
+	_displayRewardAccountWithDescriptionScreen(
+	        rewardAccount->keyReferenceType,
+	        &rewardAccount->path,
+	        rewardAccountBuffer,
+	        firstLine,
+	        callback
+	);
+}
+
 
 static const char STAKING_HEADING_PATH[]    = "Staking key path: ";
 static const char STAKING_HEADING_HASH[]    = "Staking key hash: ";
@@ -270,26 +452,26 @@ void ui_displayAssetFingerprintScreen(
 }
 
 void ui_displayAdaAmountScreen(
-        const char* screenHeader,
+        const char* firstLine,
         uint64_t amount,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
 	char adaAmountStr[50];
 	str_formatAdaAmount(amount, adaAmountStr, SIZEOF(adaAmountStr));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        adaAmountStr,
 	        callback
 	);
 }
 
 void ui_displayUint64Screen(
-        const char* screenHeader,
+        const char* firstLine,
         uint64_t value,
         ui_callback_fn_t callback
 )
@@ -298,14 +480,14 @@ void ui_displayUint64Screen(
 	str_formatUint64(value, valueStr, SIZEOF(valueStr));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        valueStr,
 	        callback
 	);
 }
 
 void ui_displayValidityBoundaryScreen(
-        const char* screenHeader,
+        const char* firstLine,
         uint64_t boundary,
         uint8_t networkId, uint32_t protocolMagic,
         ui_callback_fn_t callback
@@ -319,13 +501,13 @@ void ui_displayValidityBoundaryScreen(
 		// since it depends on network params that could differ for testnets
 		str_formatValidityBoundary(boundary, boundaryStr, SIZEOF(boundaryStr));
 		ui_displayPaginatedText(
-		        screenHeader,
+		        firstLine,
 		        boundaryStr,
 		        callback
 		);
 	} else {
 		ui_displayUint64Screen(
-		        screenHeader,
+		        firstLine,
 		        boundary,
 		        callback
 		);
@@ -333,14 +515,14 @@ void ui_displayValidityBoundaryScreen(
 }
 
 void ui_displayNetworkParamsScreen(
-        const char* screenHeader,
+        const char* firstLine,
         uint8_t networkId,
         uint32_t protocolMagic,
         ui_callback_fn_t callback
 )
 {
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
+	ASSERT(strlen(firstLine) > 0);
+	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 	ASSERT(isValidNetworkId(networkId));
 
 	char networkParams[100];
@@ -354,103 +536,8 @@ void ui_displayNetworkParamsScreen(
 	ASSERT(strlen(networkParams) + 1 < SIZEOF(networkParams));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        firstLine,
 	        networkParams,
-	        callback
-	);
-}
-
-void ui_displayHexBufferScreen(
-        const char* screenHeader,
-        const uint8_t* buffer, size_t bufferSize,
-        ui_callback_fn_t callback
-)
-{
-	ASSERT(strlen(screenHeader) > 0);
-	ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
-	ASSERT(bufferSize > 0);
-	ASSERT(bufferSize <= 32); // this is used for hashes, all are <= 32 bytes
-
-	char bufferHex[2 * 32 + 1];
-	explicit_bzero(bufferHex, SIZEOF(bufferHex));
-
-	size_t length = encode_hex(
-	                        buffer, bufferSize,
-	                        bufferHex, SIZEOF(bufferHex)
-	                );
-	ASSERT(length == strlen(bufferHex));
-	ASSERT(length == 2 * bufferSize);
-
-	ui_displayPaginatedText(
-	        screenHeader,
-	        bufferHex,
-	        callback
-	);
-}
-
-#define BECH32_BUFFER_SIZE_MAX 150
-#define BECH32_PREFIX_LENGTH_MAX 10
-
-// works for bufferSize <= 150 and prefix length <= 10
-void ui_displayBech32Screen(
-        const char* screenHeader,
-        const char* bech32Prefix,
-        const uint8_t* buffer, size_t bufferSize,
-        ui_callback_fn_t callback
-)
-{
-	{
-		// assert inputs
-		ASSERT(strlen(screenHeader) > 0);
-		ASSERT(strlen(screenHeader) < BUFFER_SIZE_PARANOIA);
-
-		ASSERT(strlen(bech32Prefix) > 0);
-		ASSERT(strlen(bech32Prefix) <= BECH32_PREFIX_LENGTH_MAX);
-
-		ASSERT(bufferSize <= BECH32_BUFFER_SIZE_MAX);
-	}
-
-	char encodedStr[10 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX]; // rough upper bound on required size
-	explicit_bzero(encodedStr, SIZEOF(encodedStr));
-
-	{
-		size_t len = bech32_encode(bech32Prefix, buffer, bufferSize, encodedStr, SIZEOF(encodedStr));
-
-		ASSERT(len == strlen(encodedStr));
-		ASSERT(len + 1 <= SIZEOF(encodedStr));
-	}
-
-	ui_displayPaginatedText(
-	        screenHeader,
-	        encodedStr,
-	        callback
-	);
-}
-
-void ui_displayPoolIdScreen(
-        const uint8_t* poolIdBuffer,
-        size_t poolIdSize,
-        ui_callback_fn_t callback
-)
-{
-	{
-		// assert inputs
-		ASSERT(poolIdSize == POOL_KEY_HASH_LENGTH);
-	}
-
-	char poolIdStr[12 + 2 * POOL_KEY_HASH_LENGTH]; // rough upper bound on required size
-	explicit_bzero(poolIdStr, SIZEOF(poolIdStr));
-
-	{
-		size_t len = bech32_encode("pool", poolIdBuffer, poolIdSize, poolIdStr, SIZEOF(poolIdStr));
-
-		ASSERT(len == strlen(poolIdStr));
-		ASSERT(len + 1 <= SIZEOF(poolIdStr));
-	}
-
-	ui_displayPaginatedText(
-	        "Pool ID",
-	        poolIdStr,
 	        callback
 	);
 }
@@ -496,85 +583,134 @@ void ui_displayPoolOwnerScreen(
 )
 {
 	{
-		// assert inputs
 		ASSERT(isValidNetworkId(networkId));
 		ASSERT(ownerIndex < POOL_MAX_OWNERS);
+	}
+	{
+		uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 
-		switch (owner->ownerType) {
-
-		case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH:
-			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
-			break;
-
-		case SIGN_TX_POOL_OWNER_TYPE_PATH:
+		switch (owner->keyReferenceType) {
+		case KEY_REFERENCE_PATH: {
 			ASSERT(bip44_isValidStakingKeyPath(&owner->path));
-			break;
 
+			constructRewardAddressFromKeyPath(
+			        &owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)
+			);
+			break;
+		}
+		case KEY_REFERENCE_HASH: {
+			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
+
+			constructRewardAddressFromKeyHash(
+			        networkId,
+			        owner->keyHash, SIZEOF(owner->keyHash),
+			        rewardAddress, SIZEOF(rewardAddress)
+			);
+			break;
+		}
 		default:
 			ASSERT(false);
 		}
+
+		char firstLine[20];
+		explicit_bzero(firstLine, SIZEOF(firstLine));
+		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
+
+		_displayRewardAccountWithDescriptionScreen(
+		        owner->keyReferenceType,
+		        &owner->path,
+		        rewardAddress,
+		        firstLine,
+		        callback
+		);
 	}
+}
 
-	char ownerDescription[BIP44_MAX_PATH_STRING_LENGTH + MAX_HUMAN_REWARD_ACCOUNT_SIZE + 1];
-	explicit_bzero(ownerDescription, SIZEOF(ownerDescription));
-	size_t descLen = 0; // owner description length
-
-	if (owner->ownerType == SIGN_TX_POOL_OWNER_TYPE_PATH) {
-		descLen += bip44_printToStr(&owner->path, ownerDescription, SIZEOF(ownerDescription));
-	}
-
-	{
-		// add owner (represented as bech32-encoded reward account for owner's staking key)
-		ASSERT(descLen <= BIP44_MAX_PATH_STRING_LENGTH);
-		ASSERT(descLen + 1 <= SIZEOF(ownerDescription));
-
-		if (descLen > 0) {
-			// add a space after path if the path is present
-			ASSERT(descLen + 2 <= SIZEOF(ownerDescription));
-			ownerDescription[descLen++] = ' ';
-			ownerDescription[descLen] = '\0';
-		}
-
-		{
-			uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
-
-			switch (owner->ownerType) {
-			case SIGN_TX_POOL_OWNER_TYPE_PATH: {
-				constructRewardAddressFromKeyPath(
-				        &owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)
-				);
-				break;
-			}
-			case SIGN_TX_POOL_OWNER_TYPE_KEY_HASH: {
-				constructRewardAddressFromKeyHash(
-				        networkId,
-				        owner->keyHash, SIZEOF(owner->keyHash),
-				        rewardAddress, SIZEOF(rewardAddress)
-				);
-				break;
-			}
-			default:
-				ASSERT(false);
-			}
-
-			descLen += humanReadableAddress(
-			                   rewardAddress, SIZEOF(rewardAddress),
-			                   ownerDescription + descLen, SIZEOF(ownerDescription) - descLen
-			           );
-		}
-		ASSERT(descLen == strlen(ownerDescription));
-		ASSERT(descLen + 1 <= SIZEOF(ownerDescription));
-	}
-
+// displays pool relay index
+void ui_displayPoolRelayScreen(
+        const pool_relay_t* relay MARK_UNUSED,
+        size_t relayIndex,
+        ui_callback_fn_t callback
+)
+{
 	char firstLine[20];
 	explicit_bzero(firstLine, SIZEOF(firstLine));
 	{
-		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
+		snprintf(firstLine, SIZEOF(firstLine), "Relay #%u", relayIndex + 1);
 	}
 
 	ui_displayPaginatedText(
 	        firstLine,
-	        ownerDescription,
+	        "",
+	        callback
+	);
+}
+
+void ui_displayIpv4Screen(
+        ipv4_t* ipv4,
+        ui_callback_fn_t callback
+)
+{
+	char ipStr[IPV4_STR_SIZE_MAX];
+	explicit_bzero(ipStr, SIZEOF(ipStr));
+
+	if (ipv4->isNull) {
+		snprintf(ipStr, SIZEOF(ipStr), "(none)");
+	} else {
+		inet_ntop4(ipv4->ip, ipStr, SIZEOF(ipStr));
+	}
+
+	ASSERT(strlen(ipStr) + 1 <= SIZEOF(ipStr));
+
+	ui_displayPaginatedText(
+	        "IPv4 address",
+	        ipStr,
+	        callback
+	);
+}
+
+void ui_displayIpv6Screen(
+        ipv6_t* ipv6,
+        ui_callback_fn_t callback
+)
+{
+	char ipStr[IPV6_STR_SIZE_MAX];
+	explicit_bzero(ipStr, SIZEOF(ipStr));
+
+	if (ipv6->isNull) {
+		snprintf(ipStr, SIZEOF(ipStr), "(none)");
+	} else {
+		inet_ntop6(ipv6->ip, ipStr, SIZEOF(ipStr));
+	}
+
+	ASSERT(strlen(ipStr) + 1 <= SIZEOF(ipStr));
+
+	ui_displayPaginatedText(
+	        "IPv6 address",
+	        ipStr,
+	        callback
+	);
+}
+
+void ui_displayIpPortScreen(
+        ipport_t* port,
+        ui_callback_fn_t callback
+)
+{
+	char portStr[sizeof "65536"];
+	explicit_bzero(portStr, SIZEOF(portStr));
+
+	if (port->isNull) {
+		snprintf(portStr, SIZEOF(portStr), "(none)");
+	} else {
+		snprintf(portStr, SIZEOF(portStr), "%u", port->number);
+	}
+
+	ASSERT(strlen(portStr) + 1 <= SIZEOF(portStr));
+
+	ui_displayPaginatedText(
+	        "Port",
+	        portStr,
 	        callback
 	);
 }

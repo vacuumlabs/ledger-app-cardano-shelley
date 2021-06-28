@@ -12,7 +12,7 @@ Due to Ledger constraints and potential security implications (parsing errors), 
 
 **SignTx Limitations**
 
-- Output address size is limited to ~200 bytes (single APDU). (Note: IOHK is fine with address size limit of 100 bytes)
+- Output address size is limited to 128 bytes (single APDU). (Note: IOHK is fine with address size limit of 100 bytes)
 - Addresses that are not shown to the user are base addresses with spending path `m/1852'/1815'/account'/{0,1}/changeIndex` and the standard staking key `m/1852'/1815'/account'/2/0`, where values of `account` and `changeIndex` are limited (for now, `0 <= account <= 100` and `0 <= changeIndex <= 1 000 000`). This makes it feasible to brute-force all change addresses in case an attacker manages to modify change address(es). (As the user does not confirm change addresses, it is relatively easy to perform MITM attack).
 - Only transactions with at least one input will be signed (this provides protection against certificate replays and transaction replays on different networks).
 
@@ -54,15 +54,17 @@ Initializes signing request.
 |------|-----|-----|
 | network id                                | 1 | |
 | protocol magic                            | 4 | Big endian |
-| include ttl                               | 1 | `SIGN_TX_INCLUDED_NO=0x01` / `SIGN_TX_INCLUDED_YES=0x02` |
-| include metadata                          | 1 | `SIGN_TX_INCLUDED_NO=0x01` / `SIGN_TX_INCLUDED_YES=0x02` |
-| include validity interval start           | 1 | `SIGN_TX_INCLUDED_NO=0x01` / `SIGN_TX_INCLUDED_YES=0x02` |
-| is signing as pool registration owner     | 1 | `SIGN_TX_POOL_REGISTRATION_NO=0x03` / `SIGN_TX_POOL_REGISTRATION_YES=0x04` |
+| include ttl                               | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
+| include metadata                          | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
+| include validity interval start           | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
+| usecase                                   | 1 | `SIGN_TX_USECASE_ORDINARY_TX=0x03` / `SIGN_TX_USECASE_POOL_REGISTRATION_OWNER=0x04` / `SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR=0x05`|
 | number of tx inputs                       | 4 | Big endian |
 | number of tx outputs                      | 4 | Big endian |
 | number of tx certificates                 | 4 | Big endian |
 | number of tx withdrawals                  | 4 | Big endian |
 | number of tx witnesses                    | 4 | Big endian |
+
+The usecase describes whether the transaction contains a pool registration certificate (if not, use `SIGN_TX_USECASE_ORDINARY_TX`) and how the certificate should be treated (see the section on certificates below).
 
 ### Auxiliary data
 
@@ -217,35 +219,53 @@ Optional.
 
 ### Certificate
 
-We support three types of certificates: stake key registration, stake key deregistration, stake delegation.
+We support 4 types of certificates in ordinary transactions (usecase `SIGN_TX_USECASE_ORDINARY_TX` in the initial APDU message): stake key registration, stake key deregistration, stake delegation and stake pool retirement.
+>>>>>>> 01cccd3... operator app
+
+In addition, a transaction using `SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR` or `SIGN_TX_USECASE_POOL_REGISTRATION_OWNER` as the usecase contains a single certificate for stake pool registration which must not be accompanied by other certificates or by withdrawals (due to security concerns about cross-witnessing data between them). This certificate is processed by a state sub-machine. Instructions for this sub-machine are given in P2; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details on accepted P2 values and additional APDU messages needed.
 
 |Field|Value|
 |-----|-----|
 |  P1 | `0x06` |
-|  P2 | (unused) |
+|  P2 | (unused / see [Stake Pool Registration](ins_sign_stake_pool_registration.md)) |
 
 **Data for CERTIFICATE_TYPE_STAKE_REGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|--------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_REGISTRATION=0x00`|
-|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_extended_public_key.md) for a format example |
+|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
 
 **Data for CERTIFICATE_TYPE_STAKE_DEREGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|--------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_DEREGISTRATION=0x01`|
-|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_extended_public_key.md) for a format example |
+|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
 
 **Data for CERTIFICATE_TYPE_STAKE_DELEGATION**
 
 |Field| Length | Comments|
 |-----|--------|--------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_DELEGATION=0x02`|
-|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_extended_public_key.md) for a format example |
+|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
 |Pool key hash| 28 | Hash of staking pool public key|
 
+**Data for CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION**
+
+|Field| Length | Comments|
+|-----|--------|--------|
+|Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION=0x03`|
+
+This only describes the initial certificate message. All the data for this certificate are obtained via a series of additional APDU messages; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details.
+
+**Data for CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT**
+
+|Field| Length | Comments|
+|-----|--------|--------|
+|Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT=0x04`|
+|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
+|Pool key hash| 28 | Hash of staking pool public key|
 
 ### Reward withdrawal
 
@@ -261,7 +281,7 @@ Withdrawals from reward accounts.
 |Field| Length | Comments|
 |-----|--------|--------|
 | Amount | 8 | Big endian |
-| Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_extended_public_key.md) for a format example |
+| Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
 
 ### Validity interval start
 
@@ -300,7 +320,7 @@ The caller is responsible for assembling the actual witness (the format is diffe
 |-----|-----|
 |  P1 | `0x0f` |
 |  P2 | (unused) |
-| data | BIP44 path. See [GetExtPubKey call](ins_get_extended_public_key.md) for a format example |
+| data | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
 
 **Response**
 

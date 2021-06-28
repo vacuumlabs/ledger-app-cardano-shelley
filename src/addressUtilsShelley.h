@@ -64,9 +64,6 @@ typedef struct {
 
 bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams);
 
-__noinline_due_to_stack__
-size_t view_appendPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath);
-
 size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize);
 
 __noinline_due_to_stack__

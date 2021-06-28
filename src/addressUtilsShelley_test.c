@@ -12,7 +12,7 @@
 static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
 {
 	pathSpec->length = pathLength;
-	os_memmove(pathSpec->path, pathArray, pathLength * 4);
+	memmove(pathSpec->path, pathArray, pathLength * 4);
 }
 
 // networkIdOrProtocolMagic is used as networkId for Shelley addresses and as protocol magic for Byron addresses
@@ -72,8 +72,10 @@ static void testcase_deriveAddressShelley(
 	} else {
 		PRINTF("testcase_deriveAddressShelley 0x%02x ", constructShelleyAddressHeader(type, (uint8_t) networkIdOrProtocolMagic));
 	}
+
 	bip44_PRINTF(&params.spendingKeyPath);
-	if (params.stakingKeyPath.length > 0) {
+
+	if (stakingChoice == STAKING_KEY_PATH) {
 		bip44_PRINTF(&params.stakingKeyPath);
 	}
 	if (stakingKeyHashHex != NULL) {
@@ -90,7 +92,7 @@ static void testcase_deriveAddressShelley(
 	PRINTF("\n");
 
 	uint8_t address[MAX_ADDRESS_LENGTH];
-	size_t addressSize = deriveAddress(&params, address, SIZEOF(address));;
+	size_t addressSize = deriveAddress(&params, address, SIZEOF(address));
 
 	uint8_t expected[MAX_ADDRESS_LENGTH];
 	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));

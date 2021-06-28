@@ -11,6 +11,11 @@ enum  {
 	P2_UNUSED = 0
 };
 
+enum {
+	ITEM_INCLUDED_NO = 1,
+	ITEM_INCLUDED_YES = 2
+};
+
 // `io_send_*` are helper functions for sending response APDUs.
 // Note that the IO_RETURN_AFTER_TX flag is set so that the function
 // does not receive next APDU.

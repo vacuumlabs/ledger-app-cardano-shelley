@@ -9,7 +9,7 @@
 static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
 {
 	pathSpec->length = pathLength;
-	os_memmove(pathSpec->path, pathArray, pathLength * 4);
+	memmove(pathSpec->path, pathArray, pathLength * 4);
 }
 
 void testcase_printToStr(const uint32_t* path, uint32_t pathLen, size_t outputSize, const char* expected)
@@ -19,7 +19,7 @@ void testcase_printToStr(const uint32_t* path, uint32_t pathLen, size_t outputSi
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	char result[1 + BIP44_MAX_PATH_STRING_LENGTH];
+	char result[BIP44_PATH_STRING_SIZE_MAX];
 	ASSERT(outputSize <= SIZEOF(result));
 
 	size_t resultLen = bip44_printToStr(&pathSpec, result, outputSize);
@@ -38,23 +38,23 @@ void run_bip44_test()
 	}
 
 	TESTCASE(
-	        (1, 2, 3, 4, 5, 6, 7), BIP44_MAX_PATH_STRING_LENGTH,
-	        "m/1/2/3/4/5/6/7"
+	        (1, 2, 3, 4, 5), BIP44_PATH_STRING_SIZE_MAX,
+	        "m/1/2/3/4/5"
 	);
 	TESTCASE(
-	        (1, 2, 3, 4, 5, 6, 7), 16,
-	        "m/1/2/3/4/5/6/7"
+	        (1, 2, 3, 4, 5), 12,
+	        "m/1/2/3/4/5"
 	);
 	TESTCASE(
 	        (), 2,
 	        "m"
 	);
 	TESTCASE(
-	        (HD + 44, HD + 1815, HD + 0, 1, 55), BIP44_MAX_PATH_STRING_LENGTH,
+	        (HD + 44, HD + 1815, HD + 0, 1, 55), BIP44_PATH_STRING_SIZE_MAX,
 	        "m/44'/1815'/0'/1/55"
 	);
 	TESTCASE(
-	        (HD + 44, HD + 1815), 100,
+	        (HD + 44, HD + 1815), 60,
 	        "m/44'/1815'"
 	);
 #undef TESTCASE
