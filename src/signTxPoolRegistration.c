@@ -181,7 +181,12 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 			uint8_t numRelays[4];
 		}* wireHeader = (void*) wireDataBuffer;
 
+		#ifndef FUZZING
+		// FIXME: the following fails when compiling for x86
 		VALIDATE(wireDataSize == SIZEOF(*wireHeader), ERR_INVALID_DATA);
+		#else
+		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
+		#endif
 
 		uint64_t numOwners = u4be_read(wireHeader->numOwners);
 		uint64_t numRelays = u4be_read(wireHeader->numRelays);

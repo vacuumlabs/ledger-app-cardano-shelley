@@ -11,6 +11,7 @@ static void signRawMessage(privateKey_t* privateKey,
 	ASSERT(messageSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(outSize == SIZEOF(signature));
 
+	#ifndef FUZZING
 	// Note(ppershing): this could be done without
 	// temporary copy
 	STATIC_ASSERT(sizeof(int) == sizeof(size_t), "bad sizing");
@@ -29,6 +30,7 @@ static void signRawMessage(privateKey_t* privateKey,
 
 	ASSERT(signatureSize == ED25519_SIGNATURE_LENGTH);
 	memmove(outBuffer, signature, signatureSize);
+	#endif
 }
 
 static void signRawMessageWithPath(bip44_path_t* pathSpec,
@@ -62,7 +64,9 @@ void getTxWitness(bip44_path_t* pathSpec,
                   uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(txHashSize == TX_HASH_LENGTH);
+	#ifndef FUZZING
 	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
+	#endif
 }
 
 void getCatalystVotingRegistrationSignature(bip44_path_t* pathSpec,
@@ -70,7 +74,9 @@ void getCatalystVotingRegistrationSignature(bip44_path_t* pathSpec,
         uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(payloadHashSize == CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH);
+	#ifndef FUZZING
 	signRawMessageWithPath(pathSpec, payloadHashBuffer, payloadHashSize, outBuffer, outSize);
+	#endif
 }
 
 void getOpCertSignature(bip44_path_t* pathSpec,

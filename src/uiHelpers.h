@@ -30,11 +30,21 @@ typedef void ui_callback_fn_t();
 			default: { \
 				ASSERT(false);
 
+#ifdef FUZZING
+// Flatten UI control flows. Every step will be 
+// called and validated without manual interaction
+// Starting from the first defined step
+#define UI_STEP(NEXT_STEP) \
+				*__ui_step_ptr = NEXT_STEP; \
+			} \
+			case NEXT_STEP: {
+#else
 #define UI_STEP(NEXT_STEP) \
 				*__ui_step_ptr = NEXT_STEP; \
 				break; \
 			} \
 			case NEXT_STEP: {
+#endif // FUZZING
 
 #define UI_STEP_END(INVALID_STEP) \
 				*__ui_step_ptr = INVALID_STEP; \
