@@ -50,19 +50,19 @@ UX_FLOW(
 
 void ui_displayPaginatedText_run()
 {
-        #ifdef FUZZING
-        ux_flow_init(0, ux_short_text_flow, NULL);
-        ux_stack_push();
-        #else
+	#ifdef FUZZING
+	ux_flow_init(0, ux_short_text_flow, NULL);
+	ux_stack_push();
+	#else
 	if (strlen((const char*) &displayState.paginatedText.fullText) < 18 ) {
 		ux_flow_init(0, ux_short_text_flow, NULL);
-                ux_stack_push();
+		ux_stack_push();
 	} else {
 		ux_layout_bnnn_paging_reset();
 		ux_flow_init(0, ux_paginated_text_flow, NULL);
 
 	}
-        #endif
+	#endif
 }
 
 

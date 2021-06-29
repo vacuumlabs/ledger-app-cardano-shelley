@@ -48,7 +48,7 @@ void derivePrivateKey(
 		TRY {
 			STATIC_ASSERT(CX_APILEVEL >= 5, "unsupported api level");
 			STATIC_ASSERT(SIZEOF(privateKey->d) == 64, "bad private key length");
-#ifndef FUZZING
+			#ifndef FUZZING
 			io_seproxyhal_io_heartbeat();
 			os_perso_derive_node_bip32(
 			        CX_CURVE_Ed25519,
@@ -57,7 +57,7 @@ void derivePrivateKey(
 			        privateKeyRawBuffer,
 			        chainCode->code);
 			io_seproxyhal_io_heartbeat();
-#endif
+			#endif
 			// We should do cx_ecfp_init_private_key here, but it does not work in SDK < 1.5.4,
 			// should work with the new SDK
 			privateKey->curve = CX_CURVE_Ed25519;
@@ -76,7 +76,7 @@ void deriveRawPublicKey(
         cx_ecfp_public_key_t* publicKey
 )
 {
-#ifndef FUZZING
+	#ifndef FUZZING
 	// We should do cx_ecfp_generate_pair here, but it does not work in SDK < 1.5.4,
 	// should work with the new SDK
 	io_seproxyhal_io_heartbeat();
@@ -88,7 +88,7 @@ void deriveRawPublicKey(
 	        publicKey,
 	        NULL, 0, NULL, 0);
 	io_seproxyhal_io_heartbeat();
-#endif
+	#endif
 }
 
 void extractRawPublicKey(
