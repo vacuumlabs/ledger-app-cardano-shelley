@@ -486,6 +486,22 @@ void ui_displayUint64Screen(
 	);
 }
 
+void ui_displayInt64Screen(
+        const char* screenHeader,
+        int64_t value,
+        ui_callback_fn_t callback
+)
+{
+	char valueStr[30];
+	str_formatInt64(value, valueStr, SIZEOF(valueStr));
+
+	ui_displayPaginatedText(
+	        screenHeader,
+	        valueStr,
+	        callback
+	);
+}
+
 void ui_displayValidityBoundaryScreen(
         const char* firstLine,
         uint64_t boundary,

@@ -154,3 +154,23 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 	}
 #undef CHECK_BUF_LEN
 }
+
+bool cbor_mapKeyFulfillsCanonicalOrdering(
+        const uint8_t* previousBuffer, size_t previousSize,
+        const uint8_t* nextBuffer, size_t nextSize
+)
+{
+	if (previousSize != nextSize) {
+		return previousSize < nextSize;
+	}
+	for (size_t i = 0; i < previousSize; ++i) {
+		if (*previousBuffer != *nextBuffer) {
+			return *previousBuffer < *nextBuffer;
+		}
+		++previousBuffer;
+		++nextBuffer;
+	}
+	// key duplication is an error
+	return false;
+}
+

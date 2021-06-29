@@ -90,6 +90,13 @@ void ui_displayUint64Screen(
 );
 
 __noinline_due_to_stack__
+void ui_displayInt64Screen(
+        const char* screenHeader,
+        int64_t value,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
 void ui_displayValidityBoundaryScreen(
         const char* screenHeader,
         uint64_t boundary,
