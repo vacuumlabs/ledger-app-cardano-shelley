@@ -3,8 +3,6 @@
 
 #include "common.h"
 #include "hash.h"
-#include "lcx_hash.h"
-#include "lcx_sha3.h"
 #include "handlers.h"
 #include "txHashBuilder.h"
 #include "bip44.h"
