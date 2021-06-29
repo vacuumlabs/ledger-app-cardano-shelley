@@ -105,6 +105,58 @@ static struct {
 
 static const char* expectedHex = "58dc0efc7a2d654795ae3b7c85518065bb123f17056406732c18d1553cc2510f";
 
+typedef void(*addTokenGroupFun)(tx_hash_builder_t* builder,
+                                const uint8_t* policyIdBuffer, size_t policyIdSize,
+                                uint16_t numTokens);
+typedef void(*addTokenFun)(tx_hash_builder_t* builder,
+                           const uint8_t* assetNameBuffer, size_t assetNameSize,
+                           uint64_t amount);
+
+static void addTwoMultiassetTokenGroups(tx_hash_builder_t* builder,
+                                        addTokenGroupFun tokenGroupAdder, addTokenFun tokenAdder)
+{
+	// we reuse the buffers to avoid wasting stack
+	uint8_t policy[MINTING_POLICY_ID_SIZE];
+	//corresponding keyHash: f4e3e6a2995519582637497d18ad821f432ef8c2b166023b9224b6a8
+	decode_hex("ad80794f72fa0edde3218b8d3fda801c24e25cbe61249e091d7eb10c", policy, MINTING_POLICY_ID_SIZE);
+	// explicit_bzero(policy, SIZEOF(policy));
+
+	uint8_t assetNameBuffer[ASSET_NAME_SIZE_MAX];
+	memset(assetNameBuffer, 'a', ASSET_NAME_SIZE_MAX);
+	tokenGroupAdder(builder, policy, SIZEOF(policy), 2);
+
+	//baaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+	assetNameBuffer[0] += 1;
+	tokenAdder(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 110);
+	//caaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+	assetNameBuffer[0] += 1;
+	tokenAdder(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 120);
+
+	//corresponding keyHash: f3e3e6a2995519582637497d18ad821f432ef8c2b166023b9224b6a8
+	decode_hex("dd56053690281363b13f4f885cb734e26ba0b1f197b093402c503f5e", policy, MINTING_POLICY_ID_SIZE);
+	tokenGroupAdder(builder, policy, SIZEOF(policy), 2);
+
+	//daaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+	assetNameBuffer[0] += 1;
+	tokenAdder(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 210);
+	//e
+	assetNameBuffer[0] += 1;
+	// use a short buffer on purpose
+	tokenAdder(builder, assetNameBuffer, 1, 220);
+}
+
+static void addMintTokenProxy(tx_hash_builder_t* builder,
+                              const uint8_t* assetNameBuffer, size_t assetNameSize,
+                              uint64_t amount)
+{
+	txHashBuilder_addMint_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
+}
+
+static void addMultiassetMint(tx_hash_builder_t* builder)
+{
+	txHashBuilder_addMint_topLevelData(builder, 2);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addMint_tokenGroup, &addMintTokenProxy);
+}
 
 static void addMultiassetOutput(tx_hash_builder_t* builder)
 {
@@ -117,29 +169,7 @@ static void addMultiassetOutput(tx_hash_builder_t* builder)
 	        2
 	);
 
-	// we reuse the buffers to avoid wasting stack
-	uint8_t policy[MINTING_POLICY_ID_SIZE];
-	explicit_bzero(policy, SIZEOF(policy));
-
-	uint8_t assetNameBuffer[ASSET_NAME_SIZE_MAX];
-	explicit_bzero(assetNameBuffer, SIZEOF(assetNameBuffer));
-
-	policy[0] = 1;
-	txHashBuilder_addOutput_tokenGroup(builder, policy, SIZEOF(policy), 2);
-
-	assetNameBuffer[0] = 11;
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 110);
-	assetNameBuffer[0] = 12;
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 120);
-
-	policy[0] = 2;
-	txHashBuilder_addOutput_tokenGroup(builder, policy, SIZEOF(policy), 2);
-
-	assetNameBuffer[0] = 21;
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 210);
-	assetNameBuffer[0] = 22;
-	// use a short buffer on purpose
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, 1, 220);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &txHashBuilder_addOutput_token);
 }
 
 static void addOutputs(tx_hash_builder_t* builder)
@@ -278,7 +308,68 @@ static void addCertificates(tx_hash_builder_t* builder)
 	}
 }
 
-void run_txHashBuilder_test()
+static void addMint(tx_hash_builder_t* builder)
+{
+	txHashBuilder_enterMint(builder);
+
+	addMultiassetMint(builder);
+}
+
+static const char* expectedMintHex = "e4ef430ebf5c4f3416fbb8077eab9adec3e4f49dc1f764377dc26e9bc3206e16";
+
+static void mintTest()
+{
+	PRINTF("txHashBuilder mint test\n");
+	tx_hash_builder_t builder;
+
+	txHashBuilder_init(&builder,
+	                   1, 1, // +2 for multiasset outputs
+	                   false, // ttl
+	                   0, 0,
+	                   false, // metadata
+	                   false, // validity interval start
+	                   true // mint
+	                  );
+
+	txHashBuilder_enterInputs(&builder);
+	{	
+		uint8_t tmp[TX_HASH_LENGTH];
+		size_t tmpSize = decode_hex(PTR_PIC(inputs[0].txHashHex), tmp, SIZEOF(tmp));
+		txHashBuilder_addInput(
+		        &builder,
+		        tmp, tmpSize,
+		        inputs[0].index
+		);
+	}
+	txHashBuilder_enterOutputs(&builder);
+	{
+		uint8_t tmp[70];
+		size_t tmpSize = decode_hex(PTR_PIC(outputs[0].rawAddressHex), tmp, SIZEOF(tmp));
+		txHashBuilder_addOutput_topLevelData(
+		        &builder,
+		        tmp, tmpSize,
+		        outputs[0].amount,
+		        0
+		);
+	}
+
+	txHashBuilder_addFee(&builder, 42);
+
+	addMint(&builder);
+
+	uint8_t result[TX_HASH_LENGTH];
+	txHashBuilder_finalize(&builder, result, SIZEOF(result));
+
+	uint8_t expected[TX_HASH_LENGTH];
+	decode_hex(expectedMintHex, expected, SIZEOF(expected));
+
+	PRINTF("result\n");
+	PRINTF("%.*h\n", 32, result);
+
+	EXPECT_EQ_BYTES(result, expected, 32);
+}
+
+static void genericTest()
 {
 	PRINTF("txHashBuilder test\n");
 	tx_hash_builder_t builder;
@@ -293,7 +384,8 @@ void run_txHashBuilder_test()
 	                   true, // ttl
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
-	                   true // validity interval start
+	                   true, // validity interval start
+	                   false // mint
 	                  );
 
 	txHashBuilder_enterInputs(&builder);
@@ -327,6 +419,8 @@ void run_txHashBuilder_test()
 		);
 	}
 
+	// addMint(&builder);
+
 	{
 		const char auxDataHashHex[] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 		uint8_t tmp[AUX_DATA_HASH_LENGTH];
@@ -347,6 +441,12 @@ void run_txHashBuilder_test()
 	PRINTF("%.*h\n", 32, result);
 
 	EXPECT_EQ_BYTES(result, expected, 32);
+}
+
+void run_txHashBuilder_test()
+{
+	// genericTest();
+	mintTest();
 }
 
 #endif // DEVEL
