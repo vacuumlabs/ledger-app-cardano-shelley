@@ -444,9 +444,11 @@ security_policy_t policyForSignTxCertificate(
 // for certificates concerning staking keys and stake delegation
 security_policy_t policyForSignTxCertificateStaking(
         const certificate_type_t certificateType,
-        const bip44_path_t* stakingKeyPath
+        const bip44_path_t* stakingKeyPath,
+        const uint8_t* stakingScriptHash
 )
 {
+	ASSERT((NULL != stakingKeyPath) ^ (NULL != stakingScriptHash));
 	switch (certificateType) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
@@ -457,7 +459,9 @@ security_policy_t policyForSignTxCertificateStaking(
 		ASSERT(false);
 	}
 
-	DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
+	if (stakingKeyPath) {
+		DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
+	}
 
 	PROMPT();
 }

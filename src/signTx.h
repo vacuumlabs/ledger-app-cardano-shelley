@@ -59,9 +59,19 @@ typedef struct {
 	uint32_t protocolMagic; // part of Byron address
 } common_tx_data_t;
 
+typedef enum {
+	CERTIFICATE_IDENTIFIER_KEY_PATH = 0,
+	CERTIFICATE_IDENTIFIER_SCRIPT_HASH = 1,
+} certificate_identifier_type_t;
+
 typedef struct {
 	certificate_type_t type;
-	bip44_path_t pathSpec; // interpretation depends on type // TODO rename to keyPath?
+	
+	certificate_identifier_type_t identifierType;
+	union {
+		bip44_path_t pathSpec; // interpretation depends on type // TODO rename to keyPath?
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
 
 	// only for specific types
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];

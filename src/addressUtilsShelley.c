@@ -324,6 +324,7 @@ static size_t deriveAddress_reward(
 		if (addressType == REWARD_KEY) {
 			const bip44_path_t* stakingKeyPath = &addressParams->stakingKeyPath;
 			// staking key path expected (corresponds to reward account)
+			BIP44_PRINTF(stakingKeyPath);
 			ASSERT(bip44_isValidStakingKeyPath(stakingKeyPath));
 			view_appendAddressPublicKeyHash(&out, stakingKeyPath);
 		} else {
