@@ -58,7 +58,8 @@ security_policy_t policyForSignTxCertificate(
 );
 security_policy_t policyForSignTxCertificateStaking(
         const certificate_type_t certificateType,
-        const bip44_path_t* stakingKeyPath
+        const bip44_path_t* stakingKeyPath,
+        const uint8_t* stakingScriptHash
 );
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_usecase_t signTxUsecase,

@@ -72,9 +72,21 @@ bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec)
 #undef CHECK
 }
 
+bool bip44_hasMultisigPrefix(const bip44_path_t* pathSpec)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_MULTISIG | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+	return true;
+#undef CHECK
+}
+
 bool bip44_hasValidCardanoWalletPrefix(const bip44_path_t* pathSpec)
 {
-	return bip44_hasByronPrefix(pathSpec) || bip44_hasShelleyPrefix(pathSpec);
+	// TODO should bip44_hasMultisigPrefix come here? does it fulfill the
+	// "path is valid as the spending path in all addresses except REWARD" ?
+	return bip44_hasByronPrefix(pathSpec) || bip44_hasShelleyPrefix(pathSpec) || bip44_hasMultisigPrefix(pathSpec);
 }
 
 bool bip44_hasValidCardanoPoolColdKeyPrefix(const bip44_path_t* pathSpec)
@@ -177,7 +189,7 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsAddress(pathSpec)) return false;
 	if (bip44_containsMoreThanAddress(pathSpec)) return false;
-	if (!bip44_hasShelleyPrefix(pathSpec)) return false;
+	if (!bip44_hasShelleyPrefix(pathSpec) && !bip44_hasMultisigPrefix(pathSpec)) return false;
 
 	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
 	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
@@ -247,6 +259,36 @@ size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 	return ptr - out;
 }
 
+static bip44_path_type_t bip44_classifyCardanoWalletPath(const bip44_path_t* pathSpec)
+{
+	const bool multiSig = bip44_hasMultisigPrefix(pathSpec);
+	switch (pathSpec->length) {
+	case 3: {
+		return multiSig ? PATH_MULTISIG_ACCOUNT : PATH_WALLET_ACCOUNT;
+	}
+	case 5: {
+		const uint8_t chainType = bip44_getChainTypeValue(pathSpec);
+		switch (chainType) {
+
+		case CARDANO_CHAIN_INTERNAL:
+		case CARDANO_CHAIN_EXTERNAL:
+			return multiSig ? PATH_MULTISIG_SPENDING_KEY : PATH_WALLET_SPENDING_KEY;
+
+		case CARDANO_CHAIN_STAKING_KEY:
+			if (bip44_isValidStakingKeyPath(pathSpec)) {
+				return multiSig ? PATH_MULTISIG_STAKING_KEY : PATH_WALLET_STAKING_KEY;
+			} else {
+				return PATH_INVALID;
+			}
+
+		default:
+			return PATH_INVALID;
+		}
+	}
+	default:
+		return PATH_INVALID;
+	}
+}
 
 bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec)
 {
@@ -259,36 +301,7 @@ bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec)
 	}
 
 	if (bip44_hasValidCardanoWalletPrefix(pathSpec)) {
-		switch (pathSpec->length) {
-
-		case 3: {
-			return PATH_WALLET_ACCOUNT;
-		}
-
-		case 5: {
-			const uint8_t chainType = bip44_getChainTypeValue(pathSpec);
-			switch (chainType) {
-
-			case CARDANO_CHAIN_INTERNAL:
-			case CARDANO_CHAIN_EXTERNAL:
-				return PATH_WALLET_SPENDING_KEY;
-
-			case CARDANO_CHAIN_STAKING_KEY:
-				if (bip44_isValidStakingKeyPath(pathSpec)) {
-					return PATH_WALLET_STAKING_KEY;
-				} else {
-					return PATH_INVALID;
-				}
-
-			default:
-				return PATH_INVALID;
-			}
-		}
-
-		// TODO too many returns in various depths, split into relevant parts when multisig is added
-		default:
-			return PATH_INVALID;
-		}
+		return bip44_classifyCardanoWalletPath(pathSpec);
 	}
 
 	return PATH_INVALID;
@@ -299,12 +312,15 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 	switch (bip44_classifyPath(pathSpec)) {
 
 	case PATH_WALLET_ACCOUNT:
+	case PATH_MULTISIG_ACCOUNT:
 		return bip44_hasReasonableAccount(pathSpec);
 
 	case PATH_WALLET_SPENDING_KEY:
+	case PATH_MULTISIG_SPENDING_KEY:
 		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
 
 	case PATH_WALLET_STAKING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
 		return bip44_hasReasonableAccount(pathSpec);
 
 	case PATH_POOL_COLD_KEY:

@@ -18,12 +18,12 @@ static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uin
 // networkIdOrProtocolMagic is used as networkId for Shelley addresses and as protocol magic for Byron addresses
 static void testcase_deriveAddressShelley(
         uint8_t type, uint32_t networkIdOrProtocolMagic, const uint32_t* spendingPathArray, size_t spendingPathLen,
-        uint8_t stakingChoice, const uint32_t* stakingPathArray, size_t stakingPathLen,
+        uint8_t stakingDataSource, const uint32_t* stakingPathArray, size_t stakingPathLen,
         const char* stakingKeyHashHex, const blockchainPointer_t* stakingKeyBlockchainPointer,
         const char* expectedHex)
 {
 	// avoid inconsistent tests
-	switch (stakingChoice) {
+	switch (stakingDataSource) {
 	case NO_STAKING:
 		ASSERT(stakingPathLen == 0 && stakingKeyHashHex == NULL && stakingKeyBlockchainPointer == NULL);
 		break;
@@ -46,13 +46,13 @@ static void testcase_deriveAddressShelley(
 		params = (addressParams_t) {
 			.type = type,
 			.protocolMagic = networkIdOrProtocolMagic,
-			.stakingChoice = stakingChoice
+			.stakingDataSource = stakingDataSource
 		};
 	} else {
 		params = (addressParams_t) {
 			.type = type,
 			.networkId = (uint8_t) networkIdOrProtocolMagic,
-			.stakingChoice = stakingChoice
+			.stakingDataSource = stakingDataSource
 		};
 	}  // the rest of params is initialized to zero
 
@@ -75,7 +75,7 @@ static void testcase_deriveAddressShelley(
 
 	bip44_PRINTF(&params.spendingKeyPath);
 
-	if (stakingChoice == STAKING_KEY_PATH) {
+	if (stakingDataSource == STAKING_KEY_PATH) {
 		bip44_PRINTF(&params.stakingKeyPath);
 	}
 	if (stakingKeyHashHex != NULL) {
@@ -121,48 +121,48 @@ static void testAddressDerivation()
 	);
 
 	TESTCASE(
-	        BASE, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1),
+	        BASE_PAYMENT_KEY_STAKE_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1),
 	        STAKING_KEY_PATH, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING_KEY_HASH,
 	        "035a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
 	        // bech32: addr1qdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcayfawlf9hwv2fzuygt2km5v92kvf8e3s3mk7ynxw77cwqdquehe
 	);
 	TESTCASE(
-	        BASE, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1),
+	        BASE_PAYMENT_KEY_STAKE_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1),
 	        STAKING_KEY_PATH, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING_KEY_HASH,
 	        "005a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
 	        // bech32: addr1qpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcayfawlf9hwv2fzuygt2km5v92kvf8e3s3mk7ynxw77cwqhn8sgh
 	);
 	TESTCASE(
-	        BASE, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1),
+	        BASE_PAYMENT_KEY_STAKE_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1),
 	        STAKING_KEY_HASH, NO_STAKING_KEY_PATH, "1d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c",
 	        "005a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
 	        // bech32: addr1qpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcayfawlf9hwv2fzuygt2km5v92kvf8e3s3mk7ynxw77cwqhn8sgh
 	);
 	TESTCASE(
-	        BASE, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1),
+	        BASE_PAYMENT_KEY_STAKE_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1),
 	        STAKING_KEY_HASH, NO_STAKING_KEY_PATH, "122a946b9ad3d2ddf029d3a828f0468aece76895f15c9efbd69b4277",
 	        "035a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3122a946b9ad3d2ddf029d3a828f0468aece76895f15c9efbd69b4277"
 	        // bech32: addr1qdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcj922xhxkn6twlq2wn4q50q352annk3903tj00h45mgfmswz93l5
 	);
 
 	TESTCASE(
-	        ENTERPRISE, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
+	        ENTERPRISE_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
 	        "605a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3"
 	        // bech32: addr1vpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vc93wyej
 	);
 	TESTCASE(
-	        ENTERPRISE, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
+	        ENTERPRISE_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
 	        "635a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3"
 	        // bech32: addr1vdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vc9wh7em
 	);
 
 	TESTCASE(
-	        REWARD, 0x03, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
+	        REWARD_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
 	        "e31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
 	        // bech32: stake1uvwjy7h05jmhx9y3wzy94td6xz4txynuccgam0zfn800v8qqucf2t
 	);
 	TESTCASE(
-	        REWARD, 0x00, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
+	        REWARD_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
 	        "e01d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
 	        // bech32: stake_test1uqwjy7h05jmhx9y3wzy94td6xz4txynuccgam0zfn800v8q8mmqwc
 	);
@@ -179,17 +179,17 @@ static void testAddressDerivation()
 	}
 
 	TESTCASE_POINTER(
-	        POINTER, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1), (1, 2, 3),
+	        POINTER_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1), (1, 2, 3),
 	        "405a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3010203"
 	        // bech32: addr1gpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcpqgpsh506pr
 	);
 	TESTCASE_POINTER(
-	        POINTER, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), (24157, 177, 42),
+	        POINTER_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), (24157, 177, 42),
 	        "435a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b381bc5d81312a"
 	        // bech32: addr1gdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vuph3wczvf288aeyu
 	);
 	TESTCASE_POINTER(
-	        POINTER, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), (0, 0, 0),
+	        POINTER_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), (0, 0, 0),
 	        "435a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3000000"
 	        // bech32: addr1gdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcqqqqqnnd32q
 	);
