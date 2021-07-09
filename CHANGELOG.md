@@ -23,6 +23,8 @@ Support for signing pool registrations by operators.
 
 ### Fixed
 
+- Fixed pool id still being displayed as hex for stake delegations instead of bech32: https://github.com/vacuumlabs/ledger-app-cardano-shelley/pull/53#issuecomment-821971545
+
 
 ## [2.3.1](https://github.com/LedgerHQ/app-cardano/compare/2.2.1...LedgerHQ:2.3.1) - [TBD]
 
