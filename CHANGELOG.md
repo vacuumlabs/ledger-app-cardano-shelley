@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [2.4.0](https://github.com/LedgerHQ/app-cardano/compare/2.3.1...LedgerHQ:2.4.0) - [TBD]
+## [2.4.1](https://github.com/LedgerHQ/app-cardano/compare/2.3.2...LedgerHQ:2.4.1) - [June 29th 2021]
 
 Support for signing pool registrations by operators.
 
@@ -23,8 +23,10 @@ Support for signing pool registrations by operators.
 
 ### Fixed
 
+- Fixed pool id still being displayed as hex for stake delegations instead of bech32: https://github.com/vacuumlabs/ledger-app-cardano-shelley/pull/53#issuecomment-821971545
 
-## [2.3.1](https://github.com/LedgerHQ/app-cardano/compare/2.2.1...LedgerHQ:2.3.1) - [TBD]
+
+## [2.3.2](https://github.com/LedgerHQ/app-cardano/compare/2.2.1...LedgerHQ:2.3.2) - [May 10th 2021]
 
 Add Catalyst voting registration metadata support
 
