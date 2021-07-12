@@ -79,7 +79,7 @@ typedef struct {
 	uint8_t assetNameBytes[ASSET_NAME_SIZE_MAX];
 	size_t assetNameSize;
 	uint64_t amount;
-} token_amount_t;
+} output_token_amount_t;
 
 
 // ==============================  CERTIFICATES  ==============================

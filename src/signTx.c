@@ -27,13 +27,14 @@ static inline void initTxBodyCtx()
 
 	{
 		// initialization
-		txBodyCtx->validityIntervalStartReceived = false;
-		txBodyCtx->feeReceived = false;
-		txBodyCtx->ttlReceived = false;
 		txBodyCtx->currentInput = 0;
 		txBodyCtx->currentOutput = 0;
 		txBodyCtx->currentCertificate = 0;
 		txBodyCtx->currentWithdrawal = 0;
+		txBodyCtx->feeReceived = false;
+		txBodyCtx->ttlReceived = false;
+		txBodyCtx->validityIntervalStartReceived = false;
+		txBodyCtx->mintReceived = false;
 	}
 }
 
@@ -91,7 +92,8 @@ static inline void advanceStage()
 			        ctx->numCertificates,
 			        ctx->numWithdrawals,
 			        ctx->includeAuxData,
-			        ctx->includeValidityIntervalStart
+			        ctx->includeValidityIntervalStart,
+			        ctx->includeMint
 			);
 			txHashBuilder_enterInputs(&txBodyCtx->txHashBuilder);
 		}
@@ -183,7 +185,20 @@ static inline void advanceStage()
 		if (ctx->includeValidityIntervalStart) {
 			ASSERT(txBodyCtx->validityIntervalStartReceived);
 		}
+		ctx->stage = SIGN_STAGE_BODY_MINT;
+		if (ctx->includeMint) {
+			txHashBuilder_enterMint(&txBodyCtx->txHashBuilder);
+			signTxMint_init();
+			// wait for mint APDU
+			break;
+		}
 
+	// intentional fallthrough
+
+	case SIGN_STAGE_BODY_MINT:
+		if (ctx->includeMint) {
+			ASSERT(txBodyCtx->mintReceived);
+		}
 		ctx->stage = SIGN_STAGE_CONFIRM;
 		break;
 
@@ -284,6 +299,13 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
+	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
+		if (signTxMint_isFinished()) {
+			TRACE();
+			ctx->stage = SIGN_STAGE_BODY_MINT;
+			txBodyCtx->mintReceived = true;
+			advanceStage();
+		}
 	default:
 		break; // nothing to do otherwise
 	}
@@ -371,6 +393,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			uint8_t includeTtl;
 			uint8_t includeAuxData;
 			uint8_t includeValidityIntervalStart;
+			uint8_t includeMint;
 			uint8_t signTxUsecase;
 
 			uint8_t numInputs[4];
@@ -399,6 +422,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 		ctx->includeValidityIntervalStart = signTx_parseIncluded(wireHeader->includeValidityIntervalStart);
 		TRACE("Include validity interval start %d", ctx->includeValidityIntervalStart);
+
+		ctx->includeMint = signTx_parseIncluded(wireHeader->includeMint);
+		TRACE("Include mint %d", ctx->includeMint);
 
 		ctx->commonTxData.signTxUsecase = wireHeader->signTxUsecase;
 		TRACE("sign tx use case %d", (int) ctx->commonTxData.signTxUsecase);
@@ -1482,6 +1508,28 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, uint8_t* wireData
 	signTx_handleValidityInterval_ui_runStep();
 }
 
+// ============================== MINT ==============================
+
+static void signTx_handleMintAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		TRACE("p2 = %d", p2);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+	}
+
+	if (ctx->stage == SIGN_STAGE_BODY_MINT) {
+		ctx->stage = SIGN_STAGE_BODY_MINT_SUBMACHINE;
+	}
+
+	CHECK_STAGE(SIGN_STAGE_BODY_MINT_SUBMACHINE);
+
+	// all mint handling is delegated to a state sub-machine
+	VALIDATE(signTxMint_isValidInstruction(p2), ERR_INVALID_DATA);
+	signTxMint_handleAPDU(p2, wireDataBuffer, wireDataSize);
+}
+
+
 // ============================== CONFIRM ==============================
 
 enum {
@@ -1700,6 +1748,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x06, signTx_handleCertificateAPDU);
 		CASE(0x07, signTx_handleWithdrawalAPDU);
 		CASE(0x09, signTx_handleValidityIntervalStartAPDU);
+		CASE(0x0b, signTx_handleMintAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
 		CASE(0x0f, signTx_handleWitnessAPDU);
 		DEFAULT(NULL)
@@ -1737,6 +1786,8 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
 	case SIGN_STAGE_BODY_WITHDRAWALS:
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
+	case SIGN_STAGE_BODY_MINT:
+	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
 		explicit_bzero(&txBodyCtx->stageData, SIZEOF(txBodyCtx->stageData));
 		break;
 	default:

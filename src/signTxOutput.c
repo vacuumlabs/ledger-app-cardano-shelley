@@ -316,8 +316,8 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 
 		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 		uint32_t numAssetGroups = parse_u4be(&view);
-		TRACE("num asset groups %u", subctx->numAssetGroups);
-		VALIDATE(subctx->numAssetGroups <= OUTPUT_ASSET_GROUPS_MAX, ERR_INVALID_DATA);
+		TRACE("num asset groups %u", numAssetGroups);
+		VALIDATE(numAssetGroups <= OUTPUT_ASSET_GROUPS_MAX, ERR_INVALID_DATA);
 
 		STATIC_ASSERT(OUTPUT_ASSET_GROUPS_MAX <= UINT16_MAX, "wrong max token groups");
 		ASSERT_TYPE(subctx->numAssetGroups, uint16_t);
@@ -385,7 +385,14 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 
 		VALIDATE(view_remainingSize(&view) >= MINTING_POLICY_ID_SIZE, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(tokenGroup->policyId) == MINTING_POLICY_ID_SIZE, "wrong policy id size");
-		view_memmove(tokenGroup->policyId, &view, MINTING_POLICY_ID_SIZE);
+		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE];
+		view_memmove(candidatePolicyId, &view, MINTING_POLICY_ID_SIZE);
+		VALIDATE(0 == subctx->currentAssetGroup || cbor_mapKeyFulfillsCanonicalOrdering(
+		                 tokenGroup->policyId, MINTING_POLICY_ID_SIZE,
+		                 candidatePolicyId, MINTING_POLICY_ID_SIZE), ERR_INVALID_DATA);
+
+		STATIC_ASSERT(SIZEOF(tokenGroup->policyId) >= MINTING_POLICY_ID_SIZE, "wrong policyId length");
+		memcpy(tokenGroup->policyId, candidatePolicyId, MINTING_POLICY_ID_SIZE);
 
 		VALIDATE(view_remainingSize(&view) == 4, ERR_INVALID_DATA);
 		uint32_t numTokens = parse_u4be(&view);
@@ -405,7 +412,6 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		);
 		TRACE();
 	}
-
 	subctx->ui_step = HANDLE_ASSET_GROUP_STEP_RESPOND;
 	signTxOutput_handleAssetGroup_ui_runStep();
 }
@@ -429,7 +435,7 @@ static void signTxOutput_handleToken_ui_runStep()
 	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_NAME) {
 		ui_displayAssetFingerprintScreen(
 		        &subctx->stateData.tokenGroup,
-		        &subctx->stateData.token,
+		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
 		        this_fn
 		);
 	}
@@ -462,18 +468,30 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
-		token_amount_t* token = &subctx->stateData.token;
+		output_token_amount_t* token = &subctx->stateData.token;
 
 		// parse data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
-		token->assetNameSize = parse_u4be(&view);
-		VALIDATE(token->assetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
+		const size_t candidateAssetNameSize = parse_u4be(&view);
 
-		ASSERT(token->assetNameSize <= SIZEOF(token->assetNameBytes));
-		view_memmove(token->assetNameBytes, &view, token->assetNameSize);
+		VALIDATE(candidateAssetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
+		ASSERT(candidateAssetNameSize <= SIZEOF(token->assetNameBytes));
+		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX];
+
+		view_memmove(candidateAssetNameBytes, &view, candidateAssetNameSize);
+		if (0 < subctx->currentToken) {
+			VALIDATE(cbor_mapKeyFulfillsCanonicalOrdering(
+			                 token->assetNameBytes, token->assetNameSize,
+			                 candidateAssetNameBytes, candidateAssetNameSize
+			         ), ERR_INVALID_DATA);
+		}
+
+		token->assetNameSize = candidateAssetNameSize;
+		ASSERT(sizeof(token->assetNameBytes) >= candidateAssetNameSize);
+		memcpy(token->assetNameBytes, candidateAssetNameBytes, candidateAssetNameSize);
 
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		token->amount = parse_u8be(&view);

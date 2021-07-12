@@ -99,6 +99,27 @@ void testcase_formatUint64(
 	}
 }
 
+void testcase_formatInt64(
+        int64_t number,
+        const char* expected
+)
+{
+	PRINTF("testcase_formatInt64 %s\n", expected);
+
+	{
+		char tmp[30];
+		size_t len = str_formatInt64(number, tmp, SIZEOF(tmp));
+		EXPECT_EQ(len, strlen(expected));
+		EXPECT_EQ(strcmp(tmp, expected), 0);
+	}
+
+	{
+		// check for buffer overflows
+		char tmp[30];
+		EXPECT_THROWS(str_formatInt64(number, tmp, strlen(expected)), ERR_DATA_TOO_LARGE);
+	}
+}
+
 void test_formatUint64()
 {
 	testcase_formatUint64( 0, "0");
@@ -108,11 +129,23 @@ void test_formatUint64()
 	testcase_formatUint64( -1ll, "18446744073709551615");
 }
 
+void test_formatInt64()
+{
+	testcase_formatInt64( 0, "0");
+	testcase_formatInt64( 1, "1");
+	testcase_formatInt64( 4924800, "4924800");
+	testcase_formatInt64( 4924799, "4924799");
+	testcase_formatInt64( -1ll, "-1");
+	testcase_formatInt64( -922337203685477580, "-922337203685477580");
+	testcase_formatInt64( INT64_MIN, "-9223372036854775808");
+}
+
 void run_textUtils_test()
 {
 	test_formatAda();
 	test_formatTtl();
 	test_formatUint64();
+	test_formatInt64();
 }
 
 #endif // DEVEL
