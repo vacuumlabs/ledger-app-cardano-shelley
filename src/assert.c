@@ -21,7 +21,9 @@ void assert(
 		#if defined(DEVEL) || defined(FUZZING)
 		{
 			PRINTF("Assertion failed %s\n", msgStr);
+			#ifndef FUZZING
 			ui_displayPaginatedText("Assertion failed", msgStr, NULL);
+			#endif
 			THROW(ERR_ASSERT);
 		}
 		#else
