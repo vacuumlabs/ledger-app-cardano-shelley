@@ -1017,17 +1017,17 @@ static void signTx_handleCertificate_ui_runStep()
 		}
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_STAKING_KEY) {
-		if (STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredentialType) {
+		if (STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type) {
 			ui_displayPathScreen(
 			        "Staking key",
-			        &txBodyCtx->stageData.certificate.pathSpec,
+			        &txBodyCtx->stageData.certificate.stakeCredential.pathSpec,
 			        this_fn
 			);
 		} else {
 			ui_displayHexBufferScreen(
 			        "Staking script hash",
-			        txBodyCtx->stageData.certificate.scriptHash,
-			        SIZEOF(txBodyCtx->stageData.certificate.scriptHash),
+			        txBodyCtx->stageData.certificate.stakeCredential.scriptHash,
+			        SIZEOF(txBodyCtx->stageData.certificate.stakeCredential.scriptHash),
 			        this_fn
 			);
 		}
@@ -1123,23 +1123,18 @@ static void _parsePathSpec(read_view_t* view, bip44_path_t* pathSpec)
 	BIP44_PRINTF(pathSpec);
 }
 
-static void _parseStakeCredentialType(read_view_t* view, sign_tx_certificate_data_t* certificateData)
+static void _parseStakeCredential(read_view_t* view, stake_credential_t* identifier)
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
-	certificateData->stakeCredentialType = parse_u1be(view);
-	TRACE("Stake credential type: %d", certificateData->stakeCredentialType);
-
-	switch(certificateData->stakeCredentialType) {
-
-	case STAKE_CREDENTIAL_KEY_PATH: {
-		_parsePathSpec(view, &certificateData->pathSpec);
+	identifier->type = parse_u1be(view);
+	switch(identifier->type) {
+	case STAKE_CREDENTIAL_KEY_PATH:
+		_parsePathSpec(view, &identifier->pathSpec);
 		break;
-	}
-
 	case STAKE_CREDENTIAL_SCRIPT_HASH: {
-		STATIC_ASSERT(SIZEOF(certificateData->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		VALIDATE(view_remainingSize(view) >= SIZEOF(certificateData->scriptHash), ERR_INVALID_DATA);
-		view_memmove(certificateData->scriptHash, view, SIZEOF(certificateData->scriptHash));
+		STATIC_ASSERT(SIZEOF(identifier->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		VALIDATE(SIZEOF(identifier->scriptHash) <= view_remainingSize(view), ERR_INVALID_DATA);
+		view_memmove(identifier->scriptHash, view, SIZEOF(identifier->scriptHash));
 		break;
 	}
 
@@ -1161,17 +1156,17 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 
 	switch (certificateData->type) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
-		_parseStakeCredentialType(&view, certificateData);
+		_parseStakeCredential(&view, &certificateData->stakeCredential);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
-		_parseStakeCredentialType(&view, certificateData);
+		_parseStakeCredential(&view, &certificateData->stakeCredential);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION:
-		_parseStakeCredentialType(&view, certificateData);
+		_parseStakeCredential(&view, &certificateData->stakeCredential);
 		VALIDATE(view_remainingSize(&view) == POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
 		view_memmove(certificateData->poolKeyHash, &view, POOL_KEY_HASH_LENGTH);
@@ -1184,7 +1179,8 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 		return;
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
-		_parsePathSpec(&view, &certificateData->pathSpec); // pool id path
+		ASSERT(STAKE_CREDENTIAL_KEY_PATH == certificateData->stakeCredential.type);
+		_parsePathSpec(&view, &certificateData->stakeCredential.pathSpec); // pool id path
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		certificateData->epoch  = parse_u8be(&view);
 		break;
@@ -1197,19 +1193,19 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 }
 
 __noinline_due_to_stack__
-static void _fillHash(const sign_tx_certificate_data_t* certificateData,
-                      uint8_t* hash, size_t hashSize)
+static void _fillHash(const stake_credential_t* stakeCredential,
+	uint8_t* hash, size_t hashSize)
 {
-	if (STAKE_CREDENTIAL_KEY_PATH == certificateData->stakeCredentialType) {
+	if (STAKE_CREDENTIAL_KEY_PATH == stakeCredential->type) {
 		ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
 		bip44_pathToKeyHash(
-		        &certificateData->pathSpec,
-		        hash, hashSize
+			&stakeCredential->pathSpec,
+			hash, hashSize
 		);
 	} else {
 		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
-		STATIC_ASSERT(SIZEOF(certificateData->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		memcpy(hash, certificateData->scriptHash, SIZEOF(certificateData->scriptHash));
+		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		memcpy(hash, stakeCredential->scriptHash, SIZEOF(stakeCredential->scriptHash));
 	}
 }
 
@@ -1232,7 +1228,7 @@ static void _addCertificateDataToTx(
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		_fillHash(&txBodyCtx->stageData.certificate, stakingHash, SIZEOF(stakingHash));
+		_fillHash(&txBodyCtx->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
 		txHashBuilder_addCertificate_stakingKey(
 		        txHashBuilder, certificateData->type,
 		        stakingHash, SIZEOF(stakingHash)
@@ -1241,7 +1237,7 @@ static void _addCertificateDataToTx(
 	}
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		_fillHash(&txBodyCtx->stageData.certificate, stakingHash, SIZEOF(stakingHash));
+		_fillHash(&txBodyCtx->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
 		txHashBuilder_addCertificate_delegation(
 		        txHashBuilder,
 		        stakingHash, SIZEOF(stakingHash),
@@ -1251,8 +1247,8 @@ static void _addCertificateDataToTx(
 	}
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		ASSERT(STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredentialType);
-		_fillHash(&txBodyCtx->stageData.certificate, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
+		ASSERT(STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type);
+		_fillHash(&txBodyCtx->stageData.certificate.stakeCredential, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
 		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash),
@@ -1298,7 +1294,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 		security_policy_t policy = policyForSignTxCertificate(
 		                                   ctx->commonTxData.signTxUsecase,
 		                                   txBodyCtx->stageData.certificate.type,
-		                                   txBodyCtx->stageData.certificate.stakeCredentialType
+		                                   txBodyCtx->stageData.certificate.stakeCredential.type
 		                           );
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
@@ -1312,11 +1308,11 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
 		security_policy_t policy = policyForSignTxCertificateStaking(
-		                                   txBodyCtx->stageData.certificate.type,
-		                                   STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredentialType ?
-		                                   &txBodyCtx->stageData.certificate.pathSpec : NULL,
-		                                   STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredentialType ?
-		                                   NULL : txBodyCtx->stageData.certificate.scriptHash
+		                                txBodyCtx->stageData.certificate.type,
+		                                STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type ?
+											&txBodyCtx->stageData.certificate.stakeCredential.pathSpec : NULL,
+		                                STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type ?
+		                                	NULL : txBodyCtx->stageData.certificate.stakeCredential.scriptHash
 		                           );
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
@@ -1348,10 +1344,12 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
-		                                   ctx->commonTxData.signTxUsecase,
-		                                   &txBodyCtx->stageData.certificate.pathSpec,
-		                                   txBodyCtx->stageData.certificate.epoch
-		                           );
+										ctx->commonTxData.signTxUsecase,
+		                               	(STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type) ?
+											&txBodyCtx->stageData.certificate.stakeCredential.pathSpec :
+											NULL,
+		                               	txBodyCtx->stageData.certificate.epoch
+									);
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
 
@@ -1395,11 +1393,27 @@ static void signTx_handleWithdrawal_ui_runStep()
 		ui_displayAdaAmountScreen("Withdrawing rewards", txBodyCtx->stageData.withdrawal.amount, this_fn);
 	}
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY_PATH) {
-		reward_account_t rewardAccount = {
-			.keyReferenceType = KEY_REFERENCE_PATH,
-			.path = txBodyCtx->stageData.withdrawal.path
-		};
-		ui_displayRewardAccountScreen(&rewardAccount, ctx->commonTxData.networkId, this_fn);
+		if (STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.withdrawal.stakeCredential.type) {
+			reward_account_t rewardAccount = {
+				.keyReferenceType = KEY_REFERENCE_PATH,
+				.path = txBodyCtx->stageData.withdrawal.stakeCredential.pathSpec
+			};
+			ui_displayRewardAccountScreen(&rewardAccount, ctx->commonTxData.networkId, this_fn);
+		} else {
+			reward_account_t rewardAccount = {
+				.keyReferenceType = KEY_REFERENCE_HASH,
+			};
+			constructRewardAddressFromHash(
+				ctx->commonTxData.networkId,
+				REWARD_HASH_SOURCE_SCRIPT,
+				txBodyCtx->stageData.withdrawal.stakeCredential.scriptHash,
+				SIZEOF(txBodyCtx->stageData.withdrawal.stakeCredential.scriptHash),
+				rewardAccount.hashBuffer,
+				SIZEOF(rewardAccount.hashBuffer)
+			);
+			ui_displayRewardAccountScreen(&rewardAccount, ctx->commonTxData.networkId, this_fn);
+			//TODO KoMa reward account scripthash type
+		}
 	}
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -1420,12 +1434,30 @@ static void _addWithdrawalToTxHash()
 {
 	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 
-	constructRewardAddressFromKeyPath(
-	        &txBodyCtx->stageData.withdrawal.path,
-	        ctx->commonTxData.networkId,
-	        rewardAddress,
-	        SIZEOF(rewardAddress)
-	);
+	switch(txBodyCtx->stageData.withdrawal.stakeCredential.type) {
+	case STAKE_CREDENTIAL_KEY_PATH:
+		constructRewardAddressFromKeyPath(
+				&txBodyCtx->stageData.withdrawal.stakeCredential.pathSpec,
+				ctx->commonTxData.networkId,
+				rewardAddress,
+				SIZEOF(rewardAddress)
+		);
+		break;
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
+		//TODO KoMa
+		constructRewardAddressFromHash(
+			ctx->commonTxData.networkId,
+			REWARD_HASH_SOURCE_SCRIPT,
+			txBodyCtx->stageData.withdrawal.stakeCredential.scriptHash,
+			SIZEOF(txBodyCtx->stageData.withdrawal.stakeCredential.scriptHash),
+			rewardAddress,
+			SIZEOF(rewardAddress)
+		);
+		break;
+	default:
+		ASSERT(false);
+		return;
+	}
 
 	TRACE("Adding withdrawal to tx hash");
 	txHashBuilder_addWithdrawal(
@@ -1457,12 +1489,9 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 		VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
 		txBodyCtx->stageData.withdrawal.amount = parse_u8be(&view);
-		// the rest is path
+		// the rest is the identifier, either path or scripthash
 
-		view_skipBytes(
-		        &view,
-		        bip44_parseFromWire(&txBodyCtx->stageData.withdrawal.path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view))
-		);
+		_parseStakeCredential(&view, &txBodyCtx->stageData.withdrawal.stakeCredential);
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 

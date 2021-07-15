@@ -610,11 +610,11 @@ static void _parsePoolRewardAccount(read_view_t* view)
 
 	case KEY_REFERENCE_HASH:
 		VALIDATE(view_remainingSize(view) >= REWARD_ACCOUNT_SIZE, ERR_INVALID_DATA);
-		STATIC_ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
-		view_memmove(rewardAccount->buffer, view, REWARD_ACCOUNT_SIZE);
-		TRACE_BUFFER(rewardAccount->buffer, SIZEOF(rewardAccount->buffer));
+		STATIC_ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
+		view_memmove(rewardAccount->hashBuffer, view, REWARD_ACCOUNT_SIZE);
+		TRACE_BUFFER(rewardAccount->hashBuffer, SIZEOF(rewardAccount->hashBuffer));
 
-		const uint8_t header = getAddressHeader(rewardAccount->buffer, SIZEOF(rewardAccount->buffer));
+		const uint8_t header = getAddressHeader(rewardAccount->hashBuffer, SIZEOF(rewardAccount->hashBuffer));
 		VALIDATE(getAddressType(header) == REWARD_KEY || getAddressType(header) == REWARD_SCRIPT, ERR_INVALID_DATA);
 		VALIDATE(getNetworkId(header) == commonTxData->networkId, ERR_INVALID_DATA);
 		break;

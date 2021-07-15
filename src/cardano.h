@@ -51,7 +51,7 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 
 typedef enum {
 	KEY_REFERENCE_PATH = 1,
-	KEY_REFERENCE_HASH = 2,
+	KEY_REFERENCE_HASH = 2,	//TODO KoMa KEY??? reference?
 } key_reference_type_t;
 
 
@@ -59,7 +59,7 @@ typedef struct {
 	key_reference_type_t keyReferenceType;
 	union {
 		bip44_path_t path;
-		uint8_t buffer[REWARD_ACCOUNT_SIZE];
+		uint8_t hashBuffer[REWARD_ACCOUNT_SIZE];
 	};
 } reward_account_t;
 

@@ -306,8 +306,8 @@ void ui_displayRewardAccountScreen(
 		);
 
 		ASSERT(SIZEOF(rewardAccountBuffer) == REWARD_ACCOUNT_SIZE);
-		ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE);
-		memmove(rewardAccountBuffer, rewardAccount->buffer, REWARD_ACCOUNT_SIZE);
+		ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE);
+		memmove(rewardAccountBuffer, rewardAccount->hashBuffer, REWARD_ACCOUNT_SIZE);
 		break;
 	}
 
@@ -632,8 +632,8 @@ void ui_displayPoolOwnerScreen(
 		case KEY_REFERENCE_HASH: {
 			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
 
-			constructRewardAddressFromKeyHash(
-			        networkId,
+			constructRewardAddressFromHash(
+			        networkId, REWARD_HASH_SOURCE_KEY,
 			        owner->keyHash, SIZEOF(owner->keyHash),
 			        rewardAddress, SIZEOF(rewardAddress)
 			);

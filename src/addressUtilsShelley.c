@@ -372,23 +372,25 @@ size_t constructRewardAddressFromKeyPath(
 	       );
 }
 
-size_t constructRewardAddressFromKeyHash(
+size_t constructRewardAddressFromHash(
         uint8_t networkId,
-        const uint8_t* stakingKeyHashBuffer, size_t stakingKeyHashSize,
+		reward_address_hash_source_t source,
+        const uint8_t* hashBuffer, size_t hashSize,
         uint8_t* outBuffer, size_t outSize
 )
 {
 	ASSERT(isValidNetworkId(networkId));
-	ASSERT(stakingKeyHashSize == ADDRESS_KEY_HASH_LENGTH);
+	ASSERT(hashSize == ADDRESS_KEY_HASH_LENGTH);
+	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "incompatible hash sizes");
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
-		const uint8_t addressHeader = constructShelleyAddressHeader(REWARD_KEY, networkId);
+		const uint8_t addressHeader = constructShelleyAddressHeader((REWARD_HASH_SOURCE_KEY == source) ? REWARD_KEY : REWARD_SCRIPT, networkId);
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
-		view_appendData(&out, stakingKeyHashBuffer, stakingKeyHashSize);
+		view_appendData(&out, hashBuffer, hashSize);
 	}
 
 	const int ADDRESS_LENGTH = REWARD_ACCOUNT_SIZE;

@@ -63,14 +63,17 @@ typedef enum {
 } stake_credential_type_t; // TODO rename to stake credential type
 
 typedef struct {
-	certificate_type_t type;
-
-	stake_credential_type_t stakeCredentialType;
+	stake_credential_type_t type;
 	union {
 		bip44_path_t pathSpec; // interpretation depends on type // TODO rename to keyPath?
 		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
 	};
+} stake_credential_t;
 
+typedef struct {
+	certificate_type_t type;
+
+	stake_credential_t stakeCredential;
 	// only for specific types
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
 	uint64_t epoch;
@@ -82,7 +85,7 @@ typedef struct {
 } sign_tx_witness_data_t;
 
 typedef struct {
-	bip44_path_t path;
+	stake_credential_t stakeCredential;
 	uint64_t amount;
 } sign_tx_withdrawal_data_t;
 

@@ -491,7 +491,9 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
 	case SIGN_TX_USECASE_MULTISIG:
-		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
+		if (poolIdPath != NULL) {
+			DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
+		}
 		PROMPT();
 		break;
 
