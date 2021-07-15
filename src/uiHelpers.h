@@ -63,7 +63,6 @@ typedef void ui_callback_fn_t();
 
 // *INDENT-ON*
 
-
 typedef enum {
 	CALLBACK_NOT_RUN,
 	CALLBACK_RUN,
@@ -129,6 +128,9 @@ void uiCallback_reject(ui_callback_t* cb);
 
 void assert_uiPaginatedText_magic();
 void assert_uiPrompt_magic();
+
+bool uiPaginatedText_canFitStringIntoHeader(const char* str);
+bool uiPaginatedText_canFitStringIntoFullText(const char* str);
 
 // responds to the host and resets
 // processing

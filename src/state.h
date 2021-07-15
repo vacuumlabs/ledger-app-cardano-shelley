@@ -4,6 +4,7 @@
 #include "getVersion.h"
 #include "getPublicKeys.h"
 #include "deriveAddress.h"
+#include "deriveNativeScriptHash.h"
 #include "signTx.h"
 #include "signOpCert.h"
 
@@ -12,6 +13,7 @@ typedef union {
 	// Here should go states of all instructions
 	ins_get_keys_context_t getKeysContext;
 	ins_derive_address_context_t deriveAddressContext;
+	ins_derive_native_script_hash_context_t deriveNativeScriptHashContext;
 	ins_sign_tx_context_t signTxContext;
 	ins_sign_op_cert_context_t signOpCertContext;
 } instructionState_t;

@@ -9,7 +9,7 @@
 
 
 #define BECH32_BUFFER_SIZE_MAX 150
-#define BECH32_PREFIX_LENGTH_MAX 12
+#define BECH32_PREFIX_LENGTH_MAX 16
 
 // encodes a buffer into bech32 and displays it (works for bufferSize <= 150 and prefix length <= 12)
 void ui_displayBech32Screen(
