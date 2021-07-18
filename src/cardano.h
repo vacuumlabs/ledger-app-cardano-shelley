@@ -20,6 +20,7 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 #define POOL_METADATA_HASH_LENGTH 32
 #define CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH 32
 #define ED25519_SIGNATURE_LENGTH 64
+#define SCRIPT_HASH_LENGTH 28
 
 #define MINTING_POLICY_ID_SIZE 28
 #define ASSET_NAME_SIZE_MAX 32
@@ -135,5 +136,18 @@ typedef struct {
 	uint8_t dnsName[DNS_NAME_SIZE_MAX];
 } pool_relay_t;
 
+// ==============================  NATIVE SCRIPTS  ==============================
+
+// depth of n means it can handle up to n-1 levels of nesting
+static const uint8_t MAX_SCRIPT_DEPTH = 11;
+
+typedef enum {
+	NATIVE_SCRIPT_PUBKEY = 0,
+	NATIVE_SCRIPT_ALL = 1,
+	NATIVE_SCRIPT_ANY = 2,
+	NATIVE_SCRIPT_N_OF_K = 3,
+	NATIVE_SCRIPT_INVALID_BEFORE = 4,
+	NATIVE_SCRIPT_INVALID_HEREAFTER = 5,
+} native_script_type;
 
 #endif // H_CARDANO_APP_CARDANO
