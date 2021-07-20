@@ -1,6 +1,7 @@
 #include "deriveNativeScriptHash.h"
 #include "state.h"
 #include "textUtils.h"
+#include "uiScreens.h"
 
 static ins_derive_native_script_hash_context_t* ctx = &(instructionState.deriveNativeScriptHashContext);
 
@@ -46,12 +47,49 @@ static inline void simpleScriptFinished()
 	}
 }
 
+// UI
+
+static void deriveScriptHash_display_ui_callback()
+{
+	io_send_buf(SUCCESS, NULL, 0);
+	ui_displayBusy();
+}
+
 // Start complex native script
 
-static void deriveNativeScriptHash_handleAllOrAny(read_view_t* view)
+static void deriveNativeScriptHash_handleAll(read_view_t* view)
 {
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE_WITH_CTX("");
+
+	// max possible length 34: "Contains x nested scripts"
+	// where x is 2^32-1
+	char text[35];
+	snprintf(text, SIZEOF(text), "Contains %d nested scripts", ctx->complexScripts[ctx->level].remainingScripts);
+
+	ui_displayPaginatedText(
+	        // TODO: proper UI screen headers with numbered sections
+	        "Script - ALL",
+	        text,
+	        deriveScriptHash_display_ui_callback
+	);
+}
+
+static void deriveNativeScriptHash_handleAny(read_view_t* view)
+{
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
+	TRACE_WITH_CTX("");
+
+	// max possible length 34: "Contains x nested scripts"
+	// where x is 2^32-1
+	char text[35];
+	snprintf(text, SIZEOF(text), "Contains %u nested scripts", ctx->complexScripts[ctx->level].remainingScripts);
+
+	ui_displayPaginatedText(
+	        "Script - ANY",
+	        text,
+	        deriveScriptHash_display_ui_callback
+	);
 }
 
 static void deriveNativeScriptHash_handleNofK(read_view_t* view)
@@ -64,6 +102,17 @@ static void deriveNativeScriptHash_handleNofK(read_view_t* view)
 
 	// validate that the received requiredScripts count makes sense
 	VALIDATE(ctx->complexScripts[ctx->level].remainingScripts >= requiredScripts, ERR_INVALID_DATA);
+
+	// max possible length 67: "Reuqired signatures: x. Contains x nested scripts"
+	// where x is 2^32-1
+	char text[68];
+	snprintf(text, SIZEOF(text), "Required signatures: %u. Contains %u nested scripts", requiredScripts, ctx->complexScripts[ctx->level].remainingScripts);
+
+	ui_displayPaginatedText(
+	        "Script - N of K",
+	        text,
+	        deriveScriptHash_display_ui_callback
+	);
 }
 
 static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
@@ -82,8 +131,8 @@ static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
 
 	switch(nativeScriptType) {
 #	define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
-		CASE(NATIVE_SCRIPT_ALL, deriveNativeScriptHash_handleAllOrAny);
-		CASE(NATIVE_SCRIPT_ANY, deriveNativeScriptHash_handleAllOrAny);
+		CASE(NATIVE_SCRIPT_ALL, deriveNativeScriptHash_handleAll);
+		CASE(NATIVE_SCRIPT_ANY, deriveNativeScriptHash_handleAny);
 		CASE(NATIVE_SCRIPT_N_OF_K, deriveNativeScriptHash_handleNofK);
 #	undef   CASE
 	default:
@@ -106,6 +155,12 @@ static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 	TRACE("pubkey given by path:");
 	BIP44_PRINTF(&path);
 	PRINTF("\n");
+
+	ui_displayPathScreen(
+	        "Script - key path",
+	        &path,
+	        deriveScriptHash_display_ui_callback
+	);
 }
 
 static void deriveNativeScriptHash_handleThirdPartyPubkey(read_view_t* view)
@@ -115,6 +170,14 @@ static void deriveNativeScriptHash_handleThirdPartyPubkey(read_view_t* view)
 	view_memmove(pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
 
 	TRACE_BUFFER(pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
+
+	ui_displayBech32Screen(
+	        "Script - key",
+	        "addr_vkh",
+	        pubkeyHash,
+	        ADDRESS_KEY_HASH_LENGTH,
+	        deriveScriptHash_display_ui_callback
+	);
 }
 
 static void deriveNativeScriptHash_handlePubkey(read_view_t* view)
@@ -142,7 +205,12 @@ static void deriveNativeScriptHash_handleInvalidBefore(read_view_t* view)
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("invalid_before timelock");
 	TRACE_UINT64(timelock);
-	UNUSED(timelock);
+
+	ui_displayUint64Screen(
+	        "Script - invalid before",
+	        timelock,
+	        deriveScriptHash_display_ui_callback
+	);
 }
 
 static void deriveNativeScriptHash_handleInvalidHereafter(read_view_t* view)
@@ -152,7 +220,12 @@ static void deriveNativeScriptHash_handleInvalidHereafter(read_view_t* view)
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("invalid_hereafter timelock");
 	TRACE_UINT64(timelock);
-	UNUSED(timelock);
+
+	ui_displayUint64Screen(
+	        "Script - invalid hereafter",
+	        timelock,
+	        deriveScriptHash_display_ui_callback
+	);
 }
 
 static void deriveNativeScriptHash_handleSimpleScript(read_view_t* view)
@@ -172,9 +245,8 @@ static void deriveNativeScriptHash_handleSimpleScript(read_view_t* view)
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
-	simpleScriptFinished();
 
-	io_send_buf(SUCCESS, NULL, 0);
+	simpleScriptFinished();
 }
 
 // Whole native script finish
@@ -183,6 +255,33 @@ typedef enum {
 	DISPLAY_NATIVE_SCRIPT_HASH_BECH32 = 1,
 	DISPLAY_NATIVE_SCRIPT_HASH_POLICY_ID = 2,
 } display_format;
+
+static void deriveNativeScriptHash_displayNativeScriptHash_callback()
+{
+	io_send_buf(SUCCESS, ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH);
+	ui_idle();
+}
+
+static void deriveNativeScriptHash_displayNativeScriptHash_bech32()
+{
+	ui_displayBech32Screen(
+	        "Script hash",
+	        "script",
+	        ctx->scriptHashBuffer,
+	        SCRIPT_HASH_LENGTH,
+	        deriveNativeScriptHash_displayNativeScriptHash_callback
+	);
+}
+
+static void deriveNativeScriptHash_displayNativeScriptHash_policyId()
+{
+	ui_displayHexBufferScreen(
+	        "Policy ID",
+	        ctx->scriptHashBuffer,
+	        SCRIPT_HASH_LENGTH,
+	        deriveNativeScriptHash_displayNativeScriptHash_callback
+	);
+}
 
 static void deriveNativeScriptHash_handleWholeNativeScriptFinish(read_view_t* view)
 {
@@ -194,16 +293,13 @@ static void deriveNativeScriptHash_handleWholeNativeScriptFinish(read_view_t* vi
 	TRACE("whole native script received, display format = %u", displayFormat);
 
 	switch (displayFormat) {
-#	define  CASE(FORMAT) case FORMAT: break;
-		CASE(DISPLAY_NATIVE_SCRIPT_HASH_BECH32);
-		CASE(DISPLAY_NATIVE_SCRIPT_HASH_POLICY_ID);
+#	define  CASE(FORMAT, DISPLAY_FN) case FORMAT: DISPLAY_FN(); break;
+		CASE(DISPLAY_NATIVE_SCRIPT_HASH_BECH32, deriveNativeScriptHash_displayNativeScriptHash_bech32);
+		CASE(DISPLAY_NATIVE_SCRIPT_HASH_POLICY_ID, deriveNativeScriptHash_displayNativeScriptHash_policyId);
 #	undef	CASE
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
-
-	uint8_t buffer[SCRIPT_HASH_LENGTH] = {0};
-	io_send_buf(SUCCESS, buffer, SCRIPT_HASH_LENGTH);
 }
 
 typedef void subhandler_fn_t(read_view_t* view);
