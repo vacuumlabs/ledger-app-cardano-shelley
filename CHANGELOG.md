@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [2.5.0](https://github.com/LedgerHQ/app-cardano/compare/2.4.0...LedgerHQ:2.5.0)
+
+Add Native script hash derivation support
+
+### Added
+
+- native script hash derivation call
+
+### Changed
+
+### Fixed
+
 ## [2.4.0](https://github.com/LedgerHQ/app-cardano/compare/2.3.1...LedgerHQ:2.4.0) - [TBD]
 
 Support for signing pool registrations by operators.
