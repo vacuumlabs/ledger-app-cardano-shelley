@@ -597,6 +597,9 @@ security_policy_t policyForSignTxWitness(
 			}
 			break;
 
+		case PATH_MINT:
+			SHOW();
+
 		default:
 			DENY();
 			break;

@@ -87,6 +87,16 @@ bool bip44_hasValidCardanoPoolColdKeyPrefix(const bip44_path_t* pathSpec)
 #undef CHECK
 }
 
+bool bip44_hasMintKeyPrefix(const bip44_path_t* pathSpec)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_MINT | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+	return true;
+#undef CHECK
+}
+
 // Account
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec)
@@ -183,6 +193,16 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec)
 	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
 
 	return (bip44_getAddressValue(pathSpec) == 0);
+}
+
+bool bip44_isMintKeyPath(const bip44_path_t* pathSpec)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(pathSpec->length == BIP44_I_MINT_POLICY + 1);
+	CHECK(bip44_hasMintKeyPrefix(pathSpec));
+	CHECK(pathSpec->path[BIP44_I_MINT_POLICY] >= HARDENED_BIP32);
+	return true;
+#undef CHECK
 }
 
 bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec)
@@ -287,6 +307,14 @@ bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec)
 
 		// TODO too many returns in various depths, split into relevant parts when multisig is added
 		default:
+			return PATH_INVALID;
+		}
+	}
+
+	if (bip44_hasMintKeyPrefix(pathSpec)) {
+		if (bip44_isMintKeyPath(pathSpec)) {
+			return PATH_MINT;
+		} else {
 			return PATH_INVALID;
 		}
 	}

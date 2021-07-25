@@ -17,6 +17,8 @@ typedef struct {
 static const uint32_t PURPOSE_BYRON = 44;
 static const uint32_t PURPOSE_SHELLEY = 1852;
 
+static const uint32_t PURPOSE_MINT = 1855;
+
 static const uint32_t PURPOSE_POOL_COLD_KEY = 1853;
 
 static const uint32_t ADA_COIN_TYPE = 1815;
@@ -37,6 +39,10 @@ enum {
 	BIP44_I_CHAIN = 3,
 	BIP44_I_ADDRESS = 4,
 	BIP44_I_REST = 5,
+
+	// TODO add references to relevant CIPs in this enum
+	// mint path specific enums
+	BIP44_I_MINT_POLICY = 2,
 
 	// cold key derivation path specific enums
 	BIP44_I_POOL_COLD_KEY_USECASE = 2,
@@ -62,6 +68,8 @@ bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
 
+bool bip44_isMintKeyPath(const bip44_path_t* pathSpec);
+
 bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec);
 bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec);
 
@@ -80,6 +88,9 @@ typedef enum {
 
 	// hd wallet reward adress, withdrawal witness, pool owner
 	PATH_WALLET_STAKING_KEY,
+
+	// native token minting/burning
+	PATH_MINT,
 
 	// pool cold key in pool registrations and retirements
 	PATH_POOL_COLD_KEY,
