@@ -6,8 +6,8 @@
 #include "addressUtilsShelley.h"
 #include "securityPolicyType.h"
 
-#define OUTPUT_ASSET_GROUPS_MAX 1000
-#define OUTPUT_TOKENS_IN_GROUP_MAX 1000
+#define OUTPUT_ASSET_GROUPS_MAX UINT16_MAX
+#define OUTPUT_TOKENS_IN_GROUP_MAX UINT16_MAX
 
 enum {
 	OUTPUT_TYPE_ADDRESS_BYTES = 1,
@@ -56,7 +56,7 @@ typedef struct {
 		top_level_output_data_t output;
 		struct {
 			token_group_t tokenGroup;
-			token_amount_t token;
+			output_token_amount_t token;
 		};
 	} stateData;
 

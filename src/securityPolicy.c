@@ -13,13 +13,13 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 	ASSERT(isValidAddressParams(addressParams));
 
 #define CHECK(cond) if (!(cond)) return false
-	CHECK(addressParams->type == BASE);
-	CHECK(addressParams->stakingChoice == STAKING_KEY_PATH);
+	CHECK(addressParams->type == BASE_PAYMENT_KEY_STAKE_KEY);
+	CHECK(addressParams->stakingDataSource == STAKING_KEY_PATH);
 
-	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_WALLET_SPENDING_KEY);
+	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_ORDINARY_SPENDING_KEY);
 	CHECK(bip44_isPathReasonable(&addressParams->spendingKeyPath));
 
-	CHECK(bip44_classifyPath(&addressParams->stakingKeyPath) == PATH_WALLET_STAKING_KEY);
+	CHECK(bip44_classifyPath(&addressParams->stakingKeyPath) == PATH_ORDINARY_STAKING_KEY);
 	CHECK(bip44_isPathReasonable(&addressParams->stakingKeyPath));
 
 	CHECK(
@@ -35,11 +35,11 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 {
 	ASSERT(isValidAddressParams(addressParams));
 
-	return addressParams->type == REWARD;
+	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
 bool is_tx_network_verifiable(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         uint16_t numOutputs,
         uint16_t numWithdrawals
 )
@@ -47,10 +47,10 @@ bool is_tx_network_verifiable(
 	if (numOutputs > 0) return true;
 	if (numWithdrawals > 0) return true;
 
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		// pool registration certificate contains pool reward account
 		return true;
 
@@ -59,6 +59,10 @@ bool is_tx_network_verifiable(
 	}
 }
 
+// useful shortcuts
+
+// WARNING: unless you are doing something exceptional,
+// policies must come in the order DENY > WARN > PROMPT/SHOW > ALLOW
 
 #define DENY()                          return POLICY_DENY;
 #define DENY_IF(expr)      if (expr)    return POLICY_DENY;
@@ -91,15 +95,16 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 {
 	switch (bip44_classifyPath(pathSpec)) {
 
-	case PATH_WALLET_ACCOUNT:
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
+	case PATH_ORDINARY_ACCOUNT:
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+	case PATH_MULTISIG_ACCOUNT:
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_MINT_KEY:
 	case PATH_POOL_COLD_KEY:
-		if (bip44_isPathReasonable(pathSpec)) {
-			PROMPT();
-		} else {
-			WARN();
-		}
+		WARN_IF(!bip44_isPathReasonable(pathSpec));
+		PROMPT();
 		break;
 
 	default:
@@ -115,22 +120,20 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 {
 	switch (bip44_classifyPath(pathSpec)) {
 
-	case PATH_WALLET_ACCOUNT:
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
-		if (bip44_isPathReasonable(pathSpec)) {
-			ALLOW();
-		} else {
-			WARN();
-		}
+	case PATH_ORDINARY_ACCOUNT:
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+	case PATH_MULTISIG_ACCOUNT:
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_MINT_KEY:
+		WARN_IF(!bip44_isPathReasonable(pathSpec));
+		ALLOW();
 		break;
 
 	case PATH_POOL_COLD_KEY:
-		if (bip44_isPathReasonable(pathSpec)) {
-			PROMPT();
-		} else {
-			WARN();
-		}
+		WARN_IF(!bip44_isPathReasonable(pathSpec));
+		PROMPT();
 		break;
 
 	default:
@@ -139,71 +142,118 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	}
 
 	DENY(); // should not be reached
+}
+
+// common policy for DENY and WARN
+static security_policy_t _policyForDeriveAddress(const addressParams_t* addressParams, security_policy_t successPolicy)
+{
+	DENY_UNLESS(isValidAddressParams(addressParams));
+
+	switch (addressParams->type) {
+
+	case BASE_PAYMENT_KEY_STAKE_KEY:
+		DENY_IF(bip44_classifyPath(&addressParams->spendingKeyPath) != PATH_ORDINARY_SPENDING_KEY);
+		DENY_IF(
+		        addressParams->stakingDataSource == STAKING_KEY_PATH &&
+		        bip44_classifyPath(&addressParams->stakingKeyPath) != PATH_ORDINARY_STAKING_KEY
+		);
+
+		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
+		WARN_IF(
+		        addressParams->stakingDataSource == STAKING_KEY_PATH &&
+		        !bip44_isPathReasonable(&addressParams->stakingKeyPath)
+		);
+		break;
+
+	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+	case POINTER_KEY:
+	case ENTERPRISE_KEY:
+	case BYRON:
+		DENY_IF(bip44_classifyPath(&addressParams->spendingKeyPath) != PATH_ORDINARY_SPENDING_KEY);
+
+		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
+		break;
+
+	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+	case REWARD_KEY:
+		DENY_IF(addressParams->stakingDataSource != STAKING_KEY_PATH);
+		DENY_IF(bip44_classifyPath(&addressParams->stakingKeyPath) != PATH_ORDINARY_STAKING_KEY);
+
+		WARN_IF(!bip44_isPathReasonable(&addressParams->stakingKeyPath));
+		break;
+
+	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
+	case POINTER_SCRIPT:
+	case ENTERPRISE_SCRIPT:
+	case REWARD_SCRIPT:
+		// no paths in the address
+		break;
+
+	default:
+		DENY();
+		break;
+	}
+
+	return successPolicy;
 }
 
 // Derive address and return it to the host
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams)
 {
-	DENY_UNLESS(isValidAddressParams(addressParams));
-
-	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
-
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
-		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
-			PROMPT();
-		} else {
-			WARN();
-		}
-		break;
-
-	default:
-		DENY();
-		break;
-	}
-
-	DENY(); // should not be reached
+	return _policyForDeriveAddress(addressParams, POLICY_ALLOW_WITHOUT_PROMPT);
 }
 
 // Derive address and show it to the user
 security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams)
 {
-	DENY_UNLESS(isValidAddressParams(addressParams));
-
-	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
-
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
-		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
-			SHOW();
-		} else {
-			WARN();
-		}
-		break;
-
-	default:
-		DENY();
-		break;
-	}
-
-	DENY(); // should not be reached
+	return _policyForDeriveAddress(addressParams, POLICY_SHOW_BEFORE_RESPONSE);
 }
 
 
 // Initiate transaction signing
 security_policy_t policyForSignTxInit(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         uint8_t networkId,
         uint32_t protocolMagic,
+        uint16_t numInputs MARK_UNUSED,
         uint16_t numOutputs,
-        uint16_t numWithdrawals
+        uint16_t numCertificates,
+        uint16_t numWithdrawals,
+        bool includeMint
 )
 {
 	// Deny shelley mainnet with weird byron protocol magic
 	DENY_IF(networkId == MAINNET_NETWORK_ID && protocolMagic != MAINNET_PROTOCOL_MAGIC);
 	// Note: testnets can still use byron mainnet protocol magic so we can't deny the opposite direction
 
-	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, signTxUsecase));
+	// certain combinations of tx body elements are forbidden
+	// because of potential cross-witnessing
+	switch (txSigningMode) {
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// necessary to avoid intermingling witnesses from several certs
+		DENY_UNLESS(numCertificates == 1);
+
+		// witnesses for owners and withdrawals are the same
+		// we forbid withdrawals so that users cannot be tricked into witnessing
+		// something unintentionally (e.g. an owner given by the staking key hash)
+		DENY_UNLESS(numWithdrawals == 0);
+
+		// mint must not be combined with pool registration certificates
+		DENY_IF(includeMint);
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		// no additional validation
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, txSigningMode));
 
 	WARN_IF(networkId != MAINNET_NETWORK_ID);
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
@@ -221,7 +271,7 @@ security_policy_t policyForSignTxInput()
 
 // For each transaction (third-party) address output
 security_policy_t policyForSignTxOutputAddressBytes(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
 )
@@ -235,22 +285,20 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	} else { // shelley
 		uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
 		DENY_IF(addressNetworkId != networkId);
-		DENY_IF(addressType == REWARD);
+		DENY_IF(addressType == REWARD_KEY || addressType == REWARD_SCRIPT);
 	}
 
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_ORDINARY_TX:
-		// We always show third-party output addresses
-		SHOW();
-		break;
-
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		// all the funds are provided by the operator
 		// and thus outputs are irrelevant to the owner
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		// We always show third-party output addresses
 		SHOW();
 		break;
 
@@ -263,7 +311,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 
 // For each output given by derivation path
 security_policy_t policyForSignTxOutputAddressParams(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic
 )
@@ -277,32 +325,29 @@ security_policy_t policyForSignTxOutputAddressParams(
 		DENY_IF(params->networkId != networkId);
 	}
 
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_ORDINARY_TX: {
-		switch (bip44_classifyPath(&params->spendingKeyPath)) {
-
-		case PATH_WALLET_SPENDING_KEY:
-			SHOW_UNLESS(bip44_isPathReasonable(&params->spendingKeyPath));
-			SHOW_UNLESS(is_standard_base_address(params));
-			ALLOW();
-			break;
-
-		default:
-			DENY();
-			break;
-		}
-
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX: {
+		SHOW_UNLESS(is_standard_base_address(params));
+		ALLOW();
 		break;
 	}
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
+
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX: {
+		// all outputs should be given as external addresses
+		DENY();
+		break;
+	}
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER: {
 		// we forbid these to avoid leaking information
 		// (since the outputs are not shown, the user is unaware of what addresses are being derived)
 		// it also makes the tx signing faster if all outputs are given as addresses
 		DENY();
 		break;
 	}
+
 	default:
 		ASSERT(false);
 	}
@@ -334,19 +379,20 @@ security_policy_t policyForSignTxOutputConfirm(
 
 // For transaction fee
 security_policy_t policyForSignTxFee(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         uint64_t fee MARK_UNUSED
 )
 {
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		// always show the fee if it is paid by the signer
 		SHOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		// fees are paid by the operator and are thus irrelevant for owners
 		ALLOW();
 		break;
@@ -371,18 +417,24 @@ security_policy_t policyForSignTxTtl(uint32_t ttl MARK_UNUSED)
 // a generic policy for all certificates
 // does not evaluate aspects of specific certificates
 security_policy_t policyForSignTxCertificate(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_ORDINARY_TX:
+	switch (txSigningMode) {
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+		ALLOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
@@ -396,8 +448,9 @@ security_policy_t policyForSignTxCertificate(
 
 // for certificates concerning staking keys and stake delegation
 security_policy_t policyForSignTxCertificateStaking(
+        sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType,
-        const bip44_path_t* stakingKeyPath
+        const stake_credential_t* stakeCredential
 )
 {
 	switch (certificateType) {
@@ -410,26 +463,41 @@ security_policy_t policyForSignTxCertificateStaking(
 		ASSERT(false);
 	}
 
-	DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
+		break;
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
+		break;
+	default:
+		ASSERT(false);
+	}
+
 
 	PROMPT();
 }
 
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* poolIdPath,
         uint64_t epoch MARK_UNUSED
 )
 {
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
 
-	case SIGN_TX_USECASE_ORDINARY_TX:
-		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		DENY_UNLESS(bip44_isPoolColdKeyPath(poolIdPath));
 		PROMPT();
 		break;
 
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		DENY();
+		break;
+
 	default:
-		// in other usecases, the tx containing pool retirement certificate
+		// in other signing modes, the tx containing pool retirement certificate
 		// should have already been reported as invalid
 		ASSERT(false);
 	}
@@ -438,17 +506,17 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const pool_id_t* poolId
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_PATH);
 		SHOW();
 		break;
@@ -461,15 +529,15 @@ security_policy_t policyForSignTxStakePoolRegistrationPoolId(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
-        sign_tx_usecase_t signTxUsecase
+        sign_tx_signingmode_t txSigningMode
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
 
@@ -481,13 +549,13 @@ security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const reward_account_t* poolRewardAccount MARK_UNUSED
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
 
@@ -499,20 +567,20 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
-        const sign_tx_usecase_t signTxUsecase,
+        const sign_tx_signingmode_t txSigningMode,
         const pool_owner_t* owner
 )
 {
 	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
-		DENY_UNLESS(bip44_isValidStakingKeyPath(&owner->path));
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&owner->path));
 	}
 
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		SHOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(owner->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
@@ -524,16 +592,16 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationRelay(
-        const sign_tx_usecase_t signTxUsecase,
+        const sign_tx_signingmode_t txSigningMode,
         const pool_relay_t* relay MARK_UNUSED
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
 
@@ -565,86 +633,123 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 }
 
 // For each withdrawal
-security_policy_t policyForSignTxWithdrawal()
+security_policy_t policyForSignTxWithdrawal(
+        sign_tx_signingmode_t txSigningMode,
+        const stake_credential_t* stakeCredential
+)
 {
-	// No need to check withdrawals
-	SHOW();
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
+		ALLOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
+		ALLOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
+static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path, bool mintPresent)
+{
+	switch (bip44_classifyPath(path)) {
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+	case PATH_POOL_COLD_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		ALLOW();
+		break;
+
+	case PATH_MINT_KEY:
+		DENY_UNLESS(mintPresent);
+		SHOW();
+		break;
+
+	default:
+		DENY();
+		break;
+	}
+}
+
+static inline security_policy_t _scriptWitnessPolicy(const bip44_path_t* path, bool mintPresent)
+{
+	switch (bip44_classifyPath(path)) {
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
+	case PATH_MINT_KEY:
+		DENY_UNLESS(mintPresent);
+		SHOW();
+
+	default:
+		DENY();
+		break;
+	}
+}
+
+static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* path)
+{
+	switch (bip44_classifyPath(path)) {
+
+	case PATH_ORDINARY_STAKING_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
+	default:
+		DENY();
+		break;
+	}
+}
+
+static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip44_path_t* path)
+{
+	switch (bip44_classifyPath(path)) {
+
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_POOL_COLD_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
+	default:
+		DENY();
+		break;
+	}
+}
 
 // For each transaction witness
 // Note: witnesses reveal public key of an address
 // and Ledger *does not* check whether they correspond to
 // previously declared inputs and certificates
 security_policy_t policyForSignTxWitness(
-        sign_tx_usecase_t signTxUsecase,
-        const bip44_path_t* pathSpec
+        sign_tx_signingmode_t txSigningMode,
+        const bip44_path_t* pathSpec,
+        bool mintPresent
 )
 {
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		return _ordinaryWitnessPolicy(pathSpec, mintPresent);
 
-	case SIGN_TX_USECASE_ORDINARY_TX: {
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		return _scriptWitnessPolicy(pathSpec, mintPresent);
 
-		switch (bip44_classifyPath(pathSpec)) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		return _poolRegistrationOwnerWitnessPolicy(pathSpec);
 
-		case PATH_WALLET_SPENDING_KEY:
-		case PATH_WALLET_STAKING_KEY:
-		case PATH_POOL_COLD_KEY:
-			if (bip44_isPathReasonable(pathSpec)) {
-				ALLOW();
-			} else {
-				WARN();
-			}
-			break;
-
-		default:
-			DENY();
-			break;
-		}
-
-		break;
-	}
-
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
-
-		switch (bip44_classifyPath(pathSpec)) {
-
-		case PATH_WALLET_STAKING_KEY:
-			if (bip44_isPathReasonable(pathSpec)) {
-				ALLOW();
-			} else {
-				WARN();
-			}
-			break;
-
-		default:
-			DENY();
-			break;
-		}
-
-		break;
-	}
-
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
-
-		switch (bip44_classifyPath(pathSpec)) {
-
-		case PATH_WALLET_SPENDING_KEY:
-		case PATH_POOL_COLD_KEY:
-			if (bip44_isPathReasonable(pathSpec)) {
-				ALLOW();
-			} else {
-				WARN();
-			}
-			break;
-
-		default:
-			DENY();
-			break;
-		}
-
-		break;
-	}
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		return _poolRegistrationOperatorWitnessPolicy(pathSpec);
 
 	default:
 		ASSERT(false);
@@ -662,6 +767,41 @@ security_policy_t policyForSignTxValidityIntervalStart()
 {
 	SHOW();
 }
+
+security_policy_t policyForSignTxMintInit(const sign_tx_signingmode_t txSigningMode)
+{
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		ALLOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
+
+security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy)
+{
+	switch (outputPolicy) {
+	case POLICY_ALLOW_WITHOUT_PROMPT:
+		ALLOW();
+		break;
+
+	case POLICY_SHOW_BEFORE_RESPONSE:
+		PROMPT();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
 
 security_policy_t policyForSignTxConfirm()
 {
@@ -686,7 +826,7 @@ security_policy_t policyForCatalystRegistrationStakingKey(
         const bip44_path_t* stakingKeyPath
 )
 {
-	DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
+	DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
 	WARN_UNLESS(bip44_hasReasonableAccount(stakingKeyPath));
 
 	SHOW();
@@ -709,7 +849,6 @@ security_policy_t policyForCatalystRegistrationConfirm()
 
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 {
-
 	switch (bip44_classifyPath(poolColdKeyPathSpec)) {
 
 	case PATH_POOL_COLD_KEY:
