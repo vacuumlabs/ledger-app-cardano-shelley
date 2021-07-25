@@ -59,7 +59,7 @@ typedef struct {
 	key_reference_type_t keyReferenceType;
 	union {
 		bip44_path_t path;
-		uint8_t buffer[REWARD_ACCOUNT_SIZE];
+		uint8_t hashBuffer[REWARD_ACCOUNT_SIZE];
 	};
 } reward_account_t;
 
@@ -80,7 +80,7 @@ typedef struct {
 	uint8_t assetNameBytes[ASSET_NAME_SIZE_MAX];
 	size_t assetNameSize;
 	uint64_t amount;
-} token_amount_t;
+} output_token_amount_t;
 
 
 // ==============================  CERTIFICATES  ==============================
@@ -102,6 +102,11 @@ typedef enum {
 	CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3,
 	CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT = 4,
 } certificate_type_t;
+
+typedef enum {
+	STAKE_CREDENTIAL_KEY_PATH = 0,
+	STAKE_CREDENTIAL_SCRIPT_HASH = 1,
+} stake_credential_type_t;
 
 typedef enum {
 	RELAY_SINGLE_HOST_IP = 0,

@@ -31,6 +31,7 @@ static void prepareResponse()
 static void deriveAddress_return_ui_runStep();
 enum {
 	RETURN_UI_STEP_WARNING = 100,
+	RETURN_UI_STEP_BEGIN,
 	RETURN_UI_STEP_SPENDING_PATH,
 	RETURN_UI_STEP_STAKING_INFO,
 	RETURN_UI_STEP_CONFIRM,
@@ -50,7 +51,7 @@ static void deriveAddress_handleReturn()
 	switch (policy) {
 #	define  CASE(POLICY, STEP) case POLICY: {ctx->ui_step=STEP; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,    RETURN_UI_STEP_WARNING);
-		CASE(POLICY_PROMPT_BEFORE_RESPONSE, RETURN_UI_STEP_SPENDING_PATH);
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, RETURN_UI_STEP_BEGIN);
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   RETURN_UI_STEP_RESPOND);
 #	undef   CASE
 	default:
@@ -74,12 +75,15 @@ static void deriveAddress_return_ui_runStep()
 		        this_fn
 		);
 	}
+	UI_STEP(RETURN_UI_STEP_BEGIN) {
+		ui_displayPaginatedText("Export", "address", this_fn);
+	}
 	UI_STEP(RETURN_UI_STEP_SPENDING_PATH) {
-		ui_displayPathScreen(
-		        "Export address",
-		        &ctx->addressParams.spendingKeyPath,
-		        this_fn
-		);
+		if (determineSpendingChoice(ctx->addressParams.type) == SPENDING_NONE) {
+			// reward address
+			UI_STEP_JUMP(RETURN_UI_STEP_STAKING_INFO);
+		}
+		ui_displaySpendingInfoScreen(&ctx->addressParams, this_fn);
 	}
 	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
 		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
@@ -100,7 +104,6 @@ static void deriveAddress_return_ui_runStep()
 		ui_idle();
 	}
 	UI_STEP_END(RETURN_UI_STEP_INVALID);
-
 }
 
 
@@ -108,7 +111,7 @@ static void deriveAddress_display_ui_runStep();
 enum {
 	DISPLAY_UI_STEP_WARNING = 200,
 	DISPLAY_UI_STEP_INSTRUCTIONS,
-	DISPLAY_UI_STEP_PATH,
+	DISPLAY_UI_STEP_SPENDING_INFO,
 	DISPLAY_UI_STEP_STAKING_INFO,
 	DISPLAY_UI_STEP_ADDRESS,
 	DISPLAY_UI_STEP_RESPOND,
@@ -157,14 +160,14 @@ static void deriveAddress_display_ui_runStep()
 		        this_fn
 		);
 	}
-	UI_STEP(DISPLAY_UI_STEP_PATH) {
-		ui_displayPathScreen(
-		        "Address path",
-		        &ctx->addressParams.spendingKeyPath,
-		        this_fn
-		);
+	UI_STEP(DISPLAY_UI_STEP_SPENDING_INFO) {
+		if (determineSpendingChoice(ctx->addressParams.type) == SPENDING_NONE) {
+			// reward address
+			UI_STEP_JUMP(DISPLAY_UI_STEP_STAKING_INFO);
+		}
+		ui_displaySpendingInfoScreen(&ctx->addressParams, this_fn);
 	}
-	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
+	UI_STEP(DISPLAY_UI_STEP_STAKING_INFO) {
 		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
 	}
 	UI_STEP(DISPLAY_UI_STEP_ADDRESS) {

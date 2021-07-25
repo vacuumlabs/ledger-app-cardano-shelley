@@ -54,7 +54,7 @@ void ui_idle(void)
 	UX_MENU_DISPLAY(0, menu_main, NULL);
 	#elif defined(TARGET_NANOX)
 	// reserve a display stack slot if none yet
-	if(G_ux.stack_count == 0) {
+	if (G_ux.stack_count == 0) {
 		ux_stack_push();
 	}
 	ux_flow_init(0, ux_idle_flow, NULL);

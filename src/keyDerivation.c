@@ -16,10 +16,18 @@ static bool _isPathAllowed(const bip44_path_t* pathSpec)
 {
 	switch (bip44_classifyPath(pathSpec)) {
 
-	case PATH_WALLET_ACCOUNT:
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
+	case PATH_ORDINARY_ACCOUNT:
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+
+	case PATH_MULTISIG_ACCOUNT:
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+
+	case PATH_MINT_KEY:
+
 	case PATH_POOL_COLD_KEY:
+
 		return true;
 
 	default:

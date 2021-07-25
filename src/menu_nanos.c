@@ -17,8 +17,6 @@
 // menu_main.
 const ux_menu_entry_t menu_main[];
 
-// TODO APPVERSION must contain info on being operator app?
-
 static const ux_menu_entry_t menu_about[] = {
 	// I won't bother describing how menus work in detail, since it's fairly
 	// self-evident and not very useful; but to save you some trouble, this

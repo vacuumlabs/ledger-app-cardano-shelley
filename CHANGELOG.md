@@ -12,8 +12,8 @@ Support for signing pool registrations by operators.
 ### Added
 
 - operational certificate signing
-- new use case for transactions containing pool registration certificate: operators can sign such a transaction with the pool cold key
-- in the new use case, pool relays and the VRF key are displayed to the user
+- new signing mode for transactions containing pool registration certificate: operators can sign such a transaction with the pool cold key
+- in the new signing mode, pool relays and the VRF key are displayed to the user
 - support for pool retirement certificates in ordinary transactions
 
 ### Changed
@@ -42,7 +42,7 @@ Add Catalyst voting registration metadata support
 
 ## [2.2.1](https://github.com/LedgerHQ/app-cardano/compare/2.2.0...LedgerHQ:2.2.1) - [March 30th 2021]
 
-Minor release updating the way of showing multiassed identifiers. No API changes.
+Minor release updating the way of showing multiasset identifiers. No API changes.
 
 ### Added
  

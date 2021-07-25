@@ -59,9 +59,9 @@ static uint8_t _getScriptLevelForPosition()
 	// For complex scripts we reduce the current level by 1
 	// Because they already have the level increased by 1
 	uint8_t levelOffset = ctx->ui_scriptType == UI_SCRIPT_ALL
-	                   || ctx->ui_scriptType == UI_SCRIPT_ANY
-	                   || ctx->ui_scriptType == UI_SCRIPT_N_OF_K
-	                   ? 1 : 0;
+	                      || ctx->ui_scriptType == UI_SCRIPT_ANY
+	                      || ctx->ui_scriptType == UI_SCRIPT_N_OF_K
+	                      ? 1 : 0;
 	ASSERT(levelOffset == 0 || ctx->level > 0);
 	return ctx->level - levelOffset;
 }
@@ -360,7 +360,7 @@ static void deriveNativeScriptHash_handleSimpleScript(read_view_t* view)
 	TRACE("native simple script type = %u", nativeScriptType);
 
 	// parse data
-	switch(nativeScriptType) {
+	switch (nativeScriptType) {
 #	define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
 		CASE(NATIVE_SCRIPT_PUBKEY, deriveNativeScriptHash_handlePubkey);
 		CASE(NATIVE_SCRIPT_INVALID_BEFORE, deriveNativeScriptHash_handleInvalidBefore);
