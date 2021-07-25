@@ -59,9 +59,9 @@ static uint8_t _getScriptLevelForPosition()
 	// For complex scripts we reduce the current level by 1
 	// Because they already have the level increased by 1
 	uint8_t levelOffset = ctx->ui_scriptType == UI_SCRIPT_ALL
-	                   || ctx->ui_scriptType == UI_SCRIPT_ANY
-	                   || ctx->ui_scriptType == UI_SCRIPT_N_OF_K
-	                   ? 1 : 0;
+	                      || ctx->ui_scriptType == UI_SCRIPT_ANY
+	                      || ctx->ui_scriptType == UI_SCRIPT_N_OF_K
+	                      ? 1 : 0;
 	ASSERT(levelOffset == 0 || ctx->level > 0);
 	return ctx->level - levelOffset;
 }

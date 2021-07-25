@@ -84,6 +84,6 @@ void getOpCertSignature(bip44_path_t* pathSpec,
                         uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(opCertBodySize == OP_CERT_BODY_LENGTH);
-	ASSERT(bip44_isValidPoolColdKeyPath(pathSpec));
+	ASSERT(bip44_isPoolColdKeyPath(pathSpec));
 	signRawMessageWithPath(pathSpec, opCertBodyBuffer, opCertBodySize, outBuffer, outSize);
 }
