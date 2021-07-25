@@ -74,9 +74,11 @@ Ordinarily, Ledger computes a rolling hash of the serialized transaction body, b
 5. After the call is processed, the terminal running console printing now contains all log messages resulting from that `signTx` call. (See the `TRACE*` macros.) Extract the transaction body logs (dumped by the function computing the rolling tx hash; you can identify them by function names following the pattern `blake2b_256_append*tx_body`) and merge them into a single hexstring. You can use the following javascript to achieve it:
 
 ```javascript
-       const logfile = "<content of the log file>"
+       const logfile = `<content of the log file>`
        console.log(logfile.split('\n').filter((x) => x.includes('blake2b_256_append'))
            .map((x) => x.split(' ')[1]).join(''))
 ```
+
+WARNING: the output of tracing sometimes (although very rarely) gets slightly mangled (for instance, the output contains `blake2b_s56_append` instead of `blake2b_256_append`) and then the script above produces an incorrect result.
 
 6. Analyze the obtained output via https://cbor.me.

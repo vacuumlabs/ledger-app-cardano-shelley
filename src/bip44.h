@@ -16,6 +16,9 @@ typedef struct {
 
 static const uint32_t PURPOSE_BYRON = 44;
 static const uint32_t PURPOSE_SHELLEY = 1852;
+static const uint32_t PURPOSE_MULTISIG = 1854;
+
+static const uint32_t PURPOSE_MINT = 1855;
 
 static const uint32_t PURPOSE_POOL_COLD_KEY = 1853;
 
@@ -31,6 +34,9 @@ size_t bip44_parseFromWire(
 
 // Indexes into pathSpec
 enum {
+	// wallet keys:
+	// ordinary https://cips.cardano.org/cips/cip1852/
+	// multisig https://cips.cardano.org/cips/cip1854/
 	BIP44_I_PURPOSE = 0,
 	BIP44_I_COIN_TYPE = 1,
 	BIP44_I_ACCOUNT = 2,
@@ -38,7 +44,10 @@ enum {
 	BIP44_I_ADDRESS = 4,
 	BIP44_I_REST = 5,
 
-	// cold key derivation path specific enums
+	// mint keys https://cips.cardano.org/cips/cip1855/
+	BIP44_I_MINT_POLICY = 2,
+
+	// pool cold keys https://cips.cardano.org/cips/cip1853/
 	BIP44_I_POOL_COLD_KEY_USECASE = 2,
 	BIP44_I_POOL_COLD_KEY = 3,
 };
@@ -46,7 +55,10 @@ enum {
 
 bool bip44_hasByronPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec);
-bool bip44_hasValidCardanoWalletPrefix(const bip44_path_t* pathSpec);
+bool bip44_hasOrdinaryWalletKeyPrefix(const bip44_path_t* pathSpec);
+bool bip44_hasMultisigWalletKeyPrefix(const bip44_path_t* pathSpec);
+bool bip44_hasMintKeyPrefix(const bip44_path_t* pathSpec);
+bool bip44_hasPoolColdKeyPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
 uint32_t bip44_getAccount(const bip44_path_t* pathSpec);
@@ -55,12 +67,16 @@ bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec);
 bool bip44_containsChainType(const bip44_path_t* pathSpec);
 
 bool bip44_containsAddress(const bip44_path_t* pathSpec);
-bool bip44_isValidAddressPath(const bip44_path_t* pathSpec);
+bool bip44_isOrdinarySpendingKeyPath(const bip44_path_t* pathSpec);
+bool bip44_isMultisigSpendingKeyPath(const bip44_path_t* pathSpec);
 bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec);
 
-bool bip44_isValidStakingKeyPath(const bip44_path_t* pathSpec);
+bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec);
+bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
+
+bool bip44_isMintKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_isValidPoolColdKeyPath(const bip44_path_t* pathSpec);
 bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec);
@@ -73,18 +89,24 @@ size_t bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
 
 typedef enum {
 	// hd wallet account
-	PATH_WALLET_ACCOUNT,
+	PATH_ORDINARY_ACCOUNT,
+	PATH_MULTISIG_ACCOUNT,
 
-	// hd wallet address
-	PATH_WALLET_SPENDING_KEY,
+	// hd wallet address (payment part in shelley)
+	PATH_ORDINARY_SPENDING_KEY,
+	PATH_MULTISIG_SPENDING_KEY,
 
 	// hd wallet reward adress, withdrawal witness, pool owner
-	PATH_WALLET_STAKING_KEY,
+	PATH_ORDINARY_STAKING_KEY,
+	PATH_MULTISIG_STAKING_KEY,
+
+	// native token minting/burning
+	PATH_MINT_KEY,
 
 	// pool cold key in pool registrations and retirements
 	PATH_POOL_COLD_KEY,
 
-	// not one of the above
+	// none of the above
 	PATH_INVALID,
 } bip44_path_type_t;
 

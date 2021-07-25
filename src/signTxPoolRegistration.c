@@ -202,8 +202,8 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 		subctx->numOwners = (uint16_t) numOwners;
 		subctx->numRelays = (uint16_t) numRelays;
 
-		switch (commonTxData->signTxUsecase) {
-		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+		switch (commonTxData->txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 			// there should be exactly one owner given by path for which we provide a witness
 			VALIDATE(subctx->numOwners >= 1, ERR_INVALID_DATA);
 			break;
@@ -335,7 +335,7 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 	}
 
 	security_policy_t policy = policyForSignTxStakePoolRegistrationPoolId(
-	                                   commonTxData->signTxUsecase,
+	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.poolId
 	                           );
 	TRACE("Policy: %d", (int) policy);
@@ -354,12 +354,12 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 	{
 		// ui step depends not only on security policy, but also on usecase
 		int displayUiStep = HANDLE_POOL_KEY_STEP_INVALID;
-		switch (commonTxData->signTxUsecase) {
-		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+		switch (commonTxData->txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 			displayUiStep = HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID;
 			break;
 
-		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 			displayUiStep = HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH;
 			break;
 
@@ -438,7 +438,7 @@ static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, siz
 	}
 
 	security_policy_t policy = policyForSignTxStakePoolRegistrationVrfKey(
-	                                   commonTxData->signTxUsecase
+	                                   commonTxData->txSigningMode
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -610,12 +610,12 @@ static void _parsePoolRewardAccount(read_view_t* view)
 
 	case KEY_REFERENCE_HASH:
 		VALIDATE(view_remainingSize(view) >= REWARD_ACCOUNT_SIZE, ERR_INVALID_DATA);
-		STATIC_ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
-		view_memmove(rewardAccount->buffer, view, REWARD_ACCOUNT_SIZE);
-		TRACE_BUFFER(rewardAccount->buffer, SIZEOF(rewardAccount->buffer));
+		STATIC_ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
+		view_memmove(rewardAccount->hashBuffer, view, REWARD_ACCOUNT_SIZE);
+		TRACE_BUFFER(rewardAccount->hashBuffer, SIZEOF(rewardAccount->hashBuffer));
 
-		const uint8_t header = getAddressHeader(rewardAccount->buffer, SIZEOF(rewardAccount->buffer));
-		VALIDATE(getAddressType(header) == REWARD, ERR_INVALID_DATA);
+		const uint8_t header = getAddressHeader(rewardAccount->hashBuffer, SIZEOF(rewardAccount->hashBuffer));
+		VALIDATE(getAddressType(header) == REWARD_KEY || getAddressType(header) == REWARD_SCRIPT, ERR_INVALID_DATA);
 		VALIDATE(getNetworkId(header) == commonTxData->networkId, ERR_INVALID_DATA);
 		break;
 
@@ -654,7 +654,7 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 	}
 
 	security_policy_t policy = policyForSignTxStakePoolRegistrationRewardAccount(
-	                                   commonTxData->signTxUsecase,
+	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.poolRewardAccount
 	                           );
 	TRACE("Policy: %d", (int) policy);
@@ -709,12 +709,12 @@ static void handleOwner_ui_runStep()
 
 		subctx->currentOwner++;
 		if (subctx->currentOwner == subctx->numOwners) {
-			switch (commonTxData->signTxUsecase) {
-			case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+			switch (commonTxData->txSigningMode) {
+			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 				VALIDATE(subctx->numOwnersGivenByPath == 1, ERR_INVALID_DATA);
 				break;
 
-			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 				ASSERT(subctx->numOwnersGivenByPath == 0);
 				break;
 
@@ -808,7 +808,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		}
 	}
 
-	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(commonTxData->signTxUsecase, owner);
+	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(commonTxData->txSigningMode, owner);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -1080,7 +1080,7 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForSignTxStakePoolRegistrationRelay(commonTxData->signTxUsecase, relay);
+	security_policy_t policy = policyForSignTxStakePoolRegistrationRelay(commonTxData->txSigningMode, relay);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -1354,7 +1354,7 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 		}
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS) {
-		bool isOperator = commonTxData->signTxUsecase == SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR;
+		bool isOperator = commonTxData->txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR;
 		if ((subctx->numRelays == 0) && isOperator) {
 			ui_displayPaginatedText(
 			        "No pool relays",

@@ -71,7 +71,7 @@ size_t deriveAssetFingerprint(
 __noinline_due_to_stack__
 void ui_displayAssetFingerprintScreen(
         token_group_t* tokenGroup,
-        token_amount_t* token,
+        uint8_t* assetNameBytes, size_t assetNameSize,
         ui_callback_fn_t callback
 );
 
@@ -86,6 +86,13 @@ __noinline_due_to_stack__
 void ui_displayUint64Screen(
         const char* screenHeader,
         uint64_t value,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
+void ui_displayInt64Screen(
+        const char* screenHeader,
+        int64_t value,
         ui_callback_fn_t callback
 );
 

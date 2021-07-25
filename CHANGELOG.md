@@ -42,7 +42,7 @@ Add Catalyst voting registration metadata support
 
 ## [2.2.1](https://github.com/LedgerHQ/app-cardano/compare/2.2.0...LedgerHQ:2.2.1) - [March 30th 2021]
 
-Minor release updating the way of showing multiassed identifiers. No API changes.
+Minor release updating the way of showing multiasset identifiers. No API changes.
 
 ### Added
  

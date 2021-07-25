@@ -145,7 +145,7 @@ static void signTx_handleOutput_addressBytes()
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
 
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
-	                                   commonTxData->signTxUsecase,
+	                                   commonTxData->txSigningMode,
 	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );
@@ -222,7 +222,7 @@ static void signTx_handleOutput_addressParams()
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS);
 
 	security_policy_t policy = policyForSignTxOutputAddressParams(
-	                                   commonTxData->signTxUsecase,
+	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.output.params,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );
@@ -316,8 +316,8 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 
 		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 		uint32_t numAssetGroups = parse_u4be(&view);
-		TRACE("num asset groups %u", subctx->numAssetGroups);
-		VALIDATE(subctx->numAssetGroups <= OUTPUT_ASSET_GROUPS_MAX, ERR_INVALID_DATA);
+		TRACE("num asset groups %u", numAssetGroups);
+		VALIDATE(numAssetGroups <= OUTPUT_ASSET_GROUPS_MAX, ERR_INVALID_DATA);
 
 		STATIC_ASSERT(OUTPUT_ASSET_GROUPS_MAX <= UINT16_MAX, "wrong max token groups");
 		ASSERT_TYPE(subctx->numAssetGroups, uint16_t);
@@ -390,6 +390,7 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		VALIDATE(view_remainingSize(&view) == 4, ERR_INVALID_DATA);
 		uint32_t numTokens = parse_u4be(&view);
 		VALIDATE(numTokens <= OUTPUT_TOKENS_IN_GROUP_MAX, ERR_INVALID_DATA);
+		VALIDATE(numTokens > 0, ERR_INVALID_DATA);
 		STATIC_ASSERT(OUTPUT_TOKENS_IN_GROUP_MAX <= UINT16_MAX, "wrong max token amounts in a group");
 		ASSERT_TYPE(subctx->numTokens, uint16_t);
 		subctx->numTokens = (uint16_t) numTokens;
@@ -429,7 +430,7 @@ static void signTxOutput_handleToken_ui_runStep()
 	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_NAME) {
 		ui_displayAssetFingerprintScreen(
 		        &subctx->stateData.tokenGroup,
-		        &subctx->stateData.token,
+		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
 		        this_fn
 		);
 	}
@@ -462,7 +463,7 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
-		token_amount_t* token = &subctx->stateData.token;
+		output_token_amount_t* token = &subctx->stateData.token;
 
 		// parse data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);

@@ -102,8 +102,55 @@ static struct {
 	}
 };
 
-static const char* expectedHex = "8d8344a54f788061068957e25dbfa580468562d412c5e3a30ebd66006f9f3721";
+static const char* expectedHex = "a185a8ec05862e17cae482c1d5407f3f3dae472212e8b7fb06e7ae8322e9529e";
 
+typedef void(*addTokenGroupFun)(tx_hash_builder_t* builder,
+                                const uint8_t* policyIdBuffer, size_t policyIdSize,
+                                uint16_t numTokens);
+typedef void(*addTokenFun)(tx_hash_builder_t* builder,
+                           const uint8_t* assetNameBuffer, size_t assetNameSize,
+                           uint64_t amount);
+
+static void addTwoMultiassetTokenGroups(tx_hash_builder_t* builder,
+                                        addTokenGroupFun tokenGroupAdder, addTokenFun tokenAdder)
+{
+	// we reuse the buffers to avoid wasting stack
+	uint8_t policy[MINTING_POLICY_ID_SIZE];
+	explicit_bzero(policy, SIZEOF(policy));
+
+	uint8_t assetNameBuffer[ASSET_NAME_SIZE_MAX];
+	explicit_bzero(assetNameBuffer, SIZEOF(assetNameBuffer));
+
+	policy[0] = 1;
+	tokenGroupAdder(builder, policy, SIZEOF(policy), 2);
+
+	assetNameBuffer[0] = 11;
+	tokenAdder(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 110);
+	assetNameBuffer[0] = 12;
+	tokenAdder(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 120);
+
+	policy[0] = 2;
+	tokenGroupAdder(builder, policy, SIZEOF(policy), 2);
+
+	assetNameBuffer[0] = 21;
+	tokenAdder(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 210);
+	assetNameBuffer[0] = 22;
+	// use a short buffer on purpose
+	tokenAdder(builder, assetNameBuffer, 1, 220);
+}
+
+static void addMintTokenProxy(tx_hash_builder_t* builder,
+                              const uint8_t* assetNameBuffer, size_t assetNameSize,
+                              uint64_t amount)
+{
+	txHashBuilder_addMint_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
+}
+
+static void addMultiassetMint(tx_hash_builder_t* builder)
+{
+	txHashBuilder_addMint_topLevelData(builder, 2);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addMint_tokenGroup, &addMintTokenProxy);
+}
 
 static void addMultiassetOutput(tx_hash_builder_t* builder)
 {
@@ -116,29 +163,7 @@ static void addMultiassetOutput(tx_hash_builder_t* builder)
 	        2
 	);
 
-	// we reuse the buffers to avoid wasting stack
-	uint8_t policy[MINTING_POLICY_ID_SIZE];
-	explicit_bzero(policy, SIZEOF(policy));
-
-	uint8_t assetNameBuffer[ASSET_NAME_SIZE_MAX];
-	explicit_bzero(assetNameBuffer, SIZEOF(assetNameBuffer));
-
-	policy[0] = 1;
-	txHashBuilder_addOutput_tokenGroup(builder, policy, SIZEOF(policy), 2);
-
-	assetNameBuffer[0] = 11;
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 110);
-	assetNameBuffer[0] = 12;
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 120);
-
-	policy[0] = 2;
-	txHashBuilder_addOutput_tokenGroup(builder, policy, SIZEOF(policy), 2);
-
-	assetNameBuffer[0] = 21;
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, SIZEOF(assetNameBuffer), 210);
-	assetNameBuffer[0] = 22;
-	// use a short buffer on purpose
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, 1, 220);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &txHashBuilder_addOutput_token);
 }
 
 static void addOutputs(tx_hash_builder_t* builder)
@@ -271,9 +296,10 @@ static void addCertificates(tx_hash_builder_t* builder)
 	ITERATE(it, registrationCertificates) {
 		uint8_t tmp[70];
 		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
-		txHashBuilder_addCertificate_stakingKey(
+		txHashBuilder_addCertificate_stakingHash(
 		        builder,
 		        CERTIFICATE_TYPE_STAKE_REGISTRATION,
+		        STAKE_CREDENTIAL_KEY_PATH,
 		        tmp, tmpSize
 		);
 	}
@@ -281,9 +307,10 @@ static void addCertificates(tx_hash_builder_t* builder)
 	ITERATE(it, deregistrationCertificates) {
 		uint8_t tmp[70];
 		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
-		txHashBuilder_addCertificate_stakingKey(
+		txHashBuilder_addCertificate_stakingHash(
 		        builder,
 		        CERTIFICATE_TYPE_STAKE_DEREGISTRATION,
+		        STAKE_CREDENTIAL_KEY_PATH,
 		        tmp, tmpSize
 		);
 	}
@@ -301,11 +328,18 @@ static void addCertificates(tx_hash_builder_t* builder)
 		uint8_t tmp_pool[70];
 		size_t tmpSize_pool = decode_hex(PTR_PIC(it->poolKeyHash), tmp_pool, SIZEOF(tmp_pool));
 		txHashBuilder_addCertificate_delegation(
-		        builder,
+		        builder, STAKE_CREDENTIAL_KEY_PATH,
 		        tmp_credential, tmpSize_credential,
 		        tmp_pool, tmpSize_pool
 		);
 	}
+}
+
+static void addMint(tx_hash_builder_t* builder)
+{
+	txHashBuilder_enterMint(builder);
+
+	addMultiassetMint(builder);
 }
 
 void run_txHashBuilder_test()
@@ -324,7 +358,8 @@ void run_txHashBuilder_test()
 	                   true, // ttl
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
-	                   true // validity interval start
+	                   true, // validity interval start
+	                   true // mint
 	                  );
 
 	txHashBuilder_enterInputs(&builder);
@@ -367,6 +402,8 @@ void run_txHashBuilder_test()
 	}
 
 	txHashBuilder_addValidityIntervalStart(&builder, 33);
+
+	addMint(&builder);
 
 	uint8_t result[TX_HASH_LENGTH];
 	txHashBuilder_finalize(&builder, result, SIZEOF(result));
