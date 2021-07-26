@@ -16,10 +16,10 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 	CHECK(addressParams->type == BASE);
 	CHECK(addressParams->stakingChoice == STAKING_KEY_PATH);
 
-	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_WALLET_SPENDING_KEY);
+	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_ORDINARY_SPENDING_KEY);
 	CHECK(bip44_isPathReasonable(&addressParams->spendingKeyPath));
 
-	CHECK(bip44_classifyPath(&addressParams->stakingKeyPath) == PATH_WALLET_STAKING_KEY);
+	CHECK(bip44_classifyPath(&addressParams->stakingKeyPath) == PATH_ORDINARY_STAKING_KEY);
 	CHECK(bip44_isPathReasonable(&addressParams->stakingKeyPath));
 
 	CHECK(
@@ -91,10 +91,18 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 {
 	switch (bip44_classifyPath(pathSpec)) {
 
-	case PATH_WALLET_ACCOUNT:
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
+	case PATH_ORDINARY_ACCOUNT:
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+
+	case PATH_MULTISIG_ACCOUNT:
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+
+	case PATH_MINT_KEY:
+
 	case PATH_POOL_COLD_KEY:
+
 		if (bip44_isPathReasonable(pathSpec)) {
 			PROMPT();
 		} else {
@@ -115,9 +123,16 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 {
 	switch (bip44_classifyPath(pathSpec)) {
 
-	case PATH_WALLET_ACCOUNT:
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
+	case PATH_ORDINARY_ACCOUNT:
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+
+	case PATH_MULTISIG_ACCOUNT:
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+
+	case PATH_MINT_KEY:
+
 		if (bip44_isPathReasonable(pathSpec)) {
 			ALLOW();
 		} else {
@@ -283,7 +298,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 	case SIGN_TX_USECASE_ORDINARY_TX: {
 		switch (bip44_classifyPath(&params->spendingKeyPath)) {
 
-		case PATH_WALLET_SPENDING_KEY:
+		case PATH_ORDINARY_SPENDING_KEY:
 			SHOW_UNLESS(bip44_isPathReasonable(&params->spendingKeyPath));
 			SHOW_UNLESS(is_standard_base_address(params));
 			ALLOW();
@@ -410,7 +425,9 @@ security_policy_t policyForSignTxCertificateStaking(
 		ASSERT(false);
 	}
 
-	DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
+	if (stakingKeyPath) {
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
+	}
 
 	PROMPT();
 }
@@ -504,7 +521,7 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 )
 {
 	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
-		DENY_UNLESS(bip44_isValidStakingKeyPath(&owner->path));
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&owner->path));
 	}
 
 	switch (signTxUsecase) {
@@ -583,12 +600,15 @@ security_policy_t policyForSignTxWitness(
 {
 	switch (signTxUsecase) {
 
-	case SIGN_TX_USECASE_ORDINARY_TX: {
-
+	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG: {
 		switch (bip44_classifyPath(pathSpec)) {
 
-		case PATH_WALLET_SPENDING_KEY:
-		case PATH_WALLET_STAKING_KEY:
+		// TODO wrong, show all witnesses for multisig
+		case PATH_ORDINARY_SPENDING_KEY:
+		case PATH_ORDINARY_STAKING_KEY:
+		case PATH_MULTISIG_SPENDING_KEY:
+		case PATH_MULTISIG_STAKING_KEY:
 		case PATH_POOL_COLD_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
 				ALLOW();
@@ -597,7 +617,7 @@ security_policy_t policyForSignTxWitness(
 			}
 			break;
 
-		case PATH_MINT:
+		case PATH_MINT_KEY:
 			SHOW();
 
 		default:
@@ -609,10 +629,9 @@ security_policy_t policyForSignTxWitness(
 	}
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
-
 		switch (bip44_classifyPath(pathSpec)) {
 
-		case PATH_WALLET_STAKING_KEY:
+		case PATH_ORDINARY_STAKING_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
 				ALLOW();
 			} else {
@@ -629,10 +648,9 @@ security_policy_t policyForSignTxWitness(
 	}
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
-
 		switch (bip44_classifyPath(pathSpec)) {
 
-		case PATH_WALLET_SPENDING_KEY:
+		case PATH_ORDINARY_SPENDING_KEY:
 		case PATH_POOL_COLD_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
 				ALLOW();
@@ -713,7 +731,7 @@ security_policy_t policyForCatalystRegistrationStakingKey(
         const bip44_path_t* stakingKeyPath
 )
 {
-	DENY_UNLESS(bip44_isValidStakingKeyPath(stakingKeyPath));
+	DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
 	WARN_UNLESS(bip44_hasReasonableAccount(stakingKeyPath));
 
 	SHOW();
@@ -736,7 +754,6 @@ security_policy_t policyForCatalystRegistrationConfirm()
 
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 {
-
 	switch (bip44_classifyPath(poolColdKeyPathSpec)) {
 
 	case PATH_POOL_COLD_KEY:
