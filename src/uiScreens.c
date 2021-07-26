@@ -105,7 +105,7 @@ static void _ui_displayAccountWithDescriptionScreen(
 	ASSERT(strlen(firstLine) > 0);
 	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(bip44_hasValidCardanoWalletPrefix(path));
+	ASSERT(bip44_hasOrdinaryWalletKeyPrefix(path));
 	ASSERT(bip44_containsAccount(path));
 
 	char accountDescription[160];
@@ -161,10 +161,12 @@ void ui_displayGetPublicKeyPathScreen(
 		return;
 	}
 
-	case PATH_WALLET_ACCOUNT: {
+	case PATH_ORDINARY_ACCOUNT: {
 		_ui_displayAccountWithDescriptionScreen("Export public key", path, true, callback);
 		return;
 	}
+
+	// TODO FIXME what happens for multisig?
 
 	default:
 		ui_displayPathScreen("Export public key", path,	callback);
@@ -178,7 +180,7 @@ void ui_displayStakingKeyScreen(
         ui_callback_fn_t callback
 )
 {
-	ASSERT(bip44_isValidStakingKeyPath(stakingPath));
+	ASSERT(bip44_isOrdinaryStakingKeyPath(stakingPath));
 
 	bool showAccountDescription = bip44_hasReasonableAccount(stakingPath);
 
@@ -280,7 +282,7 @@ void ui_displayRewardAccountScreen(
 	switch (rewardAccount->keyReferenceType) {
 
 	case KEY_REFERENCE_PATH: {
-		ASSERT(bip44_isValidStakingKeyPath(&rewardAccount->path));
+		ASSERT(bip44_isOrdinaryStakingKeyPath(&rewardAccount->path));
 
 		{
 			uint32_t account = unharden(bip44_getAccount(&rewardAccount->path));
@@ -343,22 +345,28 @@ void ui_displayStakingInfoScreen(
 	char stakingInfo[120];
 	explicit_bzero(stakingInfo, SIZEOF(stakingInfo));
 
-	switch (addressParams->stakingChoice) {
+	switch (addressParams->stakingDataSource) {
 
 	case NO_STAKING:
-		if (addressParams->type == BYRON) {
+		switch (addressParams->type) {
+
+		case BYRON:
 			heading = STAKING_HEADING_WARNING;
 			strncpy(stakingInfo, "legacy Byron address (no staking rewards)", SIZEOF(stakingInfo));
+			break;
 
-		} else if (addressParams->type == ENTERPRISE) {
+		case ENTERPRISE_KEY:
+		case ENTERPRISE_SCRIPT:
 			heading = STAKING_HEADING_WARNING;
 			strncpy(stakingInfo, "no staking rewards", SIZEOF(stakingInfo));
+			break;
 
-		} else if (addressParams->type == REWARD) {
+		case REWARD_KEY:
+		case REWARD_SCRIPT:
 			heading = STAKING_HEADING_WARNING;
 			strncpy(stakingInfo, "reward account", SIZEOF(stakingInfo));
 
-		} else {
+		default:
 			ASSERT(false);
 		}
 		break;
@@ -369,19 +377,26 @@ void ui_displayStakingInfoScreen(
 		break;
 
 	case STAKING_KEY_HASH:
+	case STAKING_SCRIPT_HASH: {
+		const uint8_t* const stakingHash = (STAKING_KEY_HASH == addressParams->stakingDataSource ? addressParams->stakingKeyHash : addressParams->stakingScriptHash);
 		heading = STAKING_HEADING_HASH;
+		STATIC_ASSERT(SCRIPT_HASH_LENGTH == ADDRESS_KEY_HASH_LENGTH, "incompatible hash lengths");
+		STATIC_ASSERT(SCRIPT_HASH_LENGTH == SIZEOF(addressParams->stakingKeyHash), "staking key hash length is wrong");
+		STATIC_ASSERT(SCRIPT_HASH_LENGTH == SIZEOF(addressParams->stakingScriptHash), "staking script hash length is wrong");
 		size_t length = encode_hex(
-		                        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
+		                        stakingHash, SCRIPT_HASH_LENGTH,
 		                        stakingInfo, SIZEOF(stakingInfo)
 		                );
 		ASSERT(length == strlen(stakingInfo));
-		ASSERT(length == 2 * SIZEOF(addressParams->stakingKeyHash));
+		ASSERT(length == 2 * SCRIPT_HASH_LENGTH);
 		break;
+	}
 
 	case BLOCKCHAIN_POINTER:
 		heading = STAKING_HEADING_POINTER;
 		printBlockchainPointerToStr(addressParams->stakingKeyBlockchainPointer, stakingInfo, SIZEOF(stakingInfo));
 		break;
+
 
 	default:
 		ASSERT(false);
@@ -607,7 +622,7 @@ void ui_displayPoolOwnerScreen(
 
 		switch (owner->keyReferenceType) {
 		case KEY_REFERENCE_PATH: {
-			ASSERT(bip44_isValidStakingKeyPath(&owner->path));
+			ASSERT(bip44_isOrdinaryStakingKeyPath(&owner->path));
 
 			constructRewardAddressFromKeyPath(
 			        &owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)

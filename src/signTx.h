@@ -18,6 +18,7 @@ typedef enum {
 	SIGN_TX_USECASE_ORDINARY_TX = 3, // enum value 3 is needed for backwards compatibility
 	SIGN_TX_USECASE_POOL_REGISTRATION_OWNER = 4,
 	SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR = 5,
+	SIGN_TX_USECASE_MULTISIG = 6,	// TODO this comes from the wire directly, so need to look up the specification
 } sign_tx_usecase_t;
 
 typedef enum {
@@ -44,7 +45,8 @@ enum {
 	SIGN_MAX_INPUTS = 1000,
 	SIGN_MAX_OUTPUTS = 1000,
 	SIGN_MAX_CERTIFICATES = 1000,
-	SIGN_MAX_REWARD_WITHDRAWALS = 1000
+	SIGN_MAX_REWARD_WITHDRAWALS = 1000,
+	SIGN_MAX_WITNESSES = SIGN_MAX_INPUTS + SIGN_MAX_OUTPUTS + SIGN_MAX_CERTIFICATES + SIGN_MAX_REWARD_WITHDRAWALS,
 };
 
 typedef struct {
@@ -55,9 +57,19 @@ typedef struct {
 	uint32_t protocolMagic; // part of Byron address
 } common_tx_data_t;
 
+typedef enum {
+	CERTIFICATE_IDENTIFIER_KEY_PATH = 0,
+	CERTIFICATE_IDENTIFIER_SCRIPT_HASH = 1,
+} certificate_identifier_type_t;
+
 typedef struct {
 	certificate_type_t type;
-	bip44_path_t pathSpec; // interpretation depends on type // TODO rename to keyPath?
+
+	certificate_identifier_type_t identifierType;
+	union {
+		bip44_path_t pathSpec; // interpretation depends on type // TODO rename to keyPath?
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
 
 	// only for specific types
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];

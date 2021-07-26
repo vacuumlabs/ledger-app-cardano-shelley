@@ -13,8 +13,8 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 	ASSERT(isValidAddressParams(addressParams));
 
 #define CHECK(cond) if (!(cond)) return false
-	CHECK(addressParams->type == BASE);
-	CHECK(addressParams->stakingChoice == STAKING_KEY_PATH);
+	CHECK(addressParams->type == BASE_PAYMENT_KEY_STAKE_KEY);
+	CHECK(addressParams->stakingDataSource == STAKING_KEY_PATH);
 
 	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_ORDINARY_SPENDING_KEY);
 	CHECK(bip44_isPathReasonable(&addressParams->spendingKeyPath));
@@ -35,7 +35,7 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 {
 	ASSERT(isValidAddressParams(addressParams));
 
-	return addressParams->type == REWARD;
+	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
 bool is_tx_network_verifiable(
@@ -161,19 +161,44 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
-	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
+	switch (addressParams->type) {
+	case BASE_PAYMENT_KEY_STAKE_KEY:
+	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+	case POINTER_KEY:
+	case ENTERPRISE_KEY:
+	case BYRON:
+		switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
-		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
-			PROMPT();
-		} else {
-			WARN();
+		case PATH_ORDINARY_SPENDING_KEY:
+		case PATH_MULTISIG_SPENDING_KEY:
+		case PATH_ORDINARY_STAKING_KEY:
+		case PATH_MULTISIG_STAKING_KEY:
+			if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
+				PROMPT();
+			} else {
+				WARN();
+			}
+			break;
+
+		default:
+			DENY();
+			break;
 		}
+		break;
+	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
+	case POINTER_SCRIPT:
+	case ENTERPRISE_SCRIPT:
+		//TODO prepare UI machines properly
+		PROMPT();
+		break;
+	case REWARD_KEY:
+	case REWARD_SCRIPT:
+		//TODO do reward need this at all?
+		PROMPT();
 		break;
 
 	default:
-		DENY();
 		break;
 	}
 
@@ -185,20 +210,27 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
-	switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
+	if (SPENDING_PATH == determineSpendingChoice(addressParams->type)) {
+		switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
-	case PATH_WALLET_SPENDING_KEY:
-	case PATH_WALLET_STAKING_KEY:
-		if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
-			SHOW();
-		} else {
-			WARN();
+		case PATH_ORDINARY_SPENDING_KEY:
+		case PATH_MULTISIG_SPENDING_KEY:
+		case PATH_ORDINARY_STAKING_KEY:
+		case PATH_MULTISIG_STAKING_KEY:
+			if (bip44_isPathReasonable(&addressParams->spendingKeyPath)) {
+				SHOW();
+			} else {
+				WARN();
+			}
+			break;
+
+		default:
+			DENY();
+			break;
 		}
-		break;
-
-	default:
-		DENY();
-		break;
+	} else {
+		//TODO work out UI machines to handle PROMPT/WARN
+		WARN();
 	}
 
 	DENY(); // should not be reached
@@ -250,7 +282,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	} else { // shelley
 		uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
 		DENY_IF(addressNetworkId != networkId);
-		DENY_IF(addressType == REWARD);
+		DENY_IF(addressType == REWARD_KEY || addressType == REWARD_SCRIPT);
 	}
 
 	switch (signTxUsecase) {
@@ -266,6 +298,10 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		break;
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		SHOW();
+		break;
+
+	case SIGN_TX_USECASE_MULTISIG:
 		SHOW();
 		break;
 
@@ -295,7 +331,8 @@ security_policy_t policyForSignTxOutputAddressParams(
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_ORDINARY_TX: {
+	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG: {
 		switch (bip44_classifyPath(&params->spendingKeyPath)) {
 
 		case PATH_ORDINARY_SPENDING_KEY:
@@ -357,6 +394,7 @@ security_policy_t policyForSignTxFee(
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG:
 		// always show the fee if it is paid by the signer
 		SHOW();
 		break;
@@ -392,6 +430,7 @@ security_policy_t policyForSignTxCertificate(
 {
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
@@ -412,9 +451,11 @@ security_policy_t policyForSignTxCertificate(
 // for certificates concerning staking keys and stake delegation
 security_policy_t policyForSignTxCertificateStaking(
         const certificate_type_t certificateType,
-        const bip44_path_t* stakingKeyPath
+        const bip44_path_t* stakingKeyPath,
+        const uint8_t* stakingScriptHash
 )
 {
+	ASSERT((NULL != stakingKeyPath) ^ (NULL != stakingScriptHash));
 	switch (certificateType) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
@@ -441,6 +482,7 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG:
 		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
 		PROMPT();
 		break;

@@ -615,7 +615,7 @@ static void _parsePoolRewardAccount(read_view_t* view)
 		TRACE_BUFFER(rewardAccount->buffer, SIZEOF(rewardAccount->buffer));
 
 		const uint8_t header = getAddressHeader(rewardAccount->buffer, SIZEOF(rewardAccount->buffer));
-		VALIDATE(getAddressType(header) == REWARD, ERR_INVALID_DATA);
+		VALIDATE(getAddressType(header) == REWARD_KEY || getAddressType(header) == REWARD_SCRIPT, ERR_INVALID_DATA);
 		VALIDATE(getNetworkId(header) == commonTxData->networkId, ERR_INVALID_DATA);
 		break;
 

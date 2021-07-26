@@ -432,6 +432,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		case SIGN_TX_USECASE_ORDINARY_TX:
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
 		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+		case SIGN_TX_USECASE_MULTISIG:
 			// these usecases are allowed
 			break;
 
@@ -473,6 +474,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			break;
 
 		case SIGN_TX_USECASE_ORDINARY_TX:
+		case SIGN_TX_USECASE_MULTISIG:
 			// no additional validation
 			break;
 
@@ -512,6 +514,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 				                  (size_t) ctx->numCertificates +
 				                  (size_t) ctx->numWithdrawals;
 				break;
+
+			case SIGN_TX_USECASE_MULTISIG:
+				maxNumWitnesses = SIGN_MAX_WITNESSES;
 
 			default:
 				ASSERT(false);
@@ -1008,11 +1013,20 @@ static void signTx_handleCertificate_ui_runStep()
 		}
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_STAKING_KEY) {
-		ui_displayPathScreen(
-		        "Staking key",
-		        &txBodyCtx->stageData.certificate.pathSpec,
-		        this_fn
-		);
+		if (CERTIFICATE_IDENTIFIER_KEY_PATH == txBodyCtx->stageData.certificate.identifierType) {
+			ui_displayPathScreen(
+			        "Staking key",
+			        &txBodyCtx->stageData.certificate.pathSpec,
+			        this_fn
+			);
+		} else {
+			ui_displayHexBufferScreen(
+			        "Staking script hash",
+			        txBodyCtx->stageData.certificate.scriptHash,
+			        SIZEOF(txBodyCtx->stageData.certificate.scriptHash),
+			        this_fn
+			);
+		}
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_CONFIRM) {
 		char description[50];
@@ -1098,11 +1112,30 @@ static void signTx_handleCertificatePoolRetirement_ui_runStep()
 	UI_STEP_END(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_INVALID);
 }
 
-static void _parsePathSpec(read_view_t* view, sign_tx_certificate_data_t* certificateData)
+static void _parsePathSpec(read_view_t* view, bip44_path_t* pathSpec)
 {
-	view_skipBytes(view, bip44_parseFromWire(&certificateData->pathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
+	view_skipBytes(view, bip44_parseFromWire(pathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 	TRACE();
-	BIP44_PRINTF(&certificateData->pathSpec);
+	BIP44_PRINTF(pathSpec);
+}
+
+static void _parseIdentifier(read_view_t* view, sign_tx_certificate_data_t* certificateData)
+{
+	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
+	certificateData->identifierType = parse_u1be(view);
+	switch(certificateData->identifierType) {
+	case CERTIFICATE_IDENTIFIER_KEY_PATH:
+		_parsePathSpec(view, &certificateData->pathSpec);
+		break;
+	case CERTIFICATE_IDENTIFIER_SCRIPT_HASH: {
+		STATIC_ASSERT(SIZEOF(certificateData->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		VALIDATE(SIZEOF(certificateData->scriptHash) <= view_remainingSize(view), ERR_INVALID_DATA);
+		view_memmove(certificateData->scriptHash, view, SIZEOF(certificateData->scriptHash));
+		break;
+	}
+	default:
+		ASSERT(false);
+	}
 }
 
 static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, sign_tx_certificate_data_t* certificateData)
@@ -1118,17 +1151,17 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 
 	switch (certificateData->type) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
-		_parsePathSpec(&view, certificateData); // staking key path for stake credential
+		_parseIdentifier(&view, certificateData);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
-		_parsePathSpec(&view, certificateData); // staking key path for stake credential
+		_parseIdentifier(&view, certificateData);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION:
-		_parsePathSpec(&view, certificateData); // staking key path for stake credential
+		_parseIdentifier(&view, certificateData);
 		VALIDATE(view_remainingSize(&view) == POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
 		view_memmove(certificateData->poolKeyHash, &view, POOL_KEY_HASH_LENGTH);
@@ -1141,7 +1174,8 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 		return;
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
-		_parsePathSpec(&view, certificateData); // pool id path
+		ASSERT(CERTIFICATE_IDENTIFIER_KEY_PATH == certificateData->identifierType);
+		_parsePathSpec(&view, &certificateData->pathSpec); // pool id path
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		certificateData->epoch  = parse_u8be(&view);
 		break;
@@ -1154,6 +1188,24 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 }
 
 __noinline_due_to_stack__
+static void _fillHash(const sign_tx_certificate_data_t* certificateData,
+                      uint8_t* hash, size_t hashSize)
+{
+	if (CERTIFICATE_IDENTIFIER_KEY_PATH == certificateData->identifierType) {
+		ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
+		bip44_pathToKeyHash(
+		        &certificateData->pathSpec,
+		        hash, hashSize
+		);
+	} else {
+		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
+		STATIC_ASSERT(SIZEOF(certificateData->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		memcpy(hash, certificateData->scriptHash, SIZEOF(certificateData->scriptHash));
+	}
+}
+
+
+__noinline_due_to_stack__
 static void _addCertificateDataToTx(
         sign_tx_certificate_data_t* certificateData,
         tx_hash_builder_t* txHashBuilder
@@ -1164,41 +1216,34 @@ static void _addCertificateDataToTx(
 
 	TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
 
-	uint8_t stakingKeyHash[ADDRESS_KEY_HASH_LENGTH];
+	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "incompatible hash sizes");
+	uint8_t stakingHash[ADDRESS_KEY_HASH_LENGTH];
 
 	switch (txBodyCtx->stageData.certificate.type) {
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		bip44_pathToKeyHash(
-		        &txBodyCtx->stageData.certificate.pathSpec,
-		        stakingKeyHash, SIZEOF(stakingKeyHash)
-		);
+		_fillHash(&txBodyCtx->stageData.certificate, stakingHash, SIZEOF(stakingHash));
 		txHashBuilder_addCertificate_stakingKey(
 		        txHashBuilder, certificateData->type,
-		        stakingKeyHash, SIZEOF(stakingKeyHash)
+		        stakingHash, SIZEOF(stakingHash)
 		);
 		break;
 	}
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		bip44_pathToKeyHash(
-		        &txBodyCtx->stageData.certificate.pathSpec,
-		        stakingKeyHash, SIZEOF(stakingKeyHash)
-		);
+		_fillHash(&txBodyCtx->stageData.certificate, stakingHash, SIZEOF(stakingHash));
 		txHashBuilder_addCertificate_delegation(
 		        txHashBuilder,
-		        stakingKeyHash, SIZEOF(stakingKeyHash),
+		        stakingHash, SIZEOF(stakingHash),
 		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
 		);
 		break;
 	}
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		bip44_pathToKeyHash(
-		        &txBodyCtx->stageData.certificate.pathSpec,
-		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
-		);
+		ASSERT(CERTIFICATE_IDENTIFIER_KEY_PATH == txBodyCtx->stageData.certificate.identifierType);
+		_fillHash(&txBodyCtx->stageData.certificate, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
 		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash),
@@ -1215,6 +1260,7 @@ static void _addCertificateDataToTx(
 __noinline_due_to_stack__
 static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	// scripthash must be added next to paths
 	TRACE_STACK_USAGE();
 
 	ASSERT(txBodyCtx->currentCertificate < ctx->numCertificates);
@@ -1257,7 +1303,10 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
 		security_policy_t policy = policyForSignTxCertificateStaking(
 		                                   txBodyCtx->stageData.certificate.type,
-		                                   &txBodyCtx->stageData.certificate.pathSpec
+		                                   CERTIFICATE_IDENTIFIER_KEY_PATH == txBodyCtx->stageData.certificate.identifierType ?
+		                                   &txBodyCtx->stageData.certificate.pathSpec : NULL,
+		                                   CERTIFICATE_IDENTIFIER_KEY_PATH == txBodyCtx->stageData.certificate.identifierType ?
+		                                   NULL : txBodyCtx->stageData.certificate.scriptHash
 		                           );
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
