@@ -62,6 +62,8 @@ static void deriveNativeScriptHash_handleAll(read_view_t* view)
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE_WITH_CTX("");
 
+	nativeScriptHashBuilder_startComplexScript_all(&ctx->hashBuilder, ctx->complexScripts[ctx->level].remainingScripts);
+
 	// max possible length 34: "Contains x nested scripts"
 	// where x is 2^32-1
 	char text[35];
@@ -79,6 +81,8 @@ static void deriveNativeScriptHash_handleAny(read_view_t* view)
 {
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE_WITH_CTX("");
+
+	nativeScriptHashBuilder_startComplexScript_any(&ctx->hashBuilder, ctx->complexScripts[ctx->level].remainingScripts);
 
 	// max possible length 34: "Contains x nested scripts"
 	// where x is 2^32-1
@@ -102,6 +106,8 @@ static void deriveNativeScriptHash_handleNofK(read_view_t* view)
 
 	// validate that the received requiredScripts count makes sense
 	VALIDATE(ctx->complexScripts[ctx->level].remainingScripts >= requiredScripts, ERR_INVALID_DATA);
+
+	nativeScriptHashBuilder_startComplexScript_n_of_k(&ctx->hashBuilder, requiredScripts, ctx->complexScripts[ctx->level].remainingScripts);
 
 	// max possible length 67: "Reuqired signatures: x. Contains x nested scripts"
 	// where x is 2^32-1
@@ -156,6 +162,10 @@ static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 	BIP44_PRINTF(&path);
 	PRINTF("\n");
 
+	uint8_t pubkeyHash[ADDRESS_KEY_HASH_LENGTH];
+	bip44_pathToKeyHash(&path, pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
+	nativeScriptHashBuilder_addScript_pubkey(&ctx->hashBuilder, pubkeyHash, SIZEOF(pubkeyHash));
+
 	ui_displayPathScreen(
 	        "Script - key path",
 	        &path,
@@ -170,6 +180,8 @@ static void deriveNativeScriptHash_handleThirdPartyPubkey(read_view_t* view)
 	view_memmove(pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
 
 	TRACE_BUFFER(pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
+
+	nativeScriptHashBuilder_addScript_pubkey(&ctx->hashBuilder, pubkeyHash, SIZEOF(pubkeyHash));
 
 	ui_displayBech32Screen(
 	        "Script - key",
@@ -206,6 +218,8 @@ static void deriveNativeScriptHash_handleInvalidBefore(read_view_t* view)
 	TRACE("invalid_before timelock");
 	TRACE_UINT64(timelock);
 
+	nativeScriptHashBuilder_addScript_invalidBefore(&ctx->hashBuilder, timelock);
+
 	ui_displayUint64Screen(
 	        "Script - invalid before",
 	        timelock,
@@ -220,6 +234,8 @@ static void deriveNativeScriptHash_handleInvalidHereafter(read_view_t* view)
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("invalid_hereafter timelock");
 	TRACE_UINT64(timelock);
+
+	nativeScriptHashBuilder_addScript_invalidHereafter(&ctx->hashBuilder, timelock);
 
 	ui_displayUint64Screen(
 	        "Script - invalid hereafter",
@@ -293,7 +309,7 @@ static void deriveNativeScriptHash_handleWholeNativeScriptFinish(read_view_t* vi
 	TRACE("whole native script received, display format = %u", displayFormat);
 
 	switch (displayFormat) {
-#	define  CASE(FORMAT, DISPLAY_FN) case FORMAT: DISPLAY_FN(); break;
+#	define  CASE(FORMAT, DISPLAY_FN) case FORMAT: nativeScriptHashBuilder_finalize(&ctx->hashBuilder, ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH); DISPLAY_FN(); break;
 		CASE(DISPLAY_NATIVE_SCRIPT_HASH_BECH32, deriveNativeScriptHash_displayNativeScriptHash_bech32);
 		CASE(DISPLAY_NATIVE_SCRIPT_HASH_POLICY_ID, deriveNativeScriptHash_displayNativeScriptHash_policyId);
 #	undef	CASE
@@ -335,6 +351,7 @@ void deriveNativeScriptHash_handleAPDU(
 		explicit_bzero(ctx, SIZEOF(*ctx));
 		ctx->level = 0;
 		ctx->complexScripts[ctx->level].remainingScripts = 1;
+		nativeScriptHashBuilder_init(&ctx->hashBuilder);
 	}
 
 	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);

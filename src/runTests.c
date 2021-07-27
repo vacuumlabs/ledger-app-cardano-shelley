@@ -18,6 +18,7 @@
 #include "ipUtils.h"
 #include "uiHelpers.h"
 #include "uiScreens.h"
+#include "deriveNativeScriptHash.h"
 
 
 void handleRunTests(
@@ -48,6 +49,7 @@ void handleRunTests(
 		run_txHashBuilder_test();
 		run_uiScreens_test();
 		run_auxDataHashBuilder_test();
+		run_nativeScriptHashBuilder_test();
 		PRINTF("All tests done\n");
 	} END_ASSERT_NOEXCEPT;
 
