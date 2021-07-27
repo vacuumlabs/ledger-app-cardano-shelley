@@ -55,7 +55,7 @@ security_policy_t policyForSignTxTtl(uint32_t ttl);
 security_policy_t policyForSignTxCertificate(
         sign_tx_usecase_t signTxUsecase,
         const certificate_type_t certificateType,
-        const certificate_identifier_type_t certificateIdentifier
+        const stake_credential_type_t stakeCredentialType
 );
 security_policy_t policyForSignTxCertificateStaking(
         const certificate_type_t certificateType,

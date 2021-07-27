@@ -426,20 +426,20 @@ security_policy_t policyForSignTxTtl(uint32_t ttl MARK_UNUSED)
 security_policy_t policyForSignTxCertificate(
         sign_tx_usecase_t signTxUsecase,
         const certificate_type_t certificateType,
-        const certificate_identifier_type_t certificateIdentifier
+        const stake_credential_type_t stakeCredentialType
 )
 {
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-		DENY_UNLESS(certificateIdentifier == CERTIFICATE_IDENTIFIER_KEY_PATH);
+		DENY_UNLESS(stakeCredentialType == STAKE_CREDENTIAL_KEY_PATH);
 		ALLOW();
 		break;
 
 	case SIGN_TX_USECASE_MULTISIG:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-		DENY_UNLESS(certificateIdentifier == CERTIFICATE_IDENTIFIER_SCRIPT_HASH);
+		DENY_UNLESS(stakeCredentialType == STAKE_CREDENTIAL_SCRIPT_HASH);
 		ALLOW();
 		break;
 

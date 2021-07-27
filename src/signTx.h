@@ -58,14 +58,14 @@ typedef struct {
 } common_tx_data_t;
 
 typedef enum {
-	CERTIFICATE_IDENTIFIER_KEY_PATH = 0,
-	CERTIFICATE_IDENTIFIER_SCRIPT_HASH = 1,
-} certificate_identifier_type_t; // TODO rename to stake credential type
+	STAKE_CREDENTIAL_KEY_PATH = 0,
+	STAKE_CREDENTIAL_SCRIPT_HASH = 1,
+} stake_credential_type_t; // TODO rename to stake credential type
 
 typedef struct {
 	certificate_type_t type;
 
-	certificate_identifier_type_t identifierType;
+	stake_credential_type_t stakeCredentialType;
 	union {
 		bip44_path_t pathSpec; // interpretation depends on type // TODO rename to keyPath?
 		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
