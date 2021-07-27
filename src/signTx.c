@@ -518,7 +518,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 				                  (size_t) ctx->numWithdrawals;
 				break;
 
-			case SIGN_TX_USECASE_MULTISIG:
+			case SIGN_TX_USECASE_MULTISIG: // TODO rename to signing mode
 				maxNumWitnesses = SIGN_MAX_WITNESSES;
 
 			default:
@@ -1127,15 +1127,19 @@ static void _parseIdentifier(read_view_t* view, sign_tx_certificate_data_t* cert
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	certificateData->identifierType = parse_u1be(view);
 	switch(certificateData->identifierType) {
-	case CERTIFICATE_IDENTIFIER_KEY_PATH:
+
+	case CERTIFICATE_IDENTIFIER_KEY_PATH: {
 		_parsePathSpec(view, &certificateData->pathSpec);
 		break;
+	}
+
 	case CERTIFICATE_IDENTIFIER_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(certificateData->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		VALIDATE(SIZEOF(certificateData->scriptHash) <= view_remainingSize(view), ERR_INVALID_DATA);
+		VALIDATE(view_remainingSize(view) >= SIZEOF(certificateData->scriptHash), ERR_INVALID_DATA);
 		view_memmove(certificateData->scriptHash, view, SIZEOF(certificateData->scriptHash));
 		break;
 	}
+
 	default:
 		ASSERT(false);
 	}
@@ -1177,6 +1181,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 		return;
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
+		_parseIdentifier(&view, certificateData);
 		ASSERT(CERTIFICATE_IDENTIFIER_KEY_PATH == certificateData->identifierType);
 		_parsePathSpec(&view, &certificateData->pathSpec); // pool id path
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
@@ -1291,7 +1296,8 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 		// basic policy that just decides if the certificate is allowed
 		security_policy_t policy = policyForSignTxCertificate(
 		                                   ctx->commonTxData.signTxUsecase,
-		                                   txBodyCtx->stageData.certificate.type
+		                                   txBodyCtx->stageData.certificate.type,
+		                                   txBodyCtx->stageData.certificate.identifierType
 		                           );
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);

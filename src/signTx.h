@@ -60,7 +60,7 @@ typedef struct {
 typedef enum {
 	CERTIFICATE_IDENTIFIER_KEY_PATH = 0,
 	CERTIFICATE_IDENTIFIER_SCRIPT_HASH = 1,
-} certificate_identifier_type_t;
+} certificate_identifier_type_t; // TODO rename to stake credential type
 
 typedef struct {
 	certificate_type_t type;
