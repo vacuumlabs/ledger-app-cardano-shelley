@@ -162,7 +162,7 @@ typedef struct {
 
 handler_fn_t signTx_handleAPDU;
 
-inline bool signTx_parseIncluded(uint8_t value)
+static inline bool signTx_parseIncluded(uint8_t value)
 {
 	switch (value) {
 	case ITEM_INCLUDED_YES:
