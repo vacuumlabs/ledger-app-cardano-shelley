@@ -8,7 +8,7 @@
 #include "securityPolicy.h"
 
 static mint_context_t* subctx = &(instructionState.signTxContext.txPartCtx.body_ctx.stageContext.mint_subctx);
-// static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);	//potentially for policy and UI?
+static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txPartCtx.body_ctx.txHashBuilder);
 
 static inline void CHECK_STATE(sign_tx_mint_state_t expected)
@@ -89,8 +89,9 @@ static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wi
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 	txHashBuilder_addMint_topLevelData(txHashBuilder, subctx->numAssetGroups);
-	subctx->mintSecurityPolicy = policyForSignTxMintDefault();	//TODO not sure how to proceed here
-	//TODO do we need UI steps here? minting has nothing to confirm or deny at this point
+	subctx->mintSecurityPolicy = policyForSignTxMintInit(commonTxData->signTxUsecase);
+	ENSURE_NOT_DENIED(subctx->mintSecurityPolicy);
+
 	respondSuccessEmptyMsg();
 	advanceState();
 }

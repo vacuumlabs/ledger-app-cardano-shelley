@@ -471,6 +471,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			// we forbid withdrawals so that users cannot be tricked into witnessing
 			// something unintentionally (e.g. an owner given by the staking key hash)
 			VALIDATE(ctx->numWithdrawals == 0, ERR_INVALID_DATA);
+
+			// mint must not be combined with pool registration certificates
+			VALIDATE(ctx->includeMint == false, ERR_INVALID_DATA);
 			break;
 
 		case SIGN_TX_USECASE_ORDINARY_TX:

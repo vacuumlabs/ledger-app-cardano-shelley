@@ -6,8 +6,8 @@
 #include "addressUtilsShelley.h"
 #include "securityPolicyType.h"
 
-#define OUTPUT_ASSET_GROUPS_MAX 1000
-#define OUTPUT_TOKENS_IN_GROUP_MAX 1000
+#define OUTPUT_ASSET_GROUPS_MAX UINT16_MAX
+#define OUTPUT_TOKENS_IN_GROUP_MAX UINT16_MAX
 
 enum {
 	OUTPUT_TYPE_ADDRESS_BYTES = 1,

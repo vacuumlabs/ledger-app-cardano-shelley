@@ -192,7 +192,7 @@ bool bip44_isOrdinarySpendingKeyPath(const bip44_path_t* pathSpec)
 	       bip44_containsAddress(pathSpec);
 }
 
-// Staking keys (one per account, should end with /2/0 after account)
+// staking keys (one per account, should end with /2/0 after account)
 bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsAddress(pathSpec)) return false;
@@ -205,8 +205,7 @@ bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec)
 	return (bip44_getAddressValue(pathSpec) == 0);
 }
 
-// Staking keys (one per account, should end with /2/0 after account)
-// TODO unclear if only one per account, or we should support all
+// multisig staking keys
 bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsAddress(pathSpec)) return false;
@@ -216,7 +215,7 @@ bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec)
 	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
 	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
 
-	return (bip44_getAddressValue(pathSpec) == 0);
+	return true;
 }
 
 bool bip44_isMintKeyPath(const bip44_path_t* pathSpec)

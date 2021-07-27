@@ -726,10 +726,21 @@ security_policy_t policyForSignTxValidityIntervalStart()
 	SHOW();
 }
 
-security_policy_t policyForSignTxMintDefault()
+security_policy_t policyForSignTxMintInit(const sign_tx_usecase_t signTxUsecase)
 {
-	ALLOW();
+	switch (signTxUsecase) {
+	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_USECASE_MULTISIG:
+		ALLOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
+
 
 security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy)
 {
