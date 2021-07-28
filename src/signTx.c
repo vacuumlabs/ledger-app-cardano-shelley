@@ -520,6 +520,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 			case SIGN_TX_USECASE_MULTISIG: // TODO rename to signing mode
 				maxNumWitnesses = SIGN_MAX_WITNESSES;
+				break;
 
 			default:
 				ASSERT(false);
@@ -1126,6 +1127,8 @@ static void _parseStakeCredentialType(read_view_t* view, sign_tx_certificate_dat
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	certificateData->stakeCredentialType = parse_u1be(view);
+	TRACE("Stake credential type: %d", certificateData->stakeCredentialType);
+
 	switch(certificateData->stakeCredentialType) {
 
 	case STAKE_CREDENTIAL_KEY_PATH: {
