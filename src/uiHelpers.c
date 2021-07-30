@@ -178,12 +178,13 @@ void ui_displayPaginatedText(
 	TRACE("%s", headerStr);
 	TRACE("%s", bodyStr);
 
+	// sanity checks
+	ASSERT(uiPaginatedText_canFitStringIntoHeader(headerStr));
+	ASSERT(uiPaginatedText_canFitStringIntoFullText(bodyStr));
+
 	paginatedTextState_t* ctx = paginatedTextState;
 	size_t header_len = strlen(headerStr);
 	size_t body_len = strlen(bodyStr);
-	// sanity checks
-	ASSERT(header_len < SIZEOF(ctx->header));
-	ASSERT(body_len < SIZEOF(ctx->fullText));
 
 	// clear all memory
 	explicit_bzero(ctx, SIZEOF(*ctx));
@@ -220,4 +221,18 @@ void respond_with_user_reject()
 {
 	io_send_buf(ERR_REJECTED_BY_USER, NULL, 0);
 	ui_idle();
+}
+
+bool uiPaginatedText_canFitStringIntoHeader(const char *str)
+{
+	paginatedTextState_t* ctx = paginatedTextState;
+
+	return strlen(str) < SIZEOF(ctx->header);
+}
+
+bool uiPaginatedText_canFitStringIntoFullText(const char *str)
+{
+	paginatedTextState_t* ctx = paginatedTextState;
+
+	return strlen(str) < SIZEOF(ctx->fullText);
 }

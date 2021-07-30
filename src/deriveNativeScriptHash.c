@@ -49,11 +49,164 @@ static inline void simpleScriptFinished()
 
 // UI
 
-static void deriveScriptHash_display_ui_callback()
+const char ui_native_script_header[7][27] = {"Script - key path", "Script - key", "Script - ALL", "Script - ANY", "Script - N of K", "Script - invalid before", "Script - invalid hereafter"};
+
+#define ASSERT_UI_SCRIPT_TYPE_SANITY() ASSERT(ctx->ui_scriptType >= UI_SCRIPT_PUBKEY_PATH && ctx->ui_scriptType <= UI_SCRIPT_INVALID_HEREAFTER)
+#define HEADER ui_native_script_header[ctx->ui_scriptType]
+
+static uint8_t _getScriptLevelForPosition()
 {
-	io_send_buf(SUCCESS, NULL, 0);
-	ui_displayBusy();
+	// For complex scripts we reduce the current level by 1
+	// Because they already have the level increased by 1
+	uint8_t levelOffset = ctx->ui_scriptType == UI_SCRIPT_ALL
+	                   || ctx->ui_scriptType == UI_SCRIPT_ANY
+	                   || ctx->ui_scriptType == UI_SCRIPT_N_OF_K
+	                   ? 1 : 0;
+	ASSERT(levelOffset == 0 || ctx->level > 0);
+	return ctx->level - levelOffset;
 }
+
+static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t* callback)
+{
+	ASSERT_UI_SCRIPT_TYPE_SANITY();
+	ASSERT(level > 0);
+	TRACE();
+
+	// 10 - length of the leading prefix: "Position: "
+	// 11 - max length for the position information for one level: "x."
+	//      where x is 2^32-1
+	// 1  - the ending null byte
+	char positionDescription[10 + 11 * (MAX_SCRIPT_DEPTH - 1) + 1];
+	explicit_bzero(positionDescription, SIZEOF(positionDescription));
+	char* ptr = BEGIN(positionDescription);
+	char* end = END(positionDescription);
+
+	snprintf(ptr, (end - ptr), "Position: ");
+	// snprintf returns 0, https://github.com/LedgerHQ/nanos-secure-sdk/issues/28
+	// so we need to check the number of written characters by `strlen`
+	ptr += strlen(ptr);
+
+	for (size_t i = 1; i <= level; i++) {
+		ASSERT(i < MAX_SCRIPT_DEPTH);
+		uint32_t position = ctx->complexScripts[i].totalScripts - ctx->complexScripts[i].remainingScripts + 1;
+		snprintf(ptr, (end - ptr), "%u.", position);
+		ptr += strlen(ptr);
+	}
+
+	// remove any trailing '.'
+	ASSERT(ptr > BEGIN(positionDescription));
+	*(ptr - 1) = '\0';
+
+	VALIDATE(uiPaginatedText_canFitStringIntoFullText(positionDescription), ERR_INVALID_DATA);
+
+	ui_displayPaginatedText(
+	        HEADER,
+	        positionDescription,
+	        callback
+	);
+}
+
+enum {
+	DISPLAY_UI_STEP_POSITION = 200,
+	DISPLAY_UI_STEP_SCRIPT_CONTENT,
+	DISPLAY_UI_STEP_RESPOND,
+	DISPLAY_UI_STEP_INVALID
+};
+
+static void deriveScriptHash_display_ui_runStep()
+{
+	TRACE("ui_step = %d", ctx->ui_step);
+	ASSERT_UI_SCRIPT_TYPE_SANITY();
+
+	ui_callback_fn_t* this_fn = deriveScriptHash_display_ui_runStep;
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(DISPLAY_UI_STEP_POSITION) {
+		uint8_t level = _getScriptLevelForPosition();
+		if (level == 0) {
+			TRACE("Skip showing position");
+			UI_STEP_JUMP(DISPLAY_UI_STEP_SCRIPT_CONTENT);
+		}
+		deriveScriptHash_display_ui_position(level, this_fn);
+	}
+
+	UI_STEP(DISPLAY_UI_STEP_SCRIPT_CONTENT) {
+		TRACE("ui_scriptType = %d", ctx->ui_scriptType);
+		switch (ctx->ui_scriptType) {
+		case UI_SCRIPT_PUBKEY_PATH: {
+			ui_displayPathScreen(
+			        HEADER,
+			        &ctx->scriptContent.pubkeyPath,
+			        this_fn
+			);
+			break;
+		}
+		case UI_SCRIPT_PUBKEY_HASH: {
+			ui_displayBech32Screen(
+			        HEADER,
+			        "addr_shared_vkh",
+			        ctx->scriptContent.pubkeyHash,
+			        ADDRESS_KEY_HASH_LENGTH,
+			        this_fn
+			);
+			break;
+		}
+		case UI_SCRIPT_ALL:
+		case UI_SCRIPT_ANY: {
+			// max possible length 35: "Contains n nested scripts."
+			// where n is 2^32-1
+			char text[36] = {0};
+			snprintf(text, SIZEOF(text), "Contains %u nested scripts.", ctx->complexScripts[ctx->level].remainingScripts);
+
+			ui_displayPaginatedText(
+			        HEADER,
+			        text,
+			        this_fn
+			);
+			break;
+		}
+		case UI_SCRIPT_N_OF_K: {
+			// max possible length 85: "Requires n out of k signatures. Contains k nested scripts."
+			// where n and k is 2^32-1
+			char text[86] = {0};
+			snprintf(text, SIZEOF(text), "Requires %u out of %u signatures. Contains %u nested scripts", ctx->scriptContent.requiredScripts, ctx->complexScripts[ctx->level].remainingScripts, ctx->complexScripts[ctx->level].remainingScripts);
+
+			ui_displayPaginatedText(
+			        HEADER,
+			        text,
+			        this_fn
+			);
+			break;
+		}
+		case UI_SCRIPT_INVALID_BEFORE:
+		case UI_SCRIPT_INVALID_HEREAFTER: {
+			ui_displayUint64Screen(
+			        HEADER,
+			        ctx->scriptContent.timelock,
+			        this_fn
+			);
+			break;
+		}
+		default:
+			THROW(ERR_INVALID_STATE);
+		}
+	}
+
+	UI_STEP(DISPLAY_UI_STEP_RESPOND) {
+		io_send_buf(SUCCESS, NULL, 0);
+		ui_displayBusy();
+	}
+
+	UI_STEP_END(DISPLAY_UI_STEP_INVALID);
+}
+#undef HEADER
+#undef ASSERT_UI_SCRIPT_TYPE_SANITY
+
+#define UI_DISPLAY_SCRIPT(UI_TYPE) {\
+		ctx->ui_scriptType = UI_TYPE;\
+		ctx->ui_step = DISPLAY_UI_STEP_POSITION;\
+		deriveScriptHash_display_ui_runStep();\
+	}
 
 // Start complex native script
 
@@ -64,17 +217,7 @@ static void deriveNativeScriptHash_handleAll(read_view_t* view)
 
 	nativeScriptHashBuilder_startComplexScript_all(&ctx->hashBuilder, ctx->complexScripts[ctx->level].remainingScripts);
 
-	// max possible length 34: "Contains x nested scripts"
-	// where x is 2^32-1
-	char text[35];
-	snprintf(text, SIZEOF(text), "Contains %d nested scripts", ctx->complexScripts[ctx->level].remainingScripts);
-
-	ui_displayPaginatedText(
-	        // TODO: proper UI screen headers with numbered sections
-	        "Script - ALL",
-	        text,
-	        deriveScriptHash_display_ui_callback
-	);
+	UI_DISPLAY_SCRIPT(UI_SCRIPT_ALL);
 }
 
 static void deriveNativeScriptHash_handleAny(read_view_t* view)
@@ -84,41 +227,23 @@ static void deriveNativeScriptHash_handleAny(read_view_t* view)
 
 	nativeScriptHashBuilder_startComplexScript_any(&ctx->hashBuilder, ctx->complexScripts[ctx->level].remainingScripts);
 
-	// max possible length 34: "Contains x nested scripts"
-	// where x is 2^32-1
-	char text[35];
-	snprintf(text, SIZEOF(text), "Contains %u nested scripts", ctx->complexScripts[ctx->level].remainingScripts);
-
-	ui_displayPaginatedText(
-	        "Script - ANY",
-	        text,
-	        deriveScriptHash_display_ui_callback
-	);
+	UI_DISPLAY_SCRIPT(UI_SCRIPT_ANY);
 }
 
 static void deriveNativeScriptHash_handleNofK(read_view_t* view)
 {
 	// parse data
-	uint32_t requiredScripts = parse_u4be(view);
+	ctx->scriptContent.requiredScripts = parse_u4be(view);
 
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
-	TRACE_WITH_CTX("required scripts = %u, ", requiredScripts);
+	TRACE_WITH_CTX("required scripts = %u, ", ctx->scriptContent.requiredScripts);
 
 	// validate that the received requiredScripts count makes sense
-	VALIDATE(ctx->complexScripts[ctx->level].remainingScripts >= requiredScripts, ERR_INVALID_DATA);
+	VALIDATE(ctx->complexScripts[ctx->level].remainingScripts >= ctx->scriptContent.requiredScripts, ERR_INVALID_DATA);
 
-	nativeScriptHashBuilder_startComplexScript_n_of_k(&ctx->hashBuilder, requiredScripts, ctx->complexScripts[ctx->level].remainingScripts);
+	nativeScriptHashBuilder_startComplexScript_n_of_k(&ctx->hashBuilder, ctx->scriptContent.requiredScripts, ctx->complexScripts[ctx->level].remainingScripts);
 
-	// max possible length 67: "Reuqired signatures: x. Contains x nested scripts"
-	// where x is 2^32-1
-	char text[68];
-	snprintf(text, SIZEOF(text), "Required signatures: %u. Contains %u nested scripts", requiredScripts, ctx->complexScripts[ctx->level].remainingScripts);
-
-	ui_displayPaginatedText(
-	        "Script - N of K",
-	        text,
-	        deriveScriptHash_display_ui_callback
-	);
+	UI_DISPLAY_SCRIPT(UI_SCRIPT_N_OF_K);
 }
 
 static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
@@ -134,6 +259,7 @@ static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
 	TRACE("native complex script type = %u", nativeScriptType);
 
 	ctx->complexScripts[ctx->level].remainingScripts = parse_u4be(view);
+	ctx->complexScripts[ctx->level].totalScripts = ctx->complexScripts[ctx->level].remainingScripts;
 
 	switch(nativeScriptType) {
 #	define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
@@ -154,42 +280,30 @@ static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
 
 static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 {
-	bip44_path_t path;
-	view_skipBytes(view, bip44_parseFromWire(&path, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
+	view_skipBytes(view, bip44_parseFromWire(&ctx->scriptContent.pubkeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("pubkey given by path:");
-	BIP44_PRINTF(&path);
+	BIP44_PRINTF(&ctx->scriptContent.pubkeyPath);
 	PRINTF("\n");
 
 	uint8_t pubkeyHash[ADDRESS_KEY_HASH_LENGTH];
-	bip44_pathToKeyHash(&path, pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
+	bip44_pathToKeyHash(&ctx->scriptContent.pubkeyPath, pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
 	nativeScriptHashBuilder_addScript_pubkey(&ctx->hashBuilder, pubkeyHash, SIZEOF(pubkeyHash));
 
-	ui_displayPathScreen(
-	        "Script - key path",
-	        &path,
-	        deriveScriptHash_display_ui_callback
-	);
+	UI_DISPLAY_SCRIPT(UI_SCRIPT_PUBKEY_PATH);
 }
 
 static void deriveNativeScriptHash_handleThirdPartyPubkey(read_view_t* view)
 {
-	uint8_t pubkeyHash[ADDRESS_KEY_HASH_LENGTH];
 	VALIDATE(view_remainingSize(view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
-	view_memmove(pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
+	view_memmove(ctx->scriptContent.pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
 
-	TRACE_BUFFER(pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
+	TRACE_BUFFER(ctx->scriptContent.pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
 
-	nativeScriptHashBuilder_addScript_pubkey(&ctx->hashBuilder, pubkeyHash, SIZEOF(pubkeyHash));
+	nativeScriptHashBuilder_addScript_pubkey(&ctx->hashBuilder, ctx->scriptContent.pubkeyHash, SIZEOF(ctx->scriptContent.pubkeyHash));
 
-	ui_displayBech32Screen(
-	        "Script - key",
-	        "addr_vkh",
-	        pubkeyHash,
-	        ADDRESS_KEY_HASH_LENGTH,
-	        deriveScriptHash_display_ui_callback
-	);
+	UI_DISPLAY_SCRIPT(UI_SCRIPT_PUBKEY_HASH);
 }
 
 static void deriveNativeScriptHash_handlePubkey(read_view_t* view)
@@ -212,37 +326,31 @@ static void deriveNativeScriptHash_handlePubkey(read_view_t* view)
 
 static void deriveNativeScriptHash_handleInvalidBefore(read_view_t* view)
 {
-	uint64_t timelock = parse_u8be(view);
+	ctx->scriptContent.timelock = parse_u8be(view);
 
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("invalid_before timelock");
-	TRACE_UINT64(timelock);
+	TRACE_UINT64(ctx->scriptContent.timelock);
 
-	nativeScriptHashBuilder_addScript_invalidBefore(&ctx->hashBuilder, timelock);
+	nativeScriptHashBuilder_addScript_invalidBefore(&ctx->hashBuilder, ctx->scriptContent.timelock);
 
-	ui_displayUint64Screen(
-	        "Script - invalid before",
-	        timelock,
-	        deriveScriptHash_display_ui_callback
-	);
+	UI_DISPLAY_SCRIPT(UI_SCRIPT_INVALID_BEFORE);
 }
 
 static void deriveNativeScriptHash_handleInvalidHereafter(read_view_t* view)
 {
-	uint64_t timelock = parse_u8be(view);
+	ctx->scriptContent.timelock = parse_u8be(view);
 
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("invalid_hereafter timelock");
-	TRACE_UINT64(timelock);
+	TRACE_UINT64(ctx->scriptContent.timelock);
 
-	nativeScriptHashBuilder_addScript_invalidHereafter(&ctx->hashBuilder, timelock);
+	nativeScriptHashBuilder_addScript_invalidHereafter(&ctx->hashBuilder, ctx->scriptContent.timelock);
 
-	ui_displayUint64Screen(
-	        "Script - invalid hereafter",
-	        timelock,
-	        deriveScriptHash_display_ui_callback
-	);
+	UI_DISPLAY_SCRIPT(UI_SCRIPT_INVALID_HEREAFTER);
 }
+
+#undef UI_DISPLAY_SCRIPT
 
 static void deriveNativeScriptHash_handleSimpleScript(read_view_t* view)
 {
