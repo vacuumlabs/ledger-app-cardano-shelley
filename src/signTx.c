@@ -1499,7 +1499,12 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 
 	_addWithdrawalToTxHash();
 
-	security_policy_t policy = policyForSignTxWithdrawal();
+	security_policy_t policy = policyForSignTxWithdrawal(
+		ctx->commonTxData.signTxUsecase,
+		txBodyCtx->stageData.withdrawal.stakeCredential.type,
+		STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.withdrawal.stakeCredential.type ?
+			&txBodyCtx->stageData.certificate.stakeCredential.pathSpec : NULL
+	);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -1777,7 +1782,8 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		// get policy
 		policy = policyForSignTxWitness(
 		                 ctx->commonTxData.signTxUsecase,
-		                 &txWitnessCtx->stageData.witness.path
+		                 &txWitnessCtx->stageData.witness.path,
+						 ctx->includeMint
 		         );
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);

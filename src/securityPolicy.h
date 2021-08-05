@@ -92,7 +92,11 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
         uint32_t numOwners, uint32_t numRelays
 );
 
-security_policy_t policyForSignTxWithdrawal();
+security_policy_t policyForSignTxWithdrawal(
+        sign_tx_usecase_t signTxUsecase,
+        const stake_credential_type_t stakeCredentialType,
+        const bip44_path_t* stakingKeyPath
+);
 
 security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType);
 
@@ -103,7 +107,8 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy);
 
 security_policy_t policyForSignTxWitness(
         sign_tx_usecase_t signTxUsecase,
-        const bip44_path_t* pathSpec
+        const bip44_path_t* pathSpec,
+        bool mintPresent
 );
 
 security_policy_t policyForSignTxConfirm();

@@ -331,8 +331,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_ORDINARY_TX:
-	case SIGN_TX_USECASE_MULTISIG: {
+	case SIGN_TX_USECASE_ORDINARY_TX: {
 		switch (bip44_classifyPath(&params->spendingKeyPath)) {
 
 		case PATH_ORDINARY_SPENDING_KEY:
@@ -348,6 +347,9 @@ security_policy_t policyForSignTxOutputAddressParams(
 
 		break;
 	}
+	case SIGN_TX_USECASE_MULTISIG:
+		DENY();
+		break;
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
 		// we forbid these to avoid leaking information
 		// (since the outputs are not shown, the user is unaware of what addresses are being derived)
@@ -634,12 +636,57 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 }
 
 // For each withdrawal
-security_policy_t policyForSignTxWithdrawal()
+security_policy_t policyForSignTxWithdrawal(
+        sign_tx_usecase_t signTxUsecase,
+        const stake_credential_type_t stakeCredentialType,
+		const bip44_path_t* stakingKeyPath
+)
 {
-	// No need to check withdrawals
-	SHOW();
+	switch (signTxUsecase) {
+	case SIGN_TX_USECASE_ORDINARY_TX:
+		DENY_UNLESS(stakeCredentialType == STAKE_CREDENTIAL_KEY_PATH);
+		ASSERT(stakingKeyPath != NULL);
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
+		ALLOW();
+		break;
+
+	case SIGN_TX_USECASE_MULTISIG:
+		DENY_UNLESS(stakeCredentialType == STAKE_CREDENTIAL_SCRIPT_HASH);
+		ASSERT(stakingKeyPath == NULL);
+		ALLOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
+
+static inline security_policy_t nonPoolSubPolicy(const bip44_path_t* pathSpec)
+{
+	switch (bip44_classifyPath(pathSpec)) {
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_POOL_COLD_KEY:
+		if (bip44_isPathReasonable(pathSpec)) {
+			ALLOW();
+		} else {
+			WARN();
+		}
+		break;
+
+	case PATH_MINT_KEY:
+		SHOW();
+
+	default:
+		DENY();
+		break;
+	}
+}
 
 // For each transaction witness
 // Note: witnesses reveal public key of an address
@@ -647,38 +694,23 @@ security_policy_t policyForSignTxWithdrawal()
 // previously declared inputs and certificates
 security_policy_t policyForSignTxWitness(
         sign_tx_usecase_t signTxUsecase,
-        const bip44_path_t* pathSpec
+        const bip44_path_t* pathSpec,
+		bool mintPresent
 )
 {
+	const bool ordinary = bip44_isOrdinarySpendingKeyPath(pathSpec);
+	const bool multisig = bip44_isMultisigSpendingKeyPath(pathSpec);
+	const bool mint = bip44_isMintSpendingKeyPath(pathSpec);
+	
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
-	case SIGN_TX_USECASE_MULTISIG: {
-		switch (bip44_classifyPath(pathSpec)) {
+		DENY_UNLESS(ordinary || mintPresent && mint);
+		return nonPoolSubPolicy(pathSpec);
 
-		// TODO wrong, show all witnesses for multisig
-		case PATH_ORDINARY_SPENDING_KEY:
-		case PATH_ORDINARY_STAKING_KEY:
-		case PATH_MULTISIG_SPENDING_KEY:
-		case PATH_MULTISIG_STAKING_KEY:
-		case PATH_POOL_COLD_KEY:
-			if (bip44_isPathReasonable(pathSpec)) {
-				ALLOW();
-			} else {
-				WARN();
-			}
-			break;
-
-		case PATH_MINT_KEY:
-			SHOW();
-
-		default:
-			DENY();
-			break;
-		}
-
-		break;
-	}
+	case SIGN_TX_USECASE_MULTISIG:
+		DENY_UNLESS(multisig || mintPresent && mint);
+		return nonPoolSubPolicy(pathSpec);
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
 		switch (bip44_classifyPath(pathSpec)) {
