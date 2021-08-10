@@ -351,7 +351,7 @@ static bip44_path_type_t bip44_classifyMultisigWalletPath(const bip44_path_t* pa
 		const uint8_t chainType = bip44_getChainTypeValue(pathSpec);
 		switch (chainType) {
 
-		case CARDANO_CHAIN_INTERNAL:
+		case CARDANO_CHAIN_EXTERNAL:
 			// we do not exclude hardened address index
 			// but such addresses are given a warning in certain places
 			return PATH_MULTISIG_SPENDING_KEY;
@@ -416,6 +416,9 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 		// we are checking the 5th item too (to avoid breaking this code
 		// if more than 1 staking key per account is allowed in the future)
 		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
+
+	// case PATH_MINT_KEY:
+	// 	return false;
 
 	case PATH_POOL_COLD_KEY:
 		return bip44_hasReasonablePoolColdKeyIndex(pathSpec);

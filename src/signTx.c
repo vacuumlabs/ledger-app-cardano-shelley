@@ -1229,8 +1229,8 @@ static void _addCertificateDataToTx(
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
 		_fillHash(&txBodyCtx->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
-		txHashBuilder_addCertificate_stakingKey(
-		        txHashBuilder, certificateData->type,
+		txHashBuilder_addCertificate_stakingHash(
+		        txHashBuilder, certificateData->type, certificateData->stakeCredential.type,
 		        stakingHash, SIZEOF(stakingHash)
 		);
 		break;
@@ -1239,7 +1239,7 @@ static void _addCertificateDataToTx(
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
 		_fillHash(&txBodyCtx->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
 		txHashBuilder_addCertificate_delegation(
-		        txHashBuilder,
+		        txHashBuilder, certificateData->stakeCredential.type,
 		        stakingHash, SIZEOF(stakingHash),
 		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
 		);

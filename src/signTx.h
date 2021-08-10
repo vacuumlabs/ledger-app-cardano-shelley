@@ -57,11 +57,6 @@ typedef struct {
 	uint32_t protocolMagic; // part of Byron address
 } common_tx_data_t;
 
-typedef enum {
-	STAKE_CREDENTIAL_KEY_PATH = 0,
-	STAKE_CREDENTIAL_SCRIPT_HASH = 1,
-} stake_credential_type_t; // TODO rename to stake credential type
-
 typedef struct {
 	stake_credential_type_t type;
 	union {

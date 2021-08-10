@@ -669,11 +669,18 @@ static inline security_policy_t nonPoolSubPolicy(const bip44_path_t* pathSpec)
 	switch (bip44_classifyPath(pathSpec)) {
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
-	case PATH_MULTISIG_SPENDING_KEY:
-	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_POOL_COLD_KEY:
 		if (bip44_isPathReasonable(pathSpec)) {
 			ALLOW();
+		} else {
+			WARN();
+		}
+		break;
+
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+		if (bip44_isPathReasonable(pathSpec)) {
+			SHOW();
 		} else {
 			WARN();
 		}
@@ -699,11 +706,10 @@ security_policy_t policyForSignTxWitness(
 )
 {
 	const bool ordinary = bip44_isOrdinarySpendingKeyPath(pathSpec);
-	const bool multisig = bip44_isMultisigSpendingKeyPath(pathSpec);
+	const bool multisig = bip44_isMultisigSpendingKeyPath(pathSpec) || bip44_isMultisigStakingKeyPath(pathSpec);
 	const bool mint = bip44_isMintSpendingKeyPath(pathSpec);
-	
-	switch (signTxUsecase) {
 
+	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_ORDINARY_TX:
 		DENY_UNLESS(ordinary || mintPresent && mint);
 		return nonPoolSubPolicy(pathSpec);

@@ -419,10 +419,11 @@ void txHashBuilder_enterCertificates(tx_hash_builder_t* builder)
 }
 
 // staking key certificate registration or deregistration
-void txHashBuilder_addCertificate_stakingKey(
+void txHashBuilder_addCertificate_stakingHash(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
-        const uint8_t* stakingKeyHash, size_t stakingKeyHashSize
+		const stake_credential_type_t stakeCredentialType,
+        const uint8_t* stakingHash, size_t stakingHashSize
 )
 {
 	_TRACE("state = %d, remainingCertificates = %u", builder->state, builder->remainingCertificates);
@@ -449,11 +450,11 @@ void txHashBuilder_addCertificate_stakingKey(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 0);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredentialType);
 			}
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingKeyHashSize);
-				BUILDER_APPEND_DATA(stakingKeyHash, stakingKeyHashSize);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingHashSize);
+				BUILDER_APPEND_DATA(stakingHash, stakingHashSize);
 			}
 		}
 	}
@@ -461,6 +462,7 @@ void txHashBuilder_addCertificate_stakingKey(
 
 void txHashBuilder_addCertificate_delegation(
         tx_hash_builder_t* builder,
+		const stake_credential_type_t stakeCredentialType,
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
 )
@@ -487,7 +489,7 @@ void txHashBuilder_addCertificate_delegation(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 0);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredentialType);
 			}
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingKeyHashSize);

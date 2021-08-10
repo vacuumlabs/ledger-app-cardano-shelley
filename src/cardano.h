@@ -104,6 +104,11 @@ typedef enum {
 } certificate_type_t;
 
 typedef enum {
+	STAKE_CREDENTIAL_KEY_PATH = 0,
+	STAKE_CREDENTIAL_SCRIPT_HASH = 1,
+} stake_credential_type_t;
+
+typedef enum {
 	RELAY_SINGLE_HOST_IP = 0,
 	RELAY_SINGLE_HOST_NAME = 1,
 	RELAY_MULTIPLE_HOST_NAME = 2
