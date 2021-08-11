@@ -1017,19 +1017,25 @@ static void signTx_handleCertificate_ui_runStep()
 		}
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_STAKING_KEY) {
-		if (STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type) {
+		switch (txBodyCtx->stageData.certificate.stakeCredential.type) {
+		case STAKE_CREDENTIAL_KEY_PATH:
 			ui_displayPathScreen(
 			        "Staking key",
 			        &txBodyCtx->stageData.certificate.stakeCredential.pathSpec,
 			        this_fn
 			);
-		} else {
+			break;
+		case STAKE_CREDENTIAL_SCRIPT_HASH:
 			ui_displayHexBufferScreen(
 			        "Staking script hash",
 			        txBodyCtx->stageData.certificate.stakeCredential.scriptHash,
 			        SIZEOF(txBodyCtx->stageData.certificate.stakeCredential.scriptHash),
 			        this_fn
 			);
+			break;
+		default: 
+			ASSERT(false);
+			break;
 		}
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_CONFIRM) {
@@ -1123,18 +1129,18 @@ static void _parsePathSpec(read_view_t* view, bip44_path_t* pathSpec)
 	BIP44_PRINTF(pathSpec);
 }
 
-static void _parseStakeCredential(read_view_t* view, stake_credential_t* identifier)
+static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCredential)
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
-	identifier->type = parse_u1be(view);
-	switch(identifier->type) {
+	stakeCredential->type = parse_u1be(view);
+	switch(stakeCredential->type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
-		_parsePathSpec(view, &identifier->pathSpec);
+		_parsePathSpec(view, &stakeCredential->pathSpec);
 		break;
 	case STAKE_CREDENTIAL_SCRIPT_HASH: {
-		STATIC_ASSERT(SIZEOF(identifier->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		VALIDATE(SIZEOF(identifier->scriptHash) <= view_remainingSize(view), ERR_INVALID_DATA);
-		view_memmove(identifier->scriptHash, view, SIZEOF(identifier->scriptHash));
+		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		VALIDATE(SIZEOF(stakeCredential->scriptHash) <= view_remainingSize(view), ERR_INVALID_DATA);
+		view_memmove(stakeCredential->scriptHash, view, SIZEOF(stakeCredential->scriptHash));
 		break;
 	}
 
@@ -1196,16 +1202,22 @@ __noinline_due_to_stack__
 static void _fillHash(const stake_credential_t* stakeCredential,
 	uint8_t* hash, size_t hashSize)
 {
-	if (STAKE_CREDENTIAL_KEY_PATH == stakeCredential->type) {
+	switch (stakeCredential->type) {
+	case STAKE_CREDENTIAL_KEY_PATH:
 		ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
 		bip44_pathToKeyHash(
 			&stakeCredential->pathSpec,
 			hash, hashSize
 		);
-	} else {
+		break;
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
 		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
 		memcpy(hash, stakeCredential->scriptHash, SIZEOF(stakeCredential->scriptHash));
+		break;
+	default:
+		ASSERT(false);
+		break;
 	}
 }
 
@@ -1393,16 +1405,15 @@ static void signTx_handleWithdrawal_ui_runStep()
 		ui_displayAdaAmountScreen("Withdrawing rewards", txBodyCtx->stageData.withdrawal.amount, this_fn);
 	}
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY_PATH) {
-		if (STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.withdrawal.stakeCredential.type) {
-			reward_account_t rewardAccount = {
-				.keyReferenceType = KEY_REFERENCE_PATH,
-				.path = txBodyCtx->stageData.withdrawal.stakeCredential.pathSpec
-			};
-			ui_displayRewardAccountScreen(&rewardAccount, ctx->commonTxData.networkId, this_fn);
-		} else {
-			reward_account_t rewardAccount = {
-				.keyReferenceType = KEY_REFERENCE_HASH,
-			};
+		reward_account_t rewardAccount;
+		switch(txBodyCtx->stageData.withdrawal.stakeCredential.type) {
+		case STAKE_CREDENTIAL_KEY_PATH: {
+			rewardAccount.keyReferenceType = KEY_REFERENCE_PATH;
+			rewardAccount.path = txBodyCtx->stageData.withdrawal.stakeCredential.pathSpec;
+			break;
+		}
+		case STAKE_CREDENTIAL_SCRIPT_HASH: {
+			rewardAccount.keyReferenceType = KEY_REFERENCE_HASH;
 			constructRewardAddressFromHash(
 				ctx->commonTxData.networkId,
 				REWARD_HASH_SOURCE_SCRIPT,
@@ -1411,9 +1422,13 @@ static void signTx_handleWithdrawal_ui_runStep()
 				rewardAccount.hashBuffer,
 				SIZEOF(rewardAccount.hashBuffer)
 			);
-			ui_displayRewardAccountScreen(&rewardAccount, ctx->commonTxData.networkId, this_fn);
-			//TODO KoMa reward account scripthash type
+			break;
 		}
+		default:
+			ASSERT(false);
+			break;
+		}
+		ui_displayRewardAccountScreen(&rewardAccount, ctx->commonTxData.networkId, this_fn);
 	}
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -1489,7 +1504,6 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 		VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
 		txBodyCtx->stageData.withdrawal.amount = parse_u8be(&view);
-		// the rest is the identifier, either path or scripthash
 
 		_parseStakeCredential(&view, &txBodyCtx->stageData.withdrawal.stakeCredential);
 

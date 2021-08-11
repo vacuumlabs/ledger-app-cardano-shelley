@@ -492,11 +492,13 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
-	case SIGN_TX_USECASE_MULTISIG:
-		if (poolIdPath != NULL) {
-			DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
-		}
+		ASSERT (poolIdPath != NULL);
+		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
 		PROMPT();
+		break;
+
+	case SIGN_TX_USECASE_MULTISIG:
+		DENY();
 		break;
 
 	default:
@@ -707,7 +709,7 @@ security_policy_t policyForSignTxWitness(
 {
 	const bool ordinary = bip44_isOrdinarySpendingKeyPath(pathSpec);
 	const bool multisig = bip44_isMultisigSpendingKeyPath(pathSpec) || bip44_isMultisigStakingKeyPath(pathSpec);
-	const bool mint = bip44_isMintSpendingKeyPath(pathSpec);
+	const bool mint = bip44_isMintKeyPath(pathSpec);
 
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_ORDINARY_TX:
@@ -720,7 +722,6 @@ security_policy_t policyForSignTxWitness(
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
 		switch (bip44_classifyPath(pathSpec)) {
-
 		case PATH_ORDINARY_STAKING_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
 				ALLOW();
@@ -739,7 +740,6 @@ security_policy_t policyForSignTxWitness(
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
 		switch (bip44_classifyPath(pathSpec)) {
-
 		case PATH_ORDINARY_SPENDING_KEY:
 		case PATH_POOL_COLD_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {

@@ -199,13 +199,6 @@ bool bip44_isMultisigSpendingKeyPath(const bip44_path_t* pathSpec)
 	       bip44_containsAddress(pathSpec);
 }
 
-bool bip44_isMintSpendingKeyPath(const bip44_path_t* pathSpec)
-{
-	return bip44_hasMintKeyPrefix(pathSpec) &&
-	       bip44_hasValidChainTypeForAddress(pathSpec) &&
-	       bip44_containsAddress(pathSpec);
-}
-
 // staking keys (one per account, should end with /2/0 after account)
 bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec)
 {
