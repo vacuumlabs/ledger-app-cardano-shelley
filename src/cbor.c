@@ -91,7 +91,7 @@ cbor_token_t cbor_parseToken(const uint8_t* buf, size_t size)
 		}
 	}
 
-	if (CBOR_TYPE_NEGATIVE == result.type) {
+	if (result.type == CBOR_TYPE_NEGATIVE) {
 		if (result.value > INT64_MAX) {
 			THROW(ERR_UNEXPECTED_TOKEN);
 		}

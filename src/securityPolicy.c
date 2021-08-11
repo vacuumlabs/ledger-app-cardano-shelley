@@ -210,7 +210,7 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
-	if (SPENDING_PATH == determineSpendingChoice(addressParams->type)) {
+	if (determineSpendingChoice(addressParams->type) == SPENDING_PATH) {
 		switch (bip44_classifyPath(&addressParams->spendingKeyPath)) {
 
 		case PATH_ORDINARY_SPENDING_KEY:

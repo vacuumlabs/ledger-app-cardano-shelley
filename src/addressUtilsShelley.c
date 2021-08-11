@@ -263,7 +263,7 @@ static size_t deriveAddress_pointer(
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
-		if (POINTER_KEY == addressType) {
+		if (addressType == POINTER_KEY) {
 			view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
 		} else {
 			view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
@@ -289,7 +289,7 @@ static size_t deriveAddress_enterprise(
 )
 {
 	const address_type_t addressType = addressParams->type;
-	ASSERT(addressType == ENTERPRISE_KEY || ENTERPRISE_SCRIPT == addressType);
+	ASSERT(addressType == ENTERPRISE_KEY || addressType == ENTERPRISE_SCRIPT);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 	const uint8_t addressHeader = constructShelleyAddressHeader(addressType, addressParams->networkId);
 
@@ -298,7 +298,7 @@ static size_t deriveAddress_enterprise(
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
-		if (ENTERPRISE_KEY == addressType) {
+		if (addressType == ENTERPRISE_KEY) {
 			view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
 		} else {
 			view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
@@ -322,7 +322,7 @@ static size_t deriveAddress_reward(
 {
 	TRACE_STACK_USAGE();
 	const address_type_t addressType = addressParams->type;
-	ASSERT(addressType == REWARD_KEY || REWARD_SCRIPT == addressType);
+	ASSERT(addressType == REWARD_KEY || addressType == REWARD_SCRIPT);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 	const uint8_t addressHeader = constructShelleyAddressHeader(addressType, addressParams->networkId);
 
@@ -386,7 +386,7 @@ size_t constructRewardAddressFromHash(
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
-		const uint8_t addressHeader = constructShelleyAddressHeader((REWARD_HASH_SOURCE_KEY == source) ? REWARD_KEY : REWARD_SCRIPT, networkId);
+		const uint8_t addressHeader = constructShelleyAddressHeader((source == REWARD_HASH_SOURCE_KEY) ? REWARD_KEY : REWARD_SCRIPT, networkId);
 		view_appendData(&out, &addressHeader, 1);
 	}
 	{
@@ -607,7 +607,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 		STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "Different key- and script hash lengths");
 		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
 		STATIC_ASSERT(SIZEOF(params->stakingScriptHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
-		const bool script = STAKING_SCRIPT_HASH == params->stakingDataSource;
+		const bool script = params->stakingDataSource == STAKING_SCRIPT_HASH;
 		readHashToBufferFromView(script ? params->stakingScriptHash : params->stakingKeyHash,
 		                         ADDRESS_KEY_HASH_LENGTH, view);
 		TRACE("Staking %s hash: ", script ? "script" : "key");

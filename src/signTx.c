@@ -1185,7 +1185,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 		return;
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
-		ASSERT(STAKE_CREDENTIAL_KEY_PATH == certificateData->stakeCredential.type);
+		ASSERT(certificateData->stakeCredential.type == STAKE_CREDENTIAL_KEY_PATH);
 		_parsePathSpec(&view, &certificateData->stakeCredential.pathSpec); // pool id path
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		certificateData->epoch  = parse_u8be(&view);
@@ -1259,7 +1259,7 @@ static void _addCertificateDataToTx(
 	}
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		ASSERT(STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type);
+		ASSERT(txBodyCtx->stageData.certificate.stakeCredential.type == STAKE_CREDENTIAL_KEY_PATH);
 		_fillHash(&txBodyCtx->stageData.certificate.stakeCredential, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
@@ -1319,11 +1319,12 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
+		const bool scriptStake = txBodyCtx->stageData.certificate.stakeCredential.type == STAKE_CREDENTIAL_SCRIPT_HASH;
 		security_policy_t policy = policyForSignTxCertificateStaking(
 		                                txBodyCtx->stageData.certificate.type,
-		                                STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type ?
+		                                !scriptStake ?
 											&txBodyCtx->stageData.certificate.stakeCredential.pathSpec : NULL,
-		                                STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type ?
+		                                !scriptStake ?
 		                                	NULL : txBodyCtx->stageData.certificate.stakeCredential.scriptHash
 		                           );
 		TRACE("Policy: %d", (int) policy);
@@ -1357,7 +1358,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
 										ctx->commonTxData.signTxUsecase,
-		                               	(STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.certificate.stakeCredential.type) ?
+		                               	(txBodyCtx->stageData.certificate.stakeCredential.type == STAKE_CREDENTIAL_KEY_PATH) ?
 											&txBodyCtx->stageData.certificate.stakeCredential.pathSpec :
 											NULL,
 		                               	txBodyCtx->stageData.certificate.epoch
@@ -1516,7 +1517,7 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	security_policy_t policy = policyForSignTxWithdrawal(
 		ctx->commonTxData.signTxUsecase,
 		txBodyCtx->stageData.withdrawal.stakeCredential.type,
-		STAKE_CREDENTIAL_KEY_PATH == txBodyCtx->stageData.withdrawal.stakeCredential.type ?
+		txBodyCtx->stageData.withdrawal.stakeCredential.type == STAKE_CREDENTIAL_KEY_PATH ?
 			&txBodyCtx->stageData.certificate.stakeCredential.pathSpec : NULL
 	);
 	TRACE("Policy: %d", (int) policy);

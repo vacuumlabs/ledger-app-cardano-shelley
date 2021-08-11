@@ -111,7 +111,7 @@ size_t str_formatInt64(int64_t number, char* out, size_t outSize)
 
 	uint64_t signlessNumber;
 	if (number < 0) {
-		if (INT64_MIN == number) {
+		if (number == INT64_MIN) {
 			signlessNumber = ((uint64_t)INT64_MAX) + 1;
 		} else {
 			signlessNumber = (uint64_t)(-number);
