@@ -427,21 +427,18 @@ security_policy_t policyForSignTxTtl(uint32_t ttl MARK_UNUSED)
 // does not evaluate aspects of specific certificates
 security_policy_t policyForSignTxCertificate(
         sign_tx_usecase_t signTxUsecase,
-        const certificate_type_t certificateType,
-        const stake_credential_type_t stakeCredentialType
+        const certificate_type_t certificateType
 )
 {
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-		DENY_UNLESS(stakeCredentialType == STAKE_CREDENTIAL_KEY_PATH);
 		ALLOW();
 		break;
 
 	case SIGN_TX_USECASE_MULTISIG:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-		DENY_UNLESS(stakeCredentialType == STAKE_CREDENTIAL_SCRIPT_HASH);
 		ALLOW();
 		break;
 
@@ -460,12 +457,23 @@ security_policy_t policyForSignTxCertificate(
 
 // for certificates concerning staking keys and stake delegation
 security_policy_t policyForSignTxCertificateStaking(
+		sign_tx_usecase_t signTxUsecase,
         const certificate_type_t certificateType,
-        const bip44_path_t* stakingKeyPath,
-        const uint8_t* stakingScriptHash
+        const stake_credential_t* stakeCredential
 )
 {
-	ASSERT((NULL != stakingKeyPath) ^ (NULL != stakingScriptHash));
+	switch (signTxUsecase) {
+
+	case SIGN_TX_USECASE_ORDINARY_TX:
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+		break;
+	case SIGN_TX_USECASE_MULTISIG:
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
+		break;
+	default:
+		ASSERT(false);
+	}
+
 	switch (certificateType) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
@@ -476,8 +484,8 @@ security_policy_t policyForSignTxCertificateStaking(
 		ASSERT(false);
 	}
 
-	if (stakingKeyPath) {
-		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
+	if (stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH) {
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
 	}
 
 	PROMPT();
@@ -485,15 +493,18 @@ security_policy_t policyForSignTxCertificateStaking(
 
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_usecase_t signTxUsecase,
-        const bip44_path_t* poolIdPath,
+        const stake_credential_t* stakeCredential,
         uint64_t epoch MARK_UNUSED
 )
+// not sure about this one to be fair, the fact that we store
+// the pool id path in the stake credentials is a memory saving measure,
+// the policy wouldn't have to know about it
 {
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
-		ASSERT (poolIdPath != NULL);
-		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
+		ASSERT (stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+		DENY_UNLESS(bip44_isValidPoolColdKeyPath(&stakeCredential->pathSpec));
 		PROMPT();
 		break;
 
@@ -640,21 +651,18 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 // For each withdrawal
 security_policy_t policyForSignTxWithdrawal(
         sign_tx_usecase_t signTxUsecase,
-        const stake_credential_type_t stakeCredentialType,
-		const bip44_path_t* stakingKeyPath
+        const stake_credential_t* stakeCredential
 )
 {
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_ORDINARY_TX:
-		DENY_UNLESS(stakeCredentialType == STAKE_CREDENTIAL_KEY_PATH);
-		ASSERT(stakingKeyPath != NULL);
-		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
 		ALLOW();
 		break;
 
 	case SIGN_TX_USECASE_MULTISIG:
-		DENY_UNLESS(stakeCredentialType == STAKE_CREDENTIAL_SCRIPT_HASH);
-		ASSERT(stakingKeyPath == NULL);
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
 		ALLOW();
 		break;
 

@@ -54,17 +54,16 @@ security_policy_t policyForSignTxTtl(uint32_t ttl);
 
 security_policy_t policyForSignTxCertificate(
         sign_tx_usecase_t signTxUsecase,
-        const certificate_type_t certificateType,
-        const stake_credential_type_t stakeCredentialType
+        const certificate_type_t certificateType
 );
 security_policy_t policyForSignTxCertificateStaking(
+        sign_tx_usecase_t signTxUsecase,
         const certificate_type_t certificateType,
-        const bip44_path_t* stakingKeyPath,
-        const uint8_t* stakingScriptHash
+        const stake_credential_t* stakeCredential
 );
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_usecase_t signTxUsecase,
-        const bip44_path_t* poolIdPath,
+        const stake_credential_t* stakeCredential,
         uint64_t epoch
 );
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
@@ -94,8 +93,7 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 
 security_policy_t policyForSignTxWithdrawal(
         sign_tx_usecase_t signTxUsecase,
-        const stake_credential_type_t stakeCredentialType,
-        const bip44_path_t* stakingKeyPath
+        const stake_credential_t* stakeCredential
 );
 
 security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType);
