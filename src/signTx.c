@@ -1768,7 +1768,7 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
-		TRACE("Witness no. %d out of %d", txWitnessCtx->currentWitness, ctx->numWitnesses);
+		TRACE("Witness no. %d out of %d", txWitnessCtx->currentWitness + 1, ctx->numWitnesses);
 		ASSERT(txWitnessCtx->currentWitness < ctx->numWitnesses);
 	}
 
