@@ -705,6 +705,49 @@ static inline security_policy_t nonPoolSubPolicy(const bip44_path_t* pathSpec)
 	}
 }
 
+static inline security_policy_t ordinaryWitnessPolicy(const bip44_path_t* pathSpec, bool mintPresent)
+{
+	switch (bip44_classifyPath(pathSpec)) {
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+	case PATH_POOL_COLD_KEY:
+		if (bip44_isPathReasonable(pathSpec)) {
+			ALLOW();
+		} else {
+			WARN();
+		}
+		break;
+	case PATH_MINT_KEY:
+		DENY_UNLESS(mintPresent);
+		SHOW();
+		break;
+	default:
+		DENY();
+		break;
+	}
+}
+
+static inline security_policy_t multisigWitnessPolicy(const bip44_path_t* pathSpec, bool mintPresent)
+{
+	switch (bip44_classifyPath(pathSpec)) {
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_POOL_COLD_KEY:
+		if (bip44_isPathReasonable(pathSpec)) {
+			SHOW();
+		} else {
+			WARN();
+		}
+		break;
+	case PATH_MINT_KEY:
+		DENY_UNLESS(mintPresent);
+		SHOW();
+	default:
+		DENY();
+		break;
+	}
+}
+
 // For each transaction witness
 // Note: witnesses reveal public key of an address
 // and Ledger *does not* check whether they correspond to
@@ -715,18 +758,12 @@ security_policy_t policyForSignTxWitness(
 		bool mintPresent
 )
 {
-	const bool ordinary = bip44_isOrdinarySpendingKeyPath(pathSpec);
-	const bool multisig = bip44_isMultisigSpendingKeyPath(pathSpec) || bip44_isMultisigStakingKeyPath(pathSpec);
-	const bool mint = bip44_isMintKeyPath(pathSpec);
-
 	switch (signTxUsecase) {
 	case SIGN_TX_USECASE_ORDINARY_TX:
-		DENY_UNLESS(ordinary || mintPresent && mint);
-		return nonPoolSubPolicy(pathSpec);
+		return ordinaryWitnessPolicy(pathSpec, mintPresent);
 
 	case SIGN_TX_USECASE_MULTISIG:
-		DENY_UNLESS(multisig || mintPresent && mint);
-		return nonPoolSubPolicy(pathSpec);
+		return multisigWitnessPolicy(pathSpec, mintPresent);
 
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
 		switch (bip44_classifyPath(pathSpec)) {
