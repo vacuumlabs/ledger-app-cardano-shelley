@@ -1186,7 +1186,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
 		ASSERT(certificateData->stakeCredential.type == STAKE_CREDENTIAL_KEY_PATH);
-		_parsePathSpec(&view, &certificateData->stakeCredential.pathSpec); // pool id path
+		_parsePathSpec(&view, &certificateData->poolIdPath); // pool id path
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		certificateData->epoch  = parse_u8be(&view);
 		break;
@@ -1198,16 +1198,22 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	ASSERT(view_remainingSize(&view) == 0);
 }
 
-static void _fillHash(const stake_credential_t* stakeCredential,
+static void _fillHashFromPath(const bip44_path_t* path,
+	uint8_t* hash, size_t hashSize)
+{
+	ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
+	bip44_pathToKeyHash(
+		path,
+		hash, hashSize
+	);
+}
+
+static void _fillHashFromStakeCredential(const stake_credential_t* stakeCredential,
 	uint8_t* hash, size_t hashSize)
 {
 	switch (stakeCredential->type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
-		ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
-		bip44_pathToKeyHash(
-			&stakeCredential->pathSpec,
-			hash, hashSize
-		);
+		_fillHashFromPath(&stakeCredential->pathSpec, hash, hashSize);
 		break;
 	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
@@ -1239,7 +1245,7 @@ static void _addCertificateDataToTx(
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		_fillHash(&txBodyCtx->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
+		_fillHashFromStakeCredential(&txBodyCtx->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
 		txHashBuilder_addCertificate_stakingHash(
 		        txHashBuilder, certificateData->type, certificateData->stakeCredential.type,
 		        stakingHash, SIZEOF(stakingHash)
@@ -1248,7 +1254,7 @@ static void _addCertificateDataToTx(
 	}
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		_fillHash(&txBodyCtx->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
+		_fillHashFromStakeCredential(&txBodyCtx->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
 		txHashBuilder_addCertificate_delegation(
 		        txHashBuilder, certificateData->stakeCredential.type,
 		        stakingHash, SIZEOF(stakingHash),
@@ -1259,7 +1265,7 @@ static void _addCertificateDataToTx(
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		ASSERT(txBodyCtx->stageData.certificate.stakeCredential.type == STAKE_CREDENTIAL_KEY_PATH);
-		_fillHash(&txBodyCtx->stageData.certificate.stakeCredential, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
+		_fillHashFromPath(&txBodyCtx->stageData.certificate.poolIdPath, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
 		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash),
@@ -1352,7 +1358,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
 										ctx->commonTxData.signTxUsecase,
-		                               	&txBodyCtx->stageData.certificate.stakeCredential,
+		                               	&txBodyCtx->stageData.certificate.poolIdPath,
 		                               	txBodyCtx->stageData.certificate.epoch
 									);
 		TRACE("Policy: %d", (int) policy);

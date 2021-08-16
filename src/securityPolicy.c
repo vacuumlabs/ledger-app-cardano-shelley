@@ -347,9 +347,12 @@ security_policy_t policyForSignTxOutputAddressParams(
 
 		break;
 	}
-	case SIGN_TX_USECASE_MULTISIG:
+
+	case SIGN_TX_USECASE_MULTISIG: {
 		DENY();
 		break;
+	}
+
 	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
 		// we forbid these to avoid leaking information
 		// (since the outputs are not shown, the user is unaware of what addresses are being derived)
@@ -357,6 +360,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 		DENY();
 		break;
 	}
+
 	default:
 		ASSERT(false);
 	}
@@ -462,18 +466,6 @@ security_policy_t policyForSignTxCertificateStaking(
         const stake_credential_t* stakeCredential
 )
 {
-	switch (signTxUsecase) {
-
-	case SIGN_TX_USECASE_ORDINARY_TX:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
-		break;
-	case SIGN_TX_USECASE_MULTISIG:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
-		break;
-	default:
-		ASSERT(false);
-	}
-
 	switch (certificateType) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
@@ -484,16 +476,27 @@ security_policy_t policyForSignTxCertificateStaking(
 		ASSERT(false);
 	}
 
-	if (stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH) {
-		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
+	switch (signTxUsecase) {
+	case SIGN_TX_USECASE_ORDINARY_TX:
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+		if (stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH) {
+			DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
+		}
+		break;
+	case SIGN_TX_USECASE_MULTISIG:
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
+		break;
+	default:
+		ASSERT(false);
 	}
+
 
 	PROMPT();
 }
 
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_usecase_t signTxUsecase,
-        const stake_credential_t* stakeCredential,
+        const bip44_path_t* poolIdPath,
         uint64_t epoch MARK_UNUSED
 )
 // not sure about this one to be fair, the fact that we store
@@ -503,8 +506,7 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	switch (signTxUsecase) {
 
 	case SIGN_TX_USECASE_ORDINARY_TX:
-		ASSERT (stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
-		DENY_UNLESS(bip44_isValidPoolColdKeyPath(&stakeCredential->pathSpec));
+		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
 		PROMPT();
 		break;
 
@@ -673,38 +675,6 @@ security_policy_t policyForSignTxWithdrawal(
 	DENY(); // should not be reached
 }
 
-
-static inline security_policy_t nonPoolSubPolicy(const bip44_path_t* pathSpec)
-{
-	switch (bip44_classifyPath(pathSpec)) {
-	case PATH_ORDINARY_SPENDING_KEY:
-	case PATH_ORDINARY_STAKING_KEY:
-	case PATH_POOL_COLD_KEY:
-		if (bip44_isPathReasonable(pathSpec)) {
-			ALLOW();
-		} else {
-			WARN();
-		}
-		break;
-
-	case PATH_MULTISIG_SPENDING_KEY:
-	case PATH_MULTISIG_STAKING_KEY:
-		if (bip44_isPathReasonable(pathSpec)) {
-			SHOW();
-		} else {
-			WARN();
-		}
-		break;
-
-	case PATH_MINT_KEY:
-		SHOW();
-
-	default:
-		DENY();
-		break;
-	}
-}
-
 static inline security_policy_t ordinaryWitnessPolicy(const bip44_path_t* pathSpec, bool mintPresent)
 {
 	switch (bip44_classifyPath(pathSpec)) {
@@ -717,10 +687,12 @@ static inline security_policy_t ordinaryWitnessPolicy(const bip44_path_t* pathSp
 			WARN();
 		}
 		break;
+
 	case PATH_MINT_KEY:
 		DENY_UNLESS(mintPresent);
 		SHOW();
 		break;
+
 	default:
 		DENY();
 		break;
@@ -739,9 +711,11 @@ static inline security_policy_t multisigWitnessPolicy(const bip44_path_t* pathSp
 			WARN();
 		}
 		break;
+
 	case PATH_MINT_KEY:
 		DENY_UNLESS(mintPresent);
 		SHOW();
+
 	default:
 		DENY();
 		break;
@@ -779,7 +753,6 @@ security_policy_t policyForSignTxWitness(
 			DENY();
 			break;
 		}
-
 		break;
 	}
 

@@ -63,7 +63,7 @@ security_policy_t policyForSignTxCertificateStaking(
 );
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_usecase_t signTxUsecase,
-        const stake_credential_t* stakeCredential,
+        const bip44_path_t* stakeCredential,
         uint64_t epoch
 );
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
