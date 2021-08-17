@@ -39,7 +39,7 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 }
 
 bool is_tx_network_verifiable(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         uint16_t numOutputs,
         uint16_t numWithdrawals
 )
@@ -47,10 +47,10 @@ bool is_tx_network_verifiable(
 	if (numOutputs > 0) return true;
 	if (numWithdrawals > 0) return true;
 
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		// pool registration certificate contains pool reward account
 		return true;
 
@@ -239,7 +239,7 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 
 // Initiate transaction signing
 security_policy_t policyForSignTxInit(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         uint8_t networkId,
         uint32_t protocolMagic,
         uint16_t numOutputs,
@@ -250,7 +250,7 @@ security_policy_t policyForSignTxInit(
 	DENY_IF(networkId == MAINNET_NETWORK_ID && protocolMagic != MAINNET_PROTOCOL_MAGIC);
 	// Note: testnets can still use byron mainnet protocol magic so we can't deny the opposite direction
 
-	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, signTxUsecase));
+	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, txSigningMode));
 
 	WARN_IF(networkId != MAINNET_NETWORK_ID);
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
@@ -268,7 +268,7 @@ security_policy_t policyForSignTxInput()
 
 // For each transaction (third-party) address output
 security_policy_t policyForSignTxOutputAddressBytes(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic
 )
@@ -285,23 +285,23 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		DENY_IF(addressType == REWARD_KEY || addressType == REWARD_SCRIPT);
 	}
 
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_ORDINARY_TX:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		// We always show third-party output addresses
 		SHOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		// all the funds are provided by the operator
 		// and thus outputs are irrelevant to the owner
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
 
-	case SIGN_TX_USECASE_MULTISIG:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		SHOW();
 		break;
 
@@ -314,7 +314,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 
 // For each output given by derivation path
 security_policy_t policyForSignTxOutputAddressParams(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic
 )
@@ -328,10 +328,10 @@ security_policy_t policyForSignTxOutputAddressParams(
 		DENY_IF(params->networkId != networkId);
 	}
 
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_ORDINARY_TX: {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX: {
 		switch (bip44_classifyPath(&params->spendingKeyPath)) {
 
 		case PATH_ORDINARY_SPENDING_KEY:
@@ -348,12 +348,12 @@ security_policy_t policyForSignTxOutputAddressParams(
 		break;
 	}
 
-	case SIGN_TX_USECASE_MULTISIG: {
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX: {
 		DENY();
 		break;
 	}
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER: {
 		// we forbid these to avoid leaking information
 		// (since the outputs are not shown, the user is unaware of what addresses are being derived)
 		// it also makes the tx signing faster if all outputs are given as addresses
@@ -392,20 +392,20 @@ security_policy_t policyForSignTxOutputConfirm(
 
 // For transaction fee
 security_policy_t policyForSignTxFee(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         uint64_t fee MARK_UNUSED
 )
 {
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_ORDINARY_TX:
-	case SIGN_TX_USECASE_MULTISIG:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		// always show the fee if it is paid by the signer
 		SHOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		// fees are paid by the operator and are thus irrelevant for owners
 		ALLOW();
 		break;
@@ -430,24 +430,24 @@ security_policy_t policyForSignTxTtl(uint32_t ttl MARK_UNUSED)
 // a generic policy for all certificates
 // does not evaluate aspects of specific certificates
 security_policy_t policyForSignTxCertificate(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType
 )
 {
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
 
-	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_MULTISIG:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
@@ -461,7 +461,7 @@ security_policy_t policyForSignTxCertificate(
 
 // for certificates concerning staking keys and stake delegation
 security_policy_t policyForSignTxCertificateStaking(
-		sign_tx_usecase_t signTxUsecase,
+		sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType,
         const stake_credential_t* stakeCredential
 )
@@ -476,14 +476,14 @@ security_policy_t policyForSignTxCertificateStaking(
 		ASSERT(false);
 	}
 
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_ORDINARY_TX:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
 		if (stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH) {
 			DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
 		}
 		break;
-	case SIGN_TX_USECASE_MULTISIG:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
 		break;
 	default:
@@ -495,7 +495,7 @@ security_policy_t policyForSignTxCertificateStaking(
 }
 
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* poolIdPath,
         uint64_t epoch MARK_UNUSED
 )
@@ -503,14 +503,14 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 // the pool id path in the stake credentials is a memory saving measure,
 // the policy wouldn't have to know about it
 {
-	switch (signTxUsecase) {
+	switch (txSigningMode) {
 
-	case SIGN_TX_USECASE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(bip44_isValidPoolColdKeyPath(poolIdPath));
 		PROMPT();
 		break;
 
-	case SIGN_TX_USECASE_MULTISIG:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		DENY();
 		break;
 
@@ -524,17 +524,17 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const pool_id_t* poolId
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_PATH);
 		SHOW();
 		break;
@@ -547,15 +547,15 @@ security_policy_t policyForSignTxStakePoolRegistrationPoolId(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
-        sign_tx_usecase_t signTxUsecase
+        sign_tx_signingmode_t txSigningMode
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
 
@@ -567,13 +567,13 @@ security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const reward_account_t* poolRewardAccount MARK_UNUSED
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
 
@@ -585,7 +585,7 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
-        const sign_tx_usecase_t signTxUsecase,
+        const sign_tx_signingmode_t txSigningMode,
         const pool_owner_t* owner
 )
 {
@@ -593,12 +593,12 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&owner->path));
 	}
 
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		SHOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		DENY_UNLESS(owner->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
@@ -610,16 +610,16 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationRelay(
-        const sign_tx_usecase_t signTxUsecase,
+        const sign_tx_signingmode_t txSigningMode,
         const pool_relay_t* relay MARK_UNUSED
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		SHOW();
 		break;
 
@@ -652,18 +652,18 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 
 // For each withdrawal
 security_policy_t policyForSignTxWithdrawal(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const stake_credential_t* stakeCredential
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_ORDINARY_TX:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
 		ALLOW();
 		break;
 
-	case SIGN_TX_USECASE_MULTISIG:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
 		ALLOW();
 		break;
@@ -727,19 +727,19 @@ static inline security_policy_t multisigWitnessPolicy(const bip44_path_t* pathSp
 // and Ledger *does not* check whether they correspond to
 // previously declared inputs and certificates
 security_policy_t policyForSignTxWitness(
-        sign_tx_usecase_t signTxUsecase,
+        sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* pathSpec,
 		bool mintPresent
 )
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_ORDINARY_TX:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		return ordinaryWitnessPolicy(pathSpec, mintPresent);
 
-	case SIGN_TX_USECASE_MULTISIG:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		return multisigWitnessPolicy(pathSpec, mintPresent);
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER: {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER: {
 		switch (bip44_classifyPath(pathSpec)) {
 		case PATH_ORDINARY_STAKING_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
@@ -756,7 +756,7 @@ security_policy_t policyForSignTxWitness(
 		break;
 	}
 
-	case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR: {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR: {
 		switch (bip44_classifyPath(pathSpec)) {
 		case PATH_ORDINARY_SPENDING_KEY:
 		case PATH_POOL_COLD_KEY:
@@ -792,11 +792,11 @@ security_policy_t policyForSignTxValidityIntervalStart()
 	SHOW();
 }
 
-security_policy_t policyForSignTxMintInit(const sign_tx_usecase_t signTxUsecase)
+security_policy_t policyForSignTxMintInit(const sign_tx_signingmode_t txSigningMode)
 {
-	switch (signTxUsecase) {
-	case SIGN_TX_USECASE_ORDINARY_TX:
-	case SIGN_TX_USECASE_MULTISIG:
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		ALLOW();
 		break;
 

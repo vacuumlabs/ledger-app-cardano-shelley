@@ -337,7 +337,7 @@ static void signTx_handleInit_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
-		if (is_tx_network_verifiable(ctx->commonTxData.signTxUsecase, ctx->numOutputs, ctx->numWithdrawals)) {
+		if (is_tx_network_verifiable(ctx->commonTxData.txSigningMode, ctx->numOutputs, ctx->numWithdrawals)) {
 			ui_displayNetworkParamsScreen(
 			        "New transaction",
 			        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
@@ -394,7 +394,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			uint8_t includeAuxData;
 			uint8_t includeValidityIntervalStart;
 			uint8_t includeMint;
-			uint8_t signTxUsecase;
+			uint8_t txSigningMode;
 
 			uint8_t numInputs[4];
 			uint8_t numOutputs[4];
@@ -426,13 +426,13 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		ctx->includeMint = signTx_parseIncluded(wireHeader->includeMint);
 		TRACE("Include mint %d", ctx->includeMint);
 
-		ctx->commonTxData.signTxUsecase = wireHeader->signTxUsecase;
-		TRACE("sign tx use case %d", (int) ctx->commonTxData.signTxUsecase);
-		switch(ctx->commonTxData.signTxUsecase) {
-		case SIGN_TX_USECASE_ORDINARY_TX:
-		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
-		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		case SIGN_TX_USECASE_MULTISIG:
+		ctx->commonTxData.txSigningMode = wireHeader->txSigningMode;
+		TRACE("sign tx use case %d", (int) ctx->commonTxData.txSigningMode);
+		switch(ctx->commonTxData.txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 			// these usecases are allowed
 			break;
 
@@ -460,10 +460,10 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		VALIDATE(ctx->numCertificates <= SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
 		VALIDATE(ctx->numWithdrawals <= SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
 
-		switch (ctx->commonTxData.signTxUsecase) {
+		switch (ctx->commonTxData.txSigningMode) {
 
-		case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
-		case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 			// necessary to avoid intermingling witnesses from several certs
 			VALIDATE(ctx->numCertificates == 1, ERR_INVALID_DATA);
 
@@ -476,8 +476,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			VALIDATE(ctx->includeMint == false, ERR_INVALID_DATA);
 			break;
 
-		case SIGN_TX_USECASE_ORDINARY_TX:
-		case SIGN_TX_USECASE_MULTISIG:
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 			// no additional validation
 			break;
 
@@ -498,12 +498,12 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			// to a given utxo, withdrawal or certificate.
 
 			size_t maxNumWitnesses = 0;
-			switch (ctx->commonTxData.signTxUsecase) {
-			case SIGN_TX_USECASE_POOL_REGISTRATION_OWNER:
+			switch (ctx->commonTxData.txSigningMode) {
+			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 				maxNumWitnesses = 1;
 				break;
 
-			case SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR:
+			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 				ASSERT(ctx->numCertificates == 1);
 				// inputs are unrestricted, to fund the tx
 				// only a single pool registration certificate
@@ -512,13 +512,13 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 				                  1; // pool key
 				break;
 
-			case SIGN_TX_USECASE_ORDINARY_TX:
+			case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 				maxNumWitnesses = (size_t) ctx->numInputs +
 				                  (size_t) ctx->numCertificates +
 				                  (size_t) ctx->numWithdrawals;
 				break;
 
-			case SIGN_TX_USECASE_MULTISIG: // TODO rename to signing mode
+			case SIGN_TX_SIGNINGMODE_SCRIPT_TX: // TODO rename to signing mode
 				maxNumWitnesses = SIGN_MAX_WITNESSES;
 				break;
 
@@ -532,7 +532,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	}
 
 	security_policy_t policy = policyForSignTxInit(
-	                                   ctx->commonTxData.signTxUsecase,
+	                                   ctx->commonTxData.txSigningMode,
 	                                   ctx->commonTxData.networkId,
 	                                   ctx->commonTxData.protocolMagic,
 	                                   ctx->numOutputs,
@@ -868,7 +868,7 @@ static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 		txHashBuilder_addFee(&txBodyCtx->txHashBuilder, txBodyCtx->stageData.fee);
 	}
 
-	security_policy_t policy = policyForSignTxFee(ctx->commonTxData.signTxUsecase, txBodyCtx->stageData.fee);
+	security_policy_t policy = policyForSignTxFee(ctx->commonTxData.txSigningMode, txBodyCtx->stageData.fee);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -1307,7 +1307,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	{
 		// basic policy that just decides if the certificate is allowed
 		security_policy_t policy = policyForSignTxCertificate(
-		                                   ctx->commonTxData.signTxUsecase,
+		                                   ctx->commonTxData.txSigningMode,
 		                                   txBodyCtx->stageData.certificate.type
 		                           );
 		TRACE("Policy: %d", (int) policy);
@@ -1322,7 +1322,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
 		security_policy_t policy = policyForSignTxCertificateStaking(
-										ctx->commonTxData.signTxUsecase,
+										ctx->commonTxData.txSigningMode,
 		                                txBodyCtx->stageData.certificate.type,
 		                                &txBodyCtx->stageData.certificate.stakeCredential
 								   );
@@ -1356,7 +1356,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, si
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
-										ctx->commonTxData.signTxUsecase,
+										ctx->commonTxData.txSigningMode,
 		                               	&txBodyCtx->stageData.certificate.poolIdPath,
 		                               	txBodyCtx->stageData.certificate.epoch
 									);
@@ -1512,7 +1512,7 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	_addWithdrawalToTxHash();
 
 	security_policy_t policy = policyForSignTxWithdrawal(
-		ctx->commonTxData.signTxUsecase,
+		ctx->commonTxData.txSigningMode,
 		&txBodyCtx->stageData.withdrawal.stakeCredential
 	);
 	TRACE("Policy: %d", (int) policy);
@@ -1791,7 +1791,7 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 	{
 		// get policy
 		policy = policyForSignTxWitness(
-		                 ctx->commonTxData.signTxUsecase,
+		                 ctx->commonTxData.txSigningMode,
 		                 &txWitnessCtx->stageData.witness.path,
 						 ctx->includeMint
 		         );

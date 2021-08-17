@@ -15,11 +15,11 @@
 
 // the use case significantly affects restrictions on tx being signed
 typedef enum {
-	SIGN_TX_USECASE_ORDINARY_TX = 3, // enum value 3 is needed for backwards compatibility
-	SIGN_TX_USECASE_POOL_REGISTRATION_OWNER = 4,
-	SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR = 5,
-	SIGN_TX_USECASE_MULTISIG = 6,	// TODO this comes from the wire directly, so need to look up the specification
-} sign_tx_usecase_t;
+	SIGN_TX_SIGNINGMODE_ORDINARY_TX = 3, // enum value 3 is needed for backwards compatibility
+	SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER = 4,
+	SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR = 5,
+	SIGN_TX_SIGNINGMODE_SCRIPT_TX = 6,
+} sign_tx_signingmode_t;
 
 typedef enum {
 	SIGN_STAGE_NONE = 0,
@@ -51,7 +51,7 @@ enum {
 
 typedef struct {
 	// significantly affects restrictions on the tx
-	sign_tx_usecase_t signTxUsecase;
+	sign_tx_signingmode_t txSigningMode;
 
 	uint8_t networkId; // part of Shelley address
 	uint32_t protocolMagic; // part of Byron address
