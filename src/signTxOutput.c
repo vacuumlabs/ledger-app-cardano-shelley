@@ -70,7 +70,7 @@ static inline void advanceState()
 		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
 
 		// we are going to receive token amounts for this group
-		ASSERT(subctx->numTokens > 0);
+		VALIDATE(subctx->numTokens > 0, ERR_INVALID_DATA);
 		ASSERT(subctx->currentToken == 0);
 
 		subctx->state = STATE_OUTPUT_TOKEN;

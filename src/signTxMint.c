@@ -24,7 +24,7 @@ static inline void advanceState()
 	switch (subctx->state) {
 
 	case STATE_MINT_TOP_LEVEL_DATA:
-		ASSERT(subctx->numAssetGroups > 0);
+		VALIDATE(subctx->numAssetGroups > 0, ERR_INVALID_DATA);
 		ASSERT(subctx->currentAssetGroup == 0);
 		subctx->state = STATE_MINT_ASSET_GROUP;
 		break;
@@ -33,7 +33,7 @@ static inline void advanceState()
 		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
 
 		// we are going to receive token amounts for this group
-		ASSERT(subctx->numTokens > 0);
+		VALIDATE(subctx->numTokens > 0, ERR_INVALID_DATA);
 		ASSERT(subctx->currentToken == 0);
 
 		subctx->state = STATE_MINT_TOKEN;
