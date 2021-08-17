@@ -743,7 +743,7 @@ security_policy_t policyForSignTxWitness(
 		switch (bip44_classifyPath(pathSpec)) {
 		case PATH_ORDINARY_STAKING_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
-				ALLOW();
+				SHOW();
 			} else {
 				WARN();
 			}
@@ -761,7 +761,7 @@ security_policy_t policyForSignTxWitness(
 		case PATH_ORDINARY_SPENDING_KEY:
 		case PATH_POOL_COLD_KEY:
 			if (bip44_isPathReasonable(pathSpec)) {
-				ALLOW();
+				SHOW();
 			} else {
 				WARN();
 			}
