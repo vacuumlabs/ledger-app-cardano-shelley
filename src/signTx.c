@@ -1264,7 +1264,6 @@ static void _addCertificateDataToTx(
 	}
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		ASSERT(txBodyCtx->stageData.certificate.stakeCredential.type == STAKE_CREDENTIAL_KEY_PATH);
 		_fillHashFromPath(&txBodyCtx->stageData.certificate.poolIdPath, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
