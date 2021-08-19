@@ -24,7 +24,7 @@ static inline void advanceState()
 	switch (subctx->state) {
 
 	case STATE_MINT_TOP_LEVEL_DATA:
-		VALIDATE(subctx->numAssetGroups > 0, ERR_INVALID_DATA);
+		ASSERT(subctx->numAssetGroups > 0);
 		ASSERT(subctx->currentAssetGroup == 0);
 		subctx->state = STATE_MINT_ASSET_GROUP;
 		break;
@@ -33,7 +33,7 @@ static inline void advanceState()
 		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
 
 		// we are going to receive token amounts for this group
-		VALIDATE(subctx->numTokens > 0, ERR_INVALID_DATA);
+		ASSERT(subctx->numTokens > 0);
 		ASSERT(subctx->currentToken == 0);
 
 		subctx->state = STATE_MINT_TOKEN;
@@ -79,6 +79,7 @@ static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wi
 		uint32_t numAssetGroups = parse_u4be(&view);
 		TRACE("num asset groups %u", numAssetGroups);
 		VALIDATE(numAssetGroups <= OUTPUT_ASSET_GROUPS_MAX, ERR_INVALID_DATA);
+		VALIDATE(numAssetGroups > 0, ERR_INVALID_DATA);
 
 		STATIC_ASSERT(OUTPUT_ASSET_GROUPS_MAX <= UINT16_MAX, "wrong max token groups");
 		ASSERT_TYPE(subctx->numAssetGroups, uint16_t);
@@ -138,6 +139,7 @@ static void signTxMint_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wire
 		VALIDATE(view_remainingSize(&view) == 4, ERR_INVALID_DATA);
 		uint32_t numTokens = parse_u4be(&view);
 		VALIDATE(numTokens <= OUTPUT_TOKENS_IN_GROUP_MAX, ERR_INVALID_DATA);
+		VALIDATE(numTokens > 0, ERR_INVALID_DATA);
 		STATIC_ASSERT(OUTPUT_TOKENS_IN_GROUP_MAX <= UINT16_MAX, "wrong max token amounts in a group");
 		ASSERT_TYPE(subctx->numTokens, uint16_t);
 		subctx->numTokens = (uint16_t) numTokens;

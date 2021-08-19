@@ -479,9 +479,7 @@ security_policy_t policyForSignTxCertificateStaking(
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
-		if (stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH) {
-			DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
-		}
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
 		break;
 	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
@@ -499,9 +497,6 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
         const bip44_path_t* poolIdPath,
         uint64_t epoch MARK_UNUSED
 )
-// not sure about this one to be fair, the fact that we store
-// the pool id path in the stake credentials is a memory saving measure,
-// the policy wouldn't have to know about it
 {
 	switch (txSigningMode) {
 

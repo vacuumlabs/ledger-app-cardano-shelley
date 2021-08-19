@@ -70,7 +70,7 @@ static inline void advanceState()
 		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
 
 		// we are going to receive token amounts for this group
-		VALIDATE(subctx->numTokens > 0, ERR_INVALID_DATA);
+		ASSERT(subctx->numTokens > 0);
 		ASSERT(subctx->currentToken == 0);
 
 		subctx->state = STATE_OUTPUT_TOKEN;
@@ -390,6 +390,7 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		VALIDATE(view_remainingSize(&view) == 4, ERR_INVALID_DATA);
 		uint32_t numTokens = parse_u4be(&view);
 		VALIDATE(numTokens <= OUTPUT_TOKENS_IN_GROUP_MAX, ERR_INVALID_DATA);
+		VALIDATE(numTokens > 0, ERR_INVALID_DATA);
 		STATIC_ASSERT(OUTPUT_TOKENS_IN_GROUP_MAX <= UINT16_MAX, "wrong max token amounts in a group");
 		ASSERT_TYPE(subctx->numTokens, uint16_t);
 		subctx->numTokens = (uint16_t) numTokens;

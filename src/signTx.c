@@ -1185,8 +1185,7 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 		return;
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
-		ASSERT(certificateData->stakeCredential.type == STAKE_CREDENTIAL_KEY_PATH);
-		_parsePathSpec(&view, &certificateData->poolIdPath); // pool id path
+		_parsePathSpec(&view, &certificateData->poolIdPath);
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		certificateData->epoch  = parse_u8be(&view);
 		break;

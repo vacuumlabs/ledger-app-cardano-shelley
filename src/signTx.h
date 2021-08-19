@@ -70,12 +70,10 @@ typedef struct {
 
 	union {
 		stake_credential_t stakeCredential;
-		struct {
-			bip44_path_t poolIdPath;
-			uint64_t epoch;
-			uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
-		};
+		bip44_path_t poolIdPath;
 	};
+	uint64_t epoch;
+	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
 	
 } sign_tx_certificate_data_t;
 
