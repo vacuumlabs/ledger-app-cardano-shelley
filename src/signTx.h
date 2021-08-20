@@ -60,7 +60,7 @@ typedef struct {
 typedef struct {
 	stake_credential_type_t type;
 	union {
-		bip44_path_t pathSpec; // interpretation depends on type // TODO rename to keyPath?
+		bip44_path_t keyPath;
 		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
 	};
 } stake_credential_t;

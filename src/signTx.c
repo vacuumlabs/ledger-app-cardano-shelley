@@ -1021,7 +1021,7 @@ static void signTx_handleCertificate_ui_runStep()
 		case STAKE_CREDENTIAL_KEY_PATH:
 			ui_displayPathScreen(
 			        "Staking key",
-			        &txBodyCtx->stageData.certificate.stakeCredential.pathSpec,
+			        &txBodyCtx->stageData.certificate.stakeCredential.keyPath,
 			        this_fn
 			);
 			break;
@@ -1135,7 +1135,7 @@ static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCr
 	stakeCredential->type = parse_u1be(view);
 	switch(stakeCredential->type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
-		_parsePathSpec(view, &stakeCredential->pathSpec);
+		_parsePathSpec(view, &stakeCredential->keyPath);
 		break;
 	case STAKE_CREDENTIAL_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
@@ -1212,7 +1212,7 @@ static void _fillHashFromStakeCredential(const stake_credential_t* stakeCredenti
 {
 	switch (stakeCredential->type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
-		_fillHashFromPath(&stakeCredential->pathSpec, hash, hashSize);
+		_fillHashFromPath(&stakeCredential->keyPath, hash, hashSize);
 		break;
 	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
@@ -1406,7 +1406,7 @@ static void signTx_handleWithdrawal_ui_runStep()
 		switch(txBodyCtx->stageData.withdrawal.stakeCredential.type) {
 		case STAKE_CREDENTIAL_KEY_PATH: {
 			rewardAccount.keyReferenceType = KEY_REFERENCE_PATH;
-			rewardAccount.path = txBodyCtx->stageData.withdrawal.stakeCredential.pathSpec;
+			rewardAccount.path = txBodyCtx->stageData.withdrawal.stakeCredential.keyPath;
 			break;
 		}
 		case STAKE_CREDENTIAL_SCRIPT_HASH: {
@@ -1449,7 +1449,7 @@ static void _addWithdrawalToTxHash()
 	switch(txBodyCtx->stageData.withdrawal.stakeCredential.type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
 		constructRewardAddressFromKeyPath(
-				&txBodyCtx->stageData.withdrawal.stakeCredential.pathSpec,
+				&txBodyCtx->stageData.withdrawal.stakeCredential.keyPath,
 				ctx->commonTxData.networkId,
 				rewardAddress,
 				SIZEOF(rewardAddress)

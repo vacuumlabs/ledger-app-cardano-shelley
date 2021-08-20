@@ -479,7 +479,7 @@ security_policy_t policyForSignTxCertificateStaking(
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
-		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		break;
 	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
@@ -654,7 +654,7 @@ security_policy_t policyForSignTxWithdrawal(
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
-		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->pathSpec));
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		ALLOW();
 		break;
 
