@@ -490,45 +490,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		// However, an input is needed for certificate replay protection (enforced by node),
 		// so double-check this protection is no longer necessary before allowing no inputs.
 		VALIDATE(ctx->numInputs > 0, ERR_INVALID_DATA);
-
-		{
-			// Note(ppershing): do not allow more witnesses than necessary.
-			// This tries to lessen potential pubkey privacy leaks because
-			// in WITNESS stage we do not verify whether the witness belongs
-			// to a given utxo, withdrawal or certificate.
-
-			size_t maxNumWitnesses = 0;
-			switch (ctx->commonTxData.txSigningMode) {
-			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-				maxNumWitnesses = 1;
-				break;
-
-			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-				ASSERT(ctx->numCertificates == 1);
-				// inputs are unrestricted, to fund the tx
-				// only a single pool registration certificate
-				// with a single possible witnesses for pool key
-				maxNumWitnesses = (size_t) ctx->numInputs +
-				                  1; // pool key
-				break;
-
-			case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-				maxNumWitnesses = (size_t) ctx->numInputs +
-				                  (size_t) ctx->numCertificates +
-				                  (size_t) ctx->numWithdrawals;
-				break;
-
-			case SIGN_TX_SIGNINGMODE_SCRIPT_TX: // TODO rename to signing mode
-				maxNumWitnesses = SIGN_MAX_WITNESSES;
-				break;
-
-			default:
-				ASSERT(false);
-			}
-			ASSERT(maxNumWitnesses > 0);
-
-			VALIDATE(ctx->numWitnesses <= maxNumWitnesses, ERR_INVALID_DATA);
-		}
 	}
 
 	security_policy_t policy = policyForSignTxInit(
