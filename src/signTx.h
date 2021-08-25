@@ -13,7 +13,7 @@
 #include "signTxCatalystRegistration.h"
 #include "signTxAuxData.h"
 
-// the use case significantly affects restrictions on tx being signed
+// the signing mode significantly affects restrictions on tx being signed
 typedef enum {
 	SIGN_TX_SIGNINGMODE_ORDINARY_TX = 3, // enum value 3 is needed for backwards compatibility
 	SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER = 4,

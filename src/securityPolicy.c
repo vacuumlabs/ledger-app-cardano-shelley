@@ -510,7 +510,7 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 		break;
 
 	default:
-		// in other usecases, the tx containing pool retirement certificate
+		// in other signing modes, the tx containing pool retirement certificate
 		// should have already been reported as invalid
 		ASSERT(false);
 	}

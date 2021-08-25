@@ -427,13 +427,13 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		TRACE("Include mint %d", ctx->includeMint);
 
 		ctx->commonTxData.txSigningMode = wireHeader->txSigningMode;
-		TRACE("sign tx use case %d", (int) ctx->commonTxData.txSigningMode);
+		TRACE("Signing mode %d", (int) ctx->commonTxData.txSigningMode);
 		switch(ctx->commonTxData.txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
-			// these usecases are allowed
+			// these signing modes are allowed
 			break;
 
 		default:

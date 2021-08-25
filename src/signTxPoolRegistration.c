@@ -352,7 +352,7 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 		);
 	}
 	{
-		// ui step depends not only on security policy, but also on usecase
+		// ui step depends not only on security policy, but also on signing mode
 		int displayUiStep = HANDLE_POOL_KEY_STEP_INVALID;
 		switch (commonTxData->txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:

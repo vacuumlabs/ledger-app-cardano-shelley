@@ -56,14 +56,15 @@ Instructions related to general app status
 
 Instructions related to public keys/addresses
 
-- `0x10` [Get extended public key](ins_get_public_key.md)
+- `0x10` [Get extended public keys](ins_get_public_keys.md)
 - `0x11` [Derive address](ins_derive_address.md)
 
 ### `INS=0x2*` group
 
-Instructions related to transaction signing
+Instructions related to signing (transactions etc.)
 
 - `0x21` [Sign Transaction](ins_sign_tx.md)
+- `0x22` [Sign operational certificate](ins_sign_opcert.md)
 
 ### `INS=0xF*` group
 

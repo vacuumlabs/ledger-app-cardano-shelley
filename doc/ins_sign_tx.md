@@ -24,16 +24,20 @@ Given these requirements in mind, here is how transaction signing works:
 
 ## Signing
 
-Transaction signing consists of an exchange of several APDUs. During this exchange, Ledger keeps track of its current internal state, so APDU messages have to be sent in the order of increasing P1 values, and the entities in the transaction body are serialized in the same order as the messages are received. The Ledger maintains an internal state and refuses to accept APDU messages that are out of place by aborting the transaction being signed. (This also applies to outputs and pool registration certificates which are serialized in multiple steps.)
+Transaction signing consists of an exchange of several APDUs. During this exchange, Ledger keeps track of its current internal state, so APDU messages have to be sent in the order of increasing P1 values, and the entities in the transaction body are serialized in the same order as the messages are received. Ledger maintains an internal state and refuses to accept APDU messages that are out of place by aborting the transaction being signed. (This also applies to outputs and pool registration certificates which are serialized in multiple steps.)
+
+**Common notions**
 
 By BIP44, we refer here both to the original BIP44 scheme and its Cardano Shelley analogue using 1852' in place of 44'.
 
-Stake credential refers to an object that contains either a script hash or BIP44, which can be used as credentials to staking, depending on the signing mode (paths for ordinary, script hashes for script).
+The numbers are unsigned integers (big endian) if not mentioned otherwise.
+
+*Stake credential* refers to an object that contains either a script hash or a BIP44 path used to derive a public key; such objects are used in the serialization of certificates into CBOR and we also use them to supply parameters for reward address derivation in certain places. It is serialized in APDU data as a concatenation of two fields:
 
 |Field|Length|Value|
-|-----|-----|
+|-----|-----|-----|
 | type | 1 | `KEY_PATH=0x00` / `SCRIPT_HASH=0x01` |
-| credential | variable for BIP44, 28 for script hashes | BIP44 / script hash|
+| credential | variable for BIP44 paths, 28 for script hashes | BIP44 path / script hash|
 
 
 **General command**
@@ -90,13 +94,13 @@ Ledger cannot parse and display generic auxiliary data in full because their str
 So only the hash is transferred and displayed and the user has to use other means of verification that the hash is correct.
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 | Auxiliary data type | 1 | `AUX_DATA_TYPE_ARBITRARY_HASH=0x00` |
 | Auxiliary data hash | 32 | |
 
 **Data for AUX_DATA_TYPE_CATALYST_REGISTRATION**
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 | Auxiliary data type | 1 | `AUX_DATA_TYPE_CATALYST_REGISTRATION=0x01` |
 
 This only describes the initial message. All the data for this type of auxiliary data are obtained via a series of additional APDU messages; see [Catalyst Registration](ins_sign_catalyst_registration.md) for the details.
@@ -114,7 +118,7 @@ This only describes the initial message. All the data for this type of auxiliary
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |tx id (hash) | 32 | |
 |output index |  4 | Big endian |
 
@@ -136,7 +140,7 @@ For each output, at least two messages are required: the first one with top-leve
 This output type is used for regular destination addresses.
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Output type| 1 | `SIGN_TX_OUTPUT_TYPE_ADDRESS_BYTES=0x01`|
 |Address size| 4 | Big endian|
 |Address| variable | raw address (before bech32/base58-encoding)|
@@ -149,7 +153,7 @@ This output type is used for change addresses. Depending (mostly) on staking inf
 (See [src/securityPolicy.c](../src/securityPolicy.c) for details.)
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Output type| 1 | `SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS=0x02`|
 |Address params | variable | see `view_parseAddressParams` in [src/addressUtilsShelley.c](../src/addressUtilsShelley.c)|
 |Amount| 8| Big endian. Amount in Lovelace|
@@ -166,7 +170,7 @@ This output type is used for change addresses. Depending (mostly) on staking inf
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |minting policy id | 28 | |
 |number of tokens |  4 | Big endian |
 
@@ -181,7 +185,7 @@ This output type is used for change addresses. Depending (mostly) on staking inf
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |asset name size | 4 | Big endian |
 |asset name |  variable | |
 |amount |  8 | Big endian |
@@ -208,7 +212,7 @@ User needs to confirm the given fee.
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Amount| 8| Big endian. Amount in Lovelace|
 
 ### TTL
@@ -223,7 +227,7 @@ Optional.
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |TTL| 8| Big endian. Absolute slot number (not relative to epoch)|
 
 ### Certificate
@@ -240,21 +244,21 @@ In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR
 **Data for CERTIFICATE_TYPE_STAKE_REGISTRATION**
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_REGISTRATION=0x00`|
 |Stake credential| variable | See stake credential explained above|
 
 **Data for CERTIFICATE_TYPE_STAKE_DEREGISTRATION**
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_DEREGISTRATION=0x01`|
 |Stake credential| variable | See stake credential explained above|
 
 **Data for CERTIFICATE_TYPE_STAKE_DELEGATION**
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_DELEGATION=0x02`|
 |Stake credential| variable | See stake credential explained above|
 |Pool key hash| 28 | Hash of staking pool public key|
@@ -262,7 +266,7 @@ In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR
 **Data for CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION**
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION=0x03`|
 
 This only describes the initial certificate message. All the data for this certificate are obtained via a series of additional APDU messages; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details.
@@ -270,9 +274,9 @@ This only describes the initial certificate message. All the data for this certi
 **Data for CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT**
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT=0x04`|
-|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
+|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 |Pool key hash| 28 | Hash of staking pool public key|
 
 ### Reward withdrawal
@@ -287,7 +291,7 @@ Withdrawals from reward accounts.
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 | Amount | 8 | Big endian |
 | Stake credential| variable | See stake credential explained above|
 
@@ -303,12 +307,12 @@ Optional.
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Validity interval start| 8| Big endian. Absolute slot number (not relative to epoch)|
 
 ### Mint
 
-Optional. Starts with the top-level data and ends with the confirmation. The messages in between them describe multiasset tokens (one message for each asset group, followed by messages for tokens included in the group). The asset groups and tokens are serialized into their respective CBOR maps in the same order as they are received. Mint uses signed integers for token amounts, to allow for burning instead of creating.
+Optional. Starts with the top-level data and ends with the confirmation. The messages in between them describe multiasset tokens (one message for each asset group, followed by messages for tokens included in the group). The asset groups and tokens are serialized into their respective CBOR maps in the same order as they are received. Mint uses signed integers for token amounts, to allow for burning instead of forging.
 
 **Command (top-level mint data)**
 
@@ -320,7 +324,7 @@ Optional. Starts with the top-level data and ends with the confirmation. The mes
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |Number of asset groups| 4 | Big endian|
 
 **Command (asset group)**
@@ -334,7 +338,7 @@ Optional. Starts with the top-level data and ends with the confirmation. The mes
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |minting policy id | 28 | |
 |number of tokens |  4 | Big endian |
 
@@ -349,10 +353,10 @@ Optional. Starts with the top-level data and ends with the confirmation. The mes
 *Data*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
 |asset name size | 4 | Big endian |
 |asset name |  variable | |
-|amount |  8 | Big endian |
+|amount |  8 | int64, Big endian |
 
 **Command (confirmation)**
 
@@ -384,7 +388,7 @@ The caller is responsible for assembling the actual witness (the format is diffe
 |-----|-----|
 |  P1 | `0x0f` |
 |  P2 | (unused) |
-| data | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
+| data | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 
 **Response**
 
