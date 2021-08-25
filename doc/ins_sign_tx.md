@@ -2,7 +2,7 @@
 
 **Description**
 
-Given transaction inputs and transaction outputs, fee, ttl, staking certificates, reward withdrawals, metadata hash, and validity interval start, construct and sign a transaction.
+Given transaction inputs and transaction outputs, fee, ttl, staking certificates, reward withdrawals, metadata hash, validity interval start, and mint, construct and sign a transaction.
 
 Due to Ledger constraints and potential security implications (parsing errors), Cardano Ledger app uses a custom format for streaming the transaction to be signed. The main rationale behind not streaming directly the (CBOR-encoded) cardano raw transaction to Ledger is the following:
 1) The app needs to support BIP44 change address outputs (Ledger should not display user's own change addresses to the user as this degrades UX).
@@ -27,6 +27,14 @@ Given these requirements in mind, here is how transaction signing works:
 Transaction signing consists of an exchange of several APDUs. During this exchange, Ledger keeps track of its current internal state, so APDU messages have to be sent in the order of increasing P1 values, and the entities in the transaction body are serialized in the same order as the messages are received. The Ledger maintains an internal state and refuses to accept APDU messages that are out of place by aborting the transaction being signed. (This also applies to outputs and pool registration certificates which are serialized in multiple steps.)
 
 By BIP44, we refer here both to the original BIP44 scheme and its Cardano Shelley analogue using 1852' in place of 44'.
+
+Stake credential refers to an object that contains either a script hash or BIP44, which can be used as credentials to staking, depending on the signing mode (paths for ordinary, script hashes for script).
+
+|Field|Length|Value|
+|-----|-----|
+| type | 1 | `KEY_PATH=0x00` / `SCRIPT_HASH=0x01` |
+| credential | variable for BIP44, 28 for script hashes | BIP44 / script hash|
+
 
 **General command**
 
@@ -57,14 +65,15 @@ Initializes signing request.
 | include ttl                               | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
 | include metadata                          | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
 | include validity interval start           | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
-| usecase                                   | 1 | `SIGN_TX_USECASE_ORDINARY_TX=0x03` / `SIGN_TX_USECASE_POOL_REGISTRATION_OWNER=0x04` / `SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR=0x05`|
+| include mint                              | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
+| signing mode                              | 1 | `SIGN_TX_SIGNINGMODE_ORDINARY_TX=0x03` / `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER=0x04` / `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR=0x05` / `SIGN_TX_SIGNINGMODE_SCRIPT_TX=0x06`|
 | number of tx inputs                       | 4 | Big endian |
 | number of tx outputs                      | 4 | Big endian |
 | number of tx certificates                 | 4 | Big endian |
 | number of tx withdrawals                  | 4 | Big endian |
 | number of tx witnesses                    | 4 | Big endian |
 
-The usecase describes whether the transaction contains a pool registration certificate (if not, use `SIGN_TX_USECASE_ORDINARY_TX`) and how the certificate should be treated (see the section on certificates below).
+The signing mode describes whether the transaction contains a pool registration certificate (if not, use `SIGN_TX_SIGNINGMODE_ORDINARY_TX` or `SIGN_TX_SIGNINGMODE_SCRIPT_TX`) and how the certificate should be treated (see the section on certificates below).
 
 ### Auxiliary data
 
@@ -219,10 +228,9 @@ Optional.
 
 ### Certificate
 
-We support 4 types of certificates in ordinary transactions (usecase `SIGN_TX_USECASE_ORDINARY_TX` in the initial APDU message): stake key registration, stake key deregistration, stake delegation and stake pool retirement.
->>>>>>> 01cccd3... operator app
+We support 4 types of certificates in ordinary transactions (signing mode `SIGN_TX_SIGNINGMODE_ORDINARY_TX` in the initial APDU message): stake key registration, stake key deregistration, stake delegation, and stake pool retirement. We support 3 types in script transactions (signing mode `SIGN_TX_SIGNINGMODE_SCRIPT_TX` in the initial APDU message): stake key registration, stake key deregistration, and stake delegation.
 
-In addition, a transaction using `SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR` or `SIGN_TX_USECASE_POOL_REGISTRATION_OWNER` as the usecase contains a single certificate for stake pool registration which must not be accompanied by other certificates or by withdrawals (due to security concerns about cross-witnessing data between them). This certificate is processed by a state sub-machine. Instructions for this sub-machine are given in P2; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details on accepted P2 values and additional APDU messages needed.
+In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR` or `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER` as the signing mode contains a single certificate for stake pool registration which must not be accompanied by other certificates or by withdrawals (due to security concerns about cross-witnessing data between them). This certificate is processed by a state sub-machine. Instructions for this sub-machine are given in P2; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details on accepted P2 values and additional APDU messages needed.
 
 |Field|Value|
 |-----|-----|
@@ -234,21 +242,21 @@ In addition, a transaction using `SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR` or
 |Field| Length | Comments|
 |-----|--------|--------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_REGISTRATION=0x00`|
-|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
+|Stake credential| variable | See stake credential explained above|
 
 **Data for CERTIFICATE_TYPE_STAKE_DEREGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|--------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_DEREGISTRATION=0x01`|
-|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
+|Stake credential| variable | See stake credential explained above|
 
 **Data for CERTIFICATE_TYPE_STAKE_DELEGATION**
 
 |Field| Length | Comments|
 |-----|--------|--------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_DELEGATION=0x02`|
-|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
+|Stake credential| variable | See stake credential explained above|
 |Pool key hash| 28 | Hash of staking pool public key|
 
 **Data for CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION**
@@ -281,7 +289,7 @@ Withdrawals from reward accounts.
 |Field| Length | Comments|
 |-----|--------|--------|
 | Amount | 8 | Big endian |
-| Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
+| Stake credential| variable | See stake credential explained above|
 
 ### Validity interval start
 
@@ -297,6 +305,62 @@ Optional.
 |Field| Length | Comments|
 |-----|--------|--------|
 |Validity interval start| 8| Big endian. Absolute slot number (not relative to epoch)|
+
+### Mint
+
+Optional. Starts with the top-level data and ends with the confirmation. The messages in between them describe multiasset tokens (one message for each asset group, followed by messages for tokens included in the group). The asset groups and tokens are serialized into their respective CBOR maps in the same order as they are received. Mint uses signed integers for token amounts, to allow for burning instead of creating.
+
+**Command (top-level mint data)**
+
+|Field|Value|
+|-----|-----|
+|  P1 | `0x0b` |
+|  P2 | `0x30` |
+
+*Data*
+
+|Field| Length | Comments|
+|-----|--------|--------|
+|Number of asset groups| 4 | Big endian|
+
+**Command (asset group)**
+
+|Field|Value|
+|-----|-----|
+|  P1 | `0x0b` |
+|  P2 | `0x31` |
+| data | see below |
+
+*Data*
+
+|Field| Length | Comments|
+|-----|--------|--------|
+|minting policy id | 28 | |
+|number of tokens |  4 | Big endian |
+
+**Command (token)**
+
+|Field|Value|
+|-----|-----|
+|  P1 | `0x0b` |
+|  P2 | `0x32` |
+| data | see below |
+
+*Data*
+
+|Field| Length | Comments|
+|-----|--------|--------|
+|asset name size | 4 | Big endian |
+|asset name |  variable | |
+|amount |  8 | Big endian |
+
+**Command (confirmation)**
+
+|Field|Value|
+|-----|-----|
+|  P1 | `0x0b` |
+|  P2 | `0x33` |
+| data | (none) |
 
 ### Final confirmation
 
