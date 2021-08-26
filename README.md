@@ -31,7 +31,7 @@ Make sure you have:
 - SDK >= 2.0.0
 - MCU >= 1.11
 
-Environment setup and developer documentation is sufficiently provided in Ledger’s [Read the Docs](https://ledger.readthedocs.io/en/latest/userspace/debugging.html).
+Environment setup and developer documentation is sufficiently provided in Ledger’s [Read the Docs](https://developers.ledger.com/docs/nano-app/quickstart/).
 
 You want a debug version of the MCU firmware (but it blocks SDK firmware updates, so for the purpose of upgrading SDK, replace it temporarily with a non-debug one). Instructions for swapping MCU versions: https://github.com/LedgerHQ/ledger-dev-doc/blob/master/source/userspace/debugging.rst
 
