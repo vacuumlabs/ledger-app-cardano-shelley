@@ -1417,7 +1417,6 @@ static void _addWithdrawalToTxHash()
 		);
 		break;
 	case STAKE_CREDENTIAL_SCRIPT_HASH:
-		//TODO KoMa
 		constructRewardAddressFromHash(
 		        ctx->commonTxData.networkId,
 		        REWARD_HASH_SOURCE_SCRIPT,

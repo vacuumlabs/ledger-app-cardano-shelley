@@ -51,7 +51,7 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 
 typedef enum {
 	KEY_REFERENCE_PATH = 1,
-	KEY_REFERENCE_HASH = 2,	//TODO KoMa KEY??? reference?
+	KEY_REFERENCE_HASH = 2,
 } key_reference_type_t;
 
 

@@ -229,7 +229,6 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 			break;
 		}
 	} else {
-		//TODO work out UI machines to handle PROMPT/WARN
 		WARN();
 	}
 

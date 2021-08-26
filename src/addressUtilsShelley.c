@@ -474,17 +474,11 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 		return base58_encode(address, addressSize, out, outSize);
 
 	case REWARD_KEY:
+	case REWARD_SCRIPT:
 		if (networkId == TESTNET_NETWORK_ID)
 			return bech32_encode("stake_test", address, addressSize, out, outSize);
 		else
 			return bech32_encode("stake", address, addressSize, out, outSize);
-
-	case REWARD_SCRIPT:
-		// TODO how would a stake_script HRP look like?
-		if (networkId == TESTNET_NETWORK_ID)
-			return bech32_encode("stake_shared_test", address, addressSize, out, outSize);
-		else
-			return bech32_encode("stake_shared", address, addressSize, out, outSize);
 
 	default: // all other shelley addresses
 		switch (determineSpendingChoice(addressType)) {

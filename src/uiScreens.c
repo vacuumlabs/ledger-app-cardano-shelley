@@ -166,8 +166,6 @@ void ui_displayGetPublicKeyPathScreen(
 		return;
 	}
 
-	// TODO FIXME what happens for multisig?
-
 	default:
 		ui_displayPathScreen("Export public key", path,	callback);
 		return;

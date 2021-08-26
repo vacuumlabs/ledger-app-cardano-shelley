@@ -96,7 +96,7 @@ static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wi
 }
 
 enum {
-	HANDLE_ASSET_GROUP_STEP_DISPLAY = 800, // TODO
+	HANDLE_ASSET_GROUP_STEP_DISPLAY = 800,
 	HANDLE_ASSET_GROUP_STEP_RESPOND,
 	HANDLE_ASSET_GROUP_STEP_INVALID,
 };
@@ -161,7 +161,7 @@ static void signTxMint_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wire
 }
 
 enum {
-	HANDLE_TOKEN_STEP_DISPLAY_NAME = 800, // TODO
+	HANDLE_TOKEN_STEP_DISPLAY_NAME = 800,
 	HANDLE_TOKEN_STEP_DISPLAY_AMOUNT,
 	HANDLE_TOKEN_STEP_RESPOND,
 	HANDLE_TOKEN_STEP_INVALID,
@@ -231,7 +231,7 @@ static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataS
 
 	{
 		// select UI step
-		switch (subctx->mintSecurityPolicy) {	//TODO where
+		switch (subctx->mintSecurityPolicy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOKEN_STEP_DISPLAY_NAME);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TOKEN_STEP_RESPOND);

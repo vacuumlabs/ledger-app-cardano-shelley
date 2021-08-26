@@ -1124,8 +1124,6 @@ void txHashBuilder_addMint_token(
         int64_t amount
 )
 {
-	//  TODO int64 -> uint64 conversion should work fine ?
-	// 	  BUILDER_APPEND_CBOR
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         TX_HASH_BUILDER_IN_MINT_TOKEN,
 	         TX_HASH_BUILDER_IN_MINT_ASSET_GROUP,
