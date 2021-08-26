@@ -5,6 +5,31 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+
+## [3.0.0](TBD) - [TBD]
+
+Script elements in transactions and support for native scripts
+
+### Added
+
+- support for multisig key derivation as described in [CIP 1854 - Multi-signatures HD Wallets](https://cips.cardano.org/cips/cip1854/)
+- native script hash derivation call
+- support for mint field in transaction body and corresponding key derivation paths from [CIP 1855 - Forging policy keys for HD Wallets](https://cips.cardano.org/cips/cip1855/)
+- support for address types with script hashes (all Shelley address types are now supported)
+- support for script elements in trasactions (certficates etc.) within a new transaction signing mode
+
+### Changed
+
+- serialization of certain APDU messages breaks backwards compatibility (mostly because paths were replaced with stake credentials)
+- the limit on number of witnesses based on transaction body elements has been dropped
+
+
+### Fixed
+
+- public keys are now displayed in bech32 instead of hex strings
+- certain assertions have been turned into proper validations
+
+
 ## [2.4.1](https://github.com/LedgerHQ/app-cardano/compare/2.3.2...LedgerHQ:2.4.1) - [June 29th 2021]
 
 Support for signing pool registrations by operators.
