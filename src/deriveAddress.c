@@ -75,29 +75,32 @@ static void deriveAddress_return_ui_runStep()
 		);
 	}
 	UI_STEP(RETURN_UI_STEP_SPENDING_PATH) {
-		switch (determineSpendingChoice(ctx->addressParams.type)) {
-		case SPENDING_PATH:
-			ui_displayPathScreen(
-			        "Export address",
-			        &ctx->addressParams.spendingKeyPath,
-			        this_fn
-			);
-			break;
-		case SPENDING_SCRIPT_HASH:
-			ui_displayHexBufferScreen(
-			        "Script hash",
-			        ctx->addressParams.spendingScriptHash,
-			        SCRIPT_HASH_LENGTH,
-			        this_fn);
-			break;
-		case SPENDING_NONE:
-			// TODO ADDRDERIV what to do for reward addresses?
-			ui_displayUint64Screen("TODO", 0xdeadbeef, this_fn);
-			break;
-		default:
-			ASSERT(false);
-			break;
+		if (!ui_displaySpendingInfoScreen(&ctx->addressParams, "Address path", "Script hash", this_fn)) {
+			UI_STEP_JUMP(RETURN_UI_STEP_STAKING_INFO);
 		}
+		// switch (determineSpendingChoice(ctx->addressParams.type)) {
+		// case SPENDING_PATH:
+		// 	ui_displayPathScreen(
+		// 	        "Export address",
+		// 	        &ctx->addressParams.spendingKeyPath,
+		// 	        this_fn
+		// 	);
+		// 	break;
+		// case SPENDING_SCRIPT_HASH:
+		// 	ui_displayHexBufferScreen(
+		// 	        "Script hash",
+		// 	        ctx->addressParams.spendingScriptHash,
+		// 	        SCRIPT_HASH_LENGTH,
+		// 	        this_fn);
+		// 	break;
+		// case SPENDING_NONE:
+		// 	// TODO ADDRDERIV what to do for reward addresses?
+		// 	ui_displayUint64Screen("TODO", 0xdeadbeef, this_fn);
+		// 	break;
+		// default:
+		// 	ASSERT(false);
+		// 	break;
+		// }
 	}
 	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
 		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
@@ -176,29 +179,32 @@ static void deriveAddress_display_ui_runStep()
 		);
 	}
 	UI_STEP(DISPLAY_UI_SPENDING_INFO) {
-		switch(determineSpendingChoice(ctx->addressParams.type)) {
-		case SPENDING_PATH:
-			ui_displayPathScreen(
-			        "Address path",
-			        &ctx->addressParams.spendingKeyPath,
-			        this_fn
-			);
-			break;
-		case SPENDING_SCRIPT_HASH:
-			ui_displayHexBufferScreen(
-			        "Script hash",
-			        ctx->addressParams.spendingScriptHash,
-			        SCRIPT_HASH_LENGTH,
-			        this_fn);
-			break;
-		case SPENDING_NONE:
-			// TODO ADDRDERIV what to display here for reward?
-			ui_displayUint64Screen("TODO", 0xdeadbeef, this_fn);
-			break;
-		default:
-			ASSERT(false);
-			break;
+		if (!ui_displaySpendingInfoScreen(&ctx->addressParams, "Address path", "Script hash", this_fn)) {
+			UI_STEP_JUMP(RETURN_UI_STEP_STAKING_INFO);
 		}
+		// switch(determineSpendingChoice(ctx->addressParams.type)) {
+		// case SPENDING_PATH:
+		// 	ui_displayPathScreen(
+		// 	        "Address path",
+		// 	        &ctx->addressParams.spendingKeyPath,
+		// 	        this_fn
+		// 	);
+		// 	break;
+		// case SPENDING_SCRIPT_HASH:
+		// 	ui_displayHexBufferScreen(
+		// 	        "Script hash",
+		// 	        ctx->addressParams.spendingScriptHash,
+		// 	        SCRIPT_HASH_LENGTH,
+		// 	        this_fn);
+		// 	break;
+		// case SPENDING_NONE:
+		// 	// TODO ADDRDERIV what to display here for reward?
+		// 	ui_displayUint64Screen("TODO", 0xdeadbeef, this_fn);
+		// 	break;
+		// default:
+		// 	ASSERT(false);
+		// 	break;
+		// }
 	}
 	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
 		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);

@@ -55,6 +55,14 @@ void ui_displayRewardAccountScreen(
 );
 
 __noinline_due_to_stack__
+bool ui_displaySpendingInfoScreen(
+        const addressParams_t* addressParams,
+        const char* pathText,
+        const char* scriptText,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
 void ui_displayStakingInfoScreen(
         const addressParams_t* addressParams,
         ui_callback_fn_t callback

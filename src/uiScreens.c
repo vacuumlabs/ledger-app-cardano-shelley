@@ -328,6 +328,42 @@ void ui_displayRewardAccountScreen(
 	);
 }
 
+bool ui_displaySpendingInfoScreen(
+        const addressParams_t* addressParams,
+		const char* pathText,
+		const char* scriptText,
+        ui_callback_fn_t callback
+)
+{
+	char spendingInfo[120];
+	explicit_bzero(spendingInfo, SIZEOF(spendingInfo));
+	switch (determineSpendingChoice(addressParams->type)) {
+	case SPENDING_PATH: {
+		ui_displayPathScreen(
+				pathText,
+				&addressParams->spendingKeyPath,
+				callback
+		);
+		break;
+	}
+	case SPENDING_SCRIPT_HASH: {
+		ui_displayHexBufferScreen(
+				scriptText,
+				addressParams->spendingScriptHash,
+				SCRIPT_HASH_LENGTH,
+				callback
+		);
+		break;
+	}
+	case SPENDING_NONE: {
+		return false;
+	}
+	default:
+		ASSERT(false);
+		return false;
+	}
+	return true;
+}
 
 static const char STAKING_HEADING_PATH[]    = "Staking key path: ";
 static const char STAKING_HEADING_HASH[]    = "Staking key hash: ";

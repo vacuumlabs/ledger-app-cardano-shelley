@@ -201,7 +201,10 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
-		ui_displayPathScreen("Send to address", &subctx->stateData.output.params.spendingKeyPath, this_fn);
+		if (!ui_displaySpendingInfoScreen(&subctx->stateData.output.params, "Send to address", "Send to script", this_fn)) {
+			UI_STEP_JUMP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO);
+		}
+		// ui_displayPathScreen("Send to address", &subctx->stateData.output.params.spendingKeyPath, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO) {
 		ui_displayStakingInfoScreen(&subctx->stateData.output.params, this_fn);
