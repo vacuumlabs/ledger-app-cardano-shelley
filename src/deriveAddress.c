@@ -129,7 +129,7 @@ static void deriveAddress_display_ui_runStep();
 enum {
 	DISPLAY_UI_STEP_WARNING = 200,
 	DISPLAY_UI_STEP_INSTRUCTIONS,
-	DISPLAY_UI_SPENDING_INFO,
+	DISPLAY_UI_STEP_SPENDING_INFO,
 	DISPLAY_UI_STEP_STAKING_INFO,
 	DISPLAY_UI_STEP_ADDRESS,
 	DISPLAY_UI_STEP_RESPOND,
@@ -178,9 +178,9 @@ static void deriveAddress_display_ui_runStep()
 		        this_fn
 		);
 	}
-	UI_STEP(DISPLAY_UI_SPENDING_INFO) {
+	UI_STEP(DISPLAY_UI_STEP_SPENDING_INFO) {
 		if (!ui_displaySpendingInfoScreen(&ctx->addressParams, "Address path", "Script hash", this_fn)) {
-			UI_STEP_JUMP(RETURN_UI_STEP_STAKING_INFO);
+			UI_STEP_JUMP(DISPLAY_UI_STEP_STAKING_INFO);
 		}
 		// switch(determineSpendingChoice(ctx->addressParams.type)) {
 		// case SPENDING_PATH:
@@ -206,7 +206,7 @@ static void deriveAddress_display_ui_runStep()
 		// 	break;
 		// }
 	}
-	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
+	UI_STEP(DISPLAY_UI_STEP_STAKING_INFO) {
 		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
 	}
 	UI_STEP(DISPLAY_UI_STEP_ADDRESS) {
