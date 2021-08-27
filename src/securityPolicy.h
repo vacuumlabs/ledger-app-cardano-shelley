@@ -29,8 +29,11 @@ security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
         uint8_t networkId,
         uint32_t protocolMagic,
+        uint16_t numInputs,
         uint16_t numOutputs,
-        uint16_t numWithdrawals
+        uint16_t numCertificates,
+        uint16_t numWithdrawals,
+        bool includeMint
 );
 
 security_policy_t policyForSignTxInput();
