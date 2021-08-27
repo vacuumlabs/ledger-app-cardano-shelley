@@ -539,7 +539,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 		VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 		params->networkId = parse_u1be(view);
 		TRACE("Network id: 0x%x", params->networkId);
-		VALIDATE(params->networkId <= 0b1111, ERR_INVALID_DATA);
+		VALIDATE(isValidNetworkId(params->networkId), ERR_INVALID_DATA);
 	}
 	// spending part
 	switch (params->type) {
