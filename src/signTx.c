@@ -465,31 +465,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		VALIDATE(ctx->numCertificates <= SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
 		VALIDATE(ctx->numWithdrawals <= SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
 
-		switch (ctx->commonTxData.txSigningMode) {
-
-		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-			// necessary to avoid intermingling witnesses from several certs
-			VALIDATE(ctx->numCertificates == 1, ERR_INVALID_DATA);
-
-			// witnesses for owners and withdrawals are the same
-			// we forbid withdrawals so that users cannot be tricked into witnessing
-			// something unintentionally (e.g. an owner given by the staking key hash)
-			VALIDATE(ctx->numWithdrawals == 0, ERR_INVALID_DATA);
-
-			// mint must not be combined with pool registration certificates
-			VALIDATE(ctx->includeMint == false, ERR_INVALID_DATA);
-			break;
-
-		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
-			// no additional validation
-			break;
-
-		default:
-			ASSERT(false);
-		}
-
 		// Current code design assumes at least one input.
 		// If this is to be relaxed, stage switching logic needs to be re-visited.
 		// However, an input is needed for certificate replay protection (enforced by node),
@@ -501,8 +476,11 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	                                   ctx->commonTxData.txSigningMode,
 	                                   ctx->commonTxData.networkId,
 	                                   ctx->commonTxData.protocolMagic,
+	                                   ctx->numInputs,
 	                                   ctx->numOutputs,
-	                                   ctx->numWithdrawals
+	                                   ctx->numCertificates,
+	                                   ctx->numWithdrawals,
+	                                   ctx->includeMint
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);

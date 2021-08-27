@@ -59,6 +59,10 @@ bool is_tx_network_verifiable(
 	}
 }
 
+// useful shortcuts
+
+// WARNING: unless you are doing something exceptional,
+// policies must come in the order DENY > WARN > PROMPT/SHOW > ALLOW
 
 #define DENY()                          return POLICY_DENY;
 #define DENY_IF(expr)      if (expr)    return POLICY_DENY;
@@ -275,13 +279,43 @@ security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
         uint8_t networkId,
         uint32_t protocolMagic,
+        uint16_t numInputs MARK_UNUSED,
         uint16_t numOutputs,
-        uint16_t numWithdrawals
+        uint16_t numCertificates,
+        uint16_t numWithdrawals,
+        bool includeMint
 )
 {
 	// Deny shelley mainnet with weird byron protocol magic
 	DENY_IF(networkId == MAINNET_NETWORK_ID && protocolMagic != MAINNET_PROTOCOL_MAGIC);
 	// Note: testnets can still use byron mainnet protocol magic so we can't deny the opposite direction
+
+	// certain combinations of tx body elements are forbidden
+	// because of potential cross-witnessing
+	switch (txSigningMode) {
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// necessary to avoid intermingling witnesses from several certs
+		DENY_UNLESS(numCertificates == 1);
+
+		// witnesses for owners and withdrawals are the same
+		// we forbid withdrawals so that users cannot be tricked into witnessing
+		// something unintentionally (e.g. an owner given by the staking key hash)
+		DENY_UNLESS(numWithdrawals == 0);
+
+		// mint must not be combined with pool registration certificates
+		DENY_IF(includeMint);
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		// no additional validation
+		break;
+
+	default:
+		ASSERT(false);
+	}
 
 	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, txSigningMode));
 
