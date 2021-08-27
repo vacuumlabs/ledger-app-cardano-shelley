@@ -83,6 +83,29 @@ bool is_tx_network_verifiable(
 #define SHOW_UNLESS(expr)  if (!(expr)) return POLICY_SHOW_BEFORE_RESPONSE;
 
 
+security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
+{
+	switch (bip44_classifyPath(path)) {
+
+	case PATH_ORDINARY_ACCOUNT:
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+
+	case PATH_MULTISIG_ACCOUNT:
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+
+	case PATH_MINT_KEY:
+
+	case PATH_POOL_COLD_KEY:
+
+		ALLOW();
+
+	default:
+		DENY();
+	}
+}
+
 security_policy_t policyForGetPublicKeysInit(size_t numPaths)
 {
 	PROMPT_IF(numPaths > 1);

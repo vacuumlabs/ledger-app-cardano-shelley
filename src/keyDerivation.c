@@ -11,29 +11,7 @@
 #include "utils.h"
 #include "endian.h"
 #include "cardano.h"
-
-static bool _isPathAllowed(const bip44_path_t* pathSpec)
-{
-	switch (bip44_classifyPath(pathSpec)) {
-
-	case PATH_ORDINARY_ACCOUNT:
-	case PATH_ORDINARY_SPENDING_KEY:
-	case PATH_ORDINARY_STAKING_KEY:
-
-	case PATH_MULTISIG_ACCOUNT:
-	case PATH_MULTISIG_SPENDING_KEY:
-	case PATH_MULTISIG_STAKING_KEY:
-
-	case PATH_MINT_KEY:
-
-	case PATH_POOL_COLD_KEY:
-
-		return true;
-
-	default:
-		return false;
-	}
-}
+#include "securityPolicy.h"
 
 void derivePrivateKey(
         const bip44_path_t* pathSpec,
@@ -41,11 +19,11 @@ void derivePrivateKey(
         privateKey_t* privateKey
 )
 {
-	if (!_isPathAllowed(pathSpec)) {
-		THROW(ERR_INVALID_BIP44_PATH);
-	}
 	// Sanity check
 	ASSERT(pathSpec->length <= ARRAY_LEN(pathSpec->path));
+
+	// if the path is invalid, it's a bug in previous validation
+	ASSERT(policyForDerivePrivateKey(pathSpec) != POLICY_DENY);
 
 	uint8_t privateKeyRawBuffer[64];
 
