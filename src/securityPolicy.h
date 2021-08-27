@@ -15,6 +15,8 @@ bool is_tx_network_verifiable(
         uint16_t numWithdrawals
 );
 
+security_policy_t policyForDerivePrivateKey(const bip44_path_t* path);
+
 security_policy_t policyForGetPublicKeysInit(size_t numPaths);
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec);
 security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec);
