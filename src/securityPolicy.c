@@ -547,6 +547,25 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	DENY(); // should not be reached
 }
 
+security_policy_t policyForSignTxStakePoolRegistrationInit(
+        sign_tx_signingmode_t txSigningMode,
+        size_t numOwners,
+        size_t numRelays MARK_UNUSED
+)
+{
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// there should be exactly one owner given by path for which we provide a witness
+		DENY_IF(numOwners == 0);
+		break;
+
+	default:
+		break;
+	}
+
+	ALLOW();
+}
+
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
         sign_tx_signingmode_t txSigningMode,
         const pool_id_t* poolId

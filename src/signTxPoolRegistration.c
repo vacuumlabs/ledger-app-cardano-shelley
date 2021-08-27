@@ -203,17 +203,15 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 		ASSERT_TYPE(subctx->numRelays, uint16_t);
 		subctx->numOwners = (uint16_t) numOwners;
 		subctx->numRelays = (uint16_t) numRelays;
-
-		switch (commonTxData->txSigningMode) {
-		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-			// there should be exactly one owner given by path for which we provide a witness
-			VALIDATE(subctx->numOwners >= 1, ERR_INVALID_DATA);
-			break;
-
-		default:
-			// nothing to validate in other cases
-			break;
-		}
+	}
+	{
+		security_policy_t policy = policyForSignTxStakePoolRegistrationInit(
+		                                   commonTxData->txSigningMode,
+		                                   subctx->numOwners,
+		                                   subctx->numRelays
+		                           );
+		TRACE("Policy: %d", (int) policy);
+		ENSURE_NOT_DENIED(policy);
 	}
 	{
 		txHashBuilder_poolRegistrationCertificate_enter(
