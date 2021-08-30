@@ -607,7 +607,7 @@ static void _parsePoolRewardAccount(read_view_t* view)
 	switch (rewardAccount->keyReferenceType) {
 
 	case KEY_REFERENCE_HASH: {
-		STATIC_ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account size");
+		STATIC_ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account hash buffer size");
 		view_copyWireToBuffer(rewardAccount->hashBuffer, view, REWARD_ACCOUNT_SIZE);
 		TRACE_BUFFER(rewardAccount->hashBuffer, SIZEOF(rewardAccount->hashBuffer));
 
