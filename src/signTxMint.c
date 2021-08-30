@@ -7,18 +7,23 @@
 #include "textUtils.h"
 #include "securityPolicy.h"
 
-static mint_context_t* subctx = &(instructionState.signTxContext.txPartCtx.body_ctx.stageContext.mint_subctx);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
-static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txPartCtx.body_ctx.txHashBuilder);
+
+static mint_context_t* accessSubcontext()
+{
+	return &BODY_CTX->stageContext.mint_subctx;
+}
 
 static inline void CHECK_STATE(sign_tx_mint_state_t expected)
 {
+	mint_context_t* subctx = accessSubcontext();
 	TRACE("Mint submachine state: current %d, expected %d", subctx->state, expected);
 	VALIDATE(subctx->state == expected, ERR_INVALID_STATE);
 }
 
 static inline void advanceState()
 {
+	mint_context_t* subctx = accessSubcontext();
 	TRACE("Advancing mint state from: %d", subctx->state);
 
 	switch (subctx->state) {
@@ -73,6 +78,7 @@ static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wi
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+	mint_context_t* subctx = accessSubcontext();
 	{
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
@@ -87,7 +93,7 @@ static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wi
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
-	txHashBuilder_addMint_topLevelData(txHashBuilder, subctx->numAssetGroups);
+	txHashBuilder_addMint_topLevelData(&BODY_CTX->txHashBuilder, subctx->numAssetGroups);
 	subctx->mintSecurityPolicy = policyForSignTxMintInit(commonTxData->txSigningMode);
 	ENSURE_NOT_DENIED(subctx->mintSecurityPolicy);
 
@@ -103,6 +109,7 @@ enum {
 
 static void signTxMint_handleAssetGroup_ui_runStep()
 {
+	mint_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 
 	ui_callback_fn_t* this_fn = signTxMint_handleAssetGroup_ui_runStep;
@@ -125,6 +132,7 @@ static void signTxMint_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wire
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	mint_context_t* subctx = accessSubcontext();
 	{
 		token_group_t* tokenGroup = &subctx->stateData.tokenGroup;
 
@@ -160,7 +168,7 @@ static void signTxMint_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wire
 		// add tokengroup to tx
 		TRACE("Adding token group hash to tx hash");
 		txHashBuilder_addMint_tokenGroup(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.tokenGroup.policyId, MINTING_POLICY_ID_SIZE,
 		        subctx->numTokens
 		);
@@ -181,6 +189,7 @@ enum {
 
 static void signTxMint_handleToken_ui_runStep()
 {
+	mint_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTxMint_handleToken_ui_runStep;
 
@@ -221,6 +230,7 @@ static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataS
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	mint_context_t* subctx = accessSubcontext();
 	{
 		mint_token_amount_t* token = &subctx->stateData.token;
 
@@ -267,7 +277,7 @@ static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataS
 		// add tokengroup to tx
 		TRACE("Adding token group hash to tx hash");
 		txHashBuilder_addMint_token(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
 		        subctx->stateData.token.amount
 		);
@@ -285,6 +295,7 @@ enum {
 
 static void signTxMint_handleConfirm_ui_runStep()
 {
+	mint_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTxMint_handleConfirm_ui_runStep;
 
@@ -319,6 +330,7 @@ static void signTxMint_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, si
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
+	mint_context_t* subctx = accessSubcontext();
 	security_policy_t policy = policyForSignTxMintConfirm(subctx->mintSecurityPolicy);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -362,11 +374,10 @@ bool signTxMint_isValidInstruction(uint8_t p2)
 void signTxMint_init()
 {
 	{
-		ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.txPartCtx.body_ctx);
-		explicit_bzero(&txBodyCtx->stageContext, SIZEOF(txBodyCtx->stageContext));
+		explicit_bzero(&BODY_CTX->stageContext, SIZEOF(BODY_CTX->stageContext));
 	}
 
-	subctx->state = STATE_MINT_TOP_LEVEL_DATA;
+	accessSubcontext()->state = STATE_MINT_TOP_LEVEL_DATA;
 }
 
 void signTxMint_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -398,6 +409,7 @@ void signTxMint_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataS
 
 bool signTxMint_isFinished()
 {
+	mint_context_t* subctx = accessSubcontext();
 	TRACE("Mint submachine state: %d", subctx->state);
 	// we are also asserting that the state is valid
 	switch (subctx->state) {

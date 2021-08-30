@@ -10,16 +10,16 @@
 #include "securityPolicy.h"
 #include "messageSigning.h"
 
-// we want to distinguish the two state machines to avoid potential confusion:
-// ctx / subctx
-// stage / state
-// from ctx, we only make the necessary parts available to avoid mistaken overwrites
-static catalyst_registration_context_t* subctx = &(instructionState.signTxContext.txPartCtx.aux_data_ctx.stageContext.catalyst_registration_subctx);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
-static aux_data_hash_builder_t* auxDataHashBuilder = &(instructionState.signTxContext.txPartCtx.aux_data_ctx.auxDataHashBuilder);
+
+static inline catalyst_registration_context_t* accessSubContext()
+{
+	return &AUX_DATA_CTX->stageContext.catalyst_registration_subctx;
+}
 
 bool signTxCatalystRegistration_isFinished()
 {
+	const catalyst_registration_context_t* subctx = accessSubContext();
 	TRACE("Catalyst registration submachine state: %d", subctx->state);
 	// we are also asserting that the state is valid
 	switch (subctx->state) {
@@ -40,24 +40,21 @@ bool signTxCatalystRegistration_isFinished()
 
 void signTxCatalystRegistration_init()
 {
-	{
-		ins_sign_tx_aux_data_context_t* auxDataCtx = &(instructionState.signTxContext.txPartCtx.aux_data_ctx);
-		explicit_bzero(&auxDataCtx->stageContext, SIZEOF(auxDataCtx->stageContext));
-	}
+	explicit_bzero(&AUX_DATA_CTX->stageContext, SIZEOF(AUX_DATA_CTX->stageContext));
+	auxDataHashBuilder_init(&AUX_DATA_CTX->auxDataHashBuilder);
 
-	auxDataHashBuilder_init(auxDataHashBuilder);
-
-	subctx->state = STATE_CATALYST_REGISTRATION_VOTING_KEY;
+	accessSubContext()->state = STATE_CATALYST_REGISTRATION_VOTING_KEY;
 }
 
 static inline void CHECK_STATE(sign_tx_catalyst_registration_state_t expected)
 {
-	TRACE("Catalyst voting registration submachine state: current %d, expected %d", subctx->state, expected);
-	VALIDATE(subctx->state == expected, ERR_INVALID_STATE);
+	TRACE("Catalyst voting registration submachine state: current %d, expected %d", accessSubContext()->state, expected);
+	VALIDATE(accessSubContext()->state == expected, ERR_INVALID_STATE);
 }
 
 static inline void advanceState()
 {
+	catalyst_registration_context_t* subctx = accessSubContext();
 	TRACE("Advancing Catalyst registration state from: %d", subctx->state);
 
 	switch (subctx->state) {
@@ -99,6 +96,7 @@ enum {
 
 static void signTxCatalystRegistration_handleVotingKey_ui_runStep()
 {
+	catalyst_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleVotingKey_ui_runStep;
@@ -132,6 +130,7 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	catalyst_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 	}
@@ -149,6 +148,7 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 		}
 	}
 	{
+		aux_data_hash_builder_t* auxDataHashBuilder = &AUX_DATA_CTX->auxDataHashBuilder;
 		auxDataHashBuilder_catalystRegistration_enter(auxDataHashBuilder);
 		auxDataHashBuilder_catalystRegistration_enterPayload(auxDataHashBuilder);
 		auxDataHashBuilder_catalystRegistration_addVotingKey(
@@ -187,6 +187,7 @@ enum {
 
 static void signTxCatalystRegistration_handleStakingKey_ui_runStep()
 {
+	catalyst_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleStakingKey_ui_runStep;
@@ -222,6 +223,7 @@ static void signTxCatalystRegistration_handleStakingKeyAPDU(uint8_t* wireDataBuf
 		CHECK_STATE(STATE_CATALYST_REGISTRATION_STAKING_KEY);
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	catalyst_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stakingKeyPath, SIZEOF(subctx->stakingKeyPath));
 	}
@@ -250,7 +252,7 @@ static void signTxCatalystRegistration_handleStakingKeyAPDU(uint8_t* wireDataBuf
 		extendedPublicKey_t extStakingPubKey;
 		deriveExtendedPublicKey(&subctx->stakingKeyPath, &extStakingPubKey);
 		auxDataHashBuilder_catalystRegistration_addStakingKey(
-		        auxDataHashBuilder, extStakingPubKey.pubKey, SIZEOF(extStakingPubKey.pubKey)
+		        &AUX_DATA_CTX->auxDataHashBuilder, extStakingPubKey.pubKey, SIZEOF(extStakingPubKey.pubKey)
 		);
 	}
 
@@ -282,6 +284,7 @@ enum {
 __noinline_due_to_stack__
 static void signTxCatalystRegistration_handleVotingRewardsAddress_addressParams_ui_runStep()
 {
+	catalyst_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleVotingRewardsAddress_addressParams_ui_runStep;
@@ -328,6 +331,7 @@ static void signTxCatalystRegistration_handleVotingRewardsAddressAPDU(uint8_t* w
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	catalyst_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(
 		        &subctx->stateData.votingRewardsAddressParams,
@@ -363,7 +367,7 @@ static void signTxCatalystRegistration_handleVotingRewardsAddressAPDU(uint8_t* w
 		ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 
 		auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
-		        auxDataHashBuilder, addressBuffer, addressSize
+		        &AUX_DATA_CTX->auxDataHashBuilder, addressBuffer, addressSize
 		);
 	}
 
@@ -393,6 +397,7 @@ enum {
 
 static void signTxCatalystRegistration_handleNonce_ui_runStep()
 {
+	catalyst_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleNonce_ui_runStep;
@@ -422,6 +427,7 @@ static void signTxCatalystRegistration_handleNonceAPDU(uint8_t* wireDataBuffer, 
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	catalyst_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 	}
@@ -436,7 +442,7 @@ static void signTxCatalystRegistration_handleNonceAPDU(uint8_t* wireDataBuffer, 
 		);
 	}
 	{
-		auxDataHashBuilder_catalystRegistration_addNonce(auxDataHashBuilder, subctx->stateData.nonce);
+		auxDataHashBuilder_catalystRegistration_addNonce(&AUX_DATA_CTX->auxDataHashBuilder, subctx->stateData.nonce);
 	}
 
 	security_policy_t policy = policyForCatalystRegistrationNonce();
@@ -470,6 +476,7 @@ enum {
 
 static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 {
+	catalyst_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxCatalystRegistration_handleConfirm_ui_runStep;
@@ -518,7 +525,7 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
-
+	catalyst_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 	}
@@ -529,6 +536,7 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 	}
 
 	{
+		aux_data_hash_builder_t* auxDataHashBuilder = &AUX_DATA_CTX->auxDataHashBuilder;
 		{
 			uint8_t votingPayloadHashBuffer[CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH];
 			auxDataHashBuilder_catalystRegistration_finalizePayload(auxDataHashBuilder, votingPayloadHashBuffer, AUX_DATA_HASH_LENGTH);

@@ -13,18 +13,17 @@
 #include "securityPolicy.h"
 #include "signTxPoolRegistration.h"
 
-// we want to distinguish the two state machines to avoid potential confusion:
-// ctx / subctx
-// stage / state
-// from ctx, we only make the necessary parts available to avoid mistaken overwrites
-static pool_registration_context_t* subctx = &(instructionState.signTxContext.txPartCtx.body_ctx.stageContext.pool_registration_subctx);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
-static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txPartCtx.body_ctx.txHashBuilder);
+
+static pool_registration_context_t* accessSubcontext()
+{
+	return &BODY_CTX->stageContext.pool_registration_subctx;
+}
 
 bool signTxPoolRegistration_isFinished()
 {
 	// we are also asserting that the state is valid
-	switch (subctx->state) {
+	switch (accessSubcontext()->state) {
 	case STAKE_POOL_REGISTRATION_FINISHED:
 		return true;
 
@@ -46,21 +45,21 @@ bool signTxPoolRegistration_isFinished()
 
 void signTxPoolRegistration_init()
 {
-	{
-		ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.txPartCtx.body_ctx);
-		explicit_bzero(&txBodyCtx->stageContext, SIZEOF(txBodyCtx->stageContext));
-	}
-	subctx->state = STAKE_POOL_REGISTRATION_INIT;
+	explicit_bzero(&BODY_CTX->stageContext, SIZEOF(BODY_CTX->stageContext));
+
+	accessSubcontext()->state = STAKE_POOL_REGISTRATION_INIT;
 }
 
 static inline void CHECK_STATE(sign_tx_pool_registration_state_t expected)
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("Pool registration certificate stage: current %d, expected %d", subctx->state, expected);
 	VALIDATE(subctx->state == expected, ERR_INVALID_STATE);
 }
 
 static inline void advanceState()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("Advancing pool registration certificate state from: %d", subctx->state);
 
 	switch (subctx->state) {
@@ -82,7 +81,7 @@ static inline void advanceState()
 		break;
 
 	case STAKE_POOL_REGISTRATION_REWARD_ACCOUNT:
-		txHashBuilder_addPoolRegistrationCertificate_enterOwners(txHashBuilder);
+		txHashBuilder_addPoolRegistrationCertificate_enterOwners(&BODY_CTX->txHashBuilder);
 		subctx->state = STAKE_POOL_REGISTRATION_OWNERS;
 
 		if (subctx->numOwners > 0) {
@@ -94,7 +93,7 @@ static inline void advanceState()
 	case STAKE_POOL_REGISTRATION_OWNERS:
 		ASSERT(subctx->currentOwner == subctx->numOwners);
 
-		txHashBuilder_addPoolRegistrationCertificate_enterRelays(txHashBuilder);
+		txHashBuilder_addPoolRegistrationCertificate_enterRelays(&BODY_CTX->txHashBuilder);
 		subctx->state = STAKE_POOL_REGISTRATION_RELAYS;
 
 		if (subctx->numRelays > 0) {
@@ -135,6 +134,7 @@ enum {
 
 static void handlePoolInit_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolInit_ui_runStep;
@@ -165,6 +165,7 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	pool_registration_context_t* subctx = accessSubcontext();
 	{
 		// initialization
 		subctx->currentOwner = 0;
@@ -215,7 +216,7 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 	}
 	{
 		txHashBuilder_poolRegistrationCertificate_enter(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        subctx->numOwners, subctx->numRelays
 		);
 	}
@@ -253,6 +254,7 @@ enum {
 
 static void handlePoolKey_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolKey_ui_runStep;
@@ -286,7 +288,7 @@ static void handlePoolKey_ui_runStep()
 
 static void _parsePoolId(read_view_t* view)
 {
-	pool_id_t* key = &subctx->stateData.poolId;
+	pool_id_t* key = &accessSubcontext()->stateData.poolId;
 
 	key->keyReferenceType = parse_u1be(view);
 
@@ -333,6 +335,7 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
+	pool_registration_context_t* subctx = accessSubcontext();
 	security_policy_t policy = policyForSignTxStakePoolRegistrationPoolId(
 	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.poolId
@@ -346,7 +349,7 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 		_toPoolKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
 		txHashBuilder_poolRegistrationCertificate_poolKeyHash(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        poolKeyHash, SIZEOF(poolKeyHash)
 		);
 	}
@@ -391,6 +394,7 @@ enum {
 
 static void handlePoolVrfKey_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolVrfKey_ui_runStep;
@@ -422,6 +426,7 @@ static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, siz
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	pool_registration_context_t* subctx = accessSubcontext();
 	{
 		// parse data
 
@@ -443,7 +448,7 @@ static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, siz
 	ENSURE_NOT_DENIED(policy);
 
 	txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
-	        txHashBuilder,
+	        &BODY_CTX->txHashBuilder,
 	        subctx->stateData.vrfKeyHash, SIZEOF(subctx->stateData.vrfKeyHash)
 	);
 
@@ -474,6 +479,7 @@ enum {
 
 static void handlePoolFinancials_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolFinancials_ui_runStep;
@@ -518,6 +524,7 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuf
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	pool_registration_context_t* subctx = accessSubcontext();
 	{
 		// parse data
 
@@ -558,7 +565,7 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuf
 	}
 	{
 		txHashBuilder_poolRegistrationCertificate_financials(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.pledge, subctx->stateData.cost,
 		        subctx->stateData.marginNumerator, subctx->stateData.marginDenominator
 		);
@@ -578,6 +585,7 @@ enum {
 
 static void handlePoolRewardAccount_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handlePoolRewardAccount_ui_runStep;
@@ -600,7 +608,7 @@ static void handlePoolRewardAccount_ui_runStep()
 
 static void _parsePoolRewardAccount(read_view_t* view)
 {
-	reward_account_t* rewardAccount = &subctx->stateData.poolRewardAccount;
+	reward_account_t* rewardAccount = &accessSubcontext()->stateData.poolRewardAccount;
 
 	rewardAccount->keyReferenceType = parse_u1be(view);
 
@@ -651,6 +659,7 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
+	pool_registration_context_t* subctx = accessSubcontext();
 	security_policy_t policy = policyForSignTxStakePoolRegistrationRewardAccount(
 	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.poolRewardAccount
@@ -664,7 +673,7 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 		rewardAccountToBuffer(&subctx->stateData.poolRewardAccount, commonTxData->networkId, rewardAccountBuffer);
 
 		txHashBuilder_poolRegistrationCertificate_rewardAccount(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        rewardAccountBuffer, SIZEOF(rewardAccountBuffer)
 		);
 	}
@@ -693,6 +702,7 @@ enum {
 
 static void handleOwner_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleOwner_ui_runStep;
@@ -729,7 +739,7 @@ static void handleOwner_ui_runStep()
 __noinline_due_to_stack__
 static void _addOwnerToTxHash()
 {
-	pool_owner_t* owner = &subctx->stateData.owner;
+	pool_owner_t* owner = &accessSubcontext()->stateData.owner;
 
 	uint8_t ownerKeyHash[ADDRESS_KEY_HASH_LENGTH];
 
@@ -750,7 +760,7 @@ static void _addOwnerToTxHash()
 	// add data to tx
 	TRACE("Adding owner to tx hash");
 	txHashBuilder_addPoolRegistrationCertificate_addOwner(
-	        txHashBuilder,
+	        &BODY_CTX->txHashBuilder,
 	        ownerKeyHash, SIZEOF(ownerKeyHash)
 	);
 	TRACE();
@@ -767,6 +777,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
+	pool_registration_context_t* subctx = accessSubcontext();
 	pool_owner_t* owner = &subctx->stateData.owner;
 
 	explicit_bzero(owner, SIZEOF(*owner));
@@ -842,6 +853,7 @@ enum {
 
 static void handleRelay_ip_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleRelay_ip_ui_runStep;
@@ -898,6 +910,7 @@ enum {
 
 static void handleRelay_dns_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleRelay_dns_ui_runStep;
@@ -1028,7 +1041,7 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	pool_relay_t* relay = &subctx->stateData.relay;
+	pool_relay_t* relay = &accessSubcontext()->stateData.relay;
 	{
 		// parse data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
@@ -1079,7 +1092,7 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 	ENSURE_NOT_DENIED(policy);
 
 	TRACE("Adding relay format %d to tx hash", (int) relay->format);
-	txHashBuilder_addPoolRegistrationCertificate_addRelay(txHashBuilder, relay);
+	txHashBuilder_addPoolRegistrationCertificate_addRelay(&BODY_CTX->txHashBuilder, relay);
 
 	{
 		int respondStep = -1;
@@ -1113,7 +1126,7 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 
 		// select UI steps and call ui handler
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#	define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, respondStep);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, displayStep);
 #	undef   CASE
@@ -1136,6 +1149,7 @@ enum {
 
 static void handleNullMetadata_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleNullMetadata_ui_runStep;
@@ -1165,6 +1179,7 @@ enum {
 
 static void handleMetadata_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = handleMetadata_ui_runStep;
@@ -1216,7 +1231,7 @@ static void handleNullMetadata()
 
 		// select UI step
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#	define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_NULL_METADATA_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_NULL_METADATA_STEP_RESPOND);
 #	undef   CASE
@@ -1227,7 +1242,7 @@ static void handleNullMetadata()
 	{
 		// add null metadata to certificate
 		TRACE("Adding null pool metadata to tx hash");
-		txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(txHashBuilder);
+		txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(&BODY_CTX->txHashBuilder);
 	}
 
 	handleNullMetadata_ui_runStep();
@@ -1244,6 +1259,7 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
+	pool_registration_context_t* subctx = accessSubcontext();
 	explicit_bzero(&subctx->stateData.metadata, SIZEOF(subctx->stateData.metadata));
 
 	{
@@ -1302,7 +1318,7 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		// add metadata to tx
 		TRACE("Adding metadata hash to tx hash");
 		txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.metadata.url, subctx->stateData.metadata.urlSize,
 		        subctx->stateData.metadata.hash, SIZEOF(subctx->stateData.metadata.hash)
 		);
@@ -1323,6 +1339,7 @@ enum {
 
 static void signTxPoolRegistration_handleConfirm_ui_runStep()
 {
+	pool_registration_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signTxPoolRegistration_handleConfirm_ui_runStep;
@@ -1386,6 +1403,7 @@ static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MAR
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
+	pool_registration_context_t* subctx = accessSubcontext();
 	security_policy_t policy = policyForSignTxStakePoolRegistrationConfirm(subctx->numOwners, subctx->numRelays);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -1445,6 +1463,7 @@ void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size
 	TRACE("p2 = 0x%x", p2);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
+	pool_registration_context_t* subctx = accessSubcontext();
 	explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 
 	switch (p2) {

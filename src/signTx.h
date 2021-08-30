@@ -162,6 +162,21 @@ typedef struct {
 	int ui_step;
 } ins_sign_tx_context_t;
 
+ins_sign_tx_aux_data_context_t* accessAuxDataContext();
+ins_sign_tx_body_context_t* accessBodyContext();
+ins_sign_tx_witness_context_t* accessWitnessContext();
+
+
+#ifdef DEVEL
+#define AUX_DATA_CTX (ASSERT(accessAuxDataContext() != NULL), accessAuxDataContext())
+#define BODY_CTX (ASSERT(accessBodyContext() != NULL), accessBodyContext())
+#define WITNESS_CTX (ASSERT(accessWitnessContext() != NULL), accessWitnessContext())
+#else
+#define AUX_DATA_CTX (accessAuxDataContext())
+#define BODY_CTX (accessBodyContext())
+#define WITNESS_CTX (accessWitnessContext())
+#endif
+
 handler_fn_t signTx_handleAPDU;
 
 static inline bool signTx_parseIncluded(uint8_t value)
