@@ -193,7 +193,7 @@ size_t str_formatValidityBoundary(uint64_t slotNumber, char* out, size_t outSize
 	uint64_t epoch = startEpoch + (slotNumber - startSlotNumber) / slotsInEpoch;
 	uint64_t slotInEpoch = (slotNumber - startSlotNumber) % slotsInEpoch;
 
-	ASSERT(sizeof(int) >= sizeof(uint32_t));
+	STATIC_ASSERT(sizeof(int) >= sizeof(uint32_t), "wrong int size");
 
 	ASSERT(outSize > 0); // so we can write null terminator
 	if (epoch > 1000000)  {
