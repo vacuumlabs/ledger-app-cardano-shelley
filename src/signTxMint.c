@@ -225,7 +225,7 @@ static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataS
 		view_memmove(token->assetNameBytes, &view, token->assetNameSize);
 
 		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
-		token->amount = (int64_t)parse_u8be(&view);
+		token->amount = parse_int64be(&view);
 		TRACE_INT64(token->amount);
 	}
 
