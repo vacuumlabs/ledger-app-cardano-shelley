@@ -75,7 +75,7 @@ static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wi
 	TRACE_BUFFER(wireDataBuffer, wireDataSize);
 	{
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
-		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
+
 		uint32_t numAssetGroups = parse_u4be(&view);
 		TRACE("num asset groups %u", numAssetGroups);
 		VALIDATE(numAssetGroups <= OUTPUT_ASSET_GROUPS_MAX, ERR_INVALID_DATA);
@@ -136,13 +136,14 @@ static void signTxMint_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wire
 		STATIC_ASSERT(SIZEOF(tokenGroup->policyId) == MINTING_POLICY_ID_SIZE, "wrong policy id size");
 		view_memmove(tokenGroup->policyId, &view, MINTING_POLICY_ID_SIZE);
 
-		VALIDATE(view_remainingSize(&view) == 4, ERR_INVALID_DATA);
 		uint32_t numTokens = parse_u4be(&view);
 		VALIDATE(numTokens <= OUTPUT_TOKENS_IN_GROUP_MAX, ERR_INVALID_DATA);
 		VALIDATE(numTokens > 0, ERR_INVALID_DATA);
 		STATIC_ASSERT(OUTPUT_TOKENS_IN_GROUP_MAX <= UINT16_MAX, "wrong max token amounts in a group");
 		ASSERT_TYPE(subctx->numTokens, uint16_t);
 		subctx->numTokens = (uint16_t) numTokens;
+
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
 	{
@@ -217,16 +218,16 @@ static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataS
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 		token->assetNameSize = parse_u4be(&view);
 		VALIDATE(token->assetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
 
 		ASSERT(token->assetNameSize <= SIZEOF(token->assetNameBytes));
 		view_memmove(token->assetNameBytes, &view, token->assetNameSize);
 
-		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		token->amount = parse_int64be(&view);
 		TRACE_INT64(token->amount);
+
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
 	{

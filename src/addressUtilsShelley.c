@@ -525,18 +525,15 @@ static void readHashToBufferFromView(uint8_t* buffer, size_t bufferSize, read_vi
 void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 {
 	// address type
-	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	params->type = parse_u1be(view);
 	TRACE("Address type: 0x%x", params->type);
 	VALIDATE(isSupportedAddressType(params->type), ERR_UNSUPPORTED_ADDRESS_TYPE);
 
 	// protocol magic / network id
 	if (params->type == BYRON) {
-		VALIDATE(view_remainingSize(view) >= 4, ERR_INVALID_DATA);
 		params->protocolMagic = parse_u4be(view);
 		TRACE("Protocol magic: 0x%x", params->protocolMagic);
 	} else {
-		VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 		params->networkId = parse_u1be(view);
 		TRACE("Network id: 0x%x", params->networkId);
 		VALIDATE(isValidNetworkId(params->networkId), ERR_INVALID_DATA);
@@ -574,7 +571,6 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	}
 
 	// staking choice
-	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	params->stakingDataSource = parse_u1be(view);
 	TRACE("Staking choice: 0x%x", (unsigned int) params->stakingDataSource);
 	VALIDATE(isValidStakingChoice(params->stakingDataSource), ERR_INVALID_DATA);
@@ -604,7 +600,6 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	}
 
 	case BLOCKCHAIN_POINTER:
-		VALIDATE(view_remainingSize(view) >= 12, ERR_INVALID_DATA);
 		params->stakingKeyBlockchainPointer.blockIndex = parse_u4be(view);
 		params->stakingKeyBlockchainPointer.txIndex = parse_u4be(view);
 		params->stakingKeyBlockchainPointer.certificateIndex = parse_u4be(view);

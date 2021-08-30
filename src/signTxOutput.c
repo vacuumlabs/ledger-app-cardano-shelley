@@ -290,13 +290,11 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 		output->outputType = parse_u1be(&view);
 		TRACE("Output type %d", (int) subctx->stateData.output.outputType);
 
 		switch (output->outputType) {
 		case OUTPUT_TYPE_ADDRESS_BYTES: {
-			VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 			STATIC_ASSERT(sizeof(output->address.size) >= 4, "wrong address size type");
 			output->address.size = parse_u4be(&view);
 			TRACE("Address length %u", output->address.size);
@@ -316,13 +314,11 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 			THROW(ERR_INVALID_DATA);
 		};
 
-		VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
 		uint64_t adaAmount = parse_u8be(&view);
 		output->adaAmount = adaAmount;
 		TRACE("Amount: %u.%06u", (unsigned) (adaAmount / 1000000), (unsigned)(adaAmount % 1000000));
 		VALIDATE(adaAmount < LOVELACE_MAX_SUPPLY, ERR_INVALID_DATA);
 
-		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 		uint32_t numAssetGroups = parse_u4be(&view);
 		TRACE("num asset groups %u", numAssetGroups);
 		VALIDATE(numAssetGroups <= OUTPUT_ASSET_GROUPS_MAX, ERR_INVALID_DATA);
@@ -395,13 +391,14 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		STATIC_ASSERT(SIZEOF(tokenGroup->policyId) == MINTING_POLICY_ID_SIZE, "wrong policy id size");
 		view_memmove(tokenGroup->policyId, &view, MINTING_POLICY_ID_SIZE);
 
-		VALIDATE(view_remainingSize(&view) == 4, ERR_INVALID_DATA);
 		uint32_t numTokens = parse_u4be(&view);
 		VALIDATE(numTokens <= OUTPUT_TOKENS_IN_GROUP_MAX, ERR_INVALID_DATA);
 		VALIDATE(numTokens > 0, ERR_INVALID_DATA);
 		STATIC_ASSERT(OUTPUT_TOKENS_IN_GROUP_MAX <= UINT16_MAX, "wrong max token amounts in a group");
 		ASSERT_TYPE(subctx->numTokens, uint16_t);
 		subctx->numTokens = (uint16_t) numTokens;
+
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
 	{
@@ -477,16 +474,16 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 		token->assetNameSize = parse_u4be(&view);
 		VALIDATE(token->assetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
 
 		ASSERT(token->assetNameSize <= SIZEOF(token->assetNameBytes));
 		view_memmove(token->assetNameBytes, &view, token->assetNameSize);
 
-		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
 		token->amount = parse_u8be(&view);
 		TRACE_UINT64(token->amount);
+
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
 	{

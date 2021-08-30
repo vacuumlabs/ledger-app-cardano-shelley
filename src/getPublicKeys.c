@@ -210,12 +210,14 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		case 4: {
 			// read the number of remaining paths
 			uint32_t remainingPaths = parse_u4be(&view);
-			ASSERT(view_remainingSize(&view) == 0);
 			VALIDATE(remainingPaths < MAX_PUBLIC_KEYS, ERR_INVALID_DATA);
 			ASSERT_TYPE(ctx->numPaths, uint16_t);
 			ASSERT(remainingPaths < UINT16_MAX);
 
 			ctx->numPaths = (uint16_t) (remainingPaths + 1);
+
+			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+
 			break;
 		}
 		default: {

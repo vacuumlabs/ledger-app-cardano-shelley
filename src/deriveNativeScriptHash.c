@@ -212,8 +212,8 @@ static void deriveScriptHash_display_ui_runStep()
 
 static void deriveNativeScriptHash_handleAll(read_view_t* view)
 {
-	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE_WITH_CTX("");
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	nativeScriptHashBuilder_startComplexScript_all(&ctx->hashBuilder, ctx->complexScripts[ctx->level].remainingScripts);
 
@@ -222,8 +222,8 @@ static void deriveNativeScriptHash_handleAll(read_view_t* view)
 
 static void deriveNativeScriptHash_handleAny(read_view_t* view)
 {
-	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE_WITH_CTX("");
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	nativeScriptHashBuilder_startComplexScript_any(&ctx->hashBuilder, ctx->complexScripts[ctx->level].remainingScripts);
 
@@ -234,9 +234,9 @@ static void deriveNativeScriptHash_handleNofK(read_view_t* view)
 {
 	// parse data
 	ctx->scriptContent.requiredScripts = parse_u4be(view);
-
-	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE_WITH_CTX("required scripts = %u, ", ctx->scriptContent.requiredScripts);
+	
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	// validate that the received requiredScripts count makes sense
 	VALIDATE(ctx->complexScripts[ctx->level].remainingScripts >= ctx->scriptContent.requiredScripts, ERR_INVALID_DATA);
@@ -261,7 +261,8 @@ static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
 	ctx->complexScripts[ctx->level].remainingScripts = parse_u4be(view);
 	ctx->complexScripts[ctx->level].totalScripts = ctx->complexScripts[ctx->level].remainingScripts;
 
-	switch(nativeScriptType) {
+	// these handlers might read additional data from the view
+	switch (nativeScriptType) {
 #	define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
 		CASE(NATIVE_SCRIPT_ALL, deriveNativeScriptHash_handleAll);
 		CASE(NATIVE_SCRIPT_ANY, deriveNativeScriptHash_handleAny);
@@ -281,11 +282,11 @@ static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
 static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 {
 	view_skipBytes(view, bip44_parseFromWire(&ctx->scriptContent.pubkeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
-
-	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("pubkey given by path:");
 	BIP44_PRINTF(&ctx->scriptContent.pubkeyPath);
 	PRINTF("\n");
+
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	uint8_t pubkeyHash[ADDRESS_KEY_HASH_LENGTH];
 	bip44_pathToKeyHash(&ctx->scriptContent.pubkeyPath, pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
@@ -297,8 +298,8 @@ static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 static void deriveNativeScriptHash_handleThirdPartyPubkey(read_view_t* view)
 {
 	VALIDATE(view_remainingSize(view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
+	STATIC_ASSERT(SIZEOF(ctx->scriptContent.pubkeyHash) == ADDRESS_KEY_HASH_LENGTH, "incorrect key hash size in script");
 	view_memmove(ctx->scriptContent.pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
-
 	TRACE_BUFFER(ctx->scriptContent.pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
 
 	nativeScriptHashBuilder_addScript_pubkey(&ctx->hashBuilder, ctx->scriptContent.pubkeyHash, SIZEOF(ctx->scriptContent.pubkeyHash));
@@ -311,13 +312,13 @@ static void deriveNativeScriptHash_handlePubkey(read_view_t* view)
 	uint8_t pubkeyType = parse_u1be(view);
 	TRACE("pubkey type = %u", pubkeyType);
 
-	switch(pubkeyType) {
+	switch (pubkeyType) {
 	case KEY_REFERENCE_PATH:
 		deriveNativeScriptHash_handleDeviceOwnedPubkey(view);
-		break;
+		return;
 	case KEY_REFERENCE_HASH:
 		deriveNativeScriptHash_handleThirdPartyPubkey(view);
-		break;
+		return;
 	// any other value for the pubkey type is invalid
 	default:
 		THROW(ERR_INVALID_DATA);
@@ -327,10 +328,10 @@ static void deriveNativeScriptHash_handlePubkey(read_view_t* view)
 static void deriveNativeScriptHash_handleInvalidBefore(read_view_t* view)
 {
 	ctx->scriptContent.timelock = parse_u8be(view);
-
-	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("invalid_before timelock");
 	TRACE_UINT64(ctx->scriptContent.timelock);
+
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	nativeScriptHashBuilder_addScript_invalidBefore(&ctx->hashBuilder, ctx->scriptContent.timelock);
 
@@ -340,10 +341,10 @@ static void deriveNativeScriptHash_handleInvalidBefore(read_view_t* view)
 static void deriveNativeScriptHash_handleInvalidHereafter(read_view_t* view)
 {
 	ctx->scriptContent.timelock = parse_u8be(view);
-
-	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("invalid_hereafter timelock");
 	TRACE_UINT64(ctx->scriptContent.timelock);
+
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	nativeScriptHashBuilder_addScript_invalidHereafter(&ctx->hashBuilder, ctx->scriptContent.timelock);
 
@@ -413,8 +414,9 @@ static void deriveNativeScriptHash_handleWholeNativeScriptFinish(read_view_t* vi
 	VALIDATE(ctx->level == 0 && ctx->complexScripts[0].remainingScripts == 0, ERR_INVALID_STATE);
 
 	uint8_t displayFormat = parse_u1be(view);
-	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	TRACE("whole native script received, display format = %u", displayFormat);
+
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	switch (displayFormat) {
 #	define  CASE(FORMAT, DISPLAY_FN) case FORMAT: nativeScriptHashBuilder_finalize(&ctx->hashBuilder, ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH); DISPLAY_FN(); break;

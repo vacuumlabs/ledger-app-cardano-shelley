@@ -288,7 +288,6 @@ static void _parsePoolId(read_view_t* view)
 {
 	pool_id_t* key = &subctx->stateData.poolId;
 
-	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	key->keyReferenceType = parse_u1be(view);
 
 	switch (key->keyReferenceType) {
@@ -603,7 +602,6 @@ static void _parsePoolRewardAccount(read_view_t* view)
 {
 	reward_account_t* rewardAccount = &subctx->stateData.poolRewardAccount;
 
-	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	rewardAccount->keyReferenceType = parse_u1be(view);
 
 	switch (rewardAccount->keyReferenceType) {
@@ -779,7 +777,6 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 		owner->keyReferenceType = parse_u1be(&view);
 		switch (owner->keyReferenceType) {
 
@@ -953,7 +950,6 @@ static void handleRelay_dns_ui_runStep()
 
 static void _parsePort(ipport_t* port, read_view_t* view)
 {
-	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	uint8_t isPortGiven = parse_u1be(view);
 	if (isPortGiven == ITEM_INCLUDED_YES) {
 		port->isNull = false;
@@ -968,7 +964,6 @@ static void _parsePort(ipport_t* port, read_view_t* view)
 
 static void _parseIpv4(ipv4_t* ipv4, read_view_t* view)
 {
-	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	uint8_t isIpv4Given = parse_u1be(view);
 	if (isIpv4Given == ITEM_INCLUDED_YES) {
 		ipv4->isNull = false;
@@ -985,7 +980,6 @@ static void _parseIpv4(ipv4_t* ipv4, read_view_t* view)
 
 static void _parseIpv6(ipv6_t* ipv6, read_view_t* view)
 {
-	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	uint8_t isIpv6Given = parse_u1be(view);
 	if (isIpv6Given == ITEM_INCLUDED_YES) {
 		ipv6->isNull = false;
@@ -1040,7 +1034,6 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 		relay->format = parse_u1be(&view);
 		TRACE("Relay format %u", relay->format);
 		switch (relay->format) {
@@ -1262,9 +1255,6 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 
 		{
 			// deal with null metadata
-
-			VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-
 			uint8_t includeMetadataByte = parse_u1be(&view);
 			int includeMetadata = signTx_parseIncluded(includeMetadataByte);
 
