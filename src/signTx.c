@@ -587,24 +587,27 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
-		VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
-		txAuxDataCtx->auxDataType = parse_u1be(&view);
 
+		txAuxDataCtx->auxDataType = parse_u1be(&view);
 		switch (txAuxDataCtx->auxDataType) {
-		case AUX_DATA_TYPE_ARBITRARY_HASH:
+
+		case AUX_DATA_TYPE_ARBITRARY_HASH: {
 			// parse data
 			VALIDATE(view_remainingSize(&view) == AUX_DATA_HASH_LENGTH, ERR_INVALID_DATA);
 			STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "wrong auxiliary data hash length");
 			view_memmove(ctx->auxDataHash, &view, AUX_DATA_HASH_LENGTH);
 			txAuxDataCtx->auxDataReceived = true;
 			break;
+		}
+
 		case AUX_DATA_TYPE_CATALYST_REGISTRATION:
 			break;
+
 		default:
 			THROW(ERR_INVALID_DATA);
 		}
 
-		ASSERT(view_remainingSize(&view) == 0);
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
 
@@ -703,7 +706,7 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 		VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
 
 		memmove(input.txHashBuffer, wireUtxo->txHash, SIZEOF(input.txHashBuffer));
-		input.parsedIndex =  u4be_read(wireUtxo->index);
+		input.parsedIndex = u4be_read(wireUtxo->index);
 	}
 
 	{
@@ -1075,7 +1078,6 @@ static void _parsePathSpec(read_view_t* view, bip44_path_t* pathSpec)
 
 static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCredential)
 {
-	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	stakeCredential->type = parse_u1be(view);
 	switch (stakeCredential->type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
@@ -1083,7 +1085,7 @@ static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCr
 		break;
 	case STAKE_CREDENTIAL_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		VALIDATE(SIZEOF(stakeCredential->scriptHash) <= view_remainingSize(view), ERR_INVALID_DATA);
+		VALIDATE(view_remainingSize(view) >= SIZEOF(stakeCredential->scriptHash), ERR_INVALID_DATA);
 		view_memmove(stakeCredential->scriptHash, view, SIZEOF(stakeCredential->scriptHash));
 		break;
 	}
@@ -1100,19 +1102,16 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 
 	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-	VALIDATE(view_remainingSize(&view) >= 1, ERR_INVALID_DATA);
 	certificateData->type = parse_u1be(&view);
 	TRACE("Certificate type: %d", certificateData->type);
 
 	switch (certificateData->type) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 		_parseStakeCredential(&view, &certificateData->stakeCredential);
-		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
 		_parseStakeCredential(&view, &certificateData->stakeCredential);
-		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION:
@@ -1125,20 +1124,18 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION:
 		// nothing more to parse, certificate data will be provided
 		// in additional APDUs processed by a submachine
-		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		return;
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
 		_parsePathSpec(&view, &certificateData->poolIdPath);
-		VALIDATE(view_remainingSize(&view) == 8, ERR_INVALID_DATA);
-		certificateData->epoch  = parse_u8be(&view);
+		certificateData->epoch = parse_u8be(&view);
 		break;
 
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
 
-	ASSERT(view_remainingSize(&view) == 0);
+	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 }
 
 static void _fillHashFromPath(const bip44_path_t* path,
@@ -1442,7 +1439,6 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
-		VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
 		txBodyCtx->stageData.withdrawal.amount = parse_u8be(&view);
 
 		_parseStakeCredential(&view, &txBodyCtx->stageData.withdrawal.stakeCredential);
