@@ -8,16 +8,16 @@
 #include "bufView.h"
 #include "securityPolicy.h"
 
-// we want to distinguish the two state machines to avoid potential confusion:
-// ctx / subctx
-// stage / state
-// from ctx, we only make the necessary parts available to avoid mistaken overwrites
-static output_context_t* subctx = &(instructionState.signTxContext.txPartCtx.body_ctx.stageContext.output_subctx);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
-static tx_hash_builder_t* txHashBuilder = &(instructionState.signTxContext.txPartCtx.body_ctx.txHashBuilder);
+
+static output_context_t* accessSubcontext()
+{
+	return &BODY_CTX->stageContext.output_subctx;
+}
 
 bool signTxOutput_isFinished()
 {
+	output_context_t* subctx = accessSubcontext();
 	TRACE("Output submachine state: %d", subctx->state);
 	// we are also asserting that the state is valid
 	switch (subctx->state) {
@@ -37,22 +37,21 @@ bool signTxOutput_isFinished()
 
 void signTxOutput_init()
 {
-	{
-		ins_sign_tx_body_context_t* txBodyCtx = &(instructionState.signTxContext.txPartCtx.body_ctx);
-		explicit_bzero(&txBodyCtx->stageContext, SIZEOF(txBodyCtx->stageContext));
-	}
+	explicit_bzero(&BODY_CTX->stageContext, SIZEOF(BODY_CTX->stageContext));
 
-	subctx->state = STATE_OUTPUT_TOP_LEVEL_DATA;
+	accessSubcontext()->state = STATE_OUTPUT_TOP_LEVEL_DATA;
 }
 
 static inline void CHECK_STATE(sign_tx_output_state_t expected)
 {
+	output_context_t* subctx = accessSubcontext();
 	TRACE("Output submachine state: current %d, expected %d", subctx->state, expected);
 	VALIDATE(subctx->state == expected, ERR_INVALID_STATE);
 }
 
 static inline void advanceState()
 {
+	output_context_t* subctx = accessSubcontext();
 	TRACE("Advancing output state from: %d", subctx->state);
 
 	switch (subctx->state) {
@@ -113,6 +112,7 @@ enum {
 
 static void signTx_handleOutput_address_ui_runStep()
 {
+	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleOutput_address_ui_runStep;
 
@@ -142,6 +142,7 @@ static void signTx_handleOutput_address_ui_runStep()
 
 static void signTx_handleOutput_addressBytes()
 {
+	output_context_t* subctx = accessSubcontext();
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
 
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
@@ -160,7 +161,7 @@ static void signTx_handleOutput_addressBytes()
 		ASSERT(subctx->stateData.output.address.size < BUFFER_SIZE_PARANOIA);
 
 		txHashBuilder_addOutput_topLevelData(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.output.address.buffer,
 		        subctx->stateData.output.address.size,
 		        subctx->stateData.output.adaAmount,
@@ -194,6 +195,7 @@ enum {
 
 static void signTx_handleOutput_addressParams_ui_runStep()
 {
+	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleOutput_addressParams_ui_runStep;
 
@@ -227,6 +229,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 
 static void signTx_handleOutput_addressParams()
 {
+	output_context_t* subctx = accessSubcontext();
 	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS);
 
 	security_policy_t policy = policyForSignTxOutputAddressParams(
@@ -251,7 +254,7 @@ static void signTx_handleOutput_addressParams()
 		ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 
 		txHashBuilder_addOutput_topLevelData(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        addressBuffer, addressSize,
 		        subctx->stateData.output.adaAmount,
 		        subctx->numAssetGroups
@@ -282,6 +285,7 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
+	output_context_t* subctx = accessSubcontext();
 	{
 		// parse all APDU data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
@@ -358,6 +362,7 @@ enum {
 
 static void signTxOutput_handleAssetGroup_ui_runStep()
 {
+	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTxOutput_handleAssetGroup_ui_runStep;
 
@@ -379,6 +384,7 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	output_context_t* subctx = accessSubcontext();
 	{
 		token_group_t* tokenGroup = &subctx->stateData.tokenGroup;
 
@@ -414,7 +420,7 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		// add tokengroup to tx
 		TRACE("Adding token group hash to tx hash");
 		txHashBuilder_addOutput_tokenGroup(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.tokenGroup.policyId, MINTING_POLICY_ID_SIZE,
 		        subctx->numTokens
 		);
@@ -436,6 +442,7 @@ enum {
 
 static void signTxOutput_handleToken_ui_runStep()
 {
+	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTxOutput_handleToken_ui_runStep;
 
@@ -476,6 +483,7 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
+	output_context_t* subctx = accessSubcontext();
 	{
 		output_token_amount_t* token = &subctx->stateData.token;
 
@@ -522,7 +530,7 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		// add tokengroup to tx
 		TRACE("Adding token group hash to tx hash");
 		txHashBuilder_addOutput_token(
-		        txHashBuilder,
+		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
 		        subctx->stateData.token.amount
 		);
@@ -542,6 +550,7 @@ enum {
 
 static void signTxOutput_handleConfirm_ui_runStep()
 {
+	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTxOutput_handleConfirm_ui_runStep;
 
@@ -576,6 +585,7 @@ static void signTxOutput_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, 
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
+	output_context_t* subctx = accessSubcontext();
 	security_policy_t policy = policyForSignTxOutputConfirm(
 	                                   subctx->outputSecurityPolicy,
 	                                   subctx->numAssetGroups
