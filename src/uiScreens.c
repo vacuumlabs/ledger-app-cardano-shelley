@@ -303,8 +303,8 @@ void ui_displayRewardAccountScreen(
 		        "Reward account"
 		);
 
-		ASSERT(SIZEOF(rewardAccountBuffer) == REWARD_ACCOUNT_SIZE);
-		ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE);
+		STATIC_ASSERT(SIZEOF(rewardAccountBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account buffer size");
+		STATIC_ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account hash buffer size");
 		memmove(rewardAccountBuffer, rewardAccount->hashBuffer, REWARD_ACCOUNT_SIZE);
 		break;
 	}
@@ -666,7 +666,7 @@ void ui_displayPoolOwnerScreen(
 			break;
 		}
 		case KEY_REFERENCE_HASH: {
-			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
+			STATIC_ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong owner.keyHash size");
 
 			constructRewardAddressFromHash(
 			        networkId, REWARD_HASH_SOURCE_KEY,

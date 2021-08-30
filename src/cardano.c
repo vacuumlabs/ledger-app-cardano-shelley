@@ -11,7 +11,7 @@ void rewardAccountToBuffer(
 	switch (rewardAccount->keyReferenceType) {
 
 	case KEY_REFERENCE_HASH: {
-		ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE);
+		STATIC_ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account hash buffer size");
 		memmove(rewardAccountBuffer, rewardAccount->hashBuffer, REWARD_ACCOUNT_SIZE);
 		break;
 	}

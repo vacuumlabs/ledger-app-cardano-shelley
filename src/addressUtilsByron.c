@@ -23,7 +23,7 @@ void addressRootFromExtPubKey(
         uint8_t* outBuffer, size_t outSize
 )
 {
-	ASSERT(SIZEOF(*extPubKey) == EXTENDED_PUBKEY_SIZE);
+	STATIC_ASSERT(SIZEOF(*extPubKey) == EXTENDED_PUBKEY_SIZE, "wrong ext pub key size");
 	ASSERT(outSize == ADDRESS_ROOT_SIZE);
 
 	uint8_t cborBuffer[64 + 10];

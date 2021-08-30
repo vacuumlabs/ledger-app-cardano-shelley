@@ -300,7 +300,7 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 			TRACE("Address length %u", output->address.size);
 			VALIDATE(output->address.size <= MAX_ADDRESS_SIZE, ERR_INVALID_DATA);
 
-			ASSERT(SIZEOF(output->address.buffer) >= output->address.size);
+			STATIC_ASSERT(SIZEOF(output->address.buffer) >= MAX_ADDRESS_SIZE, "wrong address buffer size");
 			view_copyWireToBuffer(output->address.buffer, &view, output->address.size);
 			TRACE_BUFFER(output->address.buffer, output->address.size);
 			break;
