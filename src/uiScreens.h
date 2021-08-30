@@ -66,6 +66,11 @@ void ui_displayStakingInfoScreen(
         ui_callback_fn_t callback
 );
 
+void ui_displayStakeCredentialScreen(
+        const stake_credential_t* stakeCredential,
+        ui_callback_fn_t callback
+);
+
 size_t deriveAssetFingerprint(
         uint8_t* policyId,
         size_t policyIdSize,

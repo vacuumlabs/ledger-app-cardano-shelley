@@ -56,7 +56,7 @@ static struct {
 };
 
 static struct {
-	const char* stakingKeyHash;
+	const char* stakingScriptHash;
 } registrationCertificates[] = {
 	{
 		"32C728D3861E164CAB28CB8F006448139C8F1740FFB8E7AA9E5232DC"
@@ -64,7 +64,7 @@ static struct {
 };
 
 static struct {
-	const char* stakingKeyHash;
+	const char* stakingScriptHash;
 } deregistrationCertificates[] = {
 	{
 		"32C728D3861E164CAB28CB8F006448139C8F1740FFB8E7AA9E5232DC"
@@ -75,7 +75,7 @@ static struct {
 };
 
 static struct {
-	const char* stakingKeyHash;
+	const char* stakingScriptHash;
 	const char* poolKeyHash;
 } delegationCertificates[] = {
 	{
@@ -294,24 +294,30 @@ static void addCertificates(tx_hash_builder_t* builder)
 	txHashBuilder_enterCertificates(builder);
 
 	ITERATE(it, registrationCertificates) {
-		uint8_t tmp[70];
-		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
-		txHashBuilder_addCertificate_stakingHash(
+		stake_credential_t tmp_credential;
+		tmp_credential.type = STAKE_CREDENTIAL_SCRIPT_HASH;
+		decode_hex(
+		        PTR_PIC(it->stakingScriptHash),
+		        tmp_credential.scriptHash, SIZEOF(tmp_credential.scriptHash)
+		);
+		txHashBuilder_addCertificate_staking(
 		        builder,
 		        CERTIFICATE_TYPE_STAKE_REGISTRATION,
-		        STAKE_CREDENTIAL_KEY_PATH,
-		        tmp, tmpSize
+		        &tmp_credential
 		);
 	}
 
 	ITERATE(it, deregistrationCertificates) {
-		uint8_t tmp[70];
-		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
-		txHashBuilder_addCertificate_stakingHash(
+		stake_credential_t tmp_credential;
+		tmp_credential.type = STAKE_CREDENTIAL_SCRIPT_HASH;
+		decode_hex(
+		        PTR_PIC(it->stakingScriptHash),
+		        tmp_credential.scriptHash, SIZEOF(tmp_credential.scriptHash)
+		);
+		txHashBuilder_addCertificate_staking(
 		        builder,
 		        CERTIFICATE_TYPE_STAKE_DEREGISTRATION,
-		        STAKE_CREDENTIAL_KEY_PATH,
-		        tmp, tmpSize
+		        &tmp_credential
 		);
 	}
 
@@ -320,16 +326,17 @@ static void addCertificates(tx_hash_builder_t* builder)
 	addPoolRetirementCertificate(builder);
 
 	ITERATE(it, delegationCertificates) {
-		uint8_t tmp_credential[70];
-		size_t tmpSize_credential = decode_hex(
-		                                    PTR_PIC(it->stakingKeyHash),
-		                                    tmp_credential, SIZEOF(tmp_credential)
-		                            );
+		stake_credential_t tmp_credential;
+		tmp_credential.type = STAKE_CREDENTIAL_SCRIPT_HASH;
+		decode_hex(
+		        PTR_PIC(it->stakingScriptHash),
+		        tmp_credential.scriptHash, SIZEOF(tmp_credential.scriptHash)
+		);
 		uint8_t tmp_pool[70];
 		size_t tmpSize_pool = decode_hex(PTR_PIC(it->poolKeyHash), tmp_pool, SIZEOF(tmp_pool));
 		txHashBuilder_addCertificate_delegation(
-		        builder, STAKE_CREDENTIAL_KEY_PATH,
-		        tmp_credential, tmpSize_credential,
+		        builder,
+		        &tmp_credential,
 		        tmp_pool, tmpSize_pool
 		);
 	}

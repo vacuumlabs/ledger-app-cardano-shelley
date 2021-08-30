@@ -58,14 +58,6 @@ typedef struct {
 } common_tx_data_t;
 
 typedef struct {
-	stake_credential_type_t type;
-	union {
-		bip44_path_t keyPath;
-		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
-	};
-} stake_credential_t;
-
-typedef struct {
 	certificate_type_t type;
 
 	union {
@@ -176,5 +168,7 @@ static inline bool signTx_parseIncluded(uint8_t value)
 		THROW(ERR_INVALID_DATA);
 	}
 }
+
+void advanceCertificatesStateIfAppropriate();
 
 #endif // H_CARDANO_APP_SIGN_TX

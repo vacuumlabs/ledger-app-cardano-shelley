@@ -430,21 +430,47 @@ security_policy_t policyForSignTxCertificate(
 {
 	switch (txSigningMode) {
 
-	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-		ALLOW();
-		break;
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX: {
+		switch (certificateType) {
+		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_DELEGATION:
+		case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
+			ALLOW();
+			break;
 
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
-		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-		ALLOW();
-		break;
+		default:
+			DENY();
+			break;
+		}
+	}
+
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX: {
+		switch (certificateType) {
+		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_DELEGATION:
+			ALLOW();
+			break;
+
+		default:
+			DENY();
+			break;
+		}
+	}
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-		ALLOW();
-		break;
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER: {
+		switch (certificateType) {
+		case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION:
+			ALLOW();
+			break;
+
+		default:
+			DENY();
+			break;
+		}
+	}
 
 	default:
 		ASSERT(false);

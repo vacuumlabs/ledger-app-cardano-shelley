@@ -418,12 +418,32 @@ void txHashBuilder_enterCertificates(tx_hash_builder_t* builder)
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES;
 }
 
+static void _fillHashFromStakeCredential(const stake_credential_t* stakeCredential,
+        uint8_t* hash, size_t hashSize)
+{
+	switch (stakeCredential->type) {
+	case STAKE_CREDENTIAL_KEY_PATH:
+		bip44_pathToKeyHash(
+		        &stakeCredential->keyPath,
+		        hash, hashSize
+		);
+		break;
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
+		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
+		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		memcpy(hash, stakeCredential->scriptHash, SIZEOF(stakeCredential->scriptHash));
+		break;
+	default:
+		ASSERT(false);
+		break;
+	}
+}
+
 // staking key certificate registration or deregistration
-void txHashBuilder_addCertificate_stakingHash(
+void txHashBuilder_addCertificate_staking(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
-        const stake_credential_type_t stakeCredentialType,
-        const uint8_t* stakingHash, size_t stakingHashSize
+        const stake_credential_t* stakeCredential
 )
 {
 	_TRACE("state = %d, remainingCertificates = %u", builder->state, builder->remainingCertificates);
@@ -435,11 +455,15 @@ void txHashBuilder_addCertificate_stakingHash(
 	ASSERT((certificateType == CERTIFICATE_TYPE_STAKE_REGISTRATION)
 	       || (certificateType == CERTIFICATE_TYPE_STAKE_DEREGISTRATION));
 
+	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "incompatible hash sizes");
+	uint8_t stakingHash[ADDRESS_KEY_HASH_LENGTH];
+	_fillHashFromStakeCredential(stakeCredential, stakingHash, SIZEOF(stakingHash));
+
 	// Array(2)[
 	//   Unsigned[certificateType]
 	//   Array(2)[
-	//     Unsigned[0]
-	//     Bytes[stakingKeyHash]
+	//     Unsigned[0/1]
+	//     Bytes[stakingHash]
 	//   ]
 	// ]
 	{
@@ -450,11 +474,11 @@ void txHashBuilder_addCertificate_stakingHash(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredentialType);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredential->type);
 			}
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingHashSize);
-				BUILDER_APPEND_DATA(stakingHash, stakingHashSize);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(stakingHash));
+				BUILDER_APPEND_DATA(stakingHash, SIZEOF(stakingHash));
 			}
 		}
 	}
@@ -462,8 +486,7 @@ void txHashBuilder_addCertificate_stakingHash(
 
 void txHashBuilder_addCertificate_delegation(
         tx_hash_builder_t* builder,
-        const stake_credential_type_t stakeCredentialType,
-        const uint8_t* stakingKeyHash, size_t stakingKeyHashSize,
+        const stake_credential_t* stakeCredential,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
 )
 {
@@ -473,11 +496,15 @@ void txHashBuilder_addCertificate_delegation(
 	ASSERT(builder->remainingCertificates > 0);
 	builder->remainingCertificates--;
 
+	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "incompatible hash sizes");
+	uint8_t stakingHash[ADDRESS_KEY_HASH_LENGTH];
+	_fillHashFromStakeCredential(stakeCredential, stakingHash, SIZEOF(stakingHash));
+
 	// Array(3)[
 	//   Unsigned[2]
 	//   Array(2)[
-	//     Unsigned[0]
-	//     Bytes[stakingKeyHash]
+	//     Unsigned[0/1]
+	//     Bytes[stakingHash]
 	//   ]
 	//   Bytes[poolKeyHash]
 	// ]
@@ -489,11 +516,11 @@ void txHashBuilder_addCertificate_delegation(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredentialType);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredential->type);
 			}
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingKeyHashSize);
-				BUILDER_APPEND_DATA(stakingKeyHash, stakingKeyHashSize);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(stakingHash));
+				BUILDER_APPEND_DATA(stakingHash, SIZEOF(stakingHash));
 			}
 		}
 		{

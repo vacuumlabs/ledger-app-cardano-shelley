@@ -124,16 +124,16 @@ void txHashBuilder_addFee(tx_hash_builder_t* builder, uint64_t fee);
 void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl);
 
 void txHashBuilder_enterCertificates(tx_hash_builder_t* builder);
-void txHashBuilder_addCertificate_stakingHash(
+__noinline_due_to_stack__
+void txHashBuilder_addCertificate_staking(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
-        const stake_credential_type_t stakeCredentialType,
-        const uint8_t* stakingHash, size_t stakingHashSize
+        const stake_credential_t* stakeCredential
 );
+__noinline_due_to_stack__
 void txHashBuilder_addCertificate_delegation(
         tx_hash_builder_t* builder,
-        const stake_credential_type_t stakeCredentialType,
-        const uint8_t* stakingKeyHash, size_t stakingKeyHashSize,
+        const stake_credential_t* stakeCredential,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
 );
 void txHashBuilder_addCertificate_poolRetirement(

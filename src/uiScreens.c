@@ -448,6 +448,34 @@ void ui_displayStakingInfoScreen(
 	);
 }
 
+void ui_displayStakeCredentialScreen(
+        const stake_credential_t* stakeCredential,
+        ui_callback_fn_t callback
+)
+{
+	switch (stakeCredential->type) {
+	case STAKE_CREDENTIAL_KEY_PATH:
+		ui_displayPathScreen(
+		        "Staking key",
+		        &stakeCredential->keyPath,
+		        callback
+		);
+		break;
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
+		ui_displayHexBufferScreen(
+		        "Staking script hash",
+		        stakeCredential->scriptHash,
+		        SIZEOF(stakeCredential->scriptHash),
+		        callback
+		);
+		break;
+	default:
+		ASSERT(false);
+		break;
+	}
+}
+
+
 #define ASSET_FINGERPRINT_SIZE 20
 
 size_t deriveAssetFingerprint(

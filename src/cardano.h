@@ -108,6 +108,15 @@ typedef enum {
 	STAKE_CREDENTIAL_SCRIPT_HASH = 1,
 } stake_credential_type_t;
 
+typedef struct {
+	stake_credential_type_t type;
+	union {
+		bip44_path_t keyPath;
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} stake_credential_t;
+
+
 typedef enum {
 	RELAY_SINGLE_HOST_IP = 0,
 	RELAY_SINGLE_HOST_NAME = 1,
