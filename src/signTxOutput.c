@@ -294,7 +294,7 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 		output->outputType = parse_u1be(&view);
 		TRACE("Output type %d", (int) subctx->stateData.output.outputType);
 
-		switch(output->outputType) {
+		switch (output->outputType) {
 		case OUTPUT_TYPE_ADDRESS_BYTES: {
 			VALIDATE(view_remainingSize(&view) >= 4, ERR_INVALID_DATA);
 			STATIC_ASSERT(sizeof(output->address.size) >= 4, "wrong address size type");
@@ -337,7 +337,7 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 		// call the appropriate handler depending on output type
 		// the handlers serialize data into the tx hash
 		// and take care of user interactions
-		switch(subctx->stateData.output.outputType) {
+		switch (subctx->stateData.output.outputType) {
 
 		case OUTPUT_TYPE_ADDRESS_BYTES:
 			signTx_handleOutput_addressBytes();

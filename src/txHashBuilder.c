@@ -796,7 +796,7 @@ void txHashBuilder_addPoolRegistrationCertificate_addRelay(
 	ASSERT(builder->poolCertificateData.remainingRelays > 0);
 	builder->poolCertificateData.remainingRelays--;
 
-	switch(relay->format) {
+	switch (relay->format) {
 	case RELAY_SINGLE_HOST_IP: {
 		// Array(4)[
 		//   Unsigned[0]

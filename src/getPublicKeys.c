@@ -275,7 +275,7 @@ typedef void subhandler_fn_t(uint8_t* dataBuffer, size_t dataSize);
 
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
-	switch(p1) {
+	switch (p1) {
 #	define  CASE(P1, HANDLER) case P1: return HANDLER;
 #	define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(0x00, getPublicKeys_handleInitAPDU);

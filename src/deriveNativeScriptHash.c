@@ -360,7 +360,7 @@ static void deriveNativeScriptHash_handleSimpleScript(read_view_t* view)
 	TRACE("native simple script type = %u", nativeScriptType);
 
 	// parse data
-	switch(nativeScriptType) {
+	switch (nativeScriptType) {
 #	define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
 		CASE(NATIVE_SCRIPT_PUBKEY, deriveNativeScriptHash_handlePubkey);
 		CASE(NATIVE_SCRIPT_INVALID_BEFORE, deriveNativeScriptHash_handleInvalidBefore);

@@ -261,7 +261,7 @@ static inline void checkForFinishedSubmachines()
 {
 	TRACE("Checking for finished submachines; stage = %d", ctx->stage);
 
-	switch(ctx->stage) {
+	switch (ctx->stage) {
 	case SIGN_STAGE_BODY_OUTPUTS_SUBMACHINE:
 		if (signTxOutput_isFinished()) {
 			TRACE();
@@ -433,7 +433,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 		ctx->commonTxData.txSigningMode = wireHeader->txSigningMode;
 		TRACE("Signing mode %d", (int) ctx->commonTxData.txSigningMode);
-		switch(ctx->commonTxData.txSigningMode) {
+		switch (ctx->commonTxData.txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
@@ -1099,7 +1099,7 @@ static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCr
 {
 	VALIDATE(view_remainingSize(view) >= 1, ERR_INVALID_DATA);
 	stakeCredential->type = parse_u1be(view);
-	switch(stakeCredential->type) {
+	switch (stakeCredential->type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
 		_parsePathSpec(view, &stakeCredential->keyPath);
 		break;
@@ -1369,7 +1369,7 @@ static void signTx_handleWithdrawal_ui_runStep()
 	}
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY_PATH) {
 		reward_account_t rewardAccount;
-		switch(txBodyCtx->stageData.withdrawal.stakeCredential.type) {
+		switch (txBodyCtx->stageData.withdrawal.stakeCredential.type) {
 		case STAKE_CREDENTIAL_KEY_PATH: {
 			rewardAccount.keyReferenceType = KEY_REFERENCE_PATH;
 			rewardAccount.path = txBodyCtx->stageData.withdrawal.stakeCredential.keyPath;
@@ -1412,7 +1412,7 @@ static void _addWithdrawalToTxHash()
 {
 	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
 
-	switch(txBodyCtx->stageData.withdrawal.stakeCredential.type) {
+	switch (txBodyCtx->stageData.withdrawal.stakeCredential.type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
 		constructRewardAddressFromKeyPath(
 		        &txBodyCtx->stageData.withdrawal.stakeCredential.keyPath,
@@ -1799,7 +1799,7 @@ typedef void subhandler_fn_t(uint8_t p2, uint8_t* dataBuffer, size_t dataSize);
 
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
-	switch(p1) {
+	switch (p1) {
 #	define  CASE(P1, HANDLER) case P1: return HANDLER;
 #	define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(0x01, signTx_handleInitAPDU);

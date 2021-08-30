@@ -39,7 +39,7 @@ void uiCallback_confirm(ui_callback_t* cb)
 {
 	if (!cb->confirm) return;
 
-	switch(cb->state) {
+	switch (cb->state) {
 	case CALLBACK_NOT_RUN:
 		// Note: needs to be done before resolving in case it throws
 		cb->state = CALLBACK_RUN;
@@ -57,7 +57,7 @@ void uiCallback_reject(ui_callback_t* cb)
 {
 	if (!cb->reject) return;
 
-	switch(cb->state) {
+	switch (cb->state) {
 	case CALLBACK_NOT_RUN:
 		// Note: needs to be done before resolving in case it throws
 		cb->state = CALLBACK_RUN;
