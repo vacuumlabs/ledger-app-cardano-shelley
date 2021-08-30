@@ -101,11 +101,11 @@ static inline cbor_token_t view_readToken(read_view_t* view)
 	return token;
 }
 
-// moves <length> bytes from the view to the buffer via memmove
-// (view.ptr is advanced accordingly)
-static inline void view_memmove(uint8_t* destBuffer, read_view_t* view, size_t length)
+// copies <length> bytes from the view to the buffer
+// throws ERR_INVALID_DATA if not enough data
+static inline void view_copyWireToBuffer(uint8_t* destBuffer, read_view_t* view, size_t length)
 {
-	ASSERT(length <= view_remainingSize(view));
+	VALIDATE(view_remainingSize(view) >= length, ERR_INVALID_DATA);
 	memmove(destBuffer, view->ptr, length);
 	view_skipBytes(view, length);
 }
