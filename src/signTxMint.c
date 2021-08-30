@@ -132,9 +132,8 @@ static void signTxMint_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wire
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		VALIDATE(view_remainingSize(&view) >= MINTING_POLICY_ID_SIZE, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(tokenGroup->policyId) == MINTING_POLICY_ID_SIZE, "wrong policy id size");
-		view_memmove(tokenGroup->policyId, &view, MINTING_POLICY_ID_SIZE);
+		view_copyWireToBuffer(tokenGroup->policyId, &view, MINTING_POLICY_ID_SIZE);
 
 		uint32_t numTokens = parse_u4be(&view);
 		VALIDATE(numTokens <= OUTPUT_TOKENS_IN_GROUP_MAX, ERR_INVALID_DATA);
@@ -222,7 +221,7 @@ static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataS
 		VALIDATE(token->assetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
 
 		ASSERT(token->assetNameSize <= SIZEOF(token->assetNameBytes));
-		view_memmove(token->assetNameBytes, &view, token->assetNameSize);
+		view_copyWireToBuffer(token->assetNameBytes, &view, token->assetNameSize);
 
 		token->amount = parse_int64be(&view);
 		TRACE_INT64(token->amount);

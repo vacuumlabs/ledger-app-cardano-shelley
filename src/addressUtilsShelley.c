@@ -493,12 +493,6 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 	}
 }
 
-static void readHashToBufferFromView(uint8_t* buffer, size_t bufferSize, read_view_t* view)
-{
-	VALIDATE(bufferSize <= view_remainingSize(view), ERR_INVALID_DATA);
-	view_memmove(buffer, view, bufferSize);
-}
-
 /*
  * Apart from parsing, we validate that the input contains nothing more than the params.
  *
@@ -554,7 +548,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case POINTER_SCRIPT:
 	case ENTERPRISE_SCRIPT: {
 		STATIC_ASSERT(SIZEOF(params->spendingScriptHash) == SCRIPT_HASH_LENGTH, "Wrong address key hash length");
-		readHashToBufferFromView(params->spendingScriptHash, SCRIPT_HASH_LENGTH, view);
+		view_copyWireToBuffer(params->spendingScriptHash, view, SCRIPT_HASH_LENGTH);
 		TRACE("Spending script hash: ");
 		TRACE_BUFFER(params->spendingScriptHash, SIZEOF(params->spendingScriptHash));
 		break;
@@ -586,16 +580,19 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 		BIP44_PRINTF(&params->stakingKeyPath);
 		break;
 
-	case STAKING_KEY_HASH:
-	case STAKING_SCRIPT_HASH: {
-		STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "Different key- and script hash lengths");
+	case STAKING_KEY_HASH: {
 		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
-		STATIC_ASSERT(SIZEOF(params->stakingScriptHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
-		const bool script = params->stakingDataSource == STAKING_SCRIPT_HASH;
-		readHashToBufferFromView(script ? params->stakingScriptHash : params->stakingKeyHash,
-		                         ADDRESS_KEY_HASH_LENGTH, view);
-		TRACE("Staking %s hash: ", script ? "script" : "key");
-		TRACE_BUFFER(script ? params->stakingScriptHash : params->stakingKeyHash, SIZEOF(params->stakingKeyHash));
+		view_copyWireToBuffer(params->stakingKeyHash, view, ADDRESS_KEY_HASH_LENGTH);
+		TRACE("Staking key hash: ");
+		TRACE_BUFFER(params->stakingKeyHash, SIZEOF(params->stakingKeyHash));
+		break;
+	}
+
+	case STAKING_SCRIPT_HASH: {
+		STATIC_ASSERT(SIZEOF(params->stakingScriptHash) == SCRIPT_HASH_LENGTH, "Wrong script hash length");
+		view_copyWireToBuffer(params->stakingScriptHash, view, SCRIPT_HASH_LENGTH);
+		TRACE("Staking script hash: ");
+		TRACE_BUFFER(params->stakingScriptHash, SIZEOF(params->stakingScriptHash));
 		break;
 	}
 

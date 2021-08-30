@@ -53,8 +53,7 @@ void signOpCert_handleAPDU(
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		STATIC_ASSERT(SIZEOF(ctx->kesPublicKey) == KES_PUBLIC_KEY_LENGTH, "wrong KES public key size");
-		VALIDATE(view_remainingSize(&view) >= KES_PUBLIC_KEY_LENGTH, ERR_INVALID_DATA);
-		view_memmove(ctx->kesPublicKey, &view, KES_PUBLIC_KEY_LENGTH);
+		view_copyWireToBuffer(ctx->kesPublicKey, &view, KES_PUBLIC_KEY_LENGTH);
 		TRACE("KES key:");
 		TRACE_BUFFER(ctx->kesPublicKey, KES_PUBLIC_KEY_LENGTH);
 

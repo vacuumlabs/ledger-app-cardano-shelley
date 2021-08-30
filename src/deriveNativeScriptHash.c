@@ -235,7 +235,7 @@ static void deriveNativeScriptHash_handleNofK(read_view_t* view)
 	// parse data
 	ctx->scriptContent.requiredScripts = parse_u4be(view);
 	TRACE_WITH_CTX("required scripts = %u, ", ctx->scriptContent.requiredScripts);
-	
+
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	// validate that the received requiredScripts count makes sense
@@ -297,10 +297,11 @@ static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 
 static void deriveNativeScriptHash_handleThirdPartyPubkey(read_view_t* view)
 {
-	VALIDATE(view_remainingSize(view) == ADDRESS_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 	STATIC_ASSERT(SIZEOF(ctx->scriptContent.pubkeyHash) == ADDRESS_KEY_HASH_LENGTH, "incorrect key hash size in script");
-	view_memmove(ctx->scriptContent.pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
+	view_copyWireToBuffer(ctx->scriptContent.pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
 	TRACE_BUFFER(ctx->scriptContent.pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
+
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	nativeScriptHashBuilder_addScript_pubkey(&ctx->hashBuilder, ctx->scriptContent.pubkeyHash, SIZEOF(ctx->scriptContent.pubkeyHash));
 

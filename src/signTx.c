@@ -615,9 +615,8 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 
 		case AUX_DATA_TYPE_ARBITRARY_HASH: {
 			// parse data
-			VALIDATE(view_remainingSize(&view) == AUX_DATA_HASH_LENGTH, ERR_INVALID_DATA);
 			STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "wrong auxiliary data hash length");
-			view_memmove(ctx->auxDataHash, &view, AUX_DATA_HASH_LENGTH);
+			view_copyWireToBuffer(ctx->auxDataHash, &view, AUX_DATA_HASH_LENGTH);
 			txAuxDataCtx->auxDataReceived = true;
 			break;
 		}
@@ -1107,8 +1106,7 @@ static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCr
 		break;
 	case STAKE_CREDENTIAL_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		VALIDATE(view_remainingSize(view) >= SIZEOF(stakeCredential->scriptHash), ERR_INVALID_DATA);
-		view_memmove(stakeCredential->scriptHash, view, SIZEOF(stakeCredential->scriptHash));
+		view_copyWireToBuffer(stakeCredential->scriptHash, view, SIZEOF(stakeCredential->scriptHash));
 		break;
 	}
 
@@ -1138,9 +1136,8 @@ static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, 
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION:
 		_parseStakeCredential(&view, &certificateData->stakeCredential);
-		VALIDATE(view_remainingSize(&view) == POOL_KEY_HASH_LENGTH, ERR_INVALID_DATA);
 		STATIC_ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
-		view_memmove(certificateData->poolKeyHash, &view, POOL_KEY_HASH_LENGTH);
+		view_copyWireToBuffer(certificateData->poolKeyHash, &view, POOL_KEY_HASH_LENGTH);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION:
