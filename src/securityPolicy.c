@@ -680,17 +680,14 @@ security_policy_t policyForSignTxWithdrawal(
 	DENY(); // should not be reached
 }
 
-static inline security_policy_t ordinaryWitnessPolicy(const bip44_path_t* pathSpec, bool mintPresent)
+static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path, bool mintPresent)
 {
-	switch (bip44_classifyPath(pathSpec)) {
+	switch (bip44_classifyPath(path)) {
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_POOL_COLD_KEY:
-		if (bip44_isPathReasonable(pathSpec)) {
-			ALLOW();
-		} else {
-			WARN();
-		}
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		ALLOW();
 		break;
 
 	case PATH_MINT_KEY:
@@ -704,22 +701,50 @@ static inline security_policy_t ordinaryWitnessPolicy(const bip44_path_t* pathSp
 	}
 }
 
-static inline security_policy_t scriptWitnessPolicy(const bip44_path_t* pathSpec, bool mintPresent)
+static inline security_policy_t _scriptWitnessPolicy(const bip44_path_t* path, bool mintPresent)
 {
-	switch (bip44_classifyPath(pathSpec)) {
+	switch (bip44_classifyPath(path)) {
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_POOL_COLD_KEY:
-		if (bip44_isPathReasonable(pathSpec)) {
-			SHOW();
-		} else {
-			WARN();
-		}
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
 		break;
 
 	case PATH_MINT_KEY:
 		DENY_UNLESS(mintPresent);
 		SHOW();
+
+	default:
+		DENY();
+		break;
+	}
+}
+
+static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* path)
+{
+	switch (bip44_classifyPath(path)) {
+
+	case PATH_ORDINARY_STAKING_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
+	default:
+		DENY();
+		break;
+	}
+}
+
+static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip44_path_t* path)
+{
+	switch (bip44_classifyPath(path)) {
+
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_POOL_COLD_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
 
 	default:
 		DENY();
@@ -739,46 +764,16 @@ security_policy_t policyForSignTxWitness(
 {
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		return ordinaryWitnessPolicy(pathSpec, mintPresent);
+		return _ordinaryWitnessPolicy(pathSpec, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
-		return scriptWitnessPolicy(pathSpec, mintPresent);
+		return _scriptWitnessPolicy(pathSpec, mintPresent);
 
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER: {
-		switch (bip44_classifyPath(pathSpec)) {
-		case PATH_ORDINARY_STAKING_KEY:
-			if (bip44_isPathReasonable(pathSpec)) {
-				SHOW();
-			} else {
-				WARN();
-			}
-			break;
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		return _poolRegistrationOwnerWitnessPolicy(pathSpec);
 
-		default:
-			DENY();
-			break;
-		}
-		break;
-	}
-
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR: {
-		switch (bip44_classifyPath(pathSpec)) {
-		case PATH_ORDINARY_SPENDING_KEY:
-		case PATH_POOL_COLD_KEY:
-			if (bip44_isPathReasonable(pathSpec)) {
-				SHOW();
-			} else {
-				WARN();
-			}
-			break;
-
-		default:
-			DENY();
-			break;
-		}
-
-		break;
-	}
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		return _poolRegistrationOperatorWitnessPolicy(pathSpec);
 
 	default:
 		ASSERT(false);
