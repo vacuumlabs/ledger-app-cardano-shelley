@@ -432,32 +432,25 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 	return BUFFER_SIZE_PARANOIA + 1;
 }
 
-// TODO(ppershing): this function needs to be thoroughly tested
-// on small outputSize
 void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
-	// We have to have space for terminating null
 
-	STATIC_ASSERT(sizeof(int) >= sizeof(blockchainIndex_t), "bad blockchainIndex_t size");
-	STATIC_ASSERT(sizeof(int) == 4, "bad int size"); // because of the checks below
-	ASSERT(blockchainPointer.blockIndex <= INT32_MAX);
-	ASSERT(blockchainPointer.txIndex <= INT32_MAX);
-	ASSERT(blockchainPointer.certificateIndex <= INT32_MAX);
+	STATIC_ASSERT(sizeof(blockchainIndex_t) <= sizeof(unsigned), "oversized type for %u");
+	STATIC_ASSERT(!IS_SIGNED(blockchainPointer.blockIndex), "signed type for %u");
+	STATIC_ASSERT(!IS_SIGNED(blockchainPointer.txIndex), "signed type for %u");
+	STATIC_ASSERT(!IS_SIGNED(blockchainPointer.certificateIndex), "signed type for %u");
 
 	ASSERT(outSize > 0);
 	snprintf(
 	        out,
 	        outSize,
-	        "(%d, %d, %d)",
-	        (int) blockchainPointer.blockIndex,
-	        (int) blockchainPointer.txIndex,
-	        (int) blockchainPointer.certificateIndex
+	        "(%u, %u, %u)",
+	        blockchainPointer.blockIndex,
+	        blockchainPointer.txIndex,
+	        blockchainPointer.certificateIndex
 	);
-
-	size_t len = strlen(out);
-	// ensure we are not truncating
-	ASSERT(len + 1 < outSize);
+	ASSERT(strlen(out) + 1 <= outSize);
 }
 
 // bech32 for Shelley, base58 for Byron

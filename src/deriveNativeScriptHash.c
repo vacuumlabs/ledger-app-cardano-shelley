@@ -89,6 +89,8 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 	for (size_t i = 1; i <= level; i++) {
 		ASSERT(i < MAX_SCRIPT_DEPTH);
 		uint32_t position = ctx->complexScripts[i].totalScripts - ctx->complexScripts[i].remainingScripts + 1;
+		STATIC_ASSERT(sizeof(position) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(position), "signed type for %u");
 		snprintf(ptr, (end - ptr), "%u.", position);
 		ptr += strlen(ptr);
 	}
@@ -96,6 +98,8 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 	// remove any trailing '.'
 	ASSERT(ptr > BEGIN(positionDescription));
 	*(ptr - 1) = '\0';
+
+	ASSERT(strlen(positionDescription) + 1 <= SIZEOF(positionDescription));
 
 	VALIDATE(uiPaginatedText_canFitStringIntoFullText(positionDescription), ERR_INVALID_DATA);
 
@@ -156,6 +160,8 @@ static void deriveScriptHash_display_ui_runStep()
 			// max possible length 35: "Contains n nested scripts."
 			// where n is 2^32-1
 			char text[36] = {0};
+			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
+			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
 			snprintf(text, SIZEOF(text), "Contains %u nested scripts.", ctx->complexScripts[ctx->level].remainingScripts);
 
 			ui_displayPaginatedText(
@@ -169,6 +175,10 @@ static void deriveScriptHash_display_ui_runStep()
 			// max possible length 85: "Requires n out of k signatures. Contains k nested scripts."
 			// where n and k is 2^32-1
 			char text[86] = {0};
+			STATIC_ASSERT(sizeof(ctx->scriptContent.requiredScripts) <= sizeof(unsigned), "oversized type for %u");
+			STATIC_ASSERT(!IS_SIGNED(ctx->scriptContent.requiredScripts), "signed type for %u");
+			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
+			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
 			snprintf(text, SIZEOF(text), "Requires %u out of %u signatures. Contains %u nested scripts", ctx->scriptContent.requiredScripts, ctx->complexScripts[ctx->level].remainingScripts, ctx->complexScripts[ctx->level].remainingScripts);
 
 			ui_displayPaginatedText(

@@ -200,7 +200,7 @@ size_t str_formatValidityBoundary(uint64_t slotNumber, char* out, size_t outSize
 		// thousands of years
 		snprintf(out, outSize, "epoch more than 1000000");
 	} else {
-		snprintf(out, outSize, "epoch %d / slot %d", (int) epoch, (int) slotInEpoch);
+		snprintf(out, outSize, "epoch %u / slot %u", (unsigned) epoch, (unsigned) slotInEpoch);
 	}
 
 	// snprintf does not return length written

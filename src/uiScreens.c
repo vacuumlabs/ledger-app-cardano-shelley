@@ -113,6 +113,8 @@ static void _ui_displayAccountWithDescriptionScreen(
 
 	if (showAccountDescription) {
 		uint32_t account = unharden(bip44_getAccount(path));
+		STATIC_ASSERT(sizeof(account + 1) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(account + 1), "signed type for %u");
 		if (bip44_hasByronPrefix(path)) {
 			snprintf(
 			        accountDescription, SIZEOF(accountDescription),
@@ -284,6 +286,8 @@ void ui_displayRewardAccountScreen(
 
 		{
 			uint32_t account = unharden(bip44_getAccount(&rewardAccount->path));
+			STATIC_ASSERT(sizeof(account + 1) <= sizeof(unsigned), "oversized type for %u");
+			STATIC_ASSERT(!IS_SIGNED(account + 1), "signed type for %u");
 			snprintf(
 			        firstLine, SIZEOF(firstLine),
 			        "Reward account #%u  ", account + 1
@@ -595,10 +599,14 @@ void ui_displayNetworkParamsScreen(
 	char networkParams[100];
 	explicit_bzero(networkParams, SIZEOF(networkParams));
 
+	STATIC_ASSERT(sizeof(networkId) <= sizeof(unsigned), "oversized type for %u");
+	STATIC_ASSERT(!IS_SIGNED(networkId), "signed type for %u");
+	STATIC_ASSERT(sizeof(protocolMagic) <= sizeof(unsigned), "oversized type for %u");
+	STATIC_ASSERT(!IS_SIGNED(protocolMagic), "signed type for %u");
 	snprintf(
 	        networkParams, SIZEOF(networkParams),
-	        "network id %d / protocol magic %u",
-	        (int) networkId, (unsigned) protocolMagic
+	        "network id %u / protocol magic %u",
+	        networkId, protocolMagic
 	);
 	ASSERT(strlen(networkParams) + 1 < SIZEOF(networkParams));
 
@@ -627,8 +635,10 @@ void ui_displayPoolMarginScreen(
 		uint64_t marginPercentage = (10000 * marginNumerator + (marginDenominator / 2)) / marginDenominator;
 		ASSERT(marginPercentage <= 10000);
 
-		unsigned int percentage = (unsigned int) marginPercentage;
+		const unsigned int percentage = (unsigned int) marginPercentage;
 
+		STATIC_ASSERT(sizeof(percentage) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(percentage), "signed type for %u");
 		snprintf(marginStr, SIZEOF(marginStr), "%u.%u %%", percentage / 100, percentage % 100);
 		ASSERT(strlen(marginStr) + 1 < SIZEOF(marginStr));
 	}
@@ -681,6 +691,8 @@ void ui_displayPoolOwnerScreen(
 
 		char firstLine[20];
 		explicit_bzero(firstLine, SIZEOF(firstLine));
+		STATIC_ASSERT(sizeof(ownerIndex + 1) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(ownerIndex + 1), "signed type for %u");
 		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
 
 		_displayRewardAccountWithDescriptionScreen(
@@ -703,6 +715,8 @@ void ui_displayPoolRelayScreen(
 	char firstLine[20];
 	explicit_bzero(firstLine, SIZEOF(firstLine));
 	{
+		STATIC_ASSERT(sizeof(relayIndex + 1) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(relayIndex + 1), "signed type for %u");
 		snprintf(firstLine, SIZEOF(firstLine), "Relay #%u", relayIndex + 1);
 	}
 
@@ -770,6 +784,8 @@ void ui_displayIpPortScreen(
 	if (port->isNull) {
 		snprintf(portStr, SIZEOF(portStr), "(none)");
 	} else {
+		STATIC_ASSERT(sizeof(port->number) <= sizeof(unsigned), "oversized variable for %u");
+		STATIC_ASSERT(!IS_SIGNED(port->number), "signed type for %u");
 		snprintf(portStr, SIZEOF(portStr), "%u", port->number);
 	}
 

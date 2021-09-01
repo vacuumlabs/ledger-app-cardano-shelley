@@ -301,9 +301,9 @@ size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 		const uint32_t value = pathSpec->path[i];
 
 		if ((value & HARDENED_BIP32) == HARDENED_BIP32) {
-			WRITE("/%d'", (int) (value & ~HARDENED_BIP32));
+			WRITE("/%u'", (value & ~HARDENED_BIP32));
 		} else {
-			WRITE("/%d", (int) value);
+			WRITE("/%u", value);
 		}
 	}
 #undef WRITE

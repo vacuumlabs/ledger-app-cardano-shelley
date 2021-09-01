@@ -155,8 +155,10 @@ static void getPublicKeys_handleInit_ui_runStep()
 	UI_STEP(HANDLE_INIT_UI_STEP_CONFIRM) {
 		char secondLine[100];
 		explicit_bzero(secondLine, SIZEOF(secondLine));
+		STATIC_ASSERT(sizeof(ctx->numPaths) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(ctx->numPaths), "signed type for %u");
 		snprintf(secondLine, SIZEOF(secondLine), "%u public keys?", ctx->numPaths);
-		ASSERT(strlen(secondLine) < SIZEOF(secondLine));
+		ASSERT(strlen(secondLine) + 1 <= SIZEOF(secondLine));
 
 		ui_displayPrompt(
 		        "Confirm export",
