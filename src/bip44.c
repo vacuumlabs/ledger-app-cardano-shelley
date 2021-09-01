@@ -317,11 +317,17 @@ static bip44_path_type_t bip44_classifyOrdinaryWalletPath(const bip44_path_t* pa
 {
 	ASSERT(bip44_hasOrdinaryWalletKeyPrefix(pathSpec));
 
+	// account must be hardened
+	if (!bip44_containsAccount(pathSpec)) {
+		return PATH_INVALID;
+	}
+	if (!isHardened(bip44_getAccount(pathSpec))) {
+		return PATH_INVALID;
+	}
+
 	switch (pathSpec->length) {
 	case 3: {
-		return isHardened(bip44_getAccount(pathSpec)) ?
-		       PATH_ORDINARY_ACCOUNT :
-		       PATH_INVALID;
+		return PATH_ORDINARY_ACCOUNT;
 	}
 	case 5: {
 		const uint8_t chainType = bip44_getChainTypeValue(pathSpec);
@@ -350,11 +356,18 @@ static bip44_path_type_t bip44_classifyOrdinaryWalletPath(const bip44_path_t* pa
 static bip44_path_type_t bip44_classifyMultisigWalletPath(const bip44_path_t* pathSpec)
 {
 	ASSERT(bip44_hasMultisigWalletKeyPrefix(pathSpec));
+
+	// account must be hardened
+	if (!bip44_containsAccount(pathSpec)) {
+		return PATH_INVALID;
+	}
+	if (!isHardened(bip44_getAccount(pathSpec))) {
+		return PATH_INVALID;
+	}
+
 	switch (pathSpec->length) {
 	case 3: {
-		return isHardened(bip44_getAccount(pathSpec)) ?
-		       PATH_MULTISIG_ACCOUNT :
-		       PATH_INVALID;
+		return PATH_MULTISIG_ACCOUNT;
 	}
 	case 5: {
 		const uint8_t chainType = bip44_getChainTypeValue(pathSpec);
