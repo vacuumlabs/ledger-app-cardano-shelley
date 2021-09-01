@@ -167,8 +167,8 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	DENY(); // should not be reached
 }
 
-// Derive address and return it to the host
-security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams)
+// common policy for DENY and WARN
+static security_policy_t _policyForDeriveAddress(const addressParams_t* addressParams, security_policy_t successPolicy)
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
 
@@ -217,60 +217,19 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 		break;
 	}
 
-	PROMPT();
+	return successPolicy;
+}
+
+// Derive address and return it to the host
+security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams)
+{
+	return _policyForDeriveAddress(addressParams, POLICY_ALLOW_WITHOUT_PROMPT);
 }
 
 // Derive address and show it to the user
 security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams)
 {
-	DENY_UNLESS(isValidAddressParams(addressParams));
-
-	switch (addressParams->type) {
-
-	case BASE_PAYMENT_KEY_STAKE_KEY:
-		DENY_IF(bip44_classifyPath(&addressParams->spendingKeyPath) != PATH_ORDINARY_SPENDING_KEY);
-		DENY_IF(
-		        addressParams->stakingDataSource == STAKING_KEY_PATH &&
-		        bip44_classifyPath(&addressParams->stakingKeyPath) != PATH_ORDINARY_STAKING_KEY
-		);
-
-		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
-		WARN_IF(
-		        addressParams->stakingDataSource == STAKING_KEY_PATH &&
-		        !bip44_isPathReasonable(&addressParams->stakingKeyPath)
-		);
-		break;
-
-	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
-	case POINTER_KEY:
-	case ENTERPRISE_KEY:
-	case BYRON:
-		DENY_IF(bip44_classifyPath(&addressParams->spendingKeyPath) != PATH_ORDINARY_SPENDING_KEY);
-
-		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
-		break;
-
-	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
-	case REWARD_KEY:
-		DENY_IF(addressParams->stakingDataSource != STAKING_KEY_PATH);
-		DENY_IF(bip44_classifyPath(&addressParams->stakingKeyPath) != PATH_ORDINARY_STAKING_KEY);
-
-		WARN_IF(!bip44_isPathReasonable(&addressParams->stakingKeyPath));
-		break;
-
-	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
-	case POINTER_SCRIPT:
-	case ENTERPRISE_SCRIPT:
-	case REWARD_SCRIPT:
-		// no paths in the address
-		break;
-
-	default:
-		DENY();
-		break;
-	}
-
-	SHOW();
+	return _policyForDeriveAddress(addressParams, POLICY_SHOW_BEFORE_RESPONSE);
 }
 
 
@@ -745,7 +704,7 @@ static inline security_policy_t ordinaryWitnessPolicy(const bip44_path_t* pathSp
 	}
 }
 
-static inline security_policy_t multisigWitnessPolicy(const bip44_path_t* pathSpec, bool mintPresent)
+static inline security_policy_t scriptWitnessPolicy(const bip44_path_t* pathSpec, bool mintPresent)
 {
 	switch (bip44_classifyPath(pathSpec)) {
 	case PATH_MULTISIG_SPENDING_KEY:
@@ -783,7 +742,7 @@ security_policy_t policyForSignTxWitness(
 		return ordinaryWitnessPolicy(pathSpec, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
-		return multisigWitnessPolicy(pathSpec, mintPresent);
+		return scriptWitnessPolicy(pathSpec, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER: {
 		switch (bip44_classifyPath(pathSpec)) {
