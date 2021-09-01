@@ -17,6 +17,7 @@ Script elements in transactions and support for native scripts
 - support for mint field in transaction body and corresponding key derivation paths from [CIP 1855 - Forging policy keys for HD Wallets](https://cips.cardano.org/cips/cip1855/)
 - support for address types with script hashes (all Shelley address types are now supported)
 - support for script elements in trasactions (certficates etc.) within a new transaction signing mode
+- validation of canonical ordering of cbor map keys (withdrawals, token policy ids in outputs and mint, asset names within an asset group)
 
 ### Changed
 
