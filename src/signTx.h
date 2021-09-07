@@ -66,6 +66,11 @@ typedef struct {
 } stake_credential_t;
 
 typedef struct {
+	uint8_t txHashBuffer[TX_HASH_LENGTH];
+	uint32_t index;
+} sign_tx_input_data_t;
+
+typedef struct {
 	certificate_type_t type;
 
 	union {
@@ -116,6 +121,7 @@ typedef struct {
 	union {
 		uint64_t fee;
 		uint64_t ttl;
+		sign_tx_input_data_t input;
 		sign_tx_certificate_data_t certificate;
 		sign_tx_withdrawal_data_t withdrawal;
 		uint64_t validityIntervalStart;

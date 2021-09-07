@@ -36,7 +36,7 @@ security_policy_t policyForSignTxInit(
         bool includeMint
 );
 
-security_policy_t policyForSignTxInput();
+security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);
 
 security_policy_t policyForSignTxOutputAddressBytes(
         sign_tx_signingmode_t txSigningMode,

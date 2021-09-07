@@ -286,10 +286,30 @@ security_policy_t policyForSignTxInit(
 }
 
 // For each transaction UTxO input
-security_policy_t policyForSignTxInput()
+security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 {
-	// No need to check tx inputs
-	ALLOW();
+	switch (txSigningMode) {
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		// inputs can be hidden to improve ux because
+		// they are almost interchangeable
+		ALLOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		// inputs not interchangeable, e.g. there could be two inputs
+		// with the same ADA/tokens, but different time locking policies
+		// in the native script
+		SHOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
 // For each transaction (third-party) address output

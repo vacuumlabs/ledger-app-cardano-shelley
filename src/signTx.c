@@ -649,17 +649,51 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 // ============================== INPUTS ==============================
 
 enum {
-	HANDLE_INPUT_STEP_RESPOND = 200,
+	HANDLE_INPUT_STEP_SHOW_TX_HASH = 200,
+	HANDLE_INPUT_STEP_SHOW_INDEX,
+	HANDLE_INPUT_STEP_RESPOND,
 	HANDLE_INPUT_STEP_INVALID,
 };
 
+__noinline_due_to_stack__
 static void signTx_handleInput_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleInput_ui_runStep;
 
+	sign_tx_input_data_t* input = &txBodyCtx->stageData.input;
+
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
+	UI_STEP(HANDLE_INPUT_STEP_SHOW_TX_HASH) {
+		char header[30];
+		explicit_bzero(header, SIZEOF(header));
+		snprintf(header, SIZEOF(header), "Input %u: tx id", txBodyCtx->currentInput + 1);
+		ASSERT(strlen(header) < SIZEOF(header));
+
+		ui_displayHexBufferScreen(
+		        header,
+		        input->txHashBuffer, SIZEOF(input->txHashBuffer),
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_INPUT_STEP_SHOW_INDEX) {
+		char header[30];
+		explicit_bzero(header, SIZEOF(header));
+		snprintf(header, SIZEOF(header), "Input %u: index", txBodyCtx->currentInput + 1);
+		ASSERT(strlen(header) < SIZEOF(header));
+
+		char secondLine[15];
+		explicit_bzero(secondLine, SIZEOF(secondLine));
+		snprintf(secondLine, SIZEOF(secondLine), "%u", input->index);
+		ASSERT(strlen(secondLine) < SIZEOF(secondLine));
+
+		ui_displayPaginatedText(
+		        header,
+		        secondLine,
+		        this_fn
+		);
+	}
 	UI_STEP(HANDLE_INPUT_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 
@@ -687,11 +721,7 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	// parsed data
-	struct {
-		uint8_t txHashBuffer[TX_HASH_LENGTH];
-		uint32_t parsedIndex;
-	} input;
+	sign_tx_input_data_t* input = &txBodyCtx->stageData.input;
 
 	{
 		// parse input
@@ -704,8 +734,9 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 
 		VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
 
-		memmove(input.txHashBuffer, wireUtxo->txHash, SIZEOF(input.txHashBuffer));
-		input.parsedIndex = u4be_read(wireUtxo->index);
+		STATIC_ASSERT(SIZEOF(input->txHashBuffer) == SIZEOF(wireUtxo->txHash), "wrong tx hash buffer size");
+		memmove(input->txHashBuffer, wireUtxo->txHash, SIZEOF(input->txHashBuffer));
+		input->index = u4be_read(wireUtxo->index);
 	}
 
 	{
@@ -713,12 +744,12 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 		TRACE("Adding input to tx hash");
 		txHashBuilder_addInput(
 		        &txBodyCtx->txHashBuilder,
-		        input.txHashBuffer, SIZEOF(input.txHashBuffer),
-		        input.parsedIndex
+		        input->txHashBuffer, SIZEOF(input->txHashBuffer),
+		        input->index
 		);
 	}
 
-	security_policy_t policy = policyForSignTxInput();
+	security_policy_t policy = policyForSignTxInput(ctx->commonTxData.txSigningMode);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -726,6 +757,7 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 		// select UI steps
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_INPUT_STEP_SHOW_TX_HASH);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_INPUT_STEP_RESPOND);
 #	undef   CASE
 		default:
