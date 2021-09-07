@@ -35,10 +35,9 @@ Environment setup and developer documentation is sufficiently provided in Ledger
 
 You want a debug version of the MCU firmware (but it blocks SDK firmware updates, so for the purpose of upgrading SDK, replace it temporarily with a non-debug one). Instructions for swapping MCU versions: https://github.com/LedgerHQ/ledger-dev-doc/blob/master/source/userspace/debugging.rst
 
-### Setting udev rules
+### Troubleshooting connection problems
 
-You might need to setup udev rules before your device can communicate with the system.
-- https://ledger.readthedocs.io/en/latest/userspace/setup.html
+The quickstart guide's script sets up your udev rules, but there still might be problems.
 - https://support.ledger.com/hc/en-us/articles/115005165269-Fix-connection-issues
 
 ## Development
@@ -63,11 +62,11 @@ See `Makefile` for list of included functions.
 
 Ordinarily, Ledger computes a rolling hash of the serialized transaction body, but the body itself is not available. It is possible to acquire it from the development build by going through the following steps:
 
-1. [Install debug MCU](https://ledger.readthedocs.io/en/latest/userspace/debugging.html#application-debug) on your Ledger Nano S device.
+1. [Install debug MCU](https://developers.ledger.com/docs/nano-app/debug/#introduction) on your Ledger Nano S device.
 
 2. Install the debug version of Cardano app (see above).
 
-3. Install `usbtool` and turn on [console printing](https://ledger.readthedocs.io/en/latest/userspace/debugging.html#console-printing).
+3. Install `usbtool` and turn on [console printing](https://developers.ledger.com/docs/nano-app/debug/#console-printing).
 
 4. Send a single `signTx` call to Ledger (e.g. by running `yarn test-integration --grep "<some-signTx-test>"`).
 
