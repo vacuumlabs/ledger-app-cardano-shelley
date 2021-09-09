@@ -105,6 +105,8 @@ static inline cbor_token_t view_readToken(read_view_t* view)
 // throws ERR_INVALID_DATA if not enough data
 static inline void view_copyWireToBuffer(uint8_t* destBuffer, read_view_t* view, size_t length)
 {
+	ASSERT(length < BUFFER_SIZE_PARANOIA);
+
 	VALIDATE(view_remainingSize(view) >= length, ERR_INVALID_DATA);
 	memmove(destBuffer, view->ptr, length);
 	view_skipBytes(view, length);

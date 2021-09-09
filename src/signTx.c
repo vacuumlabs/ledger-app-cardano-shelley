@@ -566,6 +566,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 {
 	{
 		TRACE_STACK_USAGE();
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 		ASSERT(ctx->includeAuxData == true);
 
 		// delegate to state sub-machine for stake pool registration certificate data
@@ -1139,6 +1140,8 @@ static void _fillHashFromPath(const bip44_path_t* path,
                               uint8_t* hash, size_t hashSize)
 {
 	ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
+	ASSERT(hashSize < BUFFER_SIZE_PARANOIA);
+
 	bip44_pathToKeyHash(
 	        path,
 	        hash, hashSize
@@ -1148,6 +1151,8 @@ static void _fillHashFromPath(const bip44_path_t* path,
 static void _fillHashFromStakeCredential(const stake_credential_t* stakeCredential,
         uint8_t* hash, size_t hashSize)
 {
+	ASSERT(hashSize < BUFFER_SIZE_PARANOIA);
+
 	switch (stakeCredential->type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
 		_fillHashFromPath(&stakeCredential->keyPath, hash, hashSize);
@@ -1219,7 +1224,7 @@ __noinline_due_to_stack__
 static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
-
+	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(txBodyCtx->currentCertificate < ctx->numCertificates);
 
 	// delegate to state sub-machine for stake pool registration certificate data
@@ -1823,6 +1828,7 @@ void signTx_handleAPDU(
 )
 {
 	TRACE("P1 = 0x%x, P2 = 0x%x, isNewCall = %d", p1, p2, isNewCall);
+	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	if (isNewCall) {
 		explicit_bzero(ctx, SIZEOF(*ctx));

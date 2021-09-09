@@ -144,6 +144,7 @@ void txHashBuilder_addInput(
 {
 	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingInputs);
 
+	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_INPUTS);
 	ASSERT(builder->remainingInputs > 0);
 	builder->remainingInputs--;
@@ -194,6 +195,7 @@ void txHashBuilder_addOutput_topLevelData(
 {
 	_TRACE("state = %d, remainingOutputs = %u", builder->state, builder->remainingOutputs);
 
+	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
 	ASSERT(builder->remainingOutputs > 0);
 	builder->remainingOutputs--;
@@ -256,10 +258,10 @@ static void addTokenGroup(tx_hash_builder_t* builder,
 	ASSERT(builder->multiassetData.remainingAssetGroups > 0);
 	builder->multiassetData.remainingAssetGroups--;
 
+	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
+
 	ASSERT(numTokens > 0);
 	builder->multiassetData.remainingTokens = numTokens;
-
-	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
 
 	// Bytes[policyId]
 	// Map(numTokens)[
@@ -324,6 +326,8 @@ void txHashBuilder_addOutput_tokenGroup(
         uint16_t numTokens
 )
 {
+	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
+
 	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens,
 	              TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP, TX_HASH_BUILDER_IN_OUTPUTS_TOKEN);
 }
@@ -334,6 +338,8 @@ void txHashBuilder_addOutput_token(
         uint64_t amount
 )
 {
+	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
+
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         TX_HASH_BUILDER_IN_OUTPUTS_TOKEN,
 	         TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP,
@@ -435,6 +441,8 @@ void txHashBuilder_addCertificate_stakingHash(
 	ASSERT((certificateType == CERTIFICATE_TYPE_STAKE_REGISTRATION)
 	       || (certificateType == CERTIFICATE_TYPE_STAKE_DEREGISTRATION));
 
+	ASSERT(stakingHashSize == ADDRESS_KEY_HASH_LENGTH);
+
 	// Array(2)[
 	//   Unsigned[certificateType]
 	//   Array(2)[
@@ -472,6 +480,9 @@ void txHashBuilder_addCertificate_delegation(
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES);
 	ASSERT(builder->remainingCertificates > 0);
 	builder->remainingCertificates--;
+
+	ASSERT(stakingKeyHashSize == ADDRESS_KEY_HASH_LENGTH);
+	ASSERT(poolKeyHashSize == POOL_KEY_HASH_LENGTH);
 
 	// Array(3)[
 	//   Unsigned[2]
@@ -514,6 +525,8 @@ void txHashBuilder_addCertificate_poolRetirement(
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES);
 	ASSERT(builder->remainingCertificates > 0);
 	builder->remainingCertificates--;
+
+	ASSERT(poolKeyHashSize == POOL_KEY_HASH_LENGTH);
 
 	// Array(3)[
 	//   Unsigned[4]
@@ -683,6 +696,8 @@ void txHashBuilder_addPoolRegistrationCertificate_addOwner(
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS);
 	ASSERT(builder->poolCertificateData.remainingOwners > 0);
 	builder->poolCertificateData.remainingOwners--;
+
+	ASSERT(stakingKeyHashSize == ADDRESS_KEY_HASH_LENGTH);
 
 	// Bytes[poolKeyHash]
 	{
@@ -887,6 +902,7 @@ void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
 )
 {
 	_TRACE("state = %d", builder->state);
+	ASSERT(metadataHashSize == POOL_METADATA_HASH_LENGTH);
 
 	// we allow this to be called immediately after pool params have been added
 	// if there are no owners or relays in the tx
@@ -973,7 +989,7 @@ void txHashBuilder_addWithdrawal(
 	ASSERT(builder->remainingWithdrawals > 0);
 	builder->remainingWithdrawals--;
 
-	ASSERT(rewardAddressSize == 1 + ADDRESS_KEY_HASH_LENGTH);
+	ASSERT(rewardAddressSize == REWARD_ACCOUNT_SIZE);
 
 	// map entry
 	//   Bytes[address]
@@ -1011,6 +1027,8 @@ static void txHashBuilder_assertCanLeaveWithdrawals(tx_hash_builder_t* builder)
 void txHashBuilder_addAuxData(tx_hash_builder_t* builder, const uint8_t* auxDataHashBuffer, size_t auxDataHashBufferSize)
 {
 	_TRACE("state = %d, remainingWithdrawals = %u", builder->state, builder->remainingWithdrawals);
+
+	ASSERT(auxDataHashBufferSize == AUX_DATA_HASH_LENGTH);
 
 	txHashBuilder_assertCanLeaveWithdrawals(builder);
 	ASSERT(builder->includeAuxData);
@@ -1114,6 +1132,8 @@ void txHashBuilder_addMint_tokenGroup(
         uint16_t numTokens
 )
 {
+	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
+
 	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens,
 	              TX_HASH_BUILDER_IN_MINT_ASSET_GROUP, TX_HASH_BUILDER_IN_MINT_TOKEN);
 }
@@ -1124,6 +1144,8 @@ void txHashBuilder_addMint_token(
         int64_t amount
 )
 {
+	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
+
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         TX_HASH_BUILDER_IN_MINT_TOKEN,
 	         TX_HASH_BUILDER_IN_MINT_ASSET_GROUP,
@@ -1163,7 +1185,7 @@ void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size
 {
 	txHashBuilder_assertCanLeaveMint(builder);
 
-	ASSERT(outSize == 32);
+	ASSERT(outSize == TX_HASH_LENGTH);
 	{
 		blake2b_256_finalize(&builder->txHash, outBuffer, outSize);
 	}

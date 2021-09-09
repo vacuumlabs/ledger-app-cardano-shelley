@@ -299,6 +299,8 @@ security_policy_t policyForSignTxOutputAddressBytes(
         const uint8_t networkId, const uint32_t protocolMagic
 )
 {
+	ASSERT(rawAddressSize < BUFFER_SIZE_PARANOIA);
+
 	// network identification must be consistent across tx
 	ASSERT(rawAddressSize >= 1);
 	address_type_t addressType = getAddressType(rawAddressBuffer[0]);

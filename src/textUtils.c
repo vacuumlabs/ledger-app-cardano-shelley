@@ -214,6 +214,8 @@ size_t str_formatValidityBoundary(uint64_t slotNumber, char* out, size_t outSize
 // returns length of the resulting string
 size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, char* out, size_t outSize)
 {
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	return encode_hex(metadataHash, metadataHashSize, out, outSize);
 }
 

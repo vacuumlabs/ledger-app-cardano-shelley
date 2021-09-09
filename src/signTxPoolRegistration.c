@@ -1443,6 +1443,7 @@ void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size
 {
 	TRACE_STACK_USAGE();
 	TRACE("p2 = 0x%x", p2);
+	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 

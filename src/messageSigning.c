@@ -37,6 +37,9 @@ static void signRawMessageWithPath(bip44_path_t* pathSpec,
                                    const uint8_t* messageBuffer, size_t messageSize,
                                    uint8_t* outBuffer, size_t outSize)
 {
+	ASSERT(messageSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	chain_code_t chainCode;
 	privateKey_t privateKey;
 
@@ -64,6 +67,8 @@ void getTxWitness(bip44_path_t* pathSpec,
                   uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(txHashSize == TX_HASH_LENGTH);
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	#ifndef FUZZING
 	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
 	#endif
@@ -74,6 +79,8 @@ void getCatalystVotingRegistrationSignature(bip44_path_t* pathSpec,
         uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(payloadHashSize == CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH);
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	#ifndef FUZZING
 	signRawMessageWithPath(pathSpec, payloadHashBuffer, payloadHashSize, outBuffer, outSize);
 	#endif
@@ -83,7 +90,9 @@ void getOpCertSignature(bip44_path_t* pathSpec,
                         const uint8_t* opCertBodyBuffer, size_t opCertBodySize,
                         uint8_t* outBuffer, size_t outSize)
 {
-	ASSERT(opCertBodySize == OP_CERT_BODY_LENGTH);
 	ASSERT(bip44_isPoolColdKeyPath(pathSpec));
+	ASSERT(opCertBodySize == OP_CERT_BODY_LENGTH);
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	signRawMessageWithPath(pathSpec, opCertBodyBuffer, opCertBodySize, outBuffer, outSize);
 }

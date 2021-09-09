@@ -593,6 +593,8 @@ bool signTxCatalystRegistration_isValidInstruction(uint8_t p2)
 
 void signTxCatalystRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+
 	switch (p2) {
 	case APDU_INSTRUCTION_VOTING_KEY:
 		signTxCatalystRegistration_handleVotingKeyAPDU(wireDataBuffer, wireDataSize);

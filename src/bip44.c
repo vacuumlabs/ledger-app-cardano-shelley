@@ -459,6 +459,8 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 
 void bip44_pathToKeyHash(const bip44_path_t* pathSpec, uint8_t* hash, size_t hashSize)
 {
+	ASSERT(hashSize < BUFFER_SIZE_PARANOIA);
+
 	extendedPublicKey_t extPubKey;
 	deriveExtendedPublicKey(pathSpec, &extPubKey);
 

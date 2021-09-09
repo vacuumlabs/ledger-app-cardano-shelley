@@ -464,6 +464,7 @@ size_t deriveAssetFingerprint(
 )
 {
 	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
+	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 
 	uint8_t hashInput[MINTING_POLICY_ID_SIZE + ASSET_NAME_SIZE_MAX];
 	const size_t hashInputSize = policyIdSize + assetNameSize;
@@ -490,6 +491,8 @@ void ui_displayAssetFingerprintScreen(
         ui_callback_fn_t callback
 )
 {
+	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
+
 	char fingerprint[200];
 
 	deriveAssetFingerprint(

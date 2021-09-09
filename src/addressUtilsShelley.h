@@ -30,7 +30,7 @@ typedef enum {
 	REWARD_SCRIPT                       = 0b1111,
 } address_type_t;
 
-uint8_t getAddressHeader(uint8_t* addressBuffer, size_t addressSize);
+uint8_t getAddressHeader(const uint8_t* addressBuffer, size_t addressSize);
 
 address_type_t getAddressType(uint8_t addressHeader);
 bool isSupportedAddressType(uint8_t addressHeader);

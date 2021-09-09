@@ -19,6 +19,8 @@ uint8_t hex_parseNibblePair(const char* buffer)
 
 size_t decode_hex(const char* inStr, uint8_t* outBuffer, size_t outMaxSize)
 {
+	ASSERT(outMaxSize < BUFFER_SIZE_PARANOIA);
+
 	size_t len = strlen(inStr);
 	if (len % 2) THROW(ERR_UNEXPECTED_TOKEN);
 

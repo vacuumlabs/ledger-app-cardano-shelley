@@ -185,6 +185,9 @@ bool cbor_mapKeyFulfillsCanonicalOrdering(
         const uint8_t* nextBuffer, size_t nextSize
 )
 {
+	ASSERT(previousSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(nextSize < BUFFER_SIZE_PARANOIA);
+
 	if (previousSize != nextSize) {
 		return previousSize < nextSize;
 	}

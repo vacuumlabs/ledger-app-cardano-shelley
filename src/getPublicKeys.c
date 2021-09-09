@@ -298,6 +298,8 @@ void getPublicKeys_handleAPDU(
         bool isNewCall
 )
 {
+	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+
 	if (isNewCall) {
 		explicit_bzero(ctx, SIZEOF(*ctx));
 		ctx->stage = GET_KEYS_STAGE_INIT;

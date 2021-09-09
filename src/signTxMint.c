@@ -371,6 +371,8 @@ void signTxMint_init()
 
 void signTxMint_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+
 	switch (p2) {
 	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
 		signTxMint_handleTopLevelDataAPDU(wireDataBuffer, wireDataSize);

@@ -7,9 +7,11 @@
 #include "base58.h"
 #include "bech32.h"
 
-uint8_t getAddressHeader(uint8_t* addressBuffer, size_t addressSize)
+uint8_t getAddressHeader(const uint8_t* addressBuffer, size_t addressSize)
 {
 	ASSERT(addressSize > 0);
+	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
+
 	return addressBuffer[0];
 }
 
@@ -158,6 +160,7 @@ static bool _isBaseAddress(address_type_t addressType)
 static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(_isBaseAddress(addressParams->type));
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	const uint8_t header = constructShelleyAddressHeader(
 	                               addressParams->type, addressParams->networkId
@@ -256,6 +259,7 @@ static size_t deriveAddress_pointer(
 	const address_type_t addressType = addressParams->type;
 	ASSERT(addressType == POINTER_KEY || addressType == POINTER_SCRIPT);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	const uint8_t addressHeader = constructShelleyAddressHeader(addressType, addressParams->networkId);
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
@@ -291,6 +295,7 @@ static size_t deriveAddress_enterprise(
 	const address_type_t addressType = addressParams->type;
 	ASSERT(addressType == ENTERPRISE_KEY || addressType == ENTERPRISE_SCRIPT);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	const uint8_t addressHeader = constructShelleyAddressHeader(addressType, addressParams->networkId);
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
@@ -324,6 +329,7 @@ static size_t deriveAddress_reward(
 	const address_type_t addressType = addressParams->type;
 	ASSERT(addressType == REWARD_KEY || addressType == REWARD_SCRIPT);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	const uint8_t addressHeader = constructShelleyAddressHeader(addressType, addressParams->networkId);
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
@@ -401,6 +407,8 @@ size_t constructRewardAddressFromHash(
 
 size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize)
 {
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	const bip44_path_t* spendingPath = &addressParams->spendingKeyPath;
 
 	if (addressParams->type == BYRON) {
@@ -457,6 +465,9 @@ void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* ou
 size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* out, size_t outSize)
 {
 	ASSERT(addressSize > 0);
+	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	const uint8_t addressType = getAddressType(address[0]);
 	const uint8_t networkId = getNetworkId(address[0]);
 
