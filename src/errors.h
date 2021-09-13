@@ -22,10 +22,11 @@ enum {
 	ERR_INVALID_REQUEST_PARAMETERS = 0x6E05,
 	// Request is not valid in the context of previous calls
 	ERR_INVALID_STATE              = 0x6E06,
-	// Some part of request data is invalid (includes not enough data)
+	// Some part of request data is invalid (or unknown to this app)
+	// (includes not enough data and too much data)
 	ERR_INVALID_DATA               = 0x6E07,
-	// BIP44 path is rejected
-	ERR_INVALID_BIP44_PATH         = 0x6E08,
+	// previously used for rejected BIP44 paths, now we use ERR_REJECTED_BY_POLICY
+	// ERR_INVALID_BIP44_PATH         = 0x6E08,
 
 	// User rejected the action
 	ERR_REJECTED_BY_USER           = 0x6E09,
@@ -35,8 +36,8 @@ enum {
 	// Pin screen
 	ERR_DEVICE_LOCKED              = 0x6E11,
 
-	// unsupported Shelley address type
-	ERR_UNSUPPORTED_ADDRESS_TYPE   = 0x6E12,
+	// previously used for unsupported Shelley address types
+	// ERR_UNSUPPORTED_ADDRESS_TYPE   = 0x6E12,
 
 
 	// end of errors which trigger automatic response

@@ -22,12 +22,10 @@ size_t decode_hex(const char* inStr, uint8_t* outBuffer, size_t outMaxSize)
 	ASSERT(outMaxSize < BUFFER_SIZE_PARANOIA);
 
 	size_t len = strlen(inStr);
-	if (len % 2) THROW(ERR_UNEXPECTED_TOKEN);
+	ASSERT(len % 2 == 0);
 
 	size_t outLen = len / 2;
-	if (outLen > outMaxSize) {
-		THROW(ERR_DATA_TOO_LARGE);
-	}
+	ASSERT(outLen <= outMaxSize);
 
 	while (len >= 2) {
 		*outBuffer = hex_parseNibblePair(inStr);

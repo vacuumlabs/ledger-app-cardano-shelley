@@ -136,8 +136,6 @@ size_t cborPackRawAddressWithChecksum(
 	return view_processedSize(&output);
 }
 
-// TODO(ppershing): Should we somehow deal with not enough input currently
-// throwing ERR_NOT_ENOUGH_INPUT instead of ERR_INVALID_DATA?
 static uint64_t parseToken(read_view_t* view, uint8_t type)
 {
 	const cbor_token_t token = view_parseToken(view);
