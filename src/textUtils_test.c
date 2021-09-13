@@ -37,7 +37,7 @@ void test_formatAda()
 		EXPECT_EQ(tmp[13], 'X');
 
 		EXPECT_THROWS(str_formatAdaAmount(10000000, tmp, 13),
-		              ERR_DATA_TOO_LARGE);
+		              ERR_ASSERT);
 		EXPECT_EQ(tmp[13], 'X');
 	}
 }
@@ -95,7 +95,7 @@ void testcase_formatUint64(
 	{
 		// check for buffer overflows
 		char tmp[30];
-		EXPECT_THROWS(str_formatUint64(number, tmp, strlen(expected)), ERR_DATA_TOO_LARGE);
+		EXPECT_THROWS(str_formatUint64(number, tmp, strlen(expected)), ERR_ASSERT);
 	}
 }
 
@@ -116,7 +116,7 @@ void testcase_formatInt64(
 	{
 		// check for buffer overflows
 		char tmp[30];
-		EXPECT_THROWS(str_formatInt64(number, tmp, strlen(expected)), ERR_DATA_TOO_LARGE);
+		EXPECT_THROWS(str_formatInt64(number, tmp, strlen(expected)), ERR_ASSERT);
 	}
 }
 

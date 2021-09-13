@@ -43,9 +43,7 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	const char *suffix = " ADA";
 	const size_t suffixLength = strlen(suffix);
 
-	if (rawSize + suffixLength + 1 > outSize) {
-		THROW(ERR_DATA_TOO_LARGE);
-	}
+	ASSERT(rawSize + suffixLength + 1 <= outSize);
 
 	// Copy reversed & append terminator
 	for (size_t i = 0; i < rawSize; i++) {
@@ -79,9 +77,8 @@ static size_t stringifyUint64ToBufferReverse(uint64_t number, char* buffer, size
 static void printReversedStringToBuffer(const char* reversed, char* out, size_t outSize)
 {
 	const size_t reversedSize = strlen(reversed);
-	if (reversedSize + 1 > outSize) {
-		THROW(ERR_DATA_TOO_LARGE);
-	}
+	ASSERT(outSize >= reversedSize + 1);
+
 	for (size_t i = 0; i < reversedSize; i++) {
 		out[i] = reversed[reversedSize - 1 - i];
 	}
