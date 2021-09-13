@@ -207,7 +207,8 @@ static inline void advanceStage()
 		break;
 
 	case SIGN_STAGE_NONE:
-		THROW(ERR_INVALID_STATE);
+		// advanceStage() not supposed to be called after tx processing is finished
+		ASSERT(false);
 
 	default:
 		ASSERT(false);
