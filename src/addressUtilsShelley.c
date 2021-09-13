@@ -409,12 +409,9 @@ size_t constructRewardAddressFromHash(
 size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(isValidAddressParams(addressParams));
 
 	const bip44_path_t* spendingPath = &addressParams->spendingKeyPath;
-
-	if (addressParams->type == BYRON) {
-		return deriveAddress_byron(spendingPath, addressParams->protocolMagic, outBuffer, outSize);
-	}
 
 	// shelley
 	switch (addressParams->type) {
@@ -434,9 +431,9 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 	case REWARD_SCRIPT:
 		return deriveAddress_reward(addressParams, outBuffer, outSize);
 	case BYRON:
-		ASSERT(false);
+		return deriveAddress_byron(spendingPath, addressParams->protocolMagic, outBuffer, outSize);
 	default:
-		THROW(ERR_UNSUPPORTED_ADDRESS_TYPE);
+		ASSERT(false);
 	}
 	return BUFFER_SIZE_PARANOIA + 1;
 }
@@ -526,7 +523,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	// address type
 	params->type = parse_u1be(view);
 	TRACE("Address type: 0x%x", params->type);
-	VALIDATE(isSupportedAddressType(params->type), ERR_UNSUPPORTED_ADDRESS_TYPE);
+	VALIDATE(isSupportedAddressType(params->type), ERR_INVALID_DATA);
 
 	// protocol magic / network id
 	if (params->type == BYRON) {
