@@ -156,17 +156,6 @@ static void testAddressDerivation()
 	        // bech32: addr1vdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vc9wh7em
 	);
 
-	TESTCASE(
-	        REWARD_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
-	        "e31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
-	        // bech32: stake1uvwjy7h05jmhx9y3wzy94td6xz4txynuccgam0zfn800v8qqucf2t
-	);
-	TESTCASE(
-	        REWARD_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
-	        "e01d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
-	        // bech32: stake_test1uqwjy7h05jmhx9y3wzy94td6xz4txynuccgam0zfn800v8q8mmqwc
-	);
-
 #undef TESTCASE
 #undef NO_STAKING_KEY_PATH
 #undef NO_STAKING_KEY_HASH
