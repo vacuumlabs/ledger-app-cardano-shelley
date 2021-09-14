@@ -198,6 +198,7 @@ static inline void advanceStage()
 
 	case SIGN_STAGE_CONFIRM:
 		ctx->stage = SIGN_STAGE_WITNESSES;
+		txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		initTxWitnessCtx();
 
 		if (ctx->numWitnesses > 0) {

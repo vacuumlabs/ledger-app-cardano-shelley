@@ -276,9 +276,11 @@ security_policy_t policyForSignTxInit(
 		ASSERT(false);
 	}
 
-	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, txSigningMode));
+	DENY_UNLESS(isValidNetworkId(networkId));
 
-	WARN_IF(networkId != MAINNET_NETWORK_ID);
+	WARN_UNLESS(is_tx_network_verifiable(numOutputs, numWithdrawals, txSigningMode));
+
+	WARN_IF(networkId != MAINNET_NETWORK_ID && networkId != TESTNET_NETWORK_ID);
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
 
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
