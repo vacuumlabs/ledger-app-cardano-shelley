@@ -108,7 +108,10 @@ void txHashBuilder_init(
 		builder->includeMint = includeMint;
 		if (includeMint) numItems++;
 
-		ASSERT((3 <= numItems) && (numItems <= 9));
+		// network id always included
+		numItems++;
+
+		ASSERT((4 <= numItems) && (numItems <= 10));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -1180,10 +1183,46 @@ static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 	ASSERT(builder->multiassetData.remainingTokens == 0);
 }
 
+void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveMint(builder);
+
+	// add network id item into the main tx body map
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_NETWORK_ID);
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, networkId);
+
+	builder->state = TX_HASH_BUILDER_IN_NETWORK_ID;
+}
+
+static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_NETWORK_ID:
+		break;
+
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveMint(builder);
+		ASSERT(!builder->includeValidityIntervalStart);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+}
 
 void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
 {
-	txHashBuilder_assertCanLeaveMint(builder);
+	txHashBuilder_assertCanLeaveNetworkId(builder);
 
 	ASSERT(outSize == TX_HASH_LENGTH);
 	{
