@@ -20,8 +20,9 @@ typedef enum {
 	STATE_OUTPUT_TOP_LEVEL_DATA = 2510,
 	STATE_OUTPUT_ASSET_GROUP = 2511,
 	STATE_OUTPUT_TOKEN = 2512,
-	STATE_OUTPUT_CONFIRM = 2513,
-	STATE_OUTPUT_FINISHED = 2514
+	STATE_OUTPUT_DATA_HASH = 2513,
+	STATE_OUTPUT_CONFIRM = 2514,
+	STATE_OUTPUT_FINISHED = 2515
 } sign_tx_output_state_t;
 
 
@@ -48,6 +49,8 @@ typedef struct {
 	uint16_t currentAssetGroup;
 	uint16_t numTokens;
 	uint16_t currentToken;
+	bool includeDataHash;
+	bool dataHashReceived;
 
 	// this affects whether amounts and tokens are shown
 	security_policy_t outputSecurityPolicy;
@@ -58,6 +61,7 @@ typedef struct {
 			token_group_t tokenGroup;
 			output_token_amount_t token;
 		};
+		uint8_t dataHash[OUTPUT_DATA_HASH_LENGTH];
 	} stateData;
 
 } output_context_t;

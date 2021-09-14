@@ -152,6 +152,16 @@ static void addMultiassetMint(tx_hash_builder_t* builder)
 	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addMint_tokenGroup, &addMintTokenProxy);
 }
 
+static void outputTokenHandler(
+        tx_hash_builder_t* builder,
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
+        uint64_t amount
+)
+{
+	txHashBuilder_addOutput_token(builder, assetNameBuffer, assetNameSize, amount, false);
+}
+
+
 static void addMultiassetOutput(tx_hash_builder_t* builder)
 {
 	uint8_t tmp[70];
@@ -160,10 +170,11 @@ static void addMultiassetOutput(tx_hash_builder_t* builder)
 	        builder,
 	        tmp, tmpSize,
 	        outputs[1].amount,
-	        2
+	        2,
+	        false
 	);
 
-	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &txHashBuilder_addOutput_token);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &outputTokenHandler);
 }
 
 static void addOutputs(tx_hash_builder_t* builder)
@@ -179,7 +190,7 @@ static void addOutputs(tx_hash_builder_t* builder)
 		        builder,
 		        tmp, tmpSize,
 		        it->amount,
-		        0
+		        0, false
 		);
 	}
 
@@ -359,7 +370,8 @@ void run_txHashBuilder_test()
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
 	                   true, // validity interval start
-	                   true // mint
+	                   true, // mint
+	                   false // script hash data
 	                  );
 
 	txHashBuilder_enterInputs(&builder);

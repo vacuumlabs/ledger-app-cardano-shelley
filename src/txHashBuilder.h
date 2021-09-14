@@ -15,6 +15,8 @@ enum {
 	TX_BODY_KEY_AUX_DATA = 7,
 	TX_BODY_KEY_VALIDITY_INTERVAL_START = 8,
 	TX_BODY_KEY_MINT = 9,
+	TX_BODY_KEY_SCRIPT_HASH_DATA = 11,
+	TX_BODY_KEY_NETWORK_ID = 15,
 };
 
 /* The state machine of the tx hash builder is driven by user calls.
@@ -34,6 +36,7 @@ typedef enum {
 	TX_HASH_BUILDER_IN_OUTPUTS_TOP_LEVEL_DATA = 310,
 	TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP = 311,
 	TX_HASH_BUILDER_IN_OUTPUTS_TOKEN = 312,
+	TX_HASH_BUILDER_IN_OUTPUTS_DATA_HASH = 313,
 	TX_HASH_BUILDER_IN_FEE = 400,
 	TX_HASH_BUILDER_IN_TTL = 500,
 	TX_HASH_BUILDER_IN_CERTIFICATES = 600,
@@ -52,7 +55,9 @@ typedef enum {
 	TX_HASH_BUILDER_IN_MINT_TOP_LEVEL_DATA = 1010,
 	TX_HASH_BUILDER_IN_MINT_ASSET_GROUP = 1011,
 	TX_HASH_BUILDER_IN_MINT_TOKEN = 1012,
-	TX_HASH_BUILDER_FINISHED = 1100,
+	TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA = 1100,
+	TX_HASH_BUILDER_IN_NETWORK_ID = 1200,
+	TX_HASH_BUILDER_FINISHED = 1300,
 } tx_hash_builder_state_t;
 
 typedef struct {
@@ -64,6 +69,7 @@ typedef struct {
 	bool includeAuxData;
 	bool includeValidityIntervalStart;
 	bool includeMint;
+	bool includeScriptDataHash;
 
 	union {
 		struct {
@@ -91,7 +97,8 @@ void txHashBuilder_init(
         uint16_t numWithdrawals,
         bool includeAuxData,
         bool includeValidityIntervalStart,
-        bool includeMint
+        bool includeMint,
+        bool includeScriptDataHash
 );
 
 void txHashBuilder_enterInputs(tx_hash_builder_t* builder);
@@ -106,7 +113,8 @@ void txHashBuilder_addOutput_topLevelData(
         tx_hash_builder_t* builder,
         const uint8_t* addressBuffer, size_t addressSize,
         uint64_t amount,
-        uint16_t numAssetGroups
+        uint16_t numAssetGroups,
+        bool includeDataHash
 );
 void txHashBuilder_addOutput_tokenGroup(
         tx_hash_builder_t* builder,
@@ -116,7 +124,12 @@ void txHashBuilder_addOutput_tokenGroup(
 void txHashBuilder_addOutput_token(
         tx_hash_builder_t* builder,
         const uint8_t* assetNameBuffer, size_t assetNameSize,
-        uint64_t amount
+        uint64_t amount,
+        bool includeDataHash
+);
+void txHashBuilder_addOutput_dataHash(
+        tx_hash_builder_t* builder,
+        const uint8_t* dataHashBuffer, size_t dataHashSize
 );
 
 void txHashBuilder_addFee(tx_hash_builder_t* builder, uint64_t fee);
@@ -213,6 +226,13 @@ void txHashBuilder_addMint_token(
         const uint8_t* assetNameBuffer, size_t assetNameSize,
         int64_t amount
 );
+
+void txHashBuilder_addScriptDataHash(
+        tx_hash_builder_t* builder,
+        const uint8_t* scriptHashData, size_t scriptHashDataSize
+);
+
+void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId);
 
 void txHashBuilder_finalize(
         tx_hash_builder_t* builder,

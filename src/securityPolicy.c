@@ -38,27 +38,6 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
-bool is_tx_network_verifiable(
-        sign_tx_signingmode_t txSigningMode,
-        uint16_t numOutputs,
-        uint16_t numWithdrawals
-)
-{
-	if (numOutputs > 0) return true;
-	if (numWithdrawals > 0) return true;
-
-	switch (txSigningMode) {
-
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-		// pool registration certificate contains pool reward account
-		return true;
-
-	default:
-		return false;
-	}
-}
-
 // useful shortcuts
 
 // WARNING: unless you are doing something exceptional,
@@ -238,8 +217,6 @@ security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
         uint8_t networkId,
         uint32_t protocolMagic,
-        uint16_t numInputs MARK_UNUSED,
-        uint16_t numOutputs,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint
@@ -276,9 +253,9 @@ security_policy_t policyForSignTxInit(
 		ASSERT(false);
 	}
 
-	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, txSigningMode));
+	DENY_UNLESS(isValidNetworkId(networkId));
 
-	WARN_IF(networkId != MAINNET_NETWORK_ID);
+	WARN_IF(networkId != MAINNET_NETWORK_ID && networkId != TESTNET_NETWORK_ID);
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
 
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
@@ -837,6 +814,25 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy)
 		PROMPT();
 		break;
 
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
+security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSigningMode)
+{
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		SHOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		DENY();
+		break;
 	default:
 		ASSERT(false);
 	}
