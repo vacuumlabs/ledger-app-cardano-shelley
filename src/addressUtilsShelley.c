@@ -76,7 +76,7 @@ uint8_t getNetworkId(uint8_t addressHeader)
 
 bool isValidNetworkId(uint8_t networkId)
 {
-	return networkId <= 0b1111;
+	return networkId <= MAXIMUM_NETWORK_ID;
 }
 
 bool isValidStakingChoice(staking_data_source_t stakingDataSource)

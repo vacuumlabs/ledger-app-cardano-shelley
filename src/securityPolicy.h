@@ -9,12 +9,6 @@
 #include "signTxAuxData.h"
 #include "signTx.h"
 
-bool is_tx_network_verifiable(
-        sign_tx_signingmode_t txSigningMode,
-        uint32_t numOutputs,
-        uint32_t numWithdrawals
-);
-
 security_policy_t policyForDerivePrivateKey(const bip44_path_t* path);
 
 security_policy_t policyForGetPublicKeysInit(uint32_t numPaths);
@@ -29,10 +23,8 @@ security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
         uint32_t networkId,
         uint32_t protocolMagic,
-        uint32_t numInputs,
-        uint32_t numOutputs,
-        uint32_t numCertificates,
-        uint32_t numWithdrawals,
+        uint16_t numCertificates,
+        uint16_t numWithdrawals,
         bool includeMint
 );
 

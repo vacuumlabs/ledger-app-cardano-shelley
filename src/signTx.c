@@ -198,6 +198,7 @@ static inline void advanceStage()
 
 	case SIGN_STAGE_CONFIRM:
 		ctx->stage = SIGN_STAGE_WITNESSES;
+		txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		initTxWitnessCtx();
 
 		if (ctx->numWitnesses > 0) {
@@ -342,20 +343,11 @@ static void signTx_handleInit_ui_runStep()
 		        "Multisig transaction" :
 		        "New transaction";
 
-		if (is_tx_network_verifiable(ctx->commonTxData.txSigningMode, ctx->numOutputs, ctx->numWithdrawals)) {
-			ui_displayNetworkParamsScreen(
-			        header,
-			        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
-			        this_fn
-			);
-		} else {
-			// technically, no withdrawals/pool reg. certificate as well, but the UI message would be too long
-			ui_displayPaginatedText(
-			        header,
-			        "no outputs, cannot verify network id",
-			        this_fn
-			);
-		}
+		ui_displayNetworkParamsScreen(
+				header,
+				ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
+				this_fn
+		);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_CONFIRM) {
@@ -476,8 +468,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	                                   ctx->commonTxData.txSigningMode,
 	                                   ctx->commonTxData.networkId,
 	                                   ctx->commonTxData.protocolMagic,
-	                                   ctx->numInputs,
-	                                   ctx->numOutputs,
 	                                   ctx->numCertificates,
 	                                   ctx->numWithdrawals,
 	                                   ctx->includeMint
