@@ -29,7 +29,7 @@ static void blake2b_224_append_cbor_data(
         uint8_t type, uint64_t value
 )
 {
-	uint8_t buffer[10];
+	uint8_t buffer[10] = {0};
 	size_t size = cbor_writeToken(type, value, buffer, SIZEOF(buffer));
 	_TRACE_BUFFER(buffer, size);
 	blake2b_224_append(hashCtx, buffer, size);

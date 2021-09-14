@@ -128,11 +128,11 @@ static void runGetOnePublicKeyUIFlow()
 	}
 
 	switch (policy) {
-	#define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
+#define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,    GET_KEY_UI_STEP_WARNING);
 		CASE(POLICY_PROMPT_BEFORE_RESPONSE, GET_KEY_UI_STEP_DISPLAY);
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   GET_KEY_UI_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
@@ -154,12 +154,13 @@ static void getPublicKeys_handleInit_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 	UI_STEP(HANDLE_INIT_UI_STEP_CONFIRM) {
-		char secondLine[100];
+		char secondLine[100] = {0};
 		explicit_bzero(secondLine, SIZEOF(secondLine));
 		STATIC_ASSERT(sizeof(ctx->numPaths) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(ctx->numPaths), "signed type for %u");
 		snprintf(secondLine, SIZEOF(secondLine), "%u public keys?", ctx->numPaths);
-		ASSERT(strlen(secondLine) + 1 <= SIZEOF(secondLine));
+		// make sure all the information is displayed to the user
+		ASSERT(strlen(secondLine) + 1 < SIZEOF(secondLine));
 
 		ui_displayPrompt(
 		        "Confirm export",
@@ -239,10 +240,10 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 	{
 		// select UI steps
 		switch (policy) {
-	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_UI_STEP_CONFIRM);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT,   HANDLE_INIT_UI_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -281,13 +282,13 @@ typedef void subhandler_fn_t(uint8_t* dataBuffer, size_t dataSize);
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
 	switch (p1) {
-	#define  CASE(P1, HANDLER) case P1: return HANDLER;
-	#define  DEFAULT(HANDLER)  default: return HANDLER;
+#define  CASE(P1, HANDLER) case P1: return HANDLER;
+#define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(0x00, getPublicKeys_handleInitAPDU);
 		CASE(0x01, getPublicKeys_handleGetNextKeyAPDU);
 		DEFAULT(NULL)
-	#undef   CASE
-	#undef   DEFAULT
+#undef   CASE
+#undef   DEFAULT
 	}
 }
 

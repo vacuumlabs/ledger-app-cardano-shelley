@@ -76,7 +76,7 @@ uint8_t getNetworkId(uint8_t addressHeader)
 
 bool isValidNetworkId(uint8_t networkId)
 {
-	return networkId <= 0b1111;
+	return networkId <= MAXIMUM_NETWORK_ID;
 }
 
 bool isValidStakingChoice(staking_data_source_t stakingDataSource)
@@ -131,12 +131,39 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 #undef CONSISTENT_WITH
 }
 
+staking_data_source_t determineStakingChoice(address_type_t addressType)
+{
+	switch (addressType) {
+	case BASE_PAYMENT_KEY_STAKE_KEY:
+	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+	case REWARD_KEY:
+		return STAKING_KEY_HASH;
+
+	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
+	case REWARD_SCRIPT:
+		return STAKING_SCRIPT_HASH;
+
+	case POINTER_KEY:
+	case POINTER_SCRIPT:
+		return BLOCKCHAIN_POINTER;
+
+	case ENTERPRISE_KEY:
+	case ENTERPRISE_SCRIPT:
+	case BYRON:
+		return NO_STAKING;
+
+	default:
+		ASSERT(false);
+	}
+}
+
 __noinline_due_to_stack__
 static size_t view_appendAddressPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath)
 {
 	TRACE_STACK_USAGE();
 
-	uint8_t hashedPubKey[ADDRESS_KEY_HASH_LENGTH];
+	uint8_t hashedPubKey[ADDRESS_KEY_HASH_LENGTH] = {0};
 	bip44_pathToKeyHash(keyDerivationPath, hashedPubKey, SIZEOF(hashedPubKey));
 
 	view_appendBuffer(view, hashedPubKey, SIZEOF(hashedPubKey));
@@ -229,7 +256,7 @@ static size_t view_appendVariableLengthUInt(write_view_t* view, uint64_t value)
 
 	ASSERT(value > 0);
 
-	uint8_t chunks[10]; // 7-bit chunks of the input bits, at most 10 in uint64
+	uint8_t chunks[10] = {0}; // 7-bit chunks of the input bits, at most 10 in uint64
 	size_t outputSize = 0;
 	{
 		blockchainIndex_t bits = value;
@@ -456,7 +483,8 @@ void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* ou
 	        blockchainPointer.txIndex,
 	        blockchainPointer.certificateIndex
 	);
-	ASSERT(strlen(out) + 1 <= outSize);
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(out) + 1 < outSize);
 }
 
 // bech32 for Shelley, base58 for Byron
@@ -622,7 +650,7 @@ static inline bool isValidStakingInfo(const addressParams_t* params)
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(isStakingInfoConsistentWithAddressType(params));
 	if (params->stakingDataSource == STAKING_KEY_PATH) {
-		CHECK(bip44_isOrdinaryStakingKeyPath(&params->stakingKeyPath));
+		CHECK(bip44_classifyPath(&params->stakingKeyPath) == PATH_ORDINARY_STAKING_KEY);
 	}
 	return true;
 #undef CHECK

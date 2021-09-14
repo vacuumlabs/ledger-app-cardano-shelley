@@ -93,10 +93,10 @@ static void testcase_deriveAddressShelley(
 	}
 	PRINTF("\n");
 
-	uint8_t address[MAX_ADDRESS_LENGTH];
+	uint8_t address[MAX_ADDRESS_LENGTH] = {0};
 	size_t addressSize = deriveAddress(&params, address, SIZEOF(address));
 
-	uint8_t expected[MAX_ADDRESS_LENGTH];
+	uint8_t expected[MAX_ADDRESS_LENGTH] = {0};
 	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));
 
 	EXPECT_EQ(addressSize, expectedSize);

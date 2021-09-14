@@ -20,7 +20,7 @@ void testcase_derivePrivateKey(uint32_t* path, uint32_t pathLen, const char* exp
 	BIP44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
-	uint8_t expected[64];
+	uint8_t expected[64] = {0};
 	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));
 
 	chain_code_t chainCode;
@@ -86,10 +86,10 @@ void testcase_derivePublicKey(uint32_t* path, uint32_t pathLen, const char* expe
 	derivePrivateKey(&pathSpec, &chainCode, &privateKey);
 	cx_ecfp_public_key_t publicKey;
 	deriveRawPublicKey(&privateKey, &publicKey);
-	uint8_t publicKeyRaw[32];
+	uint8_t publicKeyRaw[32] = {0};
 	extractRawPublicKey(&publicKey, publicKeyRaw, SIZEOF(publicKeyRaw));
 
-	uint8_t expectedBuffer[32];
+	uint8_t expectedBuffer[32] = {0};
 	decode_hex(expected, expectedBuffer, SIZEOF(expectedBuffer));
 	EXPECT_EQ_BYTES(expectedBuffer, publicKeyRaw, SIZEOF(expectedBuffer));
 }
@@ -152,7 +152,7 @@ void testcase_deriveChainCode(uint32_t* path, uint32_t pathLen, const char* expe
 
 	derivePrivateKey(&pathSpec, &chainCode, &privateKey);
 
-	uint8_t expectedBuffer[32];
+	uint8_t expectedBuffer[32] = {0};
 	decode_hex(expectedHex, expectedBuffer, 32);
 	EXPECT_EQ_BYTES(expectedBuffer, chainCode.code, 32);
 }

@@ -13,6 +13,7 @@ void assert(
         #endif
 )
 {
+	// *INDENT-OFF*
 	if (cond) return; // everything holds
 	#ifdef RESET_ON_CRASH
 	io_seproxyhal_se_reset();
@@ -31,4 +32,5 @@ void assert(
 		#endif // DEVEL
 	}
 	#endif
+	// *INDENT-ON*
 }

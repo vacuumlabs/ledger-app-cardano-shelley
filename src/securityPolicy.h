@@ -9,12 +9,6 @@
 #include "signTxAuxData.h"
 #include "signTx.h"
 
-bool is_tx_network_verifiable(
-        sign_tx_signingmode_t txSigningMode,
-        uint32_t numOutputs,
-        uint32_t numWithdrawals
-);
-
 security_policy_t policyForDerivePrivateKey(const bip44_path_t* path);
 
 security_policy_t policyForGetPublicKeysInit(uint32_t numPaths);
@@ -24,29 +18,44 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams);
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams);
 
+bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic);
+bool isTxNetworkIdVerifiable(
+        bool includeNetworkId,
+        uint32_t numOutputs,
+        uint32_t numWithdrawals,
+        sign_tx_signingmode_t txSigningMode
+);
+bool needsRunningScriptWarning(int32_t numCollaterals);
+bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollaterals);
+bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash);
 
 security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
         uint32_t networkId,
         uint32_t protocolMagic,
-        uint32_t numInputs,
-        uint32_t numOutputs,
-        uint32_t numCertificates,
-        uint32_t numWithdrawals,
-        bool includeMint
+        uint16_t numOutputs,
+        uint16_t numCertificates,
+        uint16_t numWithdrawals,
+        bool includeMint,
+        uint16_t numCollaterals,
+        uint16_t numRequiredSigners,
+        bool includeScriptDataHash,
+        bool includeNetworkId
 );
 
-security_policy_t policyForSignTxInput();
+security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);
 
 security_policy_t policyForSignTxOutputAddressBytes(
         sign_tx_signingmode_t txSigningMode,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool includeDatumHash
 );
 security_policy_t policyForSignTxOutputAddressParams(
         sign_tx_signingmode_t txSigningMode,
         const addressParams_t* params,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool includeDatumHash
 );
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t addressPolicy,
@@ -112,6 +121,15 @@ security_policy_t policyForSignTxValidityIntervalStart();
 
 security_policy_t policyForSignTxMintInit(const sign_tx_signingmode_t txSigningMode);
 security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy);
+
+security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSigningMode);
+
+security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSigningMode);
+
+security_policy_t policyForSignTxRequiredSigner(
+        const sign_tx_signingmode_t txSigningMode,
+        sign_tx_required_signer_t* requiredSigner
+);
 
 security_policy_t policyForSignTxWitness(
         sign_tx_signingmode_t txSigningMode,

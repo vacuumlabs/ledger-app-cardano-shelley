@@ -70,6 +70,43 @@ static inline void advanceState()
 	TRACE("Advancing mint state to: %d", subctx->state);
 }
 
+enum {
+	HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY = 9200,
+	HANDLE_MINT_TOP_LEVEL_DATA_RESPOND,
+	HANDLE_MINT_TOP_LEVEL_DATA_INVALID,
+};
+
+__noinline_due_to_stack__
+static void signTxMint_handleTopLevelData_ui_runStep()
+{
+	mint_context_t* subctx = accessSubcontext();
+	TRACE("UI step %d", subctx->ui_step);
+
+	ui_callback_fn_t* this_fn = signTxMint_handleTopLevelData_ui_runStep;
+
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY) {
+		char secondLine[50] = {0};
+		explicit_bzero(secondLine, SIZEOF(secondLine));
+		STATIC_ASSERT(!IS_SIGNED(subctx->numAssetGroups), "signed type for %u");
+		snprintf(secondLine, SIZEOF(secondLine), "%u asset groups", subctx->numAssetGroups);
+		ASSERT(strlen(secondLine) + 1 < SIZEOF(secondLine));
+
+		ui_displayPaginatedText(
+		        "Mint",
+		        secondLine,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		advanceState();
+	}
+	UI_STEP_END(HANDLE_MINT_TOP_LEVEL_DATA_INVALID);
+}
+
 static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
@@ -93,12 +130,13 @@ static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wi
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
-	txHashBuilder_addMint_topLevelData(&BODY_CTX->txHashBuilder, subctx->numAssetGroups);
 	subctx->mintSecurityPolicy = policyForSignTxMintInit(commonTxData->txSigningMode);
 	ENSURE_NOT_DENIED(subctx->mintSecurityPolicy);
 
-	respondSuccessEmptyMsg();
-	advanceState();
+	txHashBuilder_addMint_topLevelData(&BODY_CTX->txHashBuilder, subctx->numAssetGroups);
+
+	subctx->ui_step = HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY;
+	signTxMint_handleTopLevelData_ui_runStep();
 }
 
 enum {
@@ -140,7 +178,7 @@ static void signTxMint_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wire
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE];
+		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE] = {0};
 		view_parseBuffer(candidatePolicyId, &view, MINTING_POLICY_ID_SIZE);
 
 		if (subctx->currentAssetGroup > 0) {
@@ -240,7 +278,7 @@ static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataS
 
 		const size_t candidateAssetNameSize = parse_u4be(&view);
 		VALIDATE(candidateAssetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
-		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX];
+		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX] = {0};
 		view_parseBuffer(candidateAssetNameBytes, &view, candidateAssetNameSize);
 
 		if (subctx->currentToken > 0) {
@@ -264,10 +302,10 @@ static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataS
 	{
 		// select UI step
 		switch (subctx->mintSecurityPolicy) {
-	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOKEN_STEP_DISPLAY_NAME);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TOKEN_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -338,10 +376,10 @@ static void signTxMint_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, si
 	{
 		// select UI step
 		switch (policy) {
-	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}

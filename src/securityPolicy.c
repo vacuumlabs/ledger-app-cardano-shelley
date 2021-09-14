@@ -6,7 +6,7 @@
 
 #include "securityPolicy.h"
 
-// Helper macros
+// helper functions
 
 // staking key path has the same account as the spending key path
 static inline bool is_standard_base_address(const addressParams_t* addressParams)
@@ -39,26 +39,12 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
-bool is_tx_network_verifiable(
-        sign_tx_signingmode_t txSigningMode,
-        uint32_t numOutputs,
-        uint32_t numWithdrawals
-)
+// spending part of the address is a script hash
+static inline bool allows_datum_hash(const uint8_t addressType)
 {
-	if (numOutputs > 0) return true;
-	if (numWithdrawals > 0) return true;
-
-	switch (txSigningMode) {
-
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-		// pool registration certificate contains pool reward account
-		return true;
-
-	default:
-		return false;
-	}
+	return (determineSpendingChoice(addressType) == SPENDING_SCRIPT_HASH);
 }
+
 
 // useful shortcuts
 
@@ -101,16 +87,23 @@ security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
 	case PATH_POOL_COLD_KEY:
 
 		ALLOW();
+		break;
 
 	default:
 		DENY();
+		break;
 	}
+
+	DENY(); // should not be reached
 }
 
+// Initiate getting extended public key or extended public key bulk
 security_policy_t policyForGetPublicKeysInit(uint32_t numPaths)
 {
+	// in a bulk key export, some keys are hidden, the user must be notified
 	PROMPT_IF(numPaths > 1);
 
+	// for a single key, the policy for displaying it is determined later
 	ALLOW();
 }
 
@@ -128,6 +121,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 	case PATH_MINT_KEY:
 	case PATH_POOL_COLD_KEY:
 		WARN_IF(!bip44_isPathReasonable(pathSpec));
+		// ask for permission
 		PROMPT();
 		break;
 
@@ -152,11 +146,13 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_MINT_KEY:
 		WARN_IF(!bip44_isPathReasonable(pathSpec));
+		// we do not show these paths since there may be many of them
 		ALLOW();
 		break;
 
 	case PATH_POOL_COLD_KEY:
 		WARN_IF(!bip44_isPathReasonable(pathSpec));
+		// but ask for permission when pool cold key is requested
 		PROMPT();
 		break;
 
@@ -168,7 +164,7 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	DENY(); // should not be reached
 }
 
-// common policy for DENY and WARN
+// common policy for DENY and WARN cases in returnDeriveAddress and showDeriveAddress
 static security_policy_t _policyForDeriveAddress(const addressParams_t* addressParams, security_policy_t successPolicy)
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
@@ -176,12 +172,7 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 	switch (addressParams->type) {
 
 	case BASE_PAYMENT_KEY_STAKE_KEY:
-		DENY_IF(bip44_classifyPath(&addressParams->spendingKeyPath) != PATH_ORDINARY_SPENDING_KEY);
-		DENY_IF(
-		        addressParams->stakingDataSource == STAKING_KEY_PATH &&
-		        bip44_classifyPath(&addressParams->stakingKeyPath) != PATH_ORDINARY_STAKING_KEY
-		);
-
+		// unusual path
 		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
 		WARN_IF(
 		        addressParams->stakingDataSource == STAKING_KEY_PATH &&
@@ -193,16 +184,16 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 	case POINTER_KEY:
 	case ENTERPRISE_KEY:
 	case BYRON:
-		DENY_IF(bip44_classifyPath(&addressParams->spendingKeyPath) != PATH_ORDINARY_SPENDING_KEY);
-
+		// unusual path
 		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
 		break;
 
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
 	case REWARD_KEY:
+		// we only support derivation based on key path
 		DENY_IF(addressParams->stakingDataSource != STAKING_KEY_PATH);
-		DENY_IF(bip44_classifyPath(&addressParams->stakingKeyPath) != PATH_ORDINARY_STAKING_KEY);
 
+		// unusual path
 		WARN_IF(!bip44_isPathReasonable(&addressParams->stakingKeyPath));
 		break;
 
@@ -233,25 +224,82 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 	return _policyForDeriveAddress(addressParams, POLICY_SHOW_BEFORE_RESPONSE);
 }
 
+// true iff network is the standard mainnet or testnet
+bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic)
+{
+	if (networkId == MAINNET_NETWORK_ID && protocolMagic == MAINNET_PROTOCOL_MAGIC)
+		return true;
+
+	if (networkId == TESTNET_NETWORK_ID && protocolMagic == TESTNET_PROTOCOL_MAGIC)
+		return true;
+
+	return false;
+}
+
+// true iff tx contains an element with network id
+bool isTxNetworkIdVerifiable(
+        bool includeNetworkId,
+        uint32_t numOutputs,
+        uint32_t numWithdrawals,
+        sign_tx_signingmode_t txSigningMode
+)
+{
+	if (includeNetworkId) return true;
+
+	if (numOutputs > 0) return true;
+	if (numWithdrawals > 0) return true;
+
+	switch (txSigningMode) {
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// pool registration certificate contains pool reward account
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+bool needsRunningScriptWarning(int32_t numCollaterals)
+{
+	return numCollaterals > 0;
+}
+
+bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollaterals)
+{
+	const bool collateralExpected = (signingMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX);
+	return collateralExpected && (numCollaterals == 0);
+}
+
+bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash)
+{
+	const bool scriptDataHashExpected = (signingMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX);
+	return scriptDataHashExpected && !includesScriptDataHash;
+}
 
 // Initiate transaction signing
 security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
         uint32_t networkId,
         uint32_t protocolMagic,
-        uint32_t numInputs MARK_UNUSED,
-        uint32_t numOutputs,
-        uint32_t numCertificates,
-        uint32_t numWithdrawals,
-        bool includeMint
+        uint16_t numOutputs,
+        uint16_t numCertificates,
+        uint16_t numWithdrawals,
+        bool includeMint,
+        uint16_t numCollaterals,
+        uint16_t numRequiredSigners,
+        bool includeScriptDataHash,
+        bool includeNetworkId
 )
 {
+	DENY_UNLESS(isValidNetworkId(networkId));
 	// Deny shelley mainnet with weird byron protocol magic
 	DENY_IF(networkId == MAINNET_NETWORK_ID && protocolMagic != MAINNET_PROTOCOL_MAGIC);
 	// Note: testnets can still use byron mainnet protocol magic so we can't deny the opposite direction
 
 	// certain combinations of tx body elements are forbidden
-	// because of potential cross-witnessing
+	// mostly because of potential cross-witnessing
 	switch (txSigningMode) {
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
@@ -266,38 +314,80 @@ security_policy_t policyForSignTxInit(
 
 		// mint must not be combined with pool registration certificates
 		DENY_IF(includeMint);
+
+		// no Plutus elements for pool registrations
+		DENY_IF(includeScriptDataHash);
+		DENY_IF(numCollaterals > 0);
+		DENY_IF(numRequiredSigners > 0);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		// no additional validation
+		// collaterals and required signers are allowed only in PLUTUS_TX
+		DENY_IF(numCollaterals > 0);
+		DENY_IF(numRequiredSigners > 0);
+		break;
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		// Plutus script cannot be executed without collaterals
+		WARN_IF(numCollaterals == 0);
+
+		// Plutus script cannot be executed without script data hash
+		WARN_UNLESS(includeScriptDataHash);
+
+		// warn the user about Plutus script execution itself
+		WARN();
 		break;
 
 	default:
 		ASSERT(false);
 	}
 
-	WARN_IF(!is_tx_network_verifiable(numOutputs, numWithdrawals, txSigningMode));
+	// there are separate screens for various warnings
+	// the return value of the policy only says that at least one should be applied
+	// and the need for individual warnings is reassessed in the UI machine
+	WARN_UNLESS(isTxNetworkIdVerifiable(includeNetworkId, numOutputs, numWithdrawals, txSigningMode));
+	WARN_UNLESS(isNetworkUsual(networkId, protocolMagic));
 
-	WARN_IF(networkId != MAINNET_NETWORK_ID);
-	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
+	WARN_IF(needsRunningScriptWarning(numCollaterals));
+	WARN_IF(needsMissingCollateralWarning(txSigningMode, numCollaterals));
+	WARN_IF(needsMissingScriptDataHashWarning(txSigningMode, includeScriptDataHash));
 
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
+	// but it is safe only for a very narrow set of transactions (e.g. no Plutus)
 	PROMPT();
 }
 
 // For each transaction UTxO input
-security_policy_t policyForSignTxInput()
+security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 {
-	// No need to check tx inputs
-	ALLOW();
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		// user should check inputs because they are not interchangeable for Plutus scripts
+		SHOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		// inputs are not interesting for the user (transferred funds are shown in the outputs)
+		ALLOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
 // For each transaction (third-party) address output
 security_policy_t policyForSignTxOutputAddressBytes(
         sign_tx_signingmode_t txSigningMode,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool includeDatumHash
 )
 {
 	ASSERT(rawAddressSize < BUFFER_SIZE_PARANOIA);
@@ -315,6 +405,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 
 	case REWARD_KEY:
 	case REWARD_SCRIPT:
+		// outputs may not contain reward addresses
 		DENY();
 		break;
 
@@ -323,17 +414,35 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		break;
 	}
 
+	if (includeDatumHash) {
+		// together with the above requirement on SPENDING_PATH,
+		// this forbids datum in change outputs entirely
+		DENY_UNLESS(allows_datum_hash(addressType));
+
+		// no Plutus elements for pool registration, only allow in other modes
+		DENY_UNLESS(
+		        txSigningMode == SIGN_TX_SIGNINGMODE_ORDINARY_TX ||
+		        txSigningMode == SIGN_TX_SIGNINGMODE_MULTISIG_TX ||
+		        txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX
+		);
+	}
+
 	switch (txSigningMode) {
+
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		// all the funds are provided by the operator
-		// and thus outputs are irrelevant to the owner
+		// and thus outputs are irrelevant to the owner (even those having tokens or datum hash)
 		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-		// We always show third-party output addresses
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		// utxo on a Plutus script address without datum hash is unspendable
+		// but we can't DENY because it is valid for native scripts
+		WARN_IF(allows_datum_hash(addressType) && !includeDatumHash);
+		// we always show third-party output addresses
 		SHOW();
 		break;
 
@@ -344,16 +453,18 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	DENY(); // should not be reached
 }
 
-// For each output given by derivation path
+// For each output given by payment derivation path
 security_policy_t policyForSignTxOutputAddressParams(
         sign_tx_signingmode_t txSigningMode,
         const addressParams_t* params,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool includeDatumHash
 )
 {
 	DENY_UNLESS(isValidAddressParams(params));
 
-	// address type and network identification
+	// only allow valid address types
+	// and check network identification as appropriate
 	switch (params->type) {
 
 	case BYRON:
@@ -362,28 +473,70 @@ security_policy_t policyForSignTxOutputAddressParams(
 
 	case REWARD_KEY:
 	case REWARD_SCRIPT:
+		// outputs must not contain reward addresses (true not only for HW wallets)
 		DENY();
 		break;
 
-	default: // shelley types allowed in output
+	default: // all Shelley types allowed in output
 		DENY_IF(params->networkId != networkId);
 		break;
+	}
+
+	{
+		// outputs to a different account within this HW wallet,
+		// or to a different wallet, should be given as raw address bytes
+
+		// this captures the essence of a change output: money stays
+		// on an address where payment is fully controlled by this device
+		DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_PATH);
+		// Note: if we allowed script hash in spending part, we must add a warning
+		// for missing datum (see policyForSignTxOutputAddressBytes)
+
+		ASSERT(determineSpendingChoice(params->type) == SPENDING_PATH);
+		DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
+	}
+
+	if (includeDatumHash) {
+		// together with the above requirement on SPENDING_PATH,
+		// this forbids datum in change outputs entirely
+		DENY_UNLESS(allows_datum_hash(params->type));
+
+		// no Plutus elements for pool registration, only allow in other modes
+		DENY_UNLESS(
+		        txSigningMode == SIGN_TX_SIGNINGMODE_ORDINARY_TX ||
+		        txSigningMode == SIGN_TX_SIGNINGMODE_MULTISIG_TX ||
+		        txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX
+		);
 	}
 
 	switch (txSigningMode) {
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX: {
-		DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_PATH);
-		DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
+		// unusual paths or spending and staking path mismatch
 		SHOW_UNLESS(is_standard_base_address(params));
+
+		// outputs (eUTXOs) with datum hash are not interchangeable
+		SHOW_IF(includeDatumHash);
+
+		// it is safe to hide the remaining change outputs
 		ALLOW();
 		break;
 	}
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX: {
-		// all outputs should be given as external addresses
+		// for simplicity, all outputs should be given as external addresses;
+		// generally, more than one party is needed to sign
+		// spending from a multisig address, so we do not expect
+		// there will be 1852 outputs (that would be considered change)
 		DENY();
+		break;
+	}
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX: {
+		// the output could affect script validation so it must not be entirely hidden
+		// Note: if we relax this, some of the above restrictions may apply
+		SHOW();
 		break;
 	}
 
@@ -402,6 +555,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 	DENY(); // should not be reached
 }
 
+// For final output confirmation
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t outputPolicy,
         uint64_t numAssetGroups
@@ -409,12 +563,20 @@ security_policy_t policyForSignTxOutputConfirm(
 {
 	switch (outputPolicy) {
 	case POLICY_ALLOW_WITHOUT_PROMPT:
+		// output was not shown, no confirmation is needed
 		ALLOW();
 		break;
 
 	case POLICY_SHOW_BEFORE_RESPONSE:
+		// output was shown and it contained (possibly many) tokens
+		// show a confirmation prompt, so that the user may abort the transaction sooner
 		PROMPT_IF(numAssetGroups > 0);
+		// however, if there were no tokens, no separate confirmation is needed
 		ALLOW();
+		break;
+
+	case POLICY_PROMPT_WARN_UNUSUAL:
+		PROMPT();
 		break;
 
 	default:
@@ -435,6 +597,7 @@ security_policy_t policyForSignTxFee(
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		// always show the fee if it is paid by the signer
 		SHOW();
 		break;
@@ -454,7 +617,6 @@ security_policy_t policyForSignTxFee(
 // For transaction TTL
 security_policy_t policyForSignTxTtl(uint32_t ttl MARK_UNUSED)
 {
-
 	// might be changed to POLICY_ALLOW_WITHOUT_PROMPT
 	// to avoid bothering the user with TTL
 	// (Daedalus does not show this)
@@ -470,19 +632,24 @@ security_policy_t policyForSignTxCertificate(
 {
 	switch (txSigningMode) {
 
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		// pool registration is allowed only in POOL_REGISTRATION signging modes
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		// pool registration is allowed only in POOL_REGISTRATION signging modes
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+		// pool retirement is impossible with multisig keys
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
 		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// only pool registration is allowed
 		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
@@ -511,21 +678,72 @@ security_policy_t policyForSignTxCertificateStaking(
 		ASSERT(false);
 	}
 
-	switch (txSigningMode) {
-	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+	switch (stakeCredential->type) {
+	case STAKE_CREDENTIAL_KEY_PATH:
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			PROMPT();
+			break;
+
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+			DENY();
+			break;
+
+		default:
+			// in POOL_REGISTRATION signing modes, this certificate should have already been
+			// reported as invalid (only pool registration certificate is allowed)
+			ASSERT(false);
+			break;
+		}
 		break;
-	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
+
+	case STAKE_CREDENTIAL_KEY_HASH:
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			PROMPT();
+			break;
+
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+			DENY();
+			break;
+
+		default:
+			// in POOL_REGISTRATION signing modes, this certificate should have already been
+			// reported as invalid (only pool registration certificate is allowed)
+			ASSERT(false);
+			break;
+		}
 		break;
+
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			PROMPT();
+			break;
+
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+			DENY();
+			break;
+
+		default:
+			// in POOL_REGISTRATION signing modes, this certificate should have already been
+			// reported as invalid (only pool registration certificate is allowed)
+			ASSERT(false);
+			break;
+		}
+		break;
+
 	default:
 		ASSERT(false);
+		break;
 	}
 
-
-	PROMPT();
+	DENY(); // should not be reached
 }
 
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
@@ -537,6 +755,8 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	switch (txSigningMode) {
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		// pool retirement may only be present in ORDINARY_TX signing mode
+		// the path hash should be a valid pool cold key path
 		DENY_UNLESS(bip44_isPoolColdKeyPath(poolIdPath));
 		PROMPT();
 		break;
@@ -568,6 +788,7 @@ security_policy_t policyForSignTxStakePoolRegistrationInit(
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		DENY();
 		break;
 
@@ -586,11 +807,13 @@ security_policy_t policyForSignTxStakePoolRegistrationPoolId(
 {
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// owner should see a hash
 		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		// operator should see a path
 		DENY_UNLESS(poolId->keyReferenceType == KEY_REFERENCE_PATH);
 		SHOW();
 		break;
@@ -608,6 +831,7 @@ security_policy_t policyForSignTxStakePoolRegistrationVrfKey(
 {
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// not interesting for an owner
 		ALLOW();
 		break;
 
@@ -647,6 +871,7 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 )
 {
 	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
+		// when path is present, it should be a valid staking path
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&owner->path));
 		DENY_IF(violatesSingleAccountOrStoreIt(&owner->path));
 	}
@@ -660,6 +885,7 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 		break;
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		// operator should receive owners given by hash
 		ASSERT(numOwnersGivenByPath == 0);
 		DENY_UNLESS(owner->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
@@ -678,6 +904,7 @@ security_policy_t policyForSignTxStakePoolRegistrationRelay(
 {
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// not interesting for an owner
 		ALLOW();
 		break;
 
@@ -706,6 +933,7 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
         uint32_t numOwners, uint32_t numRelays
 )
 {
+	// notify the user if there are no owners and/or relays
 	PROMPT_IF(numOwners == 0);
 	PROMPT_IF(numRelays == 0);
 
@@ -718,21 +946,80 @@ security_policy_t policyForSignTxWithdrawal(
         const stake_credential_t* stakeCredential
 )
 {
-	switch (txSigningMode) {
-	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+	switch (stakeCredential->type) {
+	case STAKE_CREDENTIAL_KEY_PATH:
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
-		SHOW();
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			SHOW();
+			break;
+
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+			// script hash is expected for multisig txs
+			DENY();
+			break;
+
+		default:
+			// in POOL_REGISTRATION signing modes, this certificate should have already been
+			// reported as invalid (only pool registration certificate is allowed)
+			ASSERT(false);
+			break;
+		}
 		break;
 
-	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
-		SHOW();
+	case STAKE_CREDENTIAL_KEY_HASH:
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			SHOW();
+			break;
+
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+			// key path is expected for ordinary txs
+			// no known usecase for using 3rd party withdrawals in an ordinary tx
+			// the hash might come from a key used in a witness
+			// we are protecting users from accidentally signing such withdrawals
+			DENY();
+			break;
+
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+			// script hash is expected for multisig txs
+			DENY();
+			break;
+
+		default:
+			// in POOL_REGISTRATION signing modes, this certificate should have already been
+			// reported as invalid (only pool registration certificate is allowed)
+			ASSERT(false);
+			break;
+		}
+
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			SHOW();
+			break;
+
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+			// key path is expected for ordinary txs
+			DENY();
+			break;
+
+		default:
+			// in POOL_REGISTRATION signing modes, this certificate should have already been
+			// reported as invalid (only pool registration certificate is allowed)
+			ASSERT(false);
+			break;
+		}
 		break;
 
 	default:
+		// in POOL_REGISTRATION signing modes, non-zero number of withdrawals
+		// should have already been reported as invalid
 		ASSERT(false);
+		break;
 	}
 
 	DENY(); // should not be reached
@@ -749,24 +1036,58 @@ static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path,
 		break;
 
 	case PATH_POOL_COLD_KEY:
+		// ordinary key paths and pool cold key paths can be hidden if they are not unusual
+		// (the user saw all outputs, withdrawals and pool certificates and they all belong to him)
 		WARN_UNLESS(bip44_isPathReasonable(path));
 		SHOW();
 		break;
 
 	case PATH_MINT_KEY:
 		DENY_UNLESS(mintPresent);
+		// maybe not necessary, but let the user know which mint key is he using (eg. in case
+		// the minting policy contains multiple of his keys but with different rules)
 		SHOW();
 		break;
 
 	default:
+		// multisig keys forbidden
 		DENY();
 		break;
 	}
 }
 
-static inline security_policy_t _scriptWitnessPolicy(const bip44_path_t* path, bool mintPresent)
+static inline security_policy_t _multisigWitnessPolicy(const bip44_path_t* path, bool mintPresent)
 {
 	switch (bip44_classifyPath(path)) {
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+		// multisig key paths are allowed, but hiding them would make impossible for the user to
+		// distinguish what funds are being spent (multisig UTXOs sharing a signer are not
+		// necessarily interchangeable, because they may be governed by a different script)
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
+	case PATH_MINT_KEY:
+		DENY_UNLESS(mintPresent);
+		// maybe not necessary, but let the user know which mint key is he using (eg. in case
+		// the minting policy contains multiple of his keys but with different rules)
+		SHOW();
+		break;
+
+	default:
+		// ordinary and pool cold keys forbidden
+		DENY();
+		break;
+	}
+}
+
+static inline security_policy_t _plutusWitnessPolicy(const bip44_path_t* path, bool mintPresent)
+{
+	switch (bip44_classifyPath(path)) {
+	// in PLUTUS_TX, we allow signing with any path, but it must be shown
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(path));
@@ -774,9 +1095,15 @@ static inline security_policy_t _scriptWitnessPolicy(const bip44_path_t* path, b
 		break;
 
 	case PATH_MINT_KEY:
-		DENY_UNLESS(mintPresent);
+		// mint witness without mint in the tx: somewhat suspicious,
+		// no known usecase, but a mint path could be e.g. in required signers
+		SHOW_UNLESS(mintPresent);
+		// maybe not necessary, but let the user know which mint key is he using (e.g. in case
+		// the minting policy contains multiple of his keys but with different rules)
 		SHOW();
+		break;
 
+	case PATH_POOL_COLD_KEY:
 	default:
 		DENY();
 		break;
@@ -813,7 +1140,9 @@ static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip
 
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_POOL_COLD_KEY:
+		// only ordinary spending key paths (because of inputs) and pool cold key path are allowed
 		WARN_UNLESS(bip44_isPathReasonable(path));
+		// TODO is there a reason to show the witnesses?
 		SHOW();
 		break;
 
@@ -824,9 +1153,8 @@ static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip
 }
 
 // For each transaction witness
-// Note: witnesses reveal public key of an address
-// and Ledger *does not* check whether they correspond to
-// previously declared inputs and certificates
+// Note: witnesses reveal public key of an address and Ledger *does not* check
+// whether they correspond to previously declared inputs and certificates
 security_policy_t policyForSignTxWitness(
         sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* witnessPath,
@@ -839,7 +1167,10 @@ security_policy_t policyForSignTxWitness(
 		return _ordinaryWitnessPolicy(witnessPath, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		return _scriptWitnessPolicy(witnessPath, mintPresent);
+		return _multisigWitnessPolicy(witnessPath, mintPresent);
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		return _plutusWitnessPolicy(witnessPath, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		return _poolRegistrationOwnerWitnessPolicy(witnessPath, poolOwnerPath);
@@ -854,22 +1185,48 @@ security_policy_t policyForSignTxWitness(
 	DENY(); // should not be reached
 }
 
+// For transaction auxiliary data
 security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType MARK_UNUSED)
 {
 	SHOW();
 }
 
+// For transaction validity interval start
 security_policy_t policyForSignTxValidityIntervalStart()
 {
 	SHOW();
 }
 
+// For transaction mint field
 security_policy_t policyForSignTxMintInit(const sign_tx_signingmode_t txSigningMode)
 {
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		SHOW();
+		break;
+
+	default:
+		// in POOL_REGISTRATION signing modes, non-empty mint field
+		// should have already been reported as invalid
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
+// For final mint confirmation
+security_policy_t policyForSignTxMintConfirm(security_policy_t mintInitPolicy)
+{
+	switch (mintInitPolicy) {
+	case POLICY_ALLOW_WITHOUT_PROMPT:
+		ALLOW();
+		break;
+
+	case POLICY_SHOW_BEFORE_RESPONSE:
+		// all minted coins were shown, show a final cofirmation prompt as well
+		PROMPT();
 		break;
 
 	default:
@@ -879,16 +1236,85 @@ security_policy_t policyForSignTxMintInit(const sign_tx_signingmode_t txSigningM
 	DENY(); // should not be reached
 }
 
-
-security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy)
+// For transaction script data hash
+security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSigningMode)
 {
-	switch (outputPolicy) {
-	case POLICY_ALLOW_WITHOUT_PROMPT:
-		ALLOW();
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		SHOW();
 		break;
 
-	case POLICY_SHOW_BEFORE_RESPONSE:
-		PROMPT();
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		DENY();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
+// For each transaction collateral input
+security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSigningMode)
+{
+	// we do not impose restrictions on individual collateral inputs
+	// because a HW wallet cannot verify anything about the input
+
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		// must be shown because the user loses all collaterals if Plutus execution fails
+		SHOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		// collaterals allowed only if Plutus script is to be executed
+		DENY();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY();
+}
+
+static bool required_signers_allowed(const sign_tx_signingmode_t txSigningMode)
+{
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+security_policy_t policyForSignTxRequiredSigner(
+        const sign_tx_signingmode_t txSigningMode,
+        sign_tx_required_signer_t* requiredSigner
+)
+{
+	DENY_UNLESS(required_signers_allowed(txSigningMode));
+
+	switch(requiredSigner->type) {
+
+	case REQUIRED_SIGNER_WITH_HASH:
+		SHOW();
+		break;
+
+	case REQUIRED_SIGNER_WITH_PATH:
+		// must be shown because it affects Plutus script execution result
+		SHOW_IF(bip44_hasShelleyPrefix(&requiredSigner->keyPath));
+		SHOW_IF(bip44_hasMultisigWalletKeyPrefix(&requiredSigner->keyPath));
+		SHOW_IF(bip44_hasMintKeyPrefix(&requiredSigner->keyPath));
+		DENY();
 		break;
 
 	default:

@@ -51,7 +51,7 @@ static void blake2b_256_append_cbor_aux_data(
         bool trace
 )
 {
-	uint8_t buffer[10];
+	uint8_t buffer[10] = {0};
 	size_t size = cbor_writeToken(type, value, buffer, SIZEOF(buffer));
 	if (trace) {
 		TRACE_BUFFER(buffer, size);

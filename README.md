@@ -77,6 +77,7 @@ Ledger computes a rolling hash of the serialized transaction body, but the body 
        console.log(logfile.split('\n').filter((x) => x.includes('blake2b_256_append'))
            .map((x) => x.split(' ')[1]).join(''))
 ```
+Replace `x.split(' ')[1]` with `x.split(' ')[3]` if you are running the tests in Speculos.
 
 WARNING: the output of tracing sometimes (although very rarely) gets slightly mangled (for instance, the output contains `blake2b_s56_append` instead of `blake2b_256_append`) and then the script above produces an incorrect result.
 

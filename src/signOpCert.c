@@ -75,12 +75,12 @@ void signOpCert_handleAPDU(
 	ENSURE_NOT_DENIED(policy);
 
 	{
-		uint8_t opCertBodyBuffer[OP_CERT_BODY_LENGTH];
+		uint8_t opCertBodyBuffer[OP_CERT_BODY_LENGTH] = {0};
 		write_view_t opCertBodyBufferView = make_write_view(opCertBodyBuffer, opCertBodyBuffer + OP_CERT_BODY_LENGTH);
 
 		view_appendBuffer(&opCertBodyBufferView, (const uint8_t*) &ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey));
 		{
-			uint8_t chunk[8];
+			uint8_t chunk[8] = {0};
 			u8be_write(chunk, ctx->issueCounter);
 			#ifdef FUZZING
 			view_appendBuffer(&opCertBodyBufferView, chunk, 8);
@@ -89,7 +89,7 @@ void signOpCert_handleAPDU(
 			#endif
 		}
 		{
-			uint8_t chunk[8];
+			uint8_t chunk[8] = {0};
 			u8be_write(chunk, ctx->kesPeriod);
 			#ifdef FUZZING
 			view_appendBuffer(&opCertBodyBufferView, chunk, 8);
@@ -112,11 +112,11 @@ void signOpCert_handleAPDU(
 	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
 
 	switch (policy) {
-	#define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
+#define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,    UI_STEP_WARNING);
 		CASE(POLICY_PROMPT_BEFORE_RESPONSE, UI_STEP_CONFIRM_START);
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   UI_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
@@ -148,7 +148,7 @@ static void signOpCert_ui_runStep()
 		ui_displayPathScreen("Pool cold key path", &ctx->poolColdKeyPathSpec, this_fn);
 	}
 	UI_STEP(UI_STEP_DISPLAY_POOL_ID) {
-		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
 		bip44_pathToKeyHash(&ctx->poolColdKeyPathSpec, poolKeyHash, SIZEOF(poolKeyHash));
 
 		ui_displayBech32Screen(
@@ -167,7 +167,8 @@ static void signOpCert_ui_runStep()
 		);
 	}
 	UI_STEP(UI_STEP_DISPLAY_KES_PERIOD) {
-		char kesPeriodString[50];
+		char kesPeriodString[50] = {0};
+		explicit_bzero(kesPeriodString, SIZEOF(kesPeriodString));
 		str_formatUint64(ctx->kesPeriod, kesPeriodString, SIZEOF(kesPeriodString));
 		ui_displayPaginatedText(
 		        "KES period",
@@ -176,7 +177,8 @@ static void signOpCert_ui_runStep()
 		);
 	}
 	UI_STEP(UI_STEP_DISPLAY_ISSUE_COUNTER) {
-		char issueCounterString[50];
+		char issueCounterString[50] = {0};
+		explicit_bzero(issueCounterString, SIZEOF(issueCounterString));
 		str_formatUint64(ctx->issueCounter, issueCounterString, SIZEOF(issueCounterString));
 		ui_displayPaginatedText(
 		        "Issue counter",
