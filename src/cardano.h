@@ -48,6 +48,8 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 
 #define TESTNET_NETWORK_ID 0
 
+#define MAXIMUM_NETWORK_ID 0b1111
+
 
 typedef enum {
 	KEY_REFERENCE_PATH = 1,	// aka 'DEVICE_OWNED', the address belongs to this device
