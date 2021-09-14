@@ -455,6 +455,7 @@ security_policy_t policyForSignTxCertificate(
 
 	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
 		ALLOW();
 		break;
 
@@ -515,10 +516,6 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(bip44_isPoolColdKeyPath(poolIdPath));
 		PROMPT();
-		break;
-
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
-		DENY();
 		break;
 
 	default:
