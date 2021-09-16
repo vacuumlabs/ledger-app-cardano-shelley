@@ -89,7 +89,8 @@ static inline void advanceStage()
 			        ctx->numWithdrawals,
 			        ctx->includeAuxData,
 			        ctx->includeValidityIntervalStart,
-			        ctx->includeMint
+			        ctx->includeMint,
+			        ctx->includeScriptDataHash
 			);
 			txHashBuilder_enterInputs(&BODY_CTX->txHashBuilder);
 		}
@@ -193,12 +194,21 @@ static inline void advanceStage()
 		if (ctx->includeMint) {
 			ASSERT(BODY_CTX->mintReceived);
 		}
+		ctx->stage = SIGN_STAGE_BODY_SCRIPT_DATA_HASH;
+		if (ctx->includeScriptDataHash) {
+			break;
+		}
+
+	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
+		if (ctx->includeScriptDataHash) {
+			ASSERT(BODY_CTX->scriptDataHashReceived);
+		}
+		txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		ctx->stage = SIGN_STAGE_CONFIRM;
 		break;
 
 	case SIGN_STAGE_CONFIRM:
 		ctx->stage = SIGN_STAGE_WITNESSES;
-		txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		initTxWitnessCtx();
 
 		if (ctx->numWitnesses > 0) {
@@ -344,9 +354,9 @@ static void signTx_handleInit_ui_runStep()
 		        "New transaction";
 
 		ui_displayNetworkParamsScreen(
-				header,
-				ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
-				this_fn
+		        header,
+		        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
+		        this_fn
 		);
 	}
 
@@ -391,6 +401,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			uint8_t includeAuxData;
 			uint8_t includeValidityIntervalStart;
 			uint8_t includeMint;
+			uint8_t includeScriptDataHash;
 			uint8_t txSigningMode;
 
 			uint8_t numInputs[4];
@@ -422,6 +433,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 		ctx->includeMint = signTx_parseIncluded(wireHeader->includeMint);
 		TRACE("Include mint %d", ctx->includeMint);
+
+		ctx->includeScriptDataHash = signTx_parseIncluded(wireHeader->includeScriptDataHash);
+		TRACE("Include script data hash %d", ctx->includeScriptDataHash);
 
 		ctx->commonTxData.txSigningMode = wireHeader->txSigningMode;
 		TRACE("Signing mode %d", (int) ctx->commonTxData.txSigningMode);
@@ -1576,6 +1590,77 @@ static void signTx_handleMintAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	signTxMint_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
 
+// ========================= SCRIPT DATA HASH ==========================
+
+
+enum {
+	HANDLE_SCRIPT_DATA_HASH_STEP_DISPLAY = 1200,
+	HANDLE_SCRIPT_DATA_HASH_STEP_RESPOND,
+	HANDLE_SCRIPT_DATA_HASH_STEP_INVALID,
+};
+
+static void signTx_handleScriptDataHash_ui_runStep()
+{
+	TRACE("UI step %d", ctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleScriptDataHash_ui_runStep;
+
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_SCRIPT_DATA_HASH_STEP_DISPLAY) {
+		ui_displayHexBufferScreen("Script data hash", BODY_CTX->stageData.scriptDataHash, SCRIPT_DATA_HASH_LENGTH, this_fn);
+	}
+	UI_STEP(HANDLE_SCRIPT_DATA_HASH_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+		advanceStage();
+	}
+	UI_STEP_END(HANDLE_FEE_STEP_INVALID);
+}
+
+static void signTx_handleScriptDataHashAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_BODY_SCRIPT_DATA_HASH);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+		STATIC_ASSERT(SIZEOF(BODY_CTX->stageData.scriptDataHash) == SCRIPT_DATA_HASH_LENGTH, "wrong script data hash length");
+		view_copyWireToBuffer(BODY_CTX->stageData.scriptDataHash, &view, SCRIPT_DATA_HASH_LENGTH);
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+
+		BODY_CTX->scriptDataHashReceived = true;
+	}
+
+	{
+		// add to tx
+		TRACE("Adding script data hash to tx hash");
+		txHashBuilder_addScriptDataHash(&BODY_CTX->txHashBuilder, BODY_CTX->stageData.scriptDataHash, SIZEOF(BODY_CTX->stageData.scriptDataHash));
+	}
+
+	security_policy_t policy = policyForSignTxScriptDataHash(ctx->commonTxData.txSigningMode);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_SCRIPT_DATA_HASH_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_SCRIPT_DATA_HASH_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
+	signTx_handleScriptDataHash_ui_runStep();
+}
 
 // ============================== CONFIRM ==============================
 
@@ -1798,6 +1883,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x07, signTx_handleWithdrawalAPDU);
 		CASE(0x09, signTx_handleValidityIntervalStartAPDU);
 		CASE(0x0b, signTx_handleMintAPDU);
+		CASE(0x0c, signTx_handleScriptDataHashAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
 		CASE(0x0f, signTx_handleWitnessAPDU);
 		DEFAULT(NULL)
@@ -1837,7 +1923,8 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_WITHDRAWALS:
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
-	case SIGN_STAGE_BODY_MINT_SUBMACHINE: {
+	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
+	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH: {
 		explicit_bzero(&BODY_CTX->stageData, SIZEOF(BODY_CTX->stageData));
 		break;
 	}
@@ -1881,6 +1968,7 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
+	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_CONFIRM:
 		return &(ctx->txPartCtx.body_ctx);
 
