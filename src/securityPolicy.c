@@ -875,6 +875,25 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy)
 	DENY(); // should not be reached
 }
 
+security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSigningMode)
+{
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		SHOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		DENY();
+		break;
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
 security_policy_t policyForSignTxConfirm()
 {
 	PROMPT();
