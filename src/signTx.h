@@ -37,8 +37,9 @@ typedef enum {
 	SIGN_STAGE_BODY_VALIDITY_INTERVAL = 34,
 	SIGN_STAGE_BODY_MINT = 35,
 	SIGN_STAGE_BODY_MINT_SUBMACHINE = 36,
-	SIGN_STAGE_CONFIRM = 37,
-	SIGN_STAGE_WITNESSES = 38,
+	SIGN_STAGE_BODY_SCRIPT_DATA_HASH = 37,
+	SIGN_STAGE_CONFIRM = 38,
+	SIGN_STAGE_WITNESSES = 39,
 } sign_tx_stage_t;
 
 enum {
@@ -116,6 +117,7 @@ typedef struct {
 	bool ttlReceived;
 	bool validityIntervalStartReceived;
 	bool mintReceived;
+	bool scriptDataHashReceived;
 
 	// TODO move these to commonTxData?
 	tx_hash_builder_t txHashBuilder;
@@ -127,6 +129,7 @@ typedef struct {
 		sign_tx_certificate_data_t certificate;
 		sign_tx_withdrawal_data_t withdrawal;
 		uint64_t validityIntervalStart;
+		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
 	} stageData; // TODO rename to reflect single-APDU scope
 
 	union {
@@ -156,6 +159,7 @@ typedef struct {
 	uint16_t numWithdrawals; // reward withdrawals
 	bool includeValidityIntervalStart;
 	bool includeMint;
+	bool includeScriptDataHash;
 	uint16_t numWitnesses;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];

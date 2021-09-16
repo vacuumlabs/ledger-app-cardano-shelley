@@ -63,7 +63,8 @@ void txHashBuilder_init(
         uint16_t numWithdrawals,
         bool includeAuxData,
         bool includeValidityIntervalStart,
-        bool includeMint
+        bool includeMint,
+        bool includeScriptDataHash
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -107,10 +108,13 @@ void txHashBuilder_init(
 		builder->includeMint = includeMint;
 		if (includeMint) numItems++;
 
+		builder->includeScriptDataHash = includeScriptDataHash;
+		if (includeScriptDataHash) numItems++;
+
 		// network id always included
 		numItems++;
 
-		ASSERT((4 <= numItems) && (numItems <= 10));
+		ASSERT((4 <= numItems) && (numItems <= 11));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -1181,11 +1185,54 @@ static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 	}
 }
 
+void txHashBuilder_addScriptDataHash(
+        tx_hash_builder_t* builder,
+        const uint8_t* scriptHashData, size_t scriptHashDataSize
+)
+{
+	_TRACE("state = %d", builder->state);
+
+	ASSERT(scriptHashDataSize == SCRIPT_DATA_HASH_LENGTH);
+	txHashBuilder_assertCanLeaveMint(builder);
+	ASSERT(builder->includeScriptDataHash);
+
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_SCRIPT_HASH_DATA);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, scriptHashDataSize);
+		BUILDER_APPEND_DATA(scriptHashData, scriptHashDataSize);
+	}
+	builder->state = TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA;
+}
+
+static void txHashBuilder_assertCanLeaveScriptDataHash(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %u", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA:
+		break;
+
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveMint(builder);
+		ASSERT(!builder->includeScriptDataHash);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+}
+
 void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId)
 {
 	_TRACE("state = %d", builder->state);
 
-	txHashBuilder_assertCanLeaveMint(builder);
+	txHashBuilder_assertCanLeaveScriptDataHash(builder);
 
 	// add network id item into the main tx body map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_NETWORK_ID);
@@ -1198,13 +1245,7 @@ static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d", builder->state);
 
-	switch (builder->state) {
-	case TX_HASH_BUILDER_IN_NETWORK_ID:
-		break;
-
-	default:
-		ASSERT(false);
-	}
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_NETWORK_ID);
 }
 
 void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)

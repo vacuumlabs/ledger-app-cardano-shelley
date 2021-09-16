@@ -359,7 +359,8 @@ void run_txHashBuilder_test()
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
 	                   true, // validity interval start
-	                   true // mint
+	                   true, // mint
+	                   false // script hash data
 	                  );
 
 	txHashBuilder_enterInputs(&builder);
