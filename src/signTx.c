@@ -199,7 +199,10 @@ static inline void advanceStage()
 		ctx->stage = SIGN_STAGE_WITNESSES;
 		initTxWitnessCtx();
 
-		break;
+		if (ctx->numWitnesses > 0) {
+			break;
+		}
+	// intentional fallthrough
 
 	case SIGN_STAGE_WITNESSES:
 		ctx->stage = SIGN_STAGE_NONE;
