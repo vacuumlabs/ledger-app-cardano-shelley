@@ -186,6 +186,7 @@ static inline void advanceStage()
 			// wait for mint APDU
 			break;
 		}
+
 	// intentional fallthrough
 
 	case SIGN_STAGE_BODY_MINT:
@@ -199,7 +200,11 @@ static inline void advanceStage()
 		ctx->stage = SIGN_STAGE_WITNESSES;
 		initTxWitnessCtx();
 
-		break;
+		if (ctx->numWitnesses > 0) {
+			break;
+		}
+
+	// intentional fallthrough
 
 	case SIGN_STAGE_WITNESSES:
 		ctx->stage = SIGN_STAGE_NONE;
