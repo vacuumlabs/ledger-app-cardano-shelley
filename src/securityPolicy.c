@@ -38,27 +38,6 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
-bool is_tx_network_verifiable(
-        sign_tx_signingmode_t txSigningMode,
-        uint16_t numOutputs,
-        uint16_t numWithdrawals
-)
-{
-	if (numOutputs > 0) return true;
-	if (numWithdrawals > 0) return true;
-
-	switch (txSigningMode) {
-
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-		// pool registration certificate contains pool reward account
-		return true;
-
-	default:
-		return false;
-	}
-}
-
 // useful shortcuts
 
 // WARNING: unless you are doing something exceptional,
@@ -239,7 +218,6 @@ security_policy_t policyForSignTxInit(
         uint8_t networkId,
         uint32_t protocolMagic,
         uint16_t numInputs MARK_UNUSED,
-        uint16_t numOutputs,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint
@@ -277,8 +255,6 @@ security_policy_t policyForSignTxInit(
 	}
 
 	DENY_UNLESS(isValidNetworkId(networkId));
-
-	WARN_UNLESS(is_tx_network_verifiable(numOutputs, numWithdrawals, txSigningMode));
 
 	WARN_IF(networkId != MAINNET_NETWORK_ID && networkId != TESTNET_NETWORK_ID);
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);

@@ -343,20 +343,11 @@ static void signTx_handleInit_ui_runStep()
 		        "New script transaction" :
 		        "New transaction";
 
-		if (is_tx_network_verifiable(ctx->commonTxData.txSigningMode, ctx->numOutputs, ctx->numWithdrawals)) {
-			ui_displayNetworkParamsScreen(
-			        header,
-			        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
-			        this_fn
-			);
-		} else {
-			// technically, no withdrawals/pool reg. certificate as well, but the UI message would be too long
-			ui_displayPaginatedText(
-			        header,
-			        "no outputs, cannot verify network id",
-			        this_fn
-			);
-		}
+		ui_displayNetworkParamsScreen(
+				header,
+				ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
+				this_fn
+		);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_CONFIRM) {
@@ -478,7 +469,6 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	                                   ctx->commonTxData.networkId,
 	                                   ctx->commonTxData.protocolMagic,
 	                                   ctx->numInputs,
-	                                   ctx->numOutputs,
 	                                   ctx->numCertificates,
 	                                   ctx->numWithdrawals,
 	                                   ctx->includeMint
