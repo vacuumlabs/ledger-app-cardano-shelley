@@ -196,7 +196,8 @@ void txHashBuilder_addOutput_topLevelData(
         tx_hash_builder_t* builder,
         const uint8_t* addressBuffer, size_t addressSize,
         uint64_t amount,
-        uint16_t numAssetGroups
+        uint16_t numAssetGroups,
+        bool includeDatumHash
 )
 {
 	_TRACE("state = %d, remainingOutputs = %u", builder->state, builder->remainingOutputs);
@@ -212,7 +213,7 @@ void txHashBuilder_addOutput_topLevelData(
 		//   Unsigned[amount]
 		// ]
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumHash);
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
 				BUILDER_APPEND_DATA(addressBuffer, addressSize);
@@ -221,7 +222,11 @@ void txHashBuilder_addOutput_topLevelData(
 				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
 			}
 		}
-		builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+		if (includeDatumHash) {
+			builder->state = TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH;
+		} else {
+			builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+		}
 	} else {
 		builder->multiassetData.remainingAssetGroups = numAssetGroups;
 		// Array(2)[
@@ -234,7 +239,7 @@ void txHashBuilder_addOutput_topLevelData(
 		//   ]
 		// ]
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumHash);
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
 				BUILDER_APPEND_DATA(addressBuffer, addressSize);
@@ -341,7 +346,8 @@ void txHashBuilder_addOutput_tokenGroup(
 void txHashBuilder_addOutput_token(
         tx_hash_builder_t* builder,
         const uint8_t* assetNameBuffer, size_t assetNameSize,
-        uint64_t amount
+        uint64_t amount,
+        bool includeDatumHash
 )
 {
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
@@ -349,9 +355,25 @@ void txHashBuilder_addOutput_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         TX_HASH_BUILDER_IN_OUTPUTS_TOKEN,
 	         TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP,
-	         TX_HASH_BUILDER_IN_OUTPUTS,
+	         includeDatumHash ? TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH : TX_HASH_BUILDER_IN_OUTPUTS,
 	         CBOR_TYPE_UNSIGNED);
 }
+
+void txHashBuilder_addOutput_datumHash(
+        tx_hash_builder_t* builder,
+        const uint8_t* datumHashBuffer, size_t datumHashSize
+)
+{
+	ASSERT(datumHashSize == OUTPUT_DATUM_HASH_LENGTH);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH);
+
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, datumHashSize);
+		BUILDER_APPEND_DATA(datumHashBuffer, datumHashSize);
+	}
+	builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+}
+
 
 static void txHashBuilder_assertCanLeaveOutputs(tx_hash_builder_t* builder)
 {
