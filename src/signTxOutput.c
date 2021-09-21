@@ -27,6 +27,7 @@ bool signTxOutput_isFinished()
 	case STATE_OUTPUT_TOP_LEVEL_DATA:
 	case STATE_OUTPUT_ASSET_GROUP:
 	case STATE_OUTPUT_TOKEN:
+	case STATE_OUTPUT_DATUM_HASH:
 	case STATE_OUTPUT_CONFIRM:
 		return false;
 
@@ -61,7 +62,11 @@ static inline void advanceState()
 			ASSERT(subctx->currentAssetGroup == 0);
 			subctx->state = STATE_OUTPUT_ASSET_GROUP;
 		} else {
-			subctx->state = STATE_OUTPUT_CONFIRM;
+			if (subctx->includeDatumHash) {
+				subctx->state = STATE_OUTPUT_DATUM_HASH;
+			} else {
+				subctx->state = STATE_OUTPUT_CONFIRM;
+			}
 		}
 		break;
 
@@ -84,10 +89,19 @@ static inline void advanceState()
 
 		if (subctx->currentAssetGroup == subctx->numAssetGroups) {
 			// the whole token bundle has been received
-			subctx->state = STATE_OUTPUT_CONFIRM;
+			if (subctx->includeDatumHash) {
+				subctx->state = STATE_OUTPUT_DATUM_HASH;
+			} else {
+				subctx->state = STATE_OUTPUT_CONFIRM;
+			}
 		} else {
 			subctx->state = STATE_OUTPUT_ASSET_GROUP;
 		}
+		break;
+
+	case STATE_OUTPUT_DATUM_HASH:
+		ASSERT(subctx->datumHashReceived);
+		subctx->state = STATE_OUTPUT_CONFIRM;
 		break;
 
 	case STATE_OUTPUT_CONFIRM:
@@ -165,7 +179,8 @@ static void signTx_handleOutput_addressBytes()
 		        subctx->stateData.output.address.buffer,
 		        subctx->stateData.output.address.size,
 		        subctx->stateData.output.adaAmount,
-		        subctx->numAssetGroups
+		        subctx->numAssetGroups,
+		        subctx->includeDatumHash
 		);
 	}
 
@@ -257,7 +272,8 @@ static void signTx_handleOutput_addressParams()
 		        &BODY_CTX->txHashBuilder,
 		        addressBuffer, addressSize,
 		        subctx->stateData.output.adaAmount,
-		        subctx->numAssetGroups
+		        subctx->numAssetGroups,
+		        subctx->includeDatumHash
 		);
 	}
 
@@ -329,6 +345,8 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 		STATIC_ASSERT(OUTPUT_ASSET_GROUPS_MAX <= UINT16_MAX, "wrong max token groups");
 		ASSERT_TYPE(subctx->numAssetGroups, uint16_t);
 		subctx->numAssetGroups = (uint16_t) numAssetGroups;
+
+		subctx->includeDatumHash = signTx_parseIncluded(parse_u1be(&view));
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
@@ -532,7 +550,8 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		txHashBuilder_addOutput_token(
 		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
-		        subctx->stateData.token.amount
+		        subctx->stateData.token.amount,
+		        subctx->includeDatumHash
 		);
 		TRACE();
 	}
@@ -540,10 +559,77 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 	signTxOutput_handleToken_ui_runStep();
 }
 
+// ========================== DATUM HASH =============================
+
+enum {
+	HANDLE_DATUM_HASH_STEP_DISPLAY = 3500,
+	HANDLE_DATUM_HASH_STEP_RESPOND,
+	HANDLE_DATUM_HASH_STEP_INVALID,
+};
+
+static void signTxOutput_handleDatumHash_ui_runStep()
+{
+	output_context_t* subctx = accessSubcontext();
+	TRACE("UI step %d", subctx->ui_step);
+	ui_callback_fn_t* this_fn = signTxOutput_handleDatumHash_ui_runStep;
+
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_DATUM_HASH_STEP_DISPLAY) {
+		ui_displayHexBufferScreen("Datum hash", subctx->stateData.datumHash, OUTPUT_DATUM_HASH_LENGTH, this_fn);
+	}
+	UI_STEP(HANDLE_DATUM_HASH_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		advanceState();
+	}
+	UI_STEP_END(HANDLE_DATUM_HASH_STEP_INVALID);
+}
+
+static void signTxOutput_handleDatumHashAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STATE(STATE_OUTPUT_DATUM_HASH);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	output_context_t* subctx = accessSubcontext();
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+		STATIC_ASSERT(SIZEOF(subctx->stateData.datumHash) == OUTPUT_DATUM_HASH_LENGTH, "wrong datum hash length");
+		view_copyWireToBuffer(subctx->stateData.datumHash, &view, OUTPUT_DATUM_HASH_LENGTH);
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+
+		subctx->datumHashReceived = true;
+	}
+	{
+		// add to tx
+		TRACE("Adding datum hash to tx hash");
+		txHashBuilder_addOutput_datumHash(&BODY_CTX->txHashBuilder, subctx->stateData.datumHash, SIZEOF(subctx->stateData.datumHash));
+	}
+
+	{
+		// select UI step
+		switch (subctx->outputSecurityPolicy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_DATUM_HASH_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_DATUM_HASH_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
+	signTxOutput_handleDatumHash_ui_runStep();
+}
+
 // ============================== CONFIRM ==============================
 
 enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 3500,
+	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 3600,
 	HANDLE_CONFIRM_STEP_RESPOND,
 	HANDLE_CONFIRM_STEP_INVALID,
 };
@@ -615,6 +701,7 @@ enum {
 	APDU_INSTRUCTION_TOP_LEVEL_DATA = 0x30,
 	APDU_INSTRUCTION_ASSET_GROUP = 0x31,
 	APDU_INSTRUCTION_TOKEN = 0x32,
+	APDU_INSTRUCTION_SCRIPT_DATUM_HASH = 0x34,
 	APDU_INSTRUCTION_CONFIRM = 0x33,
 };
 
@@ -624,6 +711,7 @@ bool signTxOutput_isValidInstruction(uint8_t p2)
 	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
 	case APDU_INSTRUCTION_ASSET_GROUP:
 	case APDU_INSTRUCTION_TOKEN:
+	case APDU_INSTRUCTION_SCRIPT_DATUM_HASH:
 	case APDU_INSTRUCTION_CONFIRM:
 		return true;
 
@@ -647,6 +735,10 @@ void signTxOutput_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDat
 
 	case APDU_INSTRUCTION_TOKEN:
 		signTxOutput_handleTokenAPDU(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_SCRIPT_DATUM_HASH:
+		signTxOutput_handleDatumHashAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_CONFIRM:
