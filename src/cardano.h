@@ -50,8 +50,8 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 
 
 typedef enum {
-	KEY_REFERENCE_PATH = 1,
-	KEY_REFERENCE_HASH = 2,
+	KEY_REFERENCE_PATH = 1,	// aka 'DEVICE_OWNED', the address belongs to this device
+	KEY_REFERENCE_HASH = 2, // aka 'THIRD_PARTY', the address is third party
 } key_reference_type_t;
 
 

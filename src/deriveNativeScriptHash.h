@@ -12,8 +12,8 @@ handler_fn_t deriveNativeScriptHash_handleAPDU;
 // a special type for distinguishing what to show in the UI, makes it easier
 // to handle PUBKEY DEVICE_OWNED vs THIRD_PARTY
 typedef enum {
-	UI_SCRIPT_PUBKEY_PATH = 0,
-	UI_SCRIPT_PUBKEY_HASH,
+	UI_SCRIPT_PUBKEY_PATH = 0,	// aka DEVICE_OWNED
+	UI_SCRIPT_PUBKEY_HASH,		// aka THIRD_PARTY
 	UI_SCRIPT_ALL,
 	UI_SCRIPT_ANY,
 	UI_SCRIPT_N_OF_K,

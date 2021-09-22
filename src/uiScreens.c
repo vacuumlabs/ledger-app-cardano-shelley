@@ -415,7 +415,7 @@ void ui_displayStakingInfoScreen(
 	case STAKING_KEY_HASH: {
 		heading = STAKING_HEADING_KEY_HASH;
 		bech32_encode(
-		        "stake_vkh", // shares keys never go into address directly
+		        "stake_vkh", // shared keys never go into address directly
 		        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
 		        stakingInfo, SIZEOF(stakingInfo)
 		);

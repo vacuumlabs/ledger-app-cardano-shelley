@@ -441,14 +441,20 @@ static void deriveNativeScriptHash_handleWholeNativeScriptFinish(read_view_t* vi
 
 typedef void subhandler_fn_t(read_view_t* view);
 
+enum {
+	STAGE_COMPLEX_SCRIPT_START = 0x01,
+	STAGE_ADD_SIMPLE_SCRIPT = 0x02,
+	STAGE_WHOLE_NATIVE_SCRIPT_FINISH = 0x03,
+};
+
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
 	switch (p1) {
 #	define  CASE(P1, HANDLER) case P1: return HANDLER;
 #	define  DEFAULT(HANDLER)  default: return HANDLER;
-		CASE(0x01, deriveNativeScriptHash_handleComplexScriptStart);
-		CASE(0x02, deriveNativeScriptHash_handleSimpleScript);
-		CASE(0x03, deriveNativeScriptHash_handleWholeNativeScriptFinish)
+		CASE(STAGE_COMPLEX_SCRIPT_START, deriveNativeScriptHash_handleComplexScriptStart);
+		CASE(STAGE_ADD_SIMPLE_SCRIPT, deriveNativeScriptHash_handleSimpleScript);
+		CASE(STAGE_WHOLE_NATIVE_SCRIPT_FINISH, deriveNativeScriptHash_handleWholeNativeScriptFinish)
 		DEFAULT(NULL);
 #	undef   CASE
 #	undef   DEFAULT
