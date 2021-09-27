@@ -610,7 +610,8 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const sign_tx_signingmode_t txSigningMode,
-        const pool_owner_t* owner
+        const pool_owner_t* owner,
+		uint16_t numOwnersGivenByPath
 )
 {
 	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
@@ -619,10 +620,12 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		DENY_UNLESS(numOwnersGivenByPath == 1);
 		SHOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		DENY_UNLESS(numOwnersGivenByPath == 0);
 		DENY_UNLESS(owner->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
@@ -739,12 +742,15 @@ static inline security_policy_t _scriptWitnessPolicy(const bip44_path_t* path, b
 	}
 }
 
-static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* path)
+static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* path, const bip44_path_t* poolOwnerPath)
 {
 	switch (bip44_classifyPath(path)) {
 
 	case PATH_ORDINARY_STAKING_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(path));
+		if (poolOwnerPath != NULL) {
+			DENY_UNLESS(bip44_pathsEqual(path, poolOwnerPath));
+		}
 		SHOW();
 		break;
 
@@ -777,7 +783,8 @@ static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip
 security_policy_t policyForSignTxWitness(
         sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* pathSpec,
-        bool mintPresent
+        bool mintPresent,
+		const bip44_path_t* poolOwnerPath
 )
 {
 	switch (txSigningMode) {
@@ -788,7 +795,7 @@ security_policy_t policyForSignTxWitness(
 		return _scriptWitnessPolicy(pathSpec, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-		return _poolRegistrationOwnerWitnessPolicy(pathSpec);
+		return _poolRegistrationOwnerWitnessPolicy(pathSpec, poolOwnerPath);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		return _poolRegistrationOperatorWitnessPolicy(pathSpec);

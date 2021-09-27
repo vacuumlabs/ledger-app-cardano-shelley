@@ -479,6 +479,19 @@ void bip44_pathToKeyHash(const bip44_path_t* pathSpec, uint8_t* hash, size_t has
 	}
 }
 
+bool bip44_pathsEqual(const bip44_path_t* lhs, const bip44_path_t* rhs)
+{
+	if (lhs->length != rhs->length) {
+		return false;
+	}
+	for (unsigned i = 0; i < lhs->length; ++i) {
+		if (lhs->path[i] != rhs->path[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
 
 #ifdef DEVEL
 void bip44_PRINTF(const bip44_path_t* pathSpec)

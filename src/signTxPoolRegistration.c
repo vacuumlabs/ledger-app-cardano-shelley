@@ -13,6 +13,7 @@
 #include "securityPolicy.h"
 #include "signTxPoolRegistration.h"
 
+static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 
 static pool_registration_context_t* accessSubcontext()
@@ -717,19 +718,6 @@ static void handleOwner_ui_runStep()
 
 		subctx->currentOwner++;
 		if (subctx->currentOwner == subctx->numOwners) {
-			switch (commonTxData->txSigningMode) {
-			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-				VALIDATE(subctx->numOwnersGivenByPath == 1, ERR_INVALID_DATA);
-				break;
-
-			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-				ASSERT(subctx->numOwnersGivenByPath == 0);
-				break;
-
-			default:
-				ASSERT(false);
-			}
-
 			advanceState();
 		}
 	}
@@ -806,8 +794,10 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 			PRINTF("\n");
 
 			subctx->numOwnersGivenByPath++;
-			VALIDATE(subctx->numOwnersGivenByPath <= 1, ERR_INVALID_DATA);
-
+			// TODO this is more like a security policy
+			// VALIDATE(subctx->numOwnersGivenByPath <= 1, ERR_INVALID_DATA);
+			ctx->poolOwnerByPath = true;
+			memcpy(&ctx->poolOwnerPath, &owner->path, SIZEOF(owner->path));
 			break;
 		}
 
@@ -818,7 +808,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(commonTxData->txSigningMode, owner);
+	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(commonTxData->txSigningMode, owner, subctx->numOwnersGivenByPath);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
