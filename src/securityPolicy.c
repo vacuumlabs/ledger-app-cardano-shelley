@@ -550,6 +550,35 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	DENY(); // should not be reached
 }
 
+security_policy_t policyForSignTxStakePoolRegistrationInit(
+        sign_tx_signingmode_t txSigningMode,
+        size_t numOwners
+)
+{
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// there should be exactly one owner given by path for which we provide a witness
+		DENY_IF(numOwners == 0);
+		ALLOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		ALLOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		DENY();
+		break;
+
+	default:
+		ASSERT(false);
+		break;
+	}
+
+	DENY(); // should not be reached
+}
+
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
         sign_tx_signingmode_t txSigningMode,
         const pool_id_t* poolId
@@ -613,7 +642,8 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const sign_tx_signingmode_t txSigningMode,
-        const pool_owner_t* owner
+        const pool_owner_t* owner,
+        uint16_t numOwnersGivenByPath
 )
 {
 	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
@@ -623,10 +653,14 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// can be 0 while processing owners given by hash
+		// or if no path owner is given at all (then we just compute the tx hash and don't allow witnesses)
+		DENY_UNLESS(numOwnersGivenByPath <= 1);
 		SHOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		ASSERT(numOwnersGivenByPath == 0);
 		DENY_UNLESS(owner->keyReferenceType == KEY_REFERENCE_HASH);
 		SHOW();
 		break;
@@ -749,12 +783,21 @@ static inline security_policy_t _scriptWitnessPolicy(const bip44_path_t* path, b
 	}
 }
 
-static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* path)
+static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* witnessPath, const bip44_path_t* poolOwnerPath)
 {
-	switch (bip44_classifyPath(path)) {
+	switch (bip44_classifyPath(witnessPath)) {
 
 	case PATH_ORDINARY_STAKING_KEY:
-		WARN_UNLESS(bip44_isPathReasonable(path));
+		if (poolOwnerPath != NULL) {
+			// an owner was given by path
+			// the witness path must be identical
+			DENY_UNLESS(bip44_pathsEqual(witnessPath, poolOwnerPath));
+		} else {
+			// no owner was given by path
+			// we must not allow witnesses because they might witness owners given by key hash
+			DENY();
+		}
+		WARN_UNLESS(bip44_isPathReasonable(witnessPath));
 		SHOW();
 		break;
 
@@ -786,22 +829,23 @@ static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip
 // previously declared inputs and certificates
 security_policy_t policyForSignTxWitness(
         sign_tx_signingmode_t txSigningMode,
-        const bip44_path_t* pathSpec,
-        bool mintPresent
+        const bip44_path_t* witnessPath,
+        bool mintPresent,
+        const bip44_path_t* poolOwnerPath
 )
 {
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		return _ordinaryWitnessPolicy(pathSpec, mintPresent);
+		return _ordinaryWitnessPolicy(witnessPath, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		return _scriptWitnessPolicy(pathSpec, mintPresent);
+		return _scriptWitnessPolicy(witnessPath, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-		return _poolRegistrationOwnerWitnessPolicy(pathSpec);
+		return _poolRegistrationOwnerWitnessPolicy(witnessPath, poolOwnerPath);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-		return _poolRegistrationOperatorWitnessPolicy(pathSpec);
+		return _poolRegistrationOperatorWitnessPolicy(witnessPath);
 
 	default:
 		ASSERT(false);
