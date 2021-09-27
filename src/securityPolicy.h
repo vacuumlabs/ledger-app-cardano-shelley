@@ -71,6 +71,10 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
         const bip44_path_t* stakeCredential,
         uint64_t epoch
 );
+security_policy_t policyForSignTxStakePoolRegistrationInit(
+        sign_tx_signingmode_t txSigningMode,
+        size_t numOwners
+);
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
         sign_tx_signingmode_t txSigningMode,
         const pool_id_t* poolId
@@ -84,7 +88,8 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 );
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const sign_tx_signingmode_t txSigningMode,
-        const pool_owner_t* owner
+        const pool_owner_t* owner,
+        uint16_t numOwnersGivenByPath
 );
 security_policy_t policyForSignTxStakePoolRegistrationRelay(
         const sign_tx_signingmode_t txSigningMode,
@@ -110,8 +115,9 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy);
 
 security_policy_t policyForSignTxWitness(
         sign_tx_signingmode_t txSigningMode,
-        const bip44_path_t* pathSpec,
-        bool mintPresent
+        const bip44_path_t* witnessPath,
+        bool mintPresent,
+        const bip44_path_t* poolOwnerPath
 );
 
 security_policy_t policyForSignTxConfirm();

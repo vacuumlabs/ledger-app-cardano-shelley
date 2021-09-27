@@ -167,6 +167,9 @@ typedef struct {
 		ins_sign_tx_witness_context_t witnesses_ctx;
 	} txPartCtx;
 
+	bool poolOwnerByPath;
+	bip44_path_t poolOwnerPath;
+
 	int ui_step;
 } ins_sign_tx_context_t;
 

@@ -1752,7 +1752,8 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		policy = policyForSignTxWitness(
 		                 ctx->commonTxData.txSigningMode,
 		                 &WITNESS_CTX->stageData.witness.path,
-		                 ctx->includeMint
+		                 ctx->includeMint,
+		                 ctx->poolOwnerByPath ? &ctx->poolOwnerPath : NULL
 		         );
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
