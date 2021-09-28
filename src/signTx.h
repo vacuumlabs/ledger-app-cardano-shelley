@@ -18,7 +18,7 @@ typedef enum {
 	SIGN_TX_SIGNINGMODE_ORDINARY_TX = 3, // enum value 3 is needed for backwards compatibility
 	SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER = 4,
 	SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR = 5,
-	SIGN_TX_SIGNINGMODE_SCRIPT_TX = 6,
+	SIGN_TX_SIGNINGMODE_MULTISIG_TX = 6,
 } sign_tx_signingmode_t;
 
 typedef enum {
