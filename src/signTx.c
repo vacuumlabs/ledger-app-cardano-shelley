@@ -351,8 +351,8 @@ static void signTx_handleInit_ui_runStep()
 
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
 		char* header =
-		        (ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_SCRIPT_TX) ?
-		        "New script transaction" :
+		        (ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_MULTISIG_TX) ?
+		        "Multisig transaction" :
 		        "New transaction";
 
 		ui_displayNetworkParamsScreen(
@@ -445,7 +445,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-		case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 			// these signing modes are allowed
 			break;
 

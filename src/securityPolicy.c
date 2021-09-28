@@ -245,7 +245,7 @@ security_policy_t policyForSignTxInit(
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		// no additional validation
 		break;
 
@@ -298,7 +298,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		// We always show third-party output addresses
 		SHOW();
@@ -336,7 +336,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 		break;
 	}
 
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX: {
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX: {
 		// all outputs should be given as external addresses
 		DENY();
 		break;
@@ -389,7 +389,7 @@ security_policy_t policyForSignTxFee(
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		// always show the fee if it is paid by the signer
 		SHOW();
 		break;
@@ -430,7 +430,7 @@ security_policy_t policyForSignTxCertificate(
 		ALLOW();
 		break;
 
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
 		ALLOW();
@@ -471,7 +471,7 @@ security_policy_t policyForSignTxCertificateStaking(
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		break;
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
 		break;
 	default:
@@ -644,7 +644,7 @@ security_policy_t policyForSignTxWithdrawal(
 		SHOW();
 		break;
 
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
 		SHOW();
 		break;
@@ -741,7 +741,7 @@ security_policy_t policyForSignTxWitness(
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		return _ordinaryWitnessPolicy(pathSpec, mintPresent);
 
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		return _scriptWitnessPolicy(pathSpec, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
@@ -805,7 +805,7 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 {
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		SHOW();
 		break;
 

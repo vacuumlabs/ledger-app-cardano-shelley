@@ -70,14 +70,14 @@ Initializes signing request.
 | include metadata                          | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
 | include validity interval start           | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
 | include mint                              | 1 | `ITEM_INCLUDED_NO=0x01` / `ITEM_INCLUDED_YES=0x02` |
-| signing mode                              | 1 | `SIGN_TX_SIGNINGMODE_ORDINARY_TX=0x03` / `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER=0x04` / `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR=0x05` / `SIGN_TX_SIGNINGMODE_SCRIPT_TX=0x06`|
+| signing mode                              | 1 | `SIGN_TX_SIGNINGMODE_ORDINARY_TX=0x03` / `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER=0x04` / `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR=0x05` / `SIGN_TX_SIGNINGMODE_MULTISIG_TX=0x06`|
 | number of tx inputs                       | 4 | Big endian |
 | number of tx outputs                      | 4 | Big endian |
 | number of tx certificates                 | 4 | Big endian |
 | number of tx withdrawals                  | 4 | Big endian |
 | number of tx witnesses                    | 4 | Big endian |
 
-The signing mode describes whether the transaction contains a pool registration certificate (if not, use `SIGN_TX_SIGNINGMODE_ORDINARY_TX` or `SIGN_TX_SIGNINGMODE_SCRIPT_TX`) and how the certificate should be treated (see the section on certificates below).
+The signing mode describes whether the transaction contains a pool registration certificate (if not, use `SIGN_TX_SIGNINGMODE_ORDINARY_TX` or `SIGN_TX_SIGNINGMODE_MULTISIG_TX`) and how the certificate should be treated (see the section on certificates below).
 
 ### Auxiliary data
 
@@ -232,7 +232,7 @@ Optional.
 
 ### Certificate
 
-We support 4 types of certificates in ordinary transactions (signing mode `SIGN_TX_SIGNINGMODE_ORDINARY_TX` in the initial APDU message): stake key registration, stake key deregistration, stake delegation, and stake pool retirement. We support 3 types in script transactions (signing mode `SIGN_TX_SIGNINGMODE_SCRIPT_TX` in the initial APDU message): stake key registration, stake key deregistration, and stake delegation.
+We support 4 types of certificates in ordinary transactions (signing mode `SIGN_TX_SIGNINGMODE_ORDINARY_TX` in the initial APDU message): stake key registration, stake key deregistration, stake delegation, and stake pool retirement. We support 3 types in multisig transactions (signing mode `SIGN_TX_SIGNINGMODE_MULTISIG_TX` in the initial APDU message): stake key registration, stake key deregistration, and stake delegation.
 
 In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR` or `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER` as the signing mode contains a single certificate for stake pool registration which must not be accompanied by other certificates or by withdrawals (due to security concerns about cross-witnessing data between them). This certificate is processed by a state sub-machine. Instructions for this sub-machine are given in P2; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details on accepted P2 values and additional APDU messages needed.
 
