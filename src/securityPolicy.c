@@ -844,7 +844,6 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy)
 	DENY(); // should not be reached
 }
 
-
 security_policy_t policyForSignTxConfirm()
 {
 	PROMPT();
