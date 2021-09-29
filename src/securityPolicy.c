@@ -795,7 +795,7 @@ security_policy_t policyForSignTxMintInit(const sign_tx_signingmode_t txSigningM
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_SCRIPT_TX:
-		ALLOW();
+		SHOW();
 		break;
 
 	default:
