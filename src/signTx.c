@@ -199,6 +199,8 @@ static inline void advanceStage()
 			break;
 		}
 
+	// intentional fallthrough
+
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 		if (ctx->includeScriptDataHash) {
 			ASSERT(BODY_CTX->scriptDataHashReceived);
@@ -1911,7 +1913,6 @@ void signTx_handleAPDU(
 	// advance stage if a state sub-machine has finished
 	checkForFinishedSubmachines();
 
-	// TODO should be replaced by checking which txPartCtx is in use, see https://github.com/vacuumlabs/ledger-app-cardano-shelley/issues/66
 	switch (ctx->stage) {
 	case SIGN_STAGE_BODY_INPUTS:
 	case SIGN_STAGE_BODY_OUTPUTS:
