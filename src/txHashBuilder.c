@@ -1204,17 +1204,6 @@ static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
 	case TX_HASH_BUILDER_IN_NETWORK_ID:
 		break;
 
-	case TX_HASH_BUILDER_IN_MINT:
-	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveMint(builder);
-		ASSERT(!builder->includeValidityIntervalStart);
-		break;
-
 	default:
 		ASSERT(false);
 	}
