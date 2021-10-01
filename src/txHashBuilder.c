@@ -1160,6 +1160,8 @@ static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_MINT:
+		ASSERT(builder->multiassetData.remainingAssetGroups == 0);
+		ASSERT(builder->multiassetData.remainingTokens == 0);
 		break;
 
 	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
@@ -1175,9 +1177,6 @@ static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 	default:
 		ASSERT(false);
 	}
-
-	ASSERT(builder->multiassetData.remainingAssetGroups == 0);
-	ASSERT(builder->multiassetData.remainingTokens == 0);
 }
 
 
