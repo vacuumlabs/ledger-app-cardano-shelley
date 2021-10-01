@@ -342,6 +342,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 )
 {
 	DENY_UNLESS(isValidAddressParams(params));
+	DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_PATH);
 
 	// network identification should be consistent across tx
 	if (params->type == BYRON) {
