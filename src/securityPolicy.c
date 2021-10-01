@@ -301,16 +301,25 @@ security_policy_t policyForSignTxOutputAddressBytes(
 {
 	ASSERT(rawAddressSize < BUFFER_SIZE_PARANOIA);
 
-	// network identification must be consistent across tx
+	// address type and network identification
 	ASSERT(rawAddressSize >= 1);
-	address_type_t addressType = getAddressType(rawAddressBuffer[0]);
-	if (addressType == BYRON) {
-		uint32_t addressProtocolMagic = extractProtocolMagic(rawAddressBuffer, rawAddressSize);
-		DENY_IF(addressProtocolMagic != protocolMagic);
-	} else { // shelley
-		uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
+	const address_type_t addressType = getAddressType(rawAddressBuffer[0]);
+	const uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
+
+	switch (addressType) {
+
+	case BYRON:
+		DENY_IF(extractProtocolMagic(rawAddressBuffer, rawAddressSize) != protocolMagic);
+		break;
+
+	case REWARD_KEY:
+	case REWARD_SCRIPT:
+		DENY();
+		break;
+
+	default: // shelley types allowed in output
 		DENY_IF(addressNetworkId != networkId);
-		DENY_IF(addressType == REWARD_KEY || addressType == REWARD_SCRIPT);
+		break;
 	}
 
 	switch (txSigningMode) {
@@ -343,17 +352,28 @@ security_policy_t policyForSignTxOutputAddressParams(
 {
 	DENY_UNLESS(isValidAddressParams(params));
 
-	// network identification should be consistent across tx
-	if (params->type == BYRON) {
+	// address type and network identification
+	switch (params->type) {
+
+	case BYRON:
 		DENY_IF(params->protocolMagic != protocolMagic);
-	} else { // shelley
+		break;
+
+	case REWARD_KEY:
+	case REWARD_SCRIPT:
+		DENY();
+		break;
+
+	default: // shelley types allowed in output
 		DENY_IF(params->networkId != networkId);
+		break;
 	}
 
 	switch (txSigningMode) {
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX: {
+		DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_PATH);
 		SHOW_UNLESS(is_standard_base_address(params));
 		ALLOW();
 		break;
