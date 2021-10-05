@@ -16,6 +16,7 @@ enum {
 	TX_BODY_KEY_VALIDITY_INTERVAL_START = 8,
 	TX_BODY_KEY_MINT = 9,
 	TX_BODY_KEY_SCRIPT_HASH_DATA = 11,
+	TX_BODY_KEY_COLLATERALS = 13,
 	TX_BODY_KEY_NETWORK_ID = 15,
 };
 
@@ -56,8 +57,9 @@ typedef enum {
 	TX_HASH_BUILDER_IN_MINT_ASSET_GROUP = 1011,
 	TX_HASH_BUILDER_IN_MINT_TOKEN = 1012,
 	TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA = 1100,
-	TX_HASH_BUILDER_IN_NETWORK_ID = 1200,
-	TX_HASH_BUILDER_FINISHED = 1300,
+	TX_HASH_BUILDER_IN_COLLATERALS = 1200,
+	TX_HASH_BUILDER_IN_NETWORK_ID = 1400,
+	TX_HASH_BUILDER_FINISHED = 1500,
 } tx_hash_builder_state_t;
 
 typedef struct {
@@ -65,6 +67,7 @@ typedef struct {
 	uint16_t remainingOutputs;
 	uint16_t remainingWithdrawals;
 	uint16_t remainingCertificates;
+	uint16_t remainingCollaterals;
 	bool includeTtl;
 	bool includeAuxData;
 	bool includeValidityIntervalStart;
@@ -98,7 +101,8 @@ void txHashBuilder_init(
         bool includeAuxData,
         bool includeValidityIntervalStart,
         bool includeMint,
-        bool includeScriptDataHash
+        bool includeScriptDataHash,
+        uint16_t numCollaterals
 );
 
 void txHashBuilder_enterInputs(tx_hash_builder_t* builder);
@@ -230,6 +234,13 @@ void txHashBuilder_addMint_token(
 void txHashBuilder_addScriptDataHash(
         tx_hash_builder_t* builder,
         const uint8_t* scriptHashData, size_t scriptHashDataSize
+);
+
+void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder);
+void txHashBuilder_addCollateral(
+        tx_hash_builder_t* builder,
+        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
+        uint32_t utxoIndex
 );
 
 void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId);

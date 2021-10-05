@@ -27,6 +27,7 @@ static inline void initTxBodyCtx()
 		BODY_CTX->currentOutput = 0;
 		BODY_CTX->currentCertificate = 0;
 		BODY_CTX->currentWithdrawal = 0;
+		BODY_CTX->currentCollateral = 0;
 		BODY_CTX->feeReceived = false;
 		BODY_CTX->ttlReceived = false;
 		BODY_CTX->validityIntervalStartReceived = false;
@@ -90,7 +91,8 @@ static inline void advanceStage()
 			        ctx->includeAuxData,
 			        ctx->includeValidityIntervalStart,
 			        ctx->includeMint,
-			        ctx->includeScriptDataHash
+			        ctx->includeScriptDataHash,
+					ctx->numCollaterals
 			);
 			txHashBuilder_enterInputs(&BODY_CTX->txHashBuilder);
 		}
@@ -205,6 +207,16 @@ static inline void advanceStage()
 		if (ctx->includeScriptDataHash) {
 			ASSERT(BODY_CTX->scriptDataHashReceived);
 		}
+		ctx->stage = SIGN_STAGE_BODY_COLLATERALS;
+		if (ctx->numCollaterals > 0) {
+			txHashBuilder_enterCollaterals(&BODY_CTX->txHashBuilder);
+			break;
+		}
+
+	// intentional fallthrough
+
+	case SIGN_STAGE_BODY_COLLATERALS:
+		ASSERT(BODY_CTX->currentCollateral == ctx->numCollaterals);
 		txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		ctx->stage = SIGN_STAGE_CONFIRM;
 		break;
@@ -325,12 +337,9 @@ static inline void checkForFinishedSubmachines()
 }
 
 // this is supposed to be called at the beginning of each APDU handler
-static inline void CHECK_STAGE(sign_tx_stage_t expected)
-{
-	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
+#define CHECK_STAGE(expected)\
+	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);\
 	VALIDATE(ctx->stage == expected, ERR_INVALID_STATE);
-}
-
 
 // ============================== INIT ==============================
 
@@ -411,6 +420,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			uint8_t numCertificates[4];
 			uint8_t numWithdrawals[4];
 			uint8_t numWitnesses[4];
+			uint8_t numCollaterals[4];
 		}* wireHeader = (void*) wireDataBuffer;
 
 		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
@@ -458,20 +468,23 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		ASSERT_TYPE(ctx->numCertificates, uint16_t);
 		ASSERT_TYPE(ctx->numWithdrawals, uint16_t);
 		ASSERT_TYPE(ctx->numWitnesses, uint16_t);
+		ASSERT_TYPE(ctx->numCollaterals, uint16_t);
 		ctx->numInputs            = (uint16_t) u4be_read(wireHeader->numInputs);
 		ctx->numOutputs           = (uint16_t) u4be_read(wireHeader->numOutputs);
 		ctx->numCertificates      = (uint16_t) u4be_read(wireHeader->numCertificates);
 		ctx->numWithdrawals       = (uint16_t) u4be_read(wireHeader->numWithdrawals);
 		ctx->numWitnesses         = (uint16_t) u4be_read(wireHeader->numWitnesses);
+		ctx->numCollaterals		  = (uint16_t) u4be_read(wireHeader->numCollaterals);
 
 		TRACE(
-		        "num inputs, outputs, certificates, withdrawals, witnesses: %d %d %d %d %d",
-		        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals, ctx->numWitnesses
+		        "num inputs, outputs, certificates, withdrawals, witnesses, collaterals: %d %d %d %d %d %d",
+		        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals, ctx->numWitnesses, ctx->numCollaterals
 		);
 		VALIDATE(ctx->numInputs <= SIGN_MAX_INPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numOutputs <= SIGN_MAX_OUTPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numCertificates <= SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
 		VALIDATE(ctx->numWithdrawals <= SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
+		VALIDATE(ctx->numCollaterals <= SIGN_MAX_COLLATERALS, ERR_INVALID_DATA);
 
 		// Current code design assumes at least one input.
 		// If this is to be relaxed, stage switching logic needs to be re-visited.
@@ -680,6 +693,24 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
 
+static sign_tx_transaction_input_t extractTransactionInput(uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	sign_tx_transaction_input_t result;
+	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+	struct {
+		uint8_t txHash[TX_HASH_LENGTH];
+		uint8_t index[4];
+	}* wireUtxo = (void*) wireDataBuffer;
+
+	VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
+
+	memmove(result.txHashBuffer, wireUtxo->txHash, SIZEOF(result.txHashBuffer));
+	result.parsedIndex = u4be_read(wireUtxo->index);
+
+	return result;
+}
+
 __noinline_due_to_stack__
 static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
 {
@@ -693,26 +724,7 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	// parsed data
-	struct {
-		uint8_t txHashBuffer[TX_HASH_LENGTH];
-		uint32_t parsedIndex;
-	} input;
-
-	{
-		// parse input
-		TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
-		struct {
-			uint8_t txHash[TX_HASH_LENGTH];
-			uint8_t index[4];
-		}* wireUtxo = (void*) wireDataBuffer;
-
-		VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
-
-		memmove(input.txHashBuffer, wireUtxo->txHash, SIZEOF(input.txHashBuffer));
-		input.parsedIndex = u4be_read(wireUtxo->index);
-	}
+	const sign_tx_transaction_input_t input = extractTransactionInput(wireDataBuffer, wireDataSize);
 
 	{
 		// add to tx
@@ -1665,6 +1677,84 @@ static void signTx_handleScriptDataHashAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 	signTx_handleScriptDataHash_ui_runStep();
 }
 
+// ============================== COLLATERAL ==============================
+
+enum {
+	HANDLE_COLLATERAL_STEP_DISPLAY = 1300,
+	HANDLE_COLLATERAL_STEP_RESPOND,
+	HANDLE_COLLATERAL_STEP_INVALID,
+};
+
+static void signTx_handleCollateral_ui_runStep()
+{
+	TRACE("UI step %d", ctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleCollateral_ui_runStep;
+
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_COLLATERAL_STEP_DISPLAY) {
+		char headerText[18];
+		snprintf(headerText, SIZEOF(headerText), "Collateral #%u", BODY_CTX->stageData.collateral.parsedIndex);
+		ui_displayHexBufferScreen(headerText, BODY_CTX->stageData.collateral.txHashBuffer, SIZEOF(BODY_CTX->stageData.collateral.txHashBuffer), this_fn);
+	}
+
+	UI_STEP(HANDLE_COLLATERAL_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		// Advance stage to the next input
+		ASSERT(BODY_CTX->currentCollateral < ctx->numCollaterals);
+		BODY_CTX->currentCollateral++;
+
+		if (BODY_CTX->currentCollateral == ctx->numCollaterals) {
+			advanceStage();
+		}
+	}
+	UI_STEP_END(HANDLE_COLLATERAL_STEP_INVALID);
+}
+
+__noinline_due_to_stack__
+static void signTx_handleCollateralAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	TRACE_STACK_USAGE();
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_BODY_COLLATERALS);
+		ASSERT(BODY_CTX->currentCollateral < ctx->numCollaterals);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+
+	BODY_CTX->stageData.collateral = extractTransactionInput(wireDataBuffer, wireDataSize);
+
+	{
+		// add to tx
+		TRACE("Adding collateral to tx hash");
+		txHashBuilder_addCollateral(
+		        &BODY_CTX->txHashBuilder,
+		        BODY_CTX->stageData.collateral.txHashBuffer, SIZEOF(BODY_CTX->stageData.collateral.txHashBuffer),
+		        BODY_CTX->stageData.collateral.parsedIndex
+		);
+	}
+
+	security_policy_t policy = policyForSignTxCollaterals(ctx->commonTxData.txSigningMode);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_COLLATERAL_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_COLLATERAL_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+	signTx_handleCollateral_ui_runStep();
+}
+
 // ============================== CONFIRM ==============================
 
 enum {
@@ -1892,6 +1982,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x09, signTx_handleValidityIntervalStartAPDU);
 		CASE(0x0b, signTx_handleMintAPDU);
 		CASE(0x0c, signTx_handleScriptDataHashAPDU);
+		CASE(0x0d, signTx_handleCollateralAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
 		CASE(0x0f, signTx_handleWitnessAPDU);
 		DEFAULT(NULL)
@@ -1931,7 +2022,8 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
-	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH: {
+	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
+	case SIGN_STAGE_BODY_COLLATERALS: {
 		explicit_bzero(&BODY_CTX->stageData, SIZEOF(BODY_CTX->stageData));
 		break;
 	}
@@ -1976,6 +2068,7 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_MINT:
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
+	case SIGN_STAGE_BODY_COLLATERALS:
 	case SIGN_STAGE_CONFIRM:
 		return &(ctx->txPartCtx.body_ctx);
 

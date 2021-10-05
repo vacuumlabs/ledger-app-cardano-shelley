@@ -371,7 +371,8 @@ void run_txHashBuilder_test()
 	                   true, // metadata
 	                   true, // validity interval start
 	                   true, // mint
-	                   false // script hash data
+	                   false, // script hash data
+					   0	//TODO(KoMa) testing
 	                  );
 
 	txHashBuilder_enterInputs(&builder);
