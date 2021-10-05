@@ -64,7 +64,8 @@ void txHashBuilder_init(
         bool includeAuxData,
         bool includeValidityIntervalStart,
         bool includeMint,
-        bool includeScriptDataHash
+        bool includeScriptDataHash,
+		uint16_t numCollaterals
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -111,10 +112,13 @@ void txHashBuilder_init(
 		builder->includeScriptDataHash = includeScriptDataHash;
 		if (includeScriptDataHash) numItems++;
 
+		builder->remainingCollaterals = numCollaterals;
+		if (numCollaterals > 0) numItems++;
+
 		// network id always included
 		numItems++;
 
-		ASSERT((4 <= numItems) && (numItems <= 11));
+		ASSERT((4 <= numItems) && (numItems <= 12));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -1250,11 +1254,80 @@ static void txHashBuilder_assertCanLeaveScriptDataHash(tx_hash_builder_t* builde
 	}
 }
 
-void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId)
+void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveScriptDataHash(builder);
+	{
+		// Enter inputs
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERALS);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingCollaterals);
+	}
+	builder->state = TX_HASH_BUILDER_IN_COLLATERALS;
+}
+
+void txHashBuilder_addCollateral(
+        tx_hash_builder_t* builder,
+        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
+        uint32_t utxoIndex
+)
+{
+	_TRACE("state = %d, remainingCollaterals = %u", builder->state, builder->remainingCollaterals);
+
+	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERALS);
+	ASSERT(builder->remainingCollaterals > 0);
+	builder->remainingCollaterals--;
+	// Array(2)[
+	//    Bytes[hash],
+	//    Unsigned[index]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+		{
+			ASSERT(utxoHashSize == 32);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
+			BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, utxoIndex);
+		}
+	}
+}
+
+void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %u", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_COLLATERALS:
+		ASSERT(builder->remainingCollaterals == 0);
+		break;
+
+	case TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA:
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveScriptDataHash(builder);
+		ASSERT(!builder->includeScriptDataHash);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+}
+
+
+void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveCollaterals(builder);
 
 	// add network id item into the main tx body map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_NETWORK_ID);
