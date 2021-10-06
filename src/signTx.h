@@ -39,6 +39,7 @@ typedef enum {
 	SIGN_STAGE_BODY_MINT_SUBMACHINE = 36,
 	SIGN_STAGE_BODY_SCRIPT_DATA_HASH = 37,
 	SIGN_STAGE_BODY_COLLATERALS = 38,
+	SIGN_STAGE_BODY_REQUIRED_SIGNERS = 39,
 	SIGN_STAGE_CONFIRM = 40,
 	SIGN_STAGE_WITNESSES = 41,
 } sign_tx_stage_t;
@@ -49,6 +50,7 @@ enum {
 	SIGN_MAX_CERTIFICATES = UINT16_MAX,
 	SIGN_MAX_REWARD_WITHDRAWALS = UINT16_MAX,
 	SIGN_MAX_COLLATERALS = UINT16_MAX,
+	SIGN_MAX_REQUIRED_SIGNERS = UINT16_MAX,
 	SIGN_MAX_WITNESSES = SIGN_MAX_INPUTS + SIGN_MAX_OUTPUTS + SIGN_MAX_CERTIFICATES + SIGN_MAX_REWARD_WITHDRAWALS,
 };
 
@@ -120,6 +122,7 @@ typedef struct {
 	uint16_t currentCertificate;
 	uint16_t currentWithdrawal;
 	uint16_t currentCollateral;
+	uint16_t currentRequiredSigners;
 
 	bool feeReceived;
 	bool ttlReceived;
@@ -139,6 +142,7 @@ typedef struct {
 		uint64_t validityIntervalStart;
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
 		sign_tx_transaction_input_t collateral;
+		uint8_t requiredSigner[VKEY_LENGTH];
 	} stageData; // TODO rename to reflect single-APDU scope
 
 	union {
@@ -170,6 +174,7 @@ typedef struct {
 	bool includeMint;
 	bool includeScriptDataHash;
 	uint16_t numCollaterals;
+	uint16_t numRequiredSigners;
 	uint16_t numWitnesses;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
