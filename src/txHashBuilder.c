@@ -65,7 +65,8 @@ void txHashBuilder_init(
         bool includeValidityIntervalStart,
         bool includeMint,
         bool includeScriptDataHash,
-		uint16_t numCollaterals
+		uint16_t numCollaterals,
+		uint16_t numRequiredSigners
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -115,10 +116,13 @@ void txHashBuilder_init(
 		builder->remainingCollaterals = numCollaterals;
 		if (numCollaterals > 0) numItems++;
 
+		builder->remainingRequiredSigners = numRequiredSigners;
+		if (numRequiredSigners > 0) numItems++;
+
 		// network id always included
 		numItems++;
 
-		ASSERT((4 <= numItems) && (numItems <= 12));
+		ASSERT((4 <= numItems) && (numItems <= 13));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -1296,7 +1300,7 @@ void txHashBuilder_addCollateral(
 	}
 }
 
-void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %u", builder->state);
 
@@ -1314,7 +1318,6 @@ void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
 	case TX_HASH_BUILDER_IN_TTL:
 	case TX_HASH_BUILDER_IN_FEE:
 		txHashBuilder_assertCanLeaveScriptDataHash(builder);
-		ASSERT(!builder->includeScriptDataHash);
 		break;
 
 	default:
@@ -1322,12 +1325,72 @@ void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
 	}
 }
 
+void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveCollaterals(builder);
+	{
+		// Enter inputs
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_REQUIRED_SIGNERS);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingRequiredSigners);
+	}
+	builder->state = TX_HASH_BUILDER_IN_REQUIRED_SIGNERS;
+}
+
+void txHashBuilder_addRequiredSigner(
+        tx_hash_builder_t* builder,
+        const uint8_t* vkeyBuffer, size_t vkeySize
+)
+{
+	_TRACE("state = %d, remainingRequiredSigners = %u", builder->state, builder->remainingRequiredSigners);
+
+	ASSERT(vkeySize < BUFFER_SIZE_PARANOIA);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_REQUIRED_SIGNERS);
+	ASSERT(builder->remainingRequiredSigners > 0);
+	builder->remainingRequiredSigners--;
+	// Array(2)[
+	//    Bytes[hash],
+	//    Unsigned[index]
+	// ]
+	{
+		ASSERT(vkeySize == VKEY_LENGTH);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, vkeySize);
+		BUILDER_APPEND_DATA(vkeyBuffer, vkeySize);
+	}
+}
+
+static void txHashBuilder_assertCanLeaveRequiredSigners(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %u", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
+		ASSERT(builder->remainingRequiredSigners == 0);
+		break;
+
+	case TX_HASH_BUILDER_IN_COLLATERALS:
+	case TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA:
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveCollaterals(builder);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+}
 
 void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId)
 {
 	_TRACE("state = %d", builder->state);
 
-	txHashBuilder_assertCanLeaveCollaterals(builder);
+	txHashBuilder_assertCanLeaveRequiredSigners(builder);
 
 	// add network id item into the main tx body map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_NETWORK_ID);

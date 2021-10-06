@@ -925,6 +925,26 @@ security_policy_t policyForSignTxCollaterals(const sign_tx_signingmode_t txSigni
 	DENY();
 }
 
+security_policy_t policyForSignTxRequiredSigners(const sign_tx_signingmode_t txSigningMode)
+{
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		SHOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		DENY();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY();
+}
+
 security_policy_t policyForSignTxConfirm()
 {
 	PROMPT();

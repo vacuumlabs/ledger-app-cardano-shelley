@@ -111,6 +111,8 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 
 security_policy_t policyForSignTxCollaterals(const sign_tx_signingmode_t txSigningMode);
 
+security_policy_t policyForSignTxRequiredSigners(const sign_tx_signingmode_t txSigningMode);
+
 security_policy_t policyForSignTxWitness(
         sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* witnessPath,

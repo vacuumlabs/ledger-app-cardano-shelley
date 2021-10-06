@@ -372,6 +372,7 @@ void run_txHashBuilder_test()
 	                   true, // validity interval start
 	                   true, // mint
 	                   false, // script hash data
+					   0,	//TODO(KoMa) testing
 					   0	//TODO(KoMa) testing
 	                  );
 
