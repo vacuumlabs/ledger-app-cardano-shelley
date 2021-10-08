@@ -225,14 +225,10 @@ void respond_with_user_reject()
 
 bool uiPaginatedText_canFitStringIntoHeader(const char *str)
 {
-	paginatedTextState_t* ctx = paginatedTextState;
-
-	return strlen(str) < SIZEOF(ctx->header);
+	return strlen(str) < SIZEOF(paginatedTextState->header);
 }
 
 bool uiPaginatedText_canFitStringIntoFullText(const char *str)
 {
-	paginatedTextState_t* ctx = paginatedTextState;
-
-	return strlen(str) < SIZEOF(ctx->fullText);
+	return strlen(str) < SIZEOF(paginatedTextState->fullText);
 }
