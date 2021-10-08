@@ -48,11 +48,11 @@ static inline void simpleScriptFinished()
 }
 
 // UI
-
-const char ui_native_script_header[7][27] = {"Script - key path", "Script - key", "Script - ALL", "Script - ANY", "Script - N of K", "Script - invalid before", "Script - invalid hereafter"};
+typedef char* charPtr;
+const charPtr ui_native_script_header[7] = {"Script - key path", "Script - key", "Script - ALL", "Script - ANY", "Script - N of K", "Script - invalid before", "Script - invalid hereafter"};
 
 #define ASSERT_UI_SCRIPT_TYPE_SANITY() ASSERT(ctx->ui_scriptType >= UI_SCRIPT_PUBKEY_PATH && ctx->ui_scriptType <= UI_SCRIPT_INVALID_HEREAFTER)
-#define HEADER ui_native_script_header[ctx->ui_scriptType]
+#define HEADER ((const char*)PIC(ui_native_script_header[ctx->ui_scriptType]))
 
 static uint8_t _getScriptLevelForPosition()
 {
