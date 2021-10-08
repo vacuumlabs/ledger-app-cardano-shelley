@@ -39,7 +39,7 @@ void uiCallback_confirm(ui_callback_t* cb)
 {
 	if (!cb->confirm) return;
 
-	switch(cb->state) {
+	switch (cb->state) {
 	case CALLBACK_NOT_RUN:
 		// Note: needs to be done before resolving in case it throws
 		cb->state = CALLBACK_RUN;
@@ -57,7 +57,7 @@ void uiCallback_reject(ui_callback_t* cb)
 {
 	if (!cb->reject) return;
 
-	switch(cb->state) {
+	switch (cb->state) {
 	case CALLBACK_NOT_RUN:
 		// Note: needs to be done before resolving in case it throws
 		cb->state = CALLBACK_RUN;
@@ -178,12 +178,13 @@ void ui_displayPaginatedText(
 	TRACE("%s", headerStr);
 	TRACE("%s", bodyStr);
 
+	// sanity checks
+	ASSERT(uiPaginatedText_canFitStringIntoHeader(headerStr));
+	ASSERT(uiPaginatedText_canFitStringIntoFullText(bodyStr));
+
 	paginatedTextState_t* ctx = paginatedTextState;
 	size_t header_len = strlen(headerStr);
 	size_t body_len = strlen(bodyStr);
-	// sanity checks
-	ASSERT(header_len < SIZEOF(ctx->header));
-	ASSERT(body_len < SIZEOF(ctx->fullText));
 
 	// clear all memory
 	explicit_bzero(ctx, SIZEOF(*ctx));
@@ -220,4 +221,14 @@ void respond_with_user_reject()
 {
 	io_send_buf(ERR_REJECTED_BY_USER, NULL, 0);
 	ui_idle();
+}
+
+bool uiPaginatedText_canFitStringIntoHeader(const char *str)
+{
+	return strlen(str) < SIZEOF(paginatedTextState->header);
+}
+
+bool uiPaginatedText_canFitStringIntoFullText(const char *str)
+{
+	return strlen(str) < SIZEOF(paginatedTextState->fullText);
 }

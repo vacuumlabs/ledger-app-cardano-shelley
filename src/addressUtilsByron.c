@@ -23,7 +23,7 @@ void addressRootFromExtPubKey(
         uint8_t* outBuffer, size_t outSize
 )
 {
-	ASSERT(SIZEOF(*extPubKey) == EXTENDED_PUBKEY_SIZE);
+	STATIC_ASSERT(SIZEOF(*extPubKey) == EXTENDED_PUBKEY_SIZE, "wrong ext pub key size");
 	ASSERT(outSize == ADDRESS_ROOT_SIZE);
 
 	uint8_t cborBuffer[64 + 10];
@@ -258,6 +258,8 @@ size_t deriveRawAddress(
         uint8_t* outBuffer, size_t outSize
 )
 {
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	uint8_t addressRoot[28];
 	{
 		extendedPublicKey_t extPubKey;
@@ -282,6 +284,8 @@ size_t deriveAddress_byron(
         uint8_t* outBuffer, size_t outSize
 )
 {
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	uint8_t rawAddressBuffer[40];
 	size_t rawAddressSize = deriveRawAddress(
 	                                pathSpec, protocolMagic,

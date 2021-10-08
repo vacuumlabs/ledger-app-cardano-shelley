@@ -126,4 +126,8 @@ extern unsigned int app_stack_canary;
 #define TRACE_STACK_USAGE()
 #endif // DEVEL
 
+#define IS_SIGNED_TYPE(type) (((type)(-1)) < 0)
+#define IS_SIGNED(var) (((typeof(var))(-1)) < 0)
+
+
 #endif // H_CARDANO_APP_UTILS

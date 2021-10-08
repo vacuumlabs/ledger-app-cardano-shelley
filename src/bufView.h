@@ -101,11 +101,13 @@ static inline cbor_token_t view_readToken(read_view_t* view)
 	return token;
 }
 
-// moves <length> bytes from the view to the buffer via memmove
-// (view.ptr is advanced accordingly)
-static inline void view_memmove(uint8_t* destBuffer, read_view_t* view, size_t length)
+// copies <length> bytes from the view to the buffer
+// throws ERR_INVALID_DATA if not enough data
+static inline void view_copyWireToBuffer(uint8_t* destBuffer, read_view_t* view, size_t length)
 {
-	ASSERT(length <= view_remainingSize(view));
+	ASSERT(length < BUFFER_SIZE_PARANOIA);
+
+	VALIDATE(view_remainingSize(view) >= length, ERR_INVALID_DATA);
 	memmove(destBuffer, view->ptr, length);
 	view_skipBytes(view, length);
 }
@@ -120,19 +122,25 @@ typedef uint32_t uint_width4_t;
 typedef uint64_t uint_width8_t;
 
 #define __DEFINE_VIEW_parse_ube(width) \
+	/* assumes we are reading from wire, so ERR_INVALID_DATA is thrown if not enough data*/ \
 	static inline uint_width##width##_t parse_u##width##be(read_view_t* view) { \
-		VALIDATE(view_remainingSize(view) >= width, ERR_NOT_ENOUGH_INPUT); \
+		VALIDATE(view_remainingSize(view) >= width, ERR_INVALID_DATA); \
 		uint_width##width##_t result = u##width##be_read(view->ptr); \
 		view->ptr += width; \
 		return result; \
 	};
 
-
-
 __DEFINE_VIEW_parse_ube(1)
 __DEFINE_VIEW_parse_ube(2)
 __DEFINE_VIEW_parse_ube(4)
 __DEFINE_VIEW_parse_ube(8)
+
+
+static inline int64_t parse_int64be(read_view_t* view)
+{
+	// works with "Int64BE(value, 10).toBuffer()" which we use to serialize int64
+	return (int64_t) parse_u8be(view);
+};
 
 
 #endif // H_CARDANO_APP_BUF_VIEW

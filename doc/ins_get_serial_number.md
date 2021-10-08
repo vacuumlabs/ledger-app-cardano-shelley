@@ -28,4 +28,4 @@ The returned value is bytes exactly as written by the system call `os_serial()`.
   - Check `P1 == 0`
   - Check `P2 == 0`
   - Check `Lc == 0`
-- Respond with app version
+- Respond with serial number

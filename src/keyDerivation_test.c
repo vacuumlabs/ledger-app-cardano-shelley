@@ -65,9 +65,9 @@ void testPrivateKeyDerivation()
 		EXPECT_THROWS(testcase_derivePrivateKey(path, ARRAY_LEN(path), ""), error_ ); \
 	}
 
-	TESTCASE( (HD + 43, HD + 1815), ERR_INVALID_BIP44_PATH);
-	TESTCASE( (HD + 44, 1815, HD + 1), ERR_INVALID_BIP44_PATH);
-	TESTCASE( (HD + 44, HD + 33, HD + 1), ERR_INVALID_BIP44_PATH);
+	TESTCASE( (HD + 43, HD + 1815), ERR_ASSERT);
+	TESTCASE( (HD + 44, 1815, HD + 1), ERR_ASSERT);
+	TESTCASE( (HD + 44, HD + 33, HD + 1), ERR_ASSERT);
 #undef TESTCASE
 }
 

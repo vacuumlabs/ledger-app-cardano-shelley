@@ -66,6 +66,8 @@ static void blake2b_256_append_buffer_aux_data(
         bool trace
 )
 {
+	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
+
 	// keeping tracing within a function to be able to extract the serialized data
 	// by matching the function name where the tracing is invoked
 	if (trace) {
@@ -126,6 +128,8 @@ void auxDataHashBuilder_catalystRegistration_addVotingKey(
 {
 	_TRACE("state = %d", builder->state);
 
+	ASSERT(votingPubKeySize < BUFFER_SIZE_PARANOIA);
+
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_INIT);
 	{
 		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_VOTING_KEY);
@@ -145,6 +149,8 @@ void auxDataHashBuilder_catalystRegistration_addStakingKey(
 {
 	_TRACE("state = %d", builder->state);
 
+	ASSERT(stakingPubKeySize < BUFFER_SIZE_PARANOIA);
+
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_VOTING_KEY);
 	{
 		APPEND_CBOR(HC_AUX_DATA | HC_CATALYST_PAYLOAD, CBOR_TYPE_UNSIGNED, CATALYST_REGISTRATION_PAYLOAD_KEY_STAKING_KEY);
@@ -163,6 +169,8 @@ void auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
 )
 {
 	_TRACE("state = %d", builder->state);
+
+	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_STAKING_KEY);
 	ASSERT(addressSize <= BUFFER_SIZE_PARANOIA);
@@ -195,6 +203,8 @@ void auxDataHashBuilder_catalystRegistration_finalizePayload(aux_data_hash_build
 {
 	_TRACE("state = %d", builder->state);
 
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_NONCE);
 
 	ASSERT(outSize == CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH);
@@ -209,6 +219,8 @@ void auxDataHashBuilder_catalystRegistration_addSignature(
 )
 {
 	_TRACE("state = %d", builder->state);
+
+	ASSERT(signatureSize < BUFFER_SIZE_PARANOIA);
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_CATALYST_PAYLOAD_NONCE);
 	{

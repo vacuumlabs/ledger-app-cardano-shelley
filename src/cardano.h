@@ -20,6 +20,7 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 #define POOL_METADATA_HASH_LENGTH 32
 #define CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH 32
 #define ED25519_SIGNATURE_LENGTH 64
+#define SCRIPT_HASH_LENGTH 28
 
 #define MINTING_POLICY_ID_SIZE 28
 #define ASSET_NAME_SIZE_MAX 32
@@ -49,8 +50,8 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 
 
 typedef enum {
-	KEY_REFERENCE_PATH = 1,
-	KEY_REFERENCE_HASH = 2,
+	KEY_REFERENCE_PATH = 1,	// aka 'DEVICE_OWNED', the address belongs to this device
+	KEY_REFERENCE_HASH = 2, // aka 'THIRD_PARTY', the address is third party
 } key_reference_type_t;
 
 
@@ -58,7 +59,7 @@ typedef struct {
 	key_reference_type_t keyReferenceType;
 	union {
 		bip44_path_t path;
-		uint8_t buffer[REWARD_ACCOUNT_SIZE];
+		uint8_t hashBuffer[REWARD_ACCOUNT_SIZE];
 	};
 } reward_account_t;
 
@@ -79,7 +80,7 @@ typedef struct {
 	uint8_t assetNameBytes[ASSET_NAME_SIZE_MAX];
 	size_t assetNameSize;
 	uint64_t amount;
-} token_amount_t;
+} output_token_amount_t;
 
 
 // ==============================  CERTIFICATES  ==============================
@@ -101,6 +102,11 @@ typedef enum {
 	CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3,
 	CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT = 4,
 } certificate_type_t;
+
+typedef enum {
+	STAKE_CREDENTIAL_KEY_PATH = 0,
+	STAKE_CREDENTIAL_SCRIPT_HASH = 1,
+} stake_credential_type_t;
 
 typedef enum {
 	RELAY_SINGLE_HOST_IP = 0,
@@ -135,5 +141,18 @@ typedef struct {
 	uint8_t dnsName[DNS_NAME_SIZE_MAX];
 } pool_relay_t;
 
+// ==============================  NATIVE SCRIPTS  ==============================
+
+// depth of n means it can handle up to n-1 levels of nesting
+static const uint8_t MAX_SCRIPT_DEPTH = 11;
+
+typedef enum {
+	NATIVE_SCRIPT_PUBKEY = 0,
+	NATIVE_SCRIPT_ALL = 1,
+	NATIVE_SCRIPT_ANY = 2,
+	NATIVE_SCRIPT_N_OF_K = 3,
+	NATIVE_SCRIPT_INVALID_BEFORE = 4,
+	NATIVE_SCRIPT_INVALID_HEREAFTER = 5,
+} native_script_type;
 
 #endif // H_CARDANO_APP_CARDANO

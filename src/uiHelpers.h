@@ -26,7 +26,7 @@ typedef void ui_callback_fn_t();
 	{ \
 		int* __ui_step_ptr = &(STEP_VAR); \
 		__attribute__((unused)) ui_callback_fn_t* __this_fn = (THIS_FN); \
-		switch(*__ui_step_ptr) { \
+		switch (*__ui_step_ptr) { \
 			default: { \
 				ASSERT(false);
 
@@ -62,7 +62,6 @@ typedef void ui_callback_fn_t();
 		}
 
 // *INDENT-ON*
-
 
 typedef enum {
 	CALLBACK_NOT_RUN,
@@ -129,6 +128,9 @@ void uiCallback_reject(ui_callback_t* cb);
 
 void assert_uiPaginatedText_magic();
 void assert_uiPrompt_magic();
+
+bool uiPaginatedText_canFitStringIntoHeader(const char* str);
+bool uiPaginatedText_canFitStringIntoFullText(const char* str);
 
 // responds to the host and resets
 // processing

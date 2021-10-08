@@ -5,15 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [2.4.0](https://github.com/LedgerHQ/app-cardano/compare/2.3.1...LedgerHQ:2.4.0) - [TBD]
+
+## [3.0.0](TBD) - [TBD]
+
+Script elements in transactions and support for native scripts
+
+### Added
+
+- support for multisig key derivation as described in [CIP 1854 - Multi-signatures HD Wallets](https://cips.cardano.org/cips/cip1854/)
+- native script hash derivation call
+- support for mint field in transaction body and corresponding key derivation paths from [CIP 1855 - Forging policy keys for HD Wallets](https://cips.cardano.org/cips/cip1855/)
+- support for address types with script hashes (all Shelley address types are now supported)
+- support for script elements in transactions (certficates etc.) within a new transaction signing mode
+- validation of canonical ordering of cbor map keys (withdrawals, token policy ids in outputs and mint, asset names within an asset group)
+
+### Changed
+
+- serialization of certain APDU messages breaks backwards compatibility (mostly because paths were replaced with stake credentials)
+- the limit on number of witnesses based on transaction body elements has been dropped
+
+
+### Fixed
+
+- public keys are now displayed in bech32 instead of hex strings
+- certain assertions have been turned into proper validations
+
+
+## [2.4.1](https://github.com/LedgerHQ/app-cardano/compare/2.3.2...LedgerHQ:2.4.1) - [June 29th 2021]
 
 Support for signing pool registrations by operators.
 
 ### Added
 
 - operational certificate signing
-- new use case for transactions containing pool registration certificate: operators can sign such a transaction with the pool cold key
-- in the new use case, pool relays and the VRF key are displayed to the user
+- new signing mode for transactions containing pool registration certificate: operators can sign such a transaction with the pool cold key
+- in the new signing mode, pool relays and the VRF key are displayed to the user
 - support for pool retirement certificates in ordinary transactions
 
 ### Changed
@@ -23,8 +49,10 @@ Support for signing pool registrations by operators.
 
 ### Fixed
 
+- Fixed pool id still being displayed as hex for stake delegations instead of bech32: https://github.com/vacuumlabs/ledger-app-cardano-shelley/pull/53#issuecomment-821971545
 
-## [2.3.1](https://github.com/LedgerHQ/app-cardano/compare/2.2.1...LedgerHQ:2.3.1) - [TBD]
+
+## [2.3.2](https://github.com/LedgerHQ/app-cardano/compare/2.2.1...LedgerHQ:2.3.2) - [May 10th 2021]
 
 Add Catalyst voting registration metadata support
 
@@ -40,7 +68,7 @@ Add Catalyst voting registration metadata support
 
 ## [2.2.1](https://github.com/LedgerHQ/app-cardano/compare/2.2.0...LedgerHQ:2.2.1) - [March 30th 2021]
 
-Minor release updating the way of showing multiassed identifiers. No API changes.
+Minor release updating the way of showing multiasset identifiers. No API changes.
 
 ### Added
  

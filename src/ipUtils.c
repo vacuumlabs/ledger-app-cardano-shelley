@@ -141,7 +141,8 @@ void inet_ntop6 (const uint8_t *src, char *dst, size_t dstSize)
 			tp += strlen(tp);
 			break;
 		}
-		ASSERT((unsigned int) i < SIZEOF(words));
+		STATIC_ASSERT(sizeof(words[i]) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(words[i]), "signed type for %u");
 		snprintf(tp, sizeof tmp - (tp - tmp), "%x", words[i]);
 
 		tp += strlen(tp);

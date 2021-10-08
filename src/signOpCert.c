@@ -53,24 +53,21 @@ void signOpCert_handleAPDU(
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		STATIC_ASSERT(SIZEOF(ctx->kesPublicKey) == KES_PUBLIC_KEY_LENGTH, "wrong KES public key size");
-		VALIDATE(view_remainingSize(&view) >= KES_PUBLIC_KEY_LENGTH, ERR_INVALID_DATA);
-		view_memmove(ctx->kesPublicKey, &view, KES_PUBLIC_KEY_LENGTH);
+		view_copyWireToBuffer(ctx->kesPublicKey, &view, KES_PUBLIC_KEY_LENGTH);
 		TRACE("KES key:");
 		TRACE_BUFFER(ctx->kesPublicKey, KES_PUBLIC_KEY_LENGTH);
 
-		VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
 		ctx->kesPeriod = parse_u8be(&view);
 		TRACE("KES period:");
 		TRACE_UINT64(ctx->kesPeriod);
 
-		VALIDATE(view_remainingSize(&view) >= 8, ERR_INVALID_DATA);
 		ctx->issueCounter = parse_u8be(&view);
 		TRACE("Issue counter:");
 		TRACE_UINT64(ctx->issueCounter);
 
 		view_skipBytes(&view, bip44_parseFromWire(&ctx->poolColdKeyPathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
 
-		ASSERT(view_remainingSize(&view) == 0);
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
 	// Check security policy

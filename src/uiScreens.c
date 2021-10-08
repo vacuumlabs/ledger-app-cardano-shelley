@@ -9,7 +9,7 @@
 
 
 #define BECH32_BUFFER_SIZE_MAX 150
-#define BECH32_PREFIX_LENGTH_MAX 12
+#define BECH32_PREFIX_LENGTH_MAX 16
 
 // encodes a buffer into bech32 and displays it (works for bufferSize <= 150 and prefix length <= 12)
 void ui_displayBech32Screen(
@@ -105,7 +105,7 @@ static void _ui_displayAccountWithDescriptionScreen(
 	ASSERT(strlen(firstLine) > 0);
 	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(bip44_hasValidCardanoWalletPrefix(path));
+	ASSERT(bip44_hasOrdinaryWalletKeyPrefix(path));
 	ASSERT(bip44_containsAccount(path));
 
 	char accountDescription[160];
@@ -113,6 +113,8 @@ static void _ui_displayAccountWithDescriptionScreen(
 
 	if (showAccountDescription) {
 		uint32_t account = unharden(bip44_getAccount(path));
+		STATIC_ASSERT(sizeof(account + 1) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(account + 1), "signed type for %u");
 		if (bip44_hasByronPrefix(path)) {
 			snprintf(
 			        accountDescription, SIZEOF(accountDescription),
@@ -161,7 +163,7 @@ void ui_displayGetPublicKeyPathScreen(
 		return;
 	}
 
-	case PATH_WALLET_ACCOUNT: {
+	case PATH_ORDINARY_ACCOUNT: {
 		_ui_displayAccountWithDescriptionScreen("Export public key", path, true, callback);
 		return;
 	}
@@ -178,7 +180,7 @@ void ui_displayStakingKeyScreen(
         ui_callback_fn_t callback
 )
 {
-	ASSERT(bip44_isValidStakingKeyPath(stakingPath));
+	ASSERT(bip44_isOrdinaryStakingKeyPath(stakingPath));
 
 	bool showAccountDescription = bip44_hasReasonableAccount(stakingPath);
 
@@ -280,10 +282,12 @@ void ui_displayRewardAccountScreen(
 	switch (rewardAccount->keyReferenceType) {
 
 	case KEY_REFERENCE_PATH: {
-		ASSERT(bip44_isValidStakingKeyPath(&rewardAccount->path));
+		ASSERT(bip44_isOrdinaryStakingKeyPath(&rewardAccount->path));
 
 		{
 			uint32_t account = unharden(bip44_getAccount(&rewardAccount->path));
+			STATIC_ASSERT(sizeof(account + 1) <= sizeof(unsigned), "oversized type for %u");
+			STATIC_ASSERT(!IS_SIGNED(account + 1), "signed type for %u");
 			snprintf(
 			        firstLine, SIZEOF(firstLine),
 			        "Reward account #%u  ", account + 1
@@ -303,9 +307,9 @@ void ui_displayRewardAccountScreen(
 		        "Reward account"
 		);
 
-		ASSERT(SIZEOF(rewardAccountBuffer) == REWARD_ACCOUNT_SIZE);
-		ASSERT(SIZEOF(rewardAccount->buffer) == REWARD_ACCOUNT_SIZE);
-		memmove(rewardAccountBuffer, rewardAccount->buffer, REWARD_ACCOUNT_SIZE);
+		STATIC_ASSERT(SIZEOF(rewardAccountBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account buffer size");
+		STATIC_ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account hash buffer size");
+		memmove(rewardAccountBuffer, rewardAccount->hashBuffer, REWARD_ACCOUNT_SIZE);
 		break;
 	}
 
@@ -328,11 +332,48 @@ void ui_displayRewardAccountScreen(
 	);
 }
 
+void ui_displaySpendingInfoScreen(
+        const addressParams_t* addressParams,
+        ui_callback_fn_t callback
+)
+{
+	char spendingInfo[120];
+	explicit_bzero(spendingInfo, SIZEOF(spendingInfo));
 
-static const char STAKING_HEADING_PATH[]    = "Staking key path: ";
-static const char STAKING_HEADING_HASH[]    = "Staking key hash: ";
-static const char STAKING_HEADING_POINTER[] = "Staking key pointer: ";
-static const char STAKING_HEADING_WARNING[] = "WARNING: ";
+	switch (determineSpendingChoice(addressParams->type)) {
+
+	case SPENDING_PATH: {
+		ui_displayPathScreen(
+		        "Spending path",
+		        &addressParams->spendingKeyPath,
+		        callback
+		);
+		return;
+	}
+
+	case SPENDING_SCRIPT_HASH: {
+		ui_displayBech32Screen(
+		        "Spending script hash",
+		        "script",
+		        addressParams->spendingScriptHash,
+		        SIZEOF(addressParams->spendingScriptHash),
+		        callback
+		);
+		return;
+	}
+
+	default: {
+		// includes SPENDING_NONE
+		ASSERT(false);
+	}
+	}
+}
+
+static const char STAKING_HEADING_PATH[]        = "Staking key path";
+static const char STAKING_HEADING_KEY_HASH[]    = "Staking key hash";
+static const char STAKING_HEADING_SCRIPT_HASH[] = "Staking script hash";
+static const char STAKING_HEADING_POINTER[]     = "Staking key pointer";
+static const char STAKING_HEADING_WARNING[]     = "WARNING:";
 
 void ui_displayStakingInfoScreen(
         const addressParams_t* addressParams,
@@ -343,45 +384,59 @@ void ui_displayStakingInfoScreen(
 	char stakingInfo[120];
 	explicit_bzero(stakingInfo, SIZEOF(stakingInfo));
 
-	switch (addressParams->stakingChoice) {
+	switch (addressParams->stakingDataSource) {
 
-	case NO_STAKING:
-		if (addressParams->type == BYRON) {
+	case NO_STAKING: {
+		switch (addressParams->type) {
+
+		case BYRON:
 			heading = STAKING_HEADING_WARNING;
 			strncpy(stakingInfo, "legacy Byron address (no staking rewards)", SIZEOF(stakingInfo));
+			break;
 
-		} else if (addressParams->type == ENTERPRISE) {
+		case ENTERPRISE_KEY:
+		case ENTERPRISE_SCRIPT:
 			heading = STAKING_HEADING_WARNING;
 			strncpy(stakingInfo, "no staking rewards", SIZEOF(stakingInfo));
+			break;
 
-		} else if (addressParams->type == REWARD) {
-			heading = STAKING_HEADING_WARNING;
-			strncpy(stakingInfo, "reward account", SIZEOF(stakingInfo));
-
-		} else {
+		default:
 			ASSERT(false);
 		}
 		break;
+	}
 
-	case STAKING_KEY_PATH:
+	case STAKING_KEY_PATH: {
 		heading = STAKING_HEADING_PATH;
 		bip44_printToStr(&addressParams->stakingKeyPath, stakingInfo, SIZEOF(stakingInfo));
 		break;
+	}
 
-	case STAKING_KEY_HASH:
-		heading = STAKING_HEADING_HASH;
-		size_t length = encode_hex(
-		                        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
-		                        stakingInfo, SIZEOF(stakingInfo)
-		                );
-		ASSERT(length == strlen(stakingInfo));
-		ASSERT(length == 2 * SIZEOF(addressParams->stakingKeyHash));
+	case STAKING_KEY_HASH: {
+		heading = STAKING_HEADING_KEY_HASH;
+		bech32_encode(
+		        "stake_vkh", // shared keys never go into address directly
+		        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
+		        stakingInfo, SIZEOF(stakingInfo)
+		);
 		break;
+	}
+
+	case STAKING_SCRIPT_HASH: {
+		heading = STAKING_HEADING_SCRIPT_HASH;
+		bech32_encode(
+		        "script",
+		        addressParams->stakingScriptHash, SIZEOF(addressParams->stakingScriptHash),
+		        stakingInfo, SIZEOF(stakingInfo)
+		);
+		break;
+	}
 
 	case BLOCKCHAIN_POINTER:
 		heading = STAKING_HEADING_POINTER;
 		printBlockchainPointerToStr(addressParams->stakingKeyBlockchainPointer, stakingInfo, SIZEOF(stakingInfo));
 		break;
+
 
 	default:
 		ASSERT(false);
@@ -409,6 +464,7 @@ size_t deriveAssetFingerprint(
 )
 {
 	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
+	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 
 	uint8_t hashInput[MINTING_POLICY_ID_SIZE + ASSET_NAME_SIZE_MAX];
 	const size_t hashInputSize = policyIdSize + assetNameSize;
@@ -431,15 +487,17 @@ size_t deriveAssetFingerprint(
 
 void ui_displayAssetFingerprintScreen(
         token_group_t* tokenGroup,
-        token_amount_t* token,
+        uint8_t* assetNameBytes, size_t assetNameSize,
         ui_callback_fn_t callback
 )
 {
+	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
+
 	char fingerprint[200];
 
 	deriveAssetFingerprint(
 	        tokenGroup->policyId, SIZEOF(tokenGroup->policyId),
-	        token->assetNameBytes, token->assetNameSize,
+	        assetNameBytes, assetNameSize,
 	        fingerprint, SIZEOF(fingerprint)
 	);
 	ASSERT(strlen(fingerprint) + 1 <= SIZEOF(fingerprint));
@@ -481,6 +539,22 @@ void ui_displayUint64Screen(
 
 	ui_displayPaginatedText(
 	        firstLine,
+	        valueStr,
+	        callback
+	);
+}
+
+void ui_displayInt64Screen(
+        const char* screenHeader,
+        int64_t value,
+        ui_callback_fn_t callback
+)
+{
+	char valueStr[30];
+	str_formatInt64(value, valueStr, SIZEOF(valueStr));
+
+	ui_displayPaginatedText(
+	        screenHeader,
 	        valueStr,
 	        callback
 	);
@@ -528,10 +602,14 @@ void ui_displayNetworkParamsScreen(
 	char networkParams[100];
 	explicit_bzero(networkParams, SIZEOF(networkParams));
 
+	STATIC_ASSERT(sizeof(networkId) <= sizeof(unsigned), "oversized type for %u");
+	STATIC_ASSERT(!IS_SIGNED(networkId), "signed type for %u");
+	STATIC_ASSERT(sizeof(protocolMagic) <= sizeof(unsigned), "oversized type for %u");
+	STATIC_ASSERT(!IS_SIGNED(protocolMagic), "signed type for %u");
 	snprintf(
 	        networkParams, SIZEOF(networkParams),
-	        "network id %d / protocol magic %u",
-	        (int) networkId, (unsigned) protocolMagic
+	        "network id %u / protocol magic %u",
+	        networkId, protocolMagic
 	);
 	ASSERT(strlen(networkParams) + 1 < SIZEOF(networkParams));
 
@@ -560,8 +638,10 @@ void ui_displayPoolMarginScreen(
 		uint64_t marginPercentage = (10000 * marginNumerator + (marginDenominator / 2)) / marginDenominator;
 		ASSERT(marginPercentage <= 10000);
 
-		unsigned int percentage = (unsigned int) marginPercentage;
+		const unsigned int percentage = (unsigned int) marginPercentage;
 
+		STATIC_ASSERT(sizeof(percentage) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(percentage), "signed type for %u");
 		snprintf(marginStr, SIZEOF(marginStr), "%u.%u %%", percentage / 100, percentage % 100);
 		ASSERT(strlen(marginStr) + 1 < SIZEOF(marginStr));
 	}
@@ -591,7 +671,7 @@ void ui_displayPoolOwnerScreen(
 
 		switch (owner->keyReferenceType) {
 		case KEY_REFERENCE_PATH: {
-			ASSERT(bip44_isValidStakingKeyPath(&owner->path));
+			ASSERT(bip44_isOrdinaryStakingKeyPath(&owner->path));
 
 			constructRewardAddressFromKeyPath(
 			        &owner->path, networkId, rewardAddress, SIZEOF(rewardAddress)
@@ -599,10 +679,10 @@ void ui_displayPoolOwnerScreen(
 			break;
 		}
 		case KEY_REFERENCE_HASH: {
-			ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH);
+			STATIC_ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong owner.keyHash size");
 
-			constructRewardAddressFromKeyHash(
-			        networkId,
+			constructRewardAddressFromHash(
+			        networkId, REWARD_HASH_SOURCE_KEY,
 			        owner->keyHash, SIZEOF(owner->keyHash),
 			        rewardAddress, SIZEOF(rewardAddress)
 			);
@@ -614,6 +694,8 @@ void ui_displayPoolOwnerScreen(
 
 		char firstLine[20];
 		explicit_bzero(firstLine, SIZEOF(firstLine));
+		STATIC_ASSERT(sizeof(ownerIndex + 1) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(ownerIndex + 1), "signed type for %u");
 		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
 
 		_displayRewardAccountWithDescriptionScreen(
@@ -636,6 +718,8 @@ void ui_displayPoolRelayScreen(
 	char firstLine[20];
 	explicit_bzero(firstLine, SIZEOF(firstLine));
 	{
+		STATIC_ASSERT(sizeof(relayIndex + 1) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(relayIndex + 1), "signed type for %u");
 		snprintf(firstLine, SIZEOF(firstLine), "Relay #%u", relayIndex + 1);
 	}
 
@@ -703,6 +787,8 @@ void ui_displayIpPortScreen(
 	if (port->isNull) {
 		snprintf(portStr, SIZEOF(portStr), "(none)");
 	} else {
+		STATIC_ASSERT(sizeof(port->number) <= sizeof(unsigned), "oversized variable for %u");
+		STATIC_ASSERT(!IS_SIGNED(port->number), "signed type for %u");
 		snprintf(portStr, SIZEOF(portStr), "%u", port->number);
 	}
 

@@ -7,13 +7,13 @@ Stake pool registration certificates differ from other types of certificates in 
 2. Transactions containing them are severely restricted due to security concerns about intermingling of witnesses (for instance, the same keys are used for witnessing a pool owner and a withdrawal).
 3. Transactions containing them potentially need to be signed by several unrelated sets of keys, often managed by separate entities.
 
-We therefore split the process into two separate workflows according to the so-called use cases describing who is signing the transaction (operator of the pool or one of its owners). The chosen usecase is given in the initial message for transaction signing (see [Stake Pool Registration](ins_sign_stake_pool_registration.md)). Note that the serialized transaction must be the same for both flows, only the required witnesses and some user interactions differ.
+We therefore split the process into two separate workflows according to the so-called signing modes describing who is signing the transaction (operator of the pool or one of its owners). The chosen signing mode is given in the initial message for transaction signing (see [Stake Pool Registration](ins_sign_stake_pool_registration.md)). Note that the serialized transaction must be the same for both flows, only the required witnesses and some user interactions differ.
 
 The key derivation scheme for pool cold keys used by a pool operator is described in [CIP 1853 - HD Stake Pool Cold Keys for Cardano](https://cips.cardano.org/cips/cip1853/).
 
-## Use case for pool operator
+## Signing mode for pool operator
 
-- Set by using `SIGN_TX_USECASE_POOL_REGISTRATION_OPERATOR=0x05` in the initial sign transaction APDU message (see [SignTx call](ins_sign_tx.md)).
+- Set by using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR=0x05` in the initial sign transaction APDU message (see [SignTx call](ins_sign_tx.md)).
 
 - The pool registration transaction is paid for by the operator which is thus supposed to provide witnesses for inputs. An additional witness corresponds to pool id (signed by pool cold key).
 
@@ -21,9 +21,9 @@ The key derivation scheme for pool cold keys used by a pool operator is describe
 
 - Pool owners must be given by hash (of the staking key).
 
-## Use case for pool owner
+## Signing mode for pool owner
 
-- Set by using `SIGN_TX_USECASE_POOL_REGISTRATION_OWNER=0x04` in the initial sign transaction APDU message (see [SignTx call](ins_sign_tx.md)).
+- Set by using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER=0x04` in the initial sign transaction APDU message (see [SignTx call](ins_sign_tx.md)).
 
 - Transaction outputs must be given by addresses (not address params) and are not shown to the user (because he is not funding the transaction). The fee is not shown either.
 
@@ -113,7 +113,7 @@ P2 = `0x34`
 |Field| Length | Comments|
 |-----|--------|---------|
 |key reference type    |  1       | `KEY_REFERENCE_PATH=0x01` |
-|staking key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
+|staking key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 
 |Field| Length | Comments|
 |-----|--------|---------|
@@ -129,7 +129,7 @@ P2 = `0x35`
 |Field| Length | Comments|
 |-----|--------|---------|
 |key reference type    |  1       | `KEY_REFERENCE_PATH=0x01` |
-|staking key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_public_key.md) for a format example |
+|staking key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 
 |Field| Length | Comments|
 |-----|--------|---------|

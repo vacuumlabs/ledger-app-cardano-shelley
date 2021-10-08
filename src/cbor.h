@@ -21,10 +21,10 @@ enum {
 };
 
 
-enum {
+typedef enum {
 	// raw tags
 	CBOR_TYPE_UNSIGNED     = CBOR_MT_UNSIGNED << 5,
-	//CBOR_TYPE_NEGATIVE   = CBOR_MT_NEGATIVE << 5,
+	CBOR_TYPE_NEGATIVE	   = CBOR_MT_NEGATIVE << 5,
 	CBOR_TYPE_BYTES        = CBOR_MT_BYTES << 5,
 	CBOR_TYPE_TEXT         = CBOR_MT_TEXT << 5,
 	CBOR_TYPE_ARRAY        = CBOR_MT_ARRAY << 5,
@@ -36,7 +36,7 @@ enum {
 	CBOR_TYPE_ARRAY_INDEF  = CBOR_TYPE_ARRAY + CBOR_INDEF,
 	CBOR_TYPE_INDEF_END    = CBOR_TYPE_PRIMITIVES + CBOR_INDEF,
 	CBOR_TYPE_NULL         = CBOR_TYPE_PRIMITIVES + CBOR_NULL
-};
+} cbor_type_tag_t;
 
 enum {
 	CBOR_TAG_EMBEDDED_CBOR_BYTE_STRING = 24,
@@ -55,6 +55,10 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 
 cbor_token_t cbor_parseToken(const uint8_t* buf, size_t size);
 
+bool cbor_mapKeyFulfillsCanonicalOrdering(
+        const uint8_t* previousBuffer, size_t previousSize,
+        const uint8_t* nextBuffer, size_t nextSize
+);
 
 #ifdef DEVEL
 void run_cbor_test();

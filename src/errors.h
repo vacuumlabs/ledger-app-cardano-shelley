@@ -16,7 +16,7 @@ enum {
 	ERR_BAD_CLA                    = 0x6E02,
 	// Unknown INS
 	ERR_UNKNOWN_INS                = 0x6E03,
-	// TODO(should we move this to ERR_INVALID_STATE) ?
+	// attempt to change INS while the current call was not finished
 	ERR_STILL_IN_CALL              = 0x6E04,
 	// P1 or P2 is invalid
 	ERR_INVALID_REQUEST_PARAMETERS = 0x6E05,

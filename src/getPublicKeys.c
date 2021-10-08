@@ -155,8 +155,10 @@ static void getPublicKeys_handleInit_ui_runStep()
 	UI_STEP(HANDLE_INIT_UI_STEP_CONFIRM) {
 		char secondLine[100];
 		explicit_bzero(secondLine, SIZEOF(secondLine));
+		STATIC_ASSERT(sizeof(ctx->numPaths) <= sizeof(unsigned), "oversized type for %u");
+		STATIC_ASSERT(!IS_SIGNED(ctx->numPaths), "signed type for %u");
 		snprintf(secondLine, SIZEOF(secondLine), "%u public keys?", ctx->numPaths);
-		ASSERT(strlen(secondLine) < SIZEOF(secondLine));
+		ASSERT(strlen(secondLine) + 1 <= SIZEOF(secondLine));
 
 		ui_displayPrompt(
 		        "Confirm export",
@@ -210,12 +212,14 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		case 4: {
 			// read the number of remaining paths
 			uint32_t remainingPaths = parse_u4be(&view);
-			ASSERT(view_remainingSize(&view) == 0);
 			VALIDATE(remainingPaths < MAX_PUBLIC_KEYS, ERR_INVALID_DATA);
 			ASSERT_TYPE(ctx->numPaths, uint16_t);
 			ASSERT(remainingPaths < UINT16_MAX);
 
 			ctx->numPaths = (uint16_t) (remainingPaths + 1);
+
+			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+
 			break;
 		}
 		default: {
@@ -275,7 +279,7 @@ typedef void subhandler_fn_t(uint8_t* dataBuffer, size_t dataSize);
 
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
-	switch(p1) {
+	switch (p1) {
 #	define  CASE(P1, HANDLER) case P1: return HANDLER;
 #	define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(0x00, getPublicKeys_handleInitAPDU);
@@ -294,6 +298,8 @@ void getPublicKeys_handleAPDU(
         bool isNewCall
 )
 {
+	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+
 	if (isNewCall) {
 		explicit_bzero(ctx, SIZEOF(*ctx));
 		ctx->stage = GET_KEYS_STAGE_INIT;
