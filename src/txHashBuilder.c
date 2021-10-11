@@ -1354,7 +1354,7 @@ void txHashBuilder_addRequiredSigner(
 	//    Unsigned[index]
 	// ]
 	{
-		ASSERT(vkeySize == VKEY_LENGTH);
+		ASSERT(vkeySize == PUBLIC_KEY_SIZE);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, vkeySize);
 		BUILDER_APPEND_DATA(vkeyBuffer, vkeySize);
 	}

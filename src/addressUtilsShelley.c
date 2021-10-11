@@ -131,7 +131,7 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 #undef CONSISTENT_WITH
 }
 
-staking_data_source_t determineStakingChoide(address_type_t addressType)
+staking_data_source_t determineStakingChoice(address_type_t addressType)
 {
 	switch (addressType) {
 	case BASE_PAYMENT_KEY_STAKE_KEY:

@@ -25,7 +25,8 @@ security_policy_t policyForSignTxInit(
         uint32_t protocolMagic,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
-        bool includeMint
+        bool includeMint,
+        uint16_t numCollaterals
 );
 
 security_policy_t policyForSignTxInput();

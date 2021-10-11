@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "bip44.h"
+#include "keyDerivation.h"
 
 // Just a trick to make the numbers readable
 #define __CONCAT4(A,B,C,D) A ## B ## C ## D
@@ -23,7 +24,6 @@ STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 #define SCRIPT_HASH_LENGTH 28
 #define SCRIPT_DATA_HASH_LENGTH 32
 #define OUTPUT_DATUM_HASH_LENGTH 32
-#define VKEY_LENGTH 32
 
 #define MINTING_POLICY_ID_SIZE 28
 #define ASSET_NAME_SIZE_MAX 32
