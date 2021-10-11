@@ -220,7 +220,8 @@ security_policy_t policyForSignTxInit(
         uint32_t protocolMagic,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
-        bool includeMint
+        bool includeMint,
+        uint16_t numCollaterals
 )
 {
 	// Deny shelley mainnet with weird byron protocol magic
@@ -260,6 +261,9 @@ security_policy_t policyForSignTxInit(
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
 
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
+	if (numCollaterals != 0) {
+		WARN();
+	}
 	PROMPT();
 }
 
@@ -287,7 +291,8 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	const uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
 
 	if (includeDatumHash) {
-		DENY_UNLESS(determineSpendingChoice(addressType) == SPENDING_SCRIPT_HASH || determineStakingChoide(addressType) == STAKING_SCRIPT_HASH);
+		bool containsScriptHash = determineSpendingChoice(addressType) == SPENDING_SCRIPT_HASH || determineStakingChoice(addressType) == STAKING_SCRIPT_HASH;
+		DENY_UNLESS(containsScriptHash);
 	}
 
 	switch (addressType) {
@@ -337,7 +342,8 @@ security_policy_t policyForSignTxOutputAddressParams(
 {
 	DENY_UNLESS(isValidAddressParams(params));
 	if (includeDatumHash) {
-		DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_SCRIPT_HASH || params->stakingDataSource == STAKING_SCRIPT_HASH);
+		bool containsScriptHash = determineSpendingChoice(params->type) == SPENDING_SCRIPT_HASH || determineStakingChoice(params->type) == STAKING_SCRIPT_HASH;
+		DENY_UNLESS(containsScriptHash);
 	}
 
 	// address type and network identification
@@ -907,6 +913,7 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 
 security_policy_t policyForSignTxCollaterals(const sign_tx_signingmode_t txSigningMode)
 {
+	//TODO rework when more information is available
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
@@ -927,6 +934,7 @@ security_policy_t policyForSignTxCollaterals(const sign_tx_signingmode_t txSigni
 
 security_policy_t policyForSignTxRequiredSigners(const sign_tx_signingmode_t txSigningMode)
 {
+	//TODO rework when more information is available
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:

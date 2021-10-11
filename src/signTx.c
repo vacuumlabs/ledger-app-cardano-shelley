@@ -93,8 +93,8 @@ static inline void advanceStage()
 			        ctx->includeValidityIntervalStart,
 			        ctx->includeMint,
 			        ctx->includeScriptDataHash,
-					ctx->numCollaterals,
-					ctx->numRequiredSigners
+			        ctx->numCollaterals,
+			        ctx->numRequiredSigners
 			);
 			txHashBuilder_enterInputs(&BODY_CTX->txHashBuilder);
 		}
@@ -357,6 +357,7 @@ static inline void checkForFinishedSubmachines()
 
 enum {
 	HANDLE_INIT_STEP_DISPLAY_DETAILS = 100,
+	HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING,
 	HANDLE_INIT_STEP_CONFIRM,
 	HANDLE_INIT_STEP_RESPOND,
 	HANDLE_INIT_STEP_INVALID,
@@ -381,6 +382,14 @@ static void signTx_handleInit_ui_runStep()
 		        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
 		        this_fn
 		);
+	}
+
+	UI_STEP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING) {
+		if (ctx->numCollaterals == 0) {
+			UI_STEP_JUMP(HANDLE_INIT_STEP_CONFIRM);
+		}
+		//TODO(KoMa) what should be here exactly?
+		ui_displayPaginatedText("Warning", "Script running", this_fn);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_CONFIRM) {
@@ -515,7 +524,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	                                   ctx->commonTxData.protocolMagic,
 	                                   ctx->numCertificates,
 	                                   ctx->numWithdrawals,
-	                                   ctx->includeMint
+	                                   ctx->includeMint,
+	                                   ctx->numCollaterals
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -1787,7 +1797,18 @@ static void signTx_handleRequiredSigner_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_REQUIRED_SIGNERS_STEP_DISPLAY) {
-		ui_displayHexBufferScreen("Required signer", BODY_CTX->stageData.requiredSigner, SIZEOF(BODY_CTX->stageData.requiredSigner), this_fn);
+		switch (BODY_CTX->stageData.requiredSigner.type) {
+		case REQUIRED_SIGNER_WITH_PATH:
+			ui_displayPathScreen("Required signer", &BODY_CTX->stageData.requiredSigner.keyPath, this_fn);
+			break;
+		case REQUIRED_SIGNER_WITH_HASH:
+			ui_displayHexBufferScreen("Required signer", BODY_CTX->stageData.requiredSigner.keyHash, SIZEOF(BODY_CTX->stageData.requiredSigner.keyHash), this_fn);
+			break;
+
+		default:
+			ASSERT(false);
+			break;
+		}
 	}
 
 	UI_STEP(HANDLE_REQUIRED_SIGNERS_STEP_RESPOND) {
@@ -1821,8 +1842,16 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
-		STATIC_ASSERT(SIZEOF(BODY_CTX->stageData.requiredSigner) == VKEY_LENGTH, "wrong vkey length");
-		view_copyWireToBuffer(BODY_CTX->stageData.requiredSigner, &view, VKEY_LENGTH);
+		BODY_CTX->stageData.requiredSigner.type = parse_u1be(&view);
+		STATIC_ASSERT(SIZEOF(BODY_CTX->stageData.requiredSigner.keyHash) == PUBLIC_KEY_SIZE, "wrong key hash length");
+		switch (BODY_CTX->stageData.requiredSigner.type) {
+		case REQUIRED_SIGNER_WITH_PATH:
+			_parsePathSpec(&view, &BODY_CTX->stageData.requiredSigner.keyPath);
+			break;
+		case REQUIRED_SIGNER_WITH_HASH:
+			view_copyWireToBuffer(BODY_CTX->stageData.requiredSigner.keyHash, &view, PUBLIC_KEY_SIZE);
+			break;
+		}
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 

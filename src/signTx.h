@@ -116,6 +116,19 @@ typedef struct {
 	} stageContext;
 } ins_sign_tx_aux_data_context_t;
 
+typedef enum {
+	REQUIRED_SIGNER_WITH_PATH = 0,
+	REQUIRED_SIGNER_WITH_HASH = 1
+} sign_tx_required_signer_mode_t;
+
+typedef struct {
+	sign_tx_required_signer_mode_t type;
+	union {
+		uint8_t keyHash[PUBLIC_KEY_SIZE];
+		bip44_path_t keyPath;
+	};
+} ins_sign_tx_required_signer_t;
+
 typedef struct {
 	uint16_t currentInput;
 	uint16_t currentOutput;
@@ -142,7 +155,7 @@ typedef struct {
 		uint64_t validityIntervalStart;
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
 		sign_tx_transaction_input_t collateral;
-		uint8_t requiredSigner[VKEY_LENGTH];
+		ins_sign_tx_required_signer_t requiredSigner;
 	} stageData; // TODO rename to reflect single-APDU scope
 
 	union {

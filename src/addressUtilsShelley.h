@@ -87,7 +87,7 @@ typedef struct {
 } addressParams_t;
 
 bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams);
-staking_data_source_t determineStakingChoide(address_type_t addressType);
+staking_data_source_t determineStakingChoice(address_type_t addressType);
 
 size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize);
 
