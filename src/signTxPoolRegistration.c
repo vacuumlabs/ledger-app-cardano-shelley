@@ -792,8 +792,6 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 			PRINTF("\n");
 
 			subctx->numOwnersGivenByPath++;
-			// TODO this is more like a security policy
-			// VALIDATE(subctx->numOwnersGivenByPath <= 1, ERR_INVALID_DATA);
 			ctx->poolOwnerByPath = true;
 			memcpy(&ctx->poolOwnerPath, &owner->path, SIZEOF(owner->path));
 			break;

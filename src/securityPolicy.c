@@ -761,14 +761,14 @@ static inline security_policy_t _scriptWitnessPolicy(const bip44_path_t* path, b
 	}
 }
 
-static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* path, const bip44_path_t* poolOwnerPath)
+static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* witnessPath, const bip44_path_t* poolOwnerPath)
 {
-	switch (bip44_classifyPath(path)) {
+	switch (bip44_classifyPath(witnessPath)) {
 
 	case PATH_ORDINARY_STAKING_KEY:
-		WARN_UNLESS(bip44_isPathReasonable(path));
+		WARN_UNLESS(bip44_isPathReasonable(witnessPath));
 		if (poolOwnerPath != NULL) {
-			DENY_UNLESS(bip44_pathsEqual(path, poolOwnerPath));
+			DENY_UNLESS(bip44_pathsEqual(witnessPath, poolOwnerPath));
 		}
 		SHOW();
 		break;
