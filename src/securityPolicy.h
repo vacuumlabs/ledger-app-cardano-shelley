@@ -33,12 +33,14 @@ security_policy_t policyForSignTxInput();
 security_policy_t policyForSignTxOutputAddressBytes(
         sign_tx_signingmode_t txSigningMode,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool includeDatumHash
 );
 security_policy_t policyForSignTxOutputAddressParams(
         sign_tx_signingmode_t txSigningMode,
         const addressParams_t* params,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool includeDatumHash
 );
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t addressPolicy,

@@ -131,6 +131,33 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 #undef CONSISTENT_WITH
 }
 
+staking_data_source_t determineStakingChoide(address_type_t addressType)
+{
+	switch (addressType) {
+	case BASE_PAYMENT_KEY_STAKE_KEY:
+	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+	case REWARD_KEY:
+		return STAKING_KEY_HASH;
+
+	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
+	case REWARD_SCRIPT:
+		return STAKING_SCRIPT_HASH;
+
+	case POINTER_KEY:
+	case POINTER_SCRIPT:
+		return BLOCKCHAIN_POINTER;
+
+	case ENTERPRISE_KEY:
+	case ENTERPRISE_SCRIPT:
+	case BYRON:
+		return NO_STAKING;
+
+	default:
+		ASSERT(false);
+	}
+}
+
 __noinline_due_to_stack__
 static size_t view_appendAddressPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath)
 {

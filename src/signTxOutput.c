@@ -162,7 +162,8 @@ static void signTx_handleOutput_addressBytes()
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
 	                                   commonTxData->txSigningMode,
 	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
-	                                   commonTxData->networkId, commonTxData->protocolMagic
+	                                   commonTxData->networkId, commonTxData->protocolMagic,
+	                                   subctx->includeDatumHash
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -250,7 +251,8 @@ static void signTx_handleOutput_addressParams()
 	security_policy_t policy = policyForSignTxOutputAddressParams(
 	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.output.params,
-	                                   commonTxData->networkId, commonTxData->protocolMagic
+	                                   commonTxData->networkId, commonTxData->protocolMagic,
+	                                   subctx->includeDatumHash
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);

@@ -274,15 +274,21 @@ security_policy_t policyForSignTxInput()
 security_policy_t policyForSignTxOutputAddressBytes(
         sign_tx_signingmode_t txSigningMode,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool includeDatumHash
 )
 {
+
 	ASSERT(rawAddressSize < BUFFER_SIZE_PARANOIA);
 
 	// address type and network identification
 	ASSERT(rawAddressSize >= 1);
 	const address_type_t addressType = getAddressType(rawAddressBuffer[0]);
 	const uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
+
+	if (includeDatumHash) {
+		DENY_UNLESS(determineSpendingChoice(addressType) == SPENDING_SCRIPT_HASH || determineStakingChoide(addressType) == STAKING_SCRIPT_HASH);
+	}
 
 	switch (addressType) {
 
@@ -325,10 +331,14 @@ security_policy_t policyForSignTxOutputAddressBytes(
 security_policy_t policyForSignTxOutputAddressParams(
         sign_tx_signingmode_t txSigningMode,
         const addressParams_t* params,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool includeDatumHash
 )
 {
 	DENY_UNLESS(isValidAddressParams(params));
+	if (includeDatumHash) {
+		DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_SCRIPT_HASH || params->stakingDataSource == STAKING_SCRIPT_HASH);
+	}
 
 	// address type and network identification
 	switch (params->type) {
