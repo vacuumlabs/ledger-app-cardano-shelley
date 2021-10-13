@@ -50,11 +50,19 @@ enum {
 };
 
 typedef struct {
+	bool isStored;
+	bool isByron;
+	uint32_t accountNumber;
+} single_account_data_t;
+
+typedef struct {
 	// significantly affects restrictions on the tx
 	sign_tx_signingmode_t txSigningMode;
 
 	uint8_t networkId; // part of Shelley address
 	uint32_t protocolMagic; // part of Byron address
+
+	single_account_data_t singleAccountData;
 } common_tx_data_t;
 
 typedef struct {
