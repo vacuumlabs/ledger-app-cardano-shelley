@@ -2,6 +2,7 @@
 #include "addressUtilsByron.h"
 #include "bip44.h"
 #include "cardano.h"
+#include "signTxUtils.h"
 
 #include "securityPolicy.h"
 
@@ -374,6 +375,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX: {
 		DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_PATH);
+		DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
 		SHOW_UNLESS(is_standard_base_address(params));
 		ALLOW();
 		break;
@@ -513,6 +515,7 @@ security_policy_t policyForSignTxCertificateStaking(
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
+		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
 		break;
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
@@ -615,6 +618,7 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 {
 	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&owner->path));
+		DENY_IF(violatesSingleAccountOrStoreIt(&owner->path));
 	}
 
 	switch (txSigningMode) {
@@ -684,6 +688,7 @@ security_policy_t policyForSignTxWithdrawal(
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
+		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
 		SHOW();
 		break;
 
@@ -704,9 +709,14 @@ static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path,
 	switch (bip44_classifyPath(path)) {
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
-	case PATH_POOL_COLD_KEY:
+		DENY_IF(violatesSingleAccountOrStoreIt(path));
 		WARN_UNLESS(bip44_isPathReasonable(path));
 		ALLOW();
+		break;
+
+	case PATH_POOL_COLD_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
 		break;
 
 	case PATH_MINT_KEY:

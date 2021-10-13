@@ -344,6 +344,7 @@ static size_t deriveAddress_reward(
 			const bip44_path_t* stakingKeyPath = &addressParams->stakingKeyPath;
 			// staking key path expected (corresponds to reward account)
 			BIP44_PRINTF(stakingKeyPath);
+			PRINTF("\n");
 			ASSERT(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
 			view_appendAddressPublicKeyHash(&out, stakingKeyPath);
 		} else {
@@ -545,6 +546,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case BYRON:
 		view_skipBytes(view, bip44_parseFromWire(&params->spendingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 		BIP44_PRINTF(&params->spendingKeyPath);
+		PRINTF("\n");
 		break;
 
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
@@ -582,6 +584,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case STAKING_KEY_PATH:
 		view_skipBytes(view, bip44_parseFromWire(&params->stakingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 		BIP44_PRINTF(&params->stakingKeyPath);
+		PRINTF("\n");
 		break;
 
 	case STAKING_KEY_HASH: {
