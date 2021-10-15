@@ -3,6 +3,7 @@
 
 #include "uiHelpers.h"
 #include "addressUtilsShelley.h"
+#include "signTx.h"
 #include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
 
@@ -156,6 +157,12 @@ void ui_displayIpPortScreen(
         ipport_t* port,
         ui_callback_fn_t callback
 );
+
+__noinline_due_to_stack__
+void ui_displayInputScreen(
+        const char* screenHeader,
+        const sign_tx_transaction_input_t* input,
+        ui_callback_fn_t callback);
 
 #ifdef DEVEL
 void run_uiScreens_test();

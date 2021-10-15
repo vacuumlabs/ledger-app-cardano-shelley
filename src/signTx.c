@@ -372,6 +372,11 @@ static void signTx_handleInit_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
+		if (!(ctx->commonTxData.networkId != MAINNET_NETWORK_ID && ctx->commonTxData.networkId != TESTNET_NETWORK_ID)
+			|| ctx->commonTxData.protocolMagic != MAINNET_PROTOCOL_MAGIC) {
+			UI_STEP_JUMP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING);
+		}
+
 		char* header =
 		        (ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_MULTISIG_TX) ?
 		        "Multisig transaction" :
@@ -388,8 +393,7 @@ static void signTx_handleInit_ui_runStep()
 		if (ctx->numCollaterals == 0) {
 			UI_STEP_JUMP(HANDLE_INIT_STEP_CONFIRM);
 		}
-		//TODO(KoMa) what should be here exactly?
-		ui_displayPaginatedText("Warning", "Script running", this_fn);
+		ui_displayPaginatedText("WARNING:", "Plutus script will be run", this_fn);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_CONFIRM) {
@@ -478,6 +482,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 			// these signing modes are allowed
 			break;
 
@@ -525,7 +530,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	                                   ctx->numCertificates,
 	                                   ctx->numWithdrawals,
 	                                   ctx->includeMint,
-	                                   ctx->numCollaterals
+	                                   ctx->numCollaterals,
+									   ctx->numRequiredSigners
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -694,7 +700,8 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 // ============================== INPUTS ==============================
 
 enum {
-	HANDLE_INPUT_STEP_RESPOND = 200,
+	HANDLE_INPUT_STEP_DISPLAY = 200,
+	HANDLE_INPUT_STEP_RESPOND,
 	HANDLE_INPUT_STEP_INVALID,
 };
 
@@ -704,6 +711,12 @@ static void signTx_handleInput_ui_runStep()
 	ui_callback_fn_t* this_fn = signTx_handleInput_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_INPUT_STEP_DISPLAY) {
+		char headerText[18];
+		snprintf(headerText, SIZEOF(headerText), "Input #%u", BODY_CTX->currentInput);
+		ui_displayInputScreen(headerText, &BODY_CTX->stageData.input, this_fn);
+	}
 
 	UI_STEP(HANDLE_INPUT_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -750,19 +763,19 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	const sign_tx_transaction_input_t input = extractTransactionInput(wireDataBuffer, wireDataSize);
+	BODY_CTX->stageData.input = extractTransactionInput(wireDataBuffer, wireDataSize);
 
 	{
 		// add to tx
 		TRACE("Adding input to tx hash");
 		txHashBuilder_addInput(
 		        &BODY_CTX->txHashBuilder,
-		        input.txHashBuffer, SIZEOF(input.txHashBuffer),
-		        input.parsedIndex
+		        BODY_CTX->stageData.input.txHashBuffer, SIZEOF(BODY_CTX->stageData.input.txHashBuffer),
+		        BODY_CTX->stageData.input.parsedIndex
 		);
 	}
 
-	security_policy_t policy = policyForSignTxInput();
+	security_policy_t policy = policyForSignTxInput(ctx->commonTxData.txSigningMode);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -770,6 +783,7 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 		// select UI steps
 		switch (policy) {
 	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_INPUT_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_INPUT_STEP_RESPOND);
 	#undef   CASE
 		default:
@@ -1720,8 +1734,8 @@ static void signTx_handleCollateral_ui_runStep()
 
 	UI_STEP(HANDLE_COLLATERAL_STEP_DISPLAY) {
 		char headerText[18];
-		snprintf(headerText, SIZEOF(headerText), "Collateral #%u", BODY_CTX->stageData.collateral.parsedIndex);
-		ui_displayHexBufferScreen(headerText, BODY_CTX->stageData.collateral.txHashBuffer, SIZEOF(BODY_CTX->stageData.collateral.txHashBuffer), this_fn);
+		snprintf(headerText, SIZEOF(headerText), "Collateral #%u", BODY_CTX->currentCollateral);
+		ui_displayInputScreen(headerText, &BODY_CTX->stageData.collateral, this_fn);
 	}
 
 	UI_STEP(HANDLE_COLLATERAL_STEP_RESPOND) {

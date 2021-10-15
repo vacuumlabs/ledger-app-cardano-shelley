@@ -26,10 +26,11 @@ security_policy_t policyForSignTxInit(
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint,
-        uint16_t numCollaterals
+        uint16_t numCollaterals,
+        uint16_t numRequiredSigners
 );
 
-security_policy_t policyForSignTxInput();
+security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);
 
 security_policy_t policyForSignTxOutputAddressBytes(
         sign_tx_signingmode_t txSigningMode,

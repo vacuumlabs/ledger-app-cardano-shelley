@@ -221,7 +221,8 @@ security_policy_t policyForSignTxInit(
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint,
-        uint16_t numCollaterals
+        uint16_t numCollaterals,
+        uint16_t numRequiredSigners
 )
 {
 	// Deny shelley mainnet with weird byron protocol magic
@@ -244,11 +245,16 @@ security_policy_t policyForSignTxInit(
 
 		// mint must not be combined with pool registration certificates
 		DENY_IF(includeMint);
+		DENY_IF(numCollaterals != 0 || numRequiredSigners != 0);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		// no additional validation
+		DENY_IF(numCollaterals != 0 || numRequiredSigners != 0);
+		break;
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		WARN_IF(numCollaterals != 0);	//TODO(KoMa) do the required signers warrant a warning?
 		break;
 
 	default:
@@ -261,17 +267,30 @@ security_policy_t policyForSignTxInit(
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
 
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
-	if (numCollaterals != 0) {
-		WARN();
-	}
 	PROMPT();
 }
 
 // For each transaction UTxO input
-security_policy_t policyForSignTxInput()
+security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 {
-	// No need to check tx inputs
-	ALLOW();
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		SHOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		ALLOW();
+		break;
+	
+	default:
+		ASSERT(false);
+		DENY();
+	}
+	// We can't get here normally
+	DENY();
 }
 
 // For each transaction (third-party) address output
@@ -321,6 +340,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		// We always show third-party output addresses
 		SHOW();
 		break;
@@ -375,6 +395,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 		break;
 	}
 
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX: {
 		// all outputs should be given as external addresses
 		DENY();
@@ -429,6 +450,7 @@ security_policy_t policyForSignTxFee(
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		// always show the fee if it is paid by the signer
 		SHOW();
 		break;
@@ -464,6 +486,7 @@ security_policy_t policyForSignTxCertificate(
 {
 	switch (txSigningMode) {
 
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:	//TODO(KoMa) how does plutus handle certificates?
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
@@ -506,6 +529,7 @@ security_policy_t policyForSignTxCertificateStaking(
 	}
 
 	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:	//TODO(KoMa) how does plutus handle certificates?
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
@@ -725,6 +749,11 @@ security_policy_t policyForSignTxWithdrawal(
 		SHOW();
 		break;
 
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:	//TODO(KoMa) only ordinary keys allowed here?
+		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH || bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
+		SHOW();
+		break;
+
 	default:
 		ASSERT(false);
 	}
@@ -758,9 +787,31 @@ static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path,
 	}
 }
 
-static inline security_policy_t _scriptWitnessPolicy(const bip44_path_t* path, bool mintPresent)
+static inline security_policy_t _multisigWitnessPolicy(const bip44_path_t* path, bool mintPresent)
 {
 	switch (bip44_classifyPath(path)) {
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
+	case PATH_MINT_KEY:
+		DENY_UNLESS(mintPresent);
+		SHOW();
+
+	default:
+		DENY();
+		break;
+	}
+}
+
+static inline security_policy_t _plutusWitnessPolicy(const bip44_path_t* path, bool mintPresent)
+{
+	switch (bip44_classifyPath(path)) {
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+	case PATH_POOL_COLD_KEY:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(path));
@@ -833,7 +884,10 @@ security_policy_t policyForSignTxWitness(
 		return _ordinaryWitnessPolicy(witnessPath, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		return _scriptWitnessPolicy(witnessPath, mintPresent);
+		return _multisigWitnessPolicy(witnessPath, mintPresent);
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		return _plutusWitnessPolicy(witnessPath, mintPresent);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		return _poolRegistrationOwnerWitnessPolicy(witnessPath, poolOwnerPath);
@@ -863,6 +917,7 @@ security_policy_t policyForSignTxMintInit(const sign_tx_signingmode_t txSigningM
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		SHOW();
 		break;
 
@@ -897,6 +952,7 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		SHOW();
 		break;
 
@@ -913,13 +969,13 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 
 security_policy_t policyForSignTxCollaterals(const sign_tx_signingmode_t txSigningMode)
 {
-	//TODO rework when more information is available
 	switch (txSigningMode) {
-	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		SHOW();
 		break;
 
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		DENY();
@@ -936,11 +992,12 @@ security_policy_t policyForSignTxRequiredSigners(const sign_tx_signingmode_t txS
 {
 	//TODO rework when more information is available
 	switch (txSigningMode) {
-	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		SHOW();
 		break;
 
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		DENY();

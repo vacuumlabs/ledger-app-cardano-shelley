@@ -800,3 +800,28 @@ void ui_displayIpPortScreen(
 	        callback
 	);
 }
+
+void ui_displayInputScreen(
+        const char* screenHeader,
+        const sign_tx_transaction_input_t* input,
+        ui_callback_fn_t callback)
+{
+	char txHex[2 * SIZEOF(input->txHashBuffer) + 1];
+	size_t length = encode_hex(
+	                        input->txHashBuffer, SIZEOF(input->txHashBuffer),
+	                        txHex, SIZEOF(txHex)
+	                );
+	ASSERT(length == strlen(txHex));
+	ASSERT(length == 2 * SIZEOF(input->txHashBuffer));
+
+	// parsedIndex 32 bit (10) + separator (" / ") + utxo hash hex format + \0
+	char inputStr[10 + 3 + SIZEOF(input->txHashBuffer) * 2 + 1];
+
+	snprintf(inputStr, SIZEOF(inputStr), "%u / %s", input->parsedIndex, txHex);
+
+	ui_displayPaginatedText(
+	        screenHeader,
+	        inputStr,
+	        callback
+	);
+}

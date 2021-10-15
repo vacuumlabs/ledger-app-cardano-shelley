@@ -19,6 +19,7 @@ typedef enum {
 	SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER = 4,
 	SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR = 5,
 	SIGN_TX_SIGNINGMODE_MULTISIG_TX = 6,
+	SIGN_TX_SIGNINGMODE_PLUTUS_TX = 7,
 } sign_tx_signingmode_t;
 
 typedef enum {
@@ -148,6 +149,7 @@ typedef struct {
 
 	// this holds data valid only through the processing of a single APDU
 	union {
+		sign_tx_transaction_input_t input;
 		uint64_t fee;
 		uint64_t ttl;
 		sign_tx_certificate_data_t certificate;
