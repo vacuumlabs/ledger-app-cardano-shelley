@@ -301,14 +301,27 @@ static void signTxMint_handleConfirm_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
-		ui_displayPrompt(
-		        "Confirm mint?",
-		        "",
-		        this_fn,
-		        respond_with_user_reject
-		);
-	}
+        UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
+                if ( subctx->stateData.token.amount > 0 ) {
+			// Token amount is positive -> display a mint confirm
+			ui_displayPrompt(
+                                "Confirm mint?",
+                                "",
+                                this_fn,
+                                respond_with_user_reject
+                                );
+                }
+                else {
+       			// Token amount is negative -> display a burn confirm
+			ui_displayPrompt(
+                                "Confirm burn?",
+                                "",
+                                this_fn,
+                                respond_with_user_reject
+                                );
+                }
+
+        }
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 		advanceState();
