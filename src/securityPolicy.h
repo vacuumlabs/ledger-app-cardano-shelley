@@ -27,7 +27,8 @@ security_policy_t policyForSignTxInit(
         uint16_t numWithdrawals,
         bool includeMint,
         uint16_t numCollaterals,
-        uint16_t numRequiredSigners
+        uint16_t numRequiredSigners,
+        bool includeScriptDataHash
 );
 
 security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);

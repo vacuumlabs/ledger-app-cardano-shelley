@@ -222,7 +222,8 @@ security_policy_t policyForSignTxInit(
         uint16_t numWithdrawals,
         bool includeMint,
         uint16_t numCollaterals,
-        uint16_t numRequiredSigners
+        uint16_t numRequiredSigners,
+        bool includeScriptDataHash
 )
 {
 	// Deny shelley mainnet with weird byron protocol magic
@@ -254,7 +255,9 @@ security_policy_t policyForSignTxInit(
 		break;
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-		WARN_IF(numCollaterals != 0);	//TODO(KoMa) do the required signers warrant a warning?
+		WARN_IF(numCollaterals != 0);
+		WARN_IF(numCollaterals == 0);
+		WARN_UNLESS(includeScriptDataHash);
 		break;
 
 	default:

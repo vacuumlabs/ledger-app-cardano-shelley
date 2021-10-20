@@ -65,8 +65,8 @@ void txHashBuilder_init(
         bool includeValidityIntervalStart,
         bool includeMint,
         bool includeScriptDataHash,
-		uint16_t numCollaterals,
-		uint16_t numRequiredSigners
+        uint16_t numCollaterals,
+        uint16_t numRequiredSigners
 )
 {
 	TRACE("numInputs = %u", numInputs);
