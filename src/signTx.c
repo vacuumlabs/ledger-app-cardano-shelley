@@ -356,12 +356,23 @@ static inline void checkForFinishedSubmachines()
 // ============================== INIT ==============================
 
 enum {
-	HANDLE_INIT_STEP_DISPLAY_DETAILS = 100,
+	HANDLE_INIT_STEP_PROMPT_TYPE = 100,
+	HANDLE_INIT_STEP_DISPLAY_NETWORK_DETAILS,
 	HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING,
-	HANDLE_INIT_STEP_CONFIRM,
+	HANDLE_INIT_STEP_NO_COLLATERALS_WARNING,
+	HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING,
 	HANDLE_INIT_STEP_RESPOND,
 	HANDLE_INIT_STEP_INVALID,
 } ;
+
+typedef char* charPtr;
+const charPtr uiSigningModeName[] = {
+	"Ordinary",
+	"Pool owner",
+	"Pool operator",
+	"Multisig",
+	"Plutus"
+};
 
 static void signTx_handleInit_ui_runStep()
 {
@@ -371,19 +382,25 @@ static void signTx_handleInit_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_INIT_STEP_DISPLAY_DETAILS) {
+	UI_STEP(HANDLE_INIT_STEP_PROMPT_TYPE) {
+		char bodyTxt[SIZEOF("Pool operator") + 1 + SIZEOF("transaction?") + 1];
+		snprintf(bodyTxt, SIZEOF(bodyTxt), "%s transaction?", ((const char*)PIC(uiSigningModeName[ctx->commonTxData.txSigningMode - SIGN_TX_SIGNINGMODE_ORDINARY_TX])));
+		ui_displayPrompt(
+		        "Start new",
+		        bodyTxt,
+		        this_fn,
+		        respond_with_user_reject
+		);
+	}
+
+	UI_STEP(HANDLE_INIT_STEP_DISPLAY_NETWORK_DETAILS) {
 		if (!(ctx->commonTxData.networkId != MAINNET_NETWORK_ID && ctx->commonTxData.networkId != TESTNET_NETWORK_ID)
-			|| ctx->commonTxData.protocolMagic != MAINNET_PROTOCOL_MAGIC) {
+		    || ctx->commonTxData.protocolMagic != MAINNET_PROTOCOL_MAGIC) {
 			UI_STEP_JUMP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING);
 		}
 
-		char* header =
-		        (ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_MULTISIG_TX) ?
-		        "Multisig transaction" :
-		        "New transaction";
-
 		ui_displayNetworkParamsScreen(
-		        header,
+		        "Network details",
 		        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
 		        this_fn
 		);
@@ -391,18 +408,23 @@ static void signTx_handleInit_ui_runStep()
 
 	UI_STEP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING) {
 		if (ctx->numCollaterals == 0) {
-			UI_STEP_JUMP(HANDLE_INIT_STEP_CONFIRM);
+			UI_STEP_JUMP(HANDLE_INIT_STEP_NO_COLLATERALS_WARNING);
 		}
 		ui_displayPaginatedText("WARNING:", "Plutus script will be run", this_fn);
 	}
 
-	UI_STEP(HANDLE_INIT_STEP_CONFIRM) {
-		ui_displayPrompt(
-		        "Start new",
-		        "transaction?",
-		        this_fn,
-		        respond_with_user_reject
-		);
+	UI_STEP(HANDLE_INIT_STEP_NO_COLLATERALS_WARNING) {
+		if (ctx->commonTxData.txSigningMode != SIGN_TX_SIGNINGMODE_PLUTUS_TX || ctx->numCollaterals != 0) {
+			UI_STEP_JUMP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING);
+		}
+		ui_displayPaginatedText("WARNING:", "No collaterals given for Plutus transaction", this_fn);
+	}
+
+	UI_STEP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING) {
+		if (ctx->commonTxData.txSigningMode != SIGN_TX_SIGNINGMODE_PLUTUS_TX || ctx->includeScriptDataHash) {
+			UI_STEP_JUMP(HANDLE_INIT_STEP_RESPOND);
+		}
+		ui_displayPaginatedText("WARNING:", "No script data given for Plutus transaction", this_fn);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_RESPOND) {
@@ -531,7 +553,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	                                   ctx->numWithdrawals,
 	                                   ctx->includeMint,
 	                                   ctx->numCollaterals,
-									   ctx->numRequiredSigners
+	                                   ctx->numRequiredSigners,
+	                                   ctx->includeScriptDataHash
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -539,8 +562,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		// select UI steps
 		switch (policy) {
 	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_WARN_UNUSUAL,    HANDLE_INIT_STEP_DISPLAY_DETAILS);
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_STEP_CONFIRM);
+			CASE(POLICY_PROMPT_WARN_UNUSUAL,    HANDLE_INIT_STEP_PROMPT_TYPE);
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_STEP_PROMPT_TYPE);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT,   HANDLE_INIT_STEP_RESPOND);
 	#undef   CASE
 		default:
