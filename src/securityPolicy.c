@@ -489,7 +489,7 @@ security_policy_t policyForSignTxCertificate(
 {
 	switch (txSigningMode) {
 
-	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:	//TODO(KoMa) how does plutus handle certificates?
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
@@ -532,12 +532,12 @@ security_policy_t policyForSignTxCertificateStaking(
 	}
 
 	switch (txSigningMode) {
-	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:	//TODO(KoMa) how does plutus handle certificates?
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
 		break;
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:	//TODO(KoMa) refresh this when more info is revealed about Plutus key derivation paths
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
 		break;
