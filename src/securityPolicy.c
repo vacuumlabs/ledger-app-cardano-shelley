@@ -639,7 +639,9 @@ security_policy_t policyForSignTxStakePoolRegistrationOwner(
 
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-		DENY_UNLESS(numOwnersGivenByPath == 1);
+		// can be 0 because multiple owners can be given by third party
+		// or no path given at all, which is a pointless, but valid tx
+		DENY_UNLESS(numOwnersGivenByPath <= 1);
 		SHOW();
 		break;
 
