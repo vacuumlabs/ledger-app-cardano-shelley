@@ -85,16 +85,16 @@ static inline void view_appendToken(write_view_t* view, uint8_t type, uint64_t v
 	view->ptr += cbor_writeToken(type, value, view->ptr, view_remainingSize(view));
 }
 
-static inline void view_appendData(write_view_t* view, const uint8_t* dataBuffer, size_t dataSize)
+static inline void view_appendBuffer(write_view_t* view, const uint8_t* sourceBuffer, size_t length)
 {
 	view_check(view);
-	VALIDATE(dataSize <= view_remainingSize(view), ERR_DATA_TOO_LARGE);
-	memcpy(view->ptr, dataBuffer, dataSize);
-	view->ptr += dataSize;
+	VALIDATE(length <= view_remainingSize(view), ERR_DATA_TOO_LARGE);
+	memcpy(view->ptr, sourceBuffer, length);
+	view->ptr += length;
 	view_check(view);
 }
 
-static inline cbor_token_t view_readToken(read_view_t* view)
+static inline cbor_token_t view_parseToken(read_view_t* view)
 {
 	const cbor_token_t token = cbor_parseToken(view->ptr, view_remainingSize(view));
 	view_skipBytes(view, token.width + 1);
@@ -103,7 +103,7 @@ static inline cbor_token_t view_readToken(read_view_t* view)
 
 // copies <length> bytes from the view to the buffer
 // throws ERR_INVALID_DATA if not enough data
-static inline void view_copyWireToBuffer(uint8_t* destBuffer, read_view_t* view, size_t length)
+static inline void view_parseBuffer(uint8_t* destBuffer, read_view_t* view, size_t length)
 {
 	ASSERT(length < BUFFER_SIZE_PARANOIA);
 

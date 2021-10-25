@@ -308,7 +308,7 @@ static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 static void deriveNativeScriptHash_handleThirdPartyPubkey(read_view_t* view)
 {
 	STATIC_ASSERT(SIZEOF(ctx->scriptContent.pubkeyHash) == ADDRESS_KEY_HASH_LENGTH, "incorrect key hash size in script");
-	view_copyWireToBuffer(ctx->scriptContent.pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
+	view_parseBuffer(ctx->scriptContent.pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
 	TRACE_BUFFER(ctx->scriptContent.pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
 
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);

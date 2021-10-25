@@ -139,7 +139,7 @@ static size_t view_appendAddressPublicKeyHash(write_view_t* view, const bip44_pa
 	uint8_t hashedPubKey[ADDRESS_KEY_HASH_LENGTH];
 	bip44_pathToKeyHash(keyDerivationPath, hashedPubKey, SIZEOF(hashedPubKey));
 
-	view_appendData(view, hashedPubKey, SIZEOF(hashedPubKey));
+	view_appendBuffer(view, hashedPubKey, SIZEOF(hashedPubKey));
 
 	return ADDRESS_KEY_HASH_LENGTH;
 }
@@ -169,7 +169,7 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 
 	size_t size = 0;
 	{
-		view_appendData(&out, &header, 1);
+		view_appendBuffer(&out, &header, 1);
 		++size;
 	}
 	STATIC_ASSERT(SIZEOF(addressParams->spendingScriptHash) == SCRIPT_HASH_LENGTH, "bad spending script hash size");
@@ -182,7 +182,7 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 	break;
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
 	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT: {
-		view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+		view_appendBuffer(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
 		size += SCRIPT_HASH_LENGTH;
 	}
 	break;
@@ -200,13 +200,13 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 	break;
 
 	case STAKING_KEY_HASH: {
-		view_appendData(&out, addressParams->stakingKeyHash, ADDRESS_KEY_HASH_LENGTH);
+		view_appendBuffer(&out, addressParams->stakingKeyHash, ADDRESS_KEY_HASH_LENGTH);
 		size += ADDRESS_KEY_HASH_LENGTH;
 	}
 	break;
 
 	case STAKING_SCRIPT_HASH: {
-		view_appendData(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
+		view_appendBuffer(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
 		size += SCRIPT_HASH_LENGTH;
 	}
 	break;
@@ -223,7 +223,7 @@ static size_t view_appendVariableLengthUInt(write_view_t* view, uint64_t value)
 
 	if (value == 0) {
 		uint8_t byte = 0;
-		view_appendData(view, &byte, 1);
+		view_appendBuffer(view, &byte, 1);
 		return 1;
 	}
 
@@ -243,10 +243,10 @@ static size_t view_appendVariableLengthUInt(write_view_t* view, uint64_t value)
 	for (size_t i = outputSize - 1; i > 0; --i) {
 		// highest bit set to 1 since more bytes follow
 		uint8_t nextByte = chunks[i] | 0b10000000;
-		view_appendData(view, &nextByte, 1);
+		view_appendBuffer(view, &nextByte, 1);
 	}
 	// write the remaining byte, highest bit 0
-	view_appendData(view, &chunks[0], 1);
+	view_appendBuffer(view, &chunks[0], 1);
 
 	return outputSize;
 }
@@ -264,13 +264,13 @@ static size_t deriveAddress_pointer(
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
-		view_appendData(&out, &addressHeader, 1);
+		view_appendBuffer(&out, &addressHeader, 1);
 	}
 	{
 		if (addressType == POINTER_KEY) {
 			view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
 		} else {
-			view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+			view_appendBuffer(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
 		}
 
 		STATIC_ASSERT(SCRIPT_HASH_LENGTH == ADDRESS_KEY_HASH_LENGTH, "incompatible hash lengths");
@@ -300,13 +300,13 @@ static size_t deriveAddress_enterprise(
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
-		view_appendData(&out, &addressHeader, 1);
+		view_appendBuffer(&out, &addressHeader, 1);
 	}
 	{
 		if (addressType == ENTERPRISE_KEY) {
 			view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
 		} else {
-			view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+			view_appendBuffer(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
 		}
 	}
 	{
@@ -334,7 +334,7 @@ static size_t deriveAddress_reward(
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
-		view_appendData(&out, &addressHeader, 1);
+		view_appendBuffer(&out, &addressHeader, 1);
 	}
 	{
 		// no spending data
@@ -347,7 +347,7 @@ static size_t deriveAddress_reward(
 			ASSERT(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
 			view_appendAddressPublicKeyHash(&out, stakingKeyPath);
 		} else {
-			view_appendData(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
+			view_appendBuffer(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
 		}
 	}
 
@@ -393,10 +393,10 @@ size_t constructRewardAddressFromHash(
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
 		const uint8_t addressHeader = constructShelleyAddressHeader((source == REWARD_HASH_SOURCE_KEY) ? REWARD_KEY : REWARD_SCRIPT, networkId);
-		view_appendData(&out, &addressHeader, 1);
+		view_appendBuffer(&out, &addressHeader, 1);
 	}
 	{
-		view_appendData(&out, hashBuffer, hashSize);
+		view_appendBuffer(&out, hashBuffer, hashSize);
 	}
 
 	const int ADDRESS_LENGTH = REWARD_ACCOUNT_SIZE;
@@ -552,7 +552,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case POINTER_SCRIPT:
 	case ENTERPRISE_SCRIPT: {
 		STATIC_ASSERT(SIZEOF(params->spendingScriptHash) == SCRIPT_HASH_LENGTH, "Wrong address key hash length");
-		view_copyWireToBuffer(params->spendingScriptHash, view, SCRIPT_HASH_LENGTH);
+		view_parseBuffer(params->spendingScriptHash, view, SCRIPT_HASH_LENGTH);
 		TRACE("Spending script hash: ");
 		TRACE_BUFFER(params->spendingScriptHash, SIZEOF(params->spendingScriptHash));
 		break;
@@ -586,7 +586,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 
 	case STAKING_KEY_HASH: {
 		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
-		view_copyWireToBuffer(params->stakingKeyHash, view, ADDRESS_KEY_HASH_LENGTH);
+		view_parseBuffer(params->stakingKeyHash, view, ADDRESS_KEY_HASH_LENGTH);
 		TRACE("Staking key hash: ");
 		TRACE_BUFFER(params->stakingKeyHash, SIZEOF(params->stakingKeyHash));
 		break;
@@ -594,7 +594,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 
 	case STAKING_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(params->stakingScriptHash) == SCRIPT_HASH_LENGTH, "Wrong script hash length");
-		view_copyWireToBuffer(params->stakingScriptHash, view, SCRIPT_HASH_LENGTH);
+		view_parseBuffer(params->stakingScriptHash, view, SCRIPT_HASH_LENGTH);
 		TRACE("Staking script hash: ");
 		TRACE_BUFFER(params->stakingScriptHash, SIZEOF(params->stakingScriptHash));
 		break;

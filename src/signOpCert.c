@@ -53,7 +53,7 @@ void signOpCert_handleAPDU(
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		STATIC_ASSERT(SIZEOF(ctx->kesPublicKey) == KES_PUBLIC_KEY_LENGTH, "wrong KES public key size");
-		view_copyWireToBuffer(ctx->kesPublicKey, &view, KES_PUBLIC_KEY_LENGTH);
+		view_parseBuffer(ctx->kesPublicKey, &view, KES_PUBLIC_KEY_LENGTH);
 		TRACE("KES key:");
 		TRACE_BUFFER(ctx->kesPublicKey, KES_PUBLIC_KEY_LENGTH);
 
@@ -78,23 +78,23 @@ void signOpCert_handleAPDU(
 		uint8_t opCertBodyBuffer[OP_CERT_BODY_LENGTH];
 		write_view_t opCertBodyBufferView = make_write_view(opCertBodyBuffer, opCertBodyBuffer + OP_CERT_BODY_LENGTH);
 
-		view_appendData(&opCertBodyBufferView, (const uint8_t*) &ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey));
+		view_appendBuffer(&opCertBodyBufferView, (const uint8_t*) &ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey));
 		{
 			uint8_t chunk[8];
 			u8be_write(chunk, ctx->issueCounter);
 			#ifdef FUZZING
-			view_appendData(&opCertBodyBufferView, chunk, 8);
+			view_appendBuffer(&opCertBodyBufferView, chunk, 8);
 			#else
-			view_appendData(&opCertBodyBufferView, chunk, SIZEOF(chunk));
+			view_appendBuffer(&opCertBodyBufferView, chunk, SIZEOF(chunk));
 			#endif
 		}
 		{
 			uint8_t chunk[8];
 			u8be_write(chunk, ctx->kesPeriod);
 			#ifdef FUZZING
-			view_appendData(&opCertBodyBufferView, chunk, 8);
+			view_appendBuffer(&opCertBodyBufferView, chunk, 8);
 			#else
-			view_appendData(&opCertBodyBufferView, chunk, SIZEOF(chunk));
+			view_appendBuffer(&opCertBodyBufferView, chunk, SIZEOF(chunk));
 			#endif
 		}
 
