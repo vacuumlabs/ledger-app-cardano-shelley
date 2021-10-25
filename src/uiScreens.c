@@ -470,8 +470,8 @@ size_t deriveAssetFingerprint(
 	const size_t hashInputSize = policyIdSize + assetNameSize;
 	{
 		write_view_t view = make_write_view(hashInput, hashInput + SIZEOF(hashInput));
-		view_appendData(&view, policyId, policyIdSize);
-		view_appendData(&view, assetName, assetNameSize);
+		view_appendBuffer(&view, policyId, policyIdSize);
+		view_appendBuffer(&view, assetName, assetNameSize);
 		ASSERT(view_processedSize(&view) == hashInputSize);
 	}
 

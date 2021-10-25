@@ -142,7 +142,7 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 			read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 			STATIC_ASSERT(SIZEOF(subctx->stateData.votingPubKey) == CATALYST_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
-			view_copyWireToBuffer(subctx->stateData.votingPubKey, &view, CATALYST_VOTING_PUBLIC_KEY_LENGTH);
+			view_parseBuffer(subctx->stateData.votingPubKey, &view, CATALYST_VOTING_PUBLIC_KEY_LENGTH);
 
 			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		}
