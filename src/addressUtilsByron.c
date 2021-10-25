@@ -43,7 +43,7 @@ void addressRootFromExtPubKey(
 			}
 			{
 				view_appendToken(&cbor, CBOR_TYPE_BYTES, EXTENDED_PUBKEY_SIZE);
-				view_appendData(&cbor, (const uint8_t*) extPubKey, EXTENDED_PUBKEY_SIZE);
+				view_appendBuffer(&cbor, (const uint8_t*) extPubKey, EXTENDED_PUBKEY_SIZE);
 			}
 		}
 		{
@@ -80,7 +80,7 @@ size_t cborEncodePubkeyAddressInner(
 		{
 			// 1
 			view_appendToken(&out, CBOR_TYPE_BYTES, addressRootSize);
-			view_appendData(&out, addressRoot, addressRootSize);
+			view_appendBuffer(&out, addressRoot, addressRootSize);
 		} {
 			// 2
 			if (protocolMagic == MAINNET_PROTOCOL_MAGIC) {
@@ -95,7 +95,7 @@ size_t cborEncodePubkeyAddressInner(
 					uint8_t scratch[10];
 					size_t scratchSize = cbor_writeToken(CBOR_TYPE_UNSIGNED, protocolMagic, scratch, SIZEOF(scratch));
 					view_appendToken(&out, CBOR_TYPE_BYTES, scratchSize);
-					view_appendData(&out, scratch, scratchSize);
+					view_appendBuffer(&out, scratch, scratchSize);
 				}
 			}
 		} {
@@ -127,7 +127,7 @@ size_t cborPackRawAddressWithChecksum(
 		{
 			view_appendToken(&output, CBOR_TYPE_TAG, CBOR_TAG_EMBEDDED_CBOR_BYTE_STRING);
 			view_appendToken(&output, CBOR_TYPE_BYTES, rawAddressSize);
-			view_appendData(&output, rawAddressBuffer, rawAddressSize);
+			view_appendBuffer(&output, rawAddressBuffer, rawAddressSize);
 		} {
 			uint32_t checksum = crc32(rawAddressBuffer, rawAddressSize);
 			view_appendToken(&output, CBOR_TYPE_UNSIGNED, checksum);
@@ -140,14 +140,14 @@ size_t cborPackRawAddressWithChecksum(
 // throwing ERR_NOT_ENOUGH_INPUT instead of ERR_INVALID_DATA?
 static uint64_t parseToken(read_view_t* view, uint8_t type)
 {
-	const cbor_token_t token = view_readToken(view);
+	const cbor_token_t token = view_parseToken(view);
 	VALIDATE(token.type == type, ERR_INVALID_DATA);
 	return token.value;
 }
 
 static void parseTokenWithValue(read_view_t* view, uint8_t type, uint64_t value)
 {
-	const cbor_token_t token = view_readToken(view);
+	const cbor_token_t token = view_parseToken(view);
 	VALIDATE(token.type == type, ERR_INVALID_DATA);
 	VALIDATE(token.value  == value, ERR_INVALID_DATA);
 }

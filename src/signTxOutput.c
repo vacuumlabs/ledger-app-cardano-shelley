@@ -305,7 +305,7 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 			VALIDATE(output->address.size <= MAX_ADDRESS_SIZE, ERR_INVALID_DATA);
 
 			STATIC_ASSERT(SIZEOF(output->address.buffer) >= MAX_ADDRESS_SIZE, "wrong address buffer size");
-			view_copyWireToBuffer(output->address.buffer, &view, output->address.size);
+			view_parseBuffer(output->address.buffer, &view, output->address.size);
 			TRACE_BUFFER(output->address.buffer, output->address.size);
 			break;
 		}
@@ -393,7 +393,7 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE];
-		view_copyWireToBuffer(candidatePolicyId, &view, MINTING_POLICY_ID_SIZE);
+		view_parseBuffer(candidatePolicyId, &view, MINTING_POLICY_ID_SIZE);
 
 		if (subctx->currentAssetGroup > 0) {
 			// compare with previous value before overwriting it
@@ -494,7 +494,7 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		const size_t candidateAssetNameSize = parse_u4be(&view);
 		VALIDATE(candidateAssetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
 		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX];
-		view_copyWireToBuffer(candidateAssetNameBytes, &view, candidateAssetNameSize);
+		view_parseBuffer(candidateAssetNameBytes, &view, candidateAssetNameSize);
 
 		if (subctx->currentToken > 0) {
 			// compare with previous value before overwriting it

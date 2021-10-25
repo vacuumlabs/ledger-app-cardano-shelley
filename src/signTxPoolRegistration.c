@@ -296,7 +296,7 @@ static void _parsePoolId(read_view_t* view)
 
 	case KEY_REFERENCE_HASH: {
 		STATIC_ASSERT(SIZEOF(key->hash) == POOL_KEY_HASH_LENGTH, "wrong pool id key hash size");
-		view_copyWireToBuffer(key->hash, view, POOL_KEY_HASH_LENGTH);
+		view_parseBuffer(key->hash, view, POOL_KEY_HASH_LENGTH);
 		TRACE_BUFFER(key->hash, SIZEOF(key->hash));
 		break;
 	}
@@ -616,7 +616,7 @@ static void _parsePoolRewardAccount(read_view_t* view)
 
 	case KEY_REFERENCE_HASH: {
 		STATIC_ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account hash buffer size");
-		view_copyWireToBuffer(rewardAccount->hashBuffer, view, REWARD_ACCOUNT_SIZE);
+		view_parseBuffer(rewardAccount->hashBuffer, view, REWARD_ACCOUNT_SIZE);
 		TRACE_BUFFER(rewardAccount->hashBuffer, SIZEOF(rewardAccount->hashBuffer));
 
 		const uint8_t header = getAddressHeader(rewardAccount->hashBuffer, SIZEOF(rewardAccount->hashBuffer));
@@ -793,7 +793,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 
 		case KEY_REFERENCE_HASH: {
 			STATIC_ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong owner.keyHash size");
-			view_copyWireToBuffer(owner->keyHash, &view, ADDRESS_KEY_HASH_LENGTH);
+			view_parseBuffer(owner->keyHash, &view, ADDRESS_KEY_HASH_LENGTH);
 			TRACE_BUFFER(owner->keyHash, SIZEOF(owner->keyHash));
 			break;
 		}
@@ -983,7 +983,7 @@ static void _parseIpv4(ipv4_t* ipv4, read_view_t* view)
 	if (isIpv4Given == ITEM_INCLUDED_YES) {
 		ipv4->isNull = false;
 		STATIC_ASSERT(sizeof(ipv4->ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
-		view_copyWireToBuffer(ipv4->ip, view, IPV4_SIZE);
+		view_parseBuffer(ipv4->ip, view, IPV4_SIZE);
 		TRACE("ipv4");
 		TRACE_BUFFER(ipv4->ip, IPV4_SIZE);
 	} else {
@@ -998,7 +998,7 @@ static void _parseIpv6(ipv6_t* ipv6, read_view_t* view)
 	if (isIpv6Given == ITEM_INCLUDED_YES) {
 		ipv6->isNull = false;
 		STATIC_ASSERT(SIZEOF(ipv6->ip) == IPV6_SIZE, "wrong ipv6 size");
-		view_copyWireToBuffer(ipv6->ip, view, IPV6_SIZE);
+		view_parseBuffer(ipv6->ip, view, IPV6_SIZE);
 		TRACE("ipv6");
 		TRACE_BUFFER(ipv6->ip, IPV6_SIZE);
 	} else {
@@ -1014,7 +1014,7 @@ static void _parseDnsName(pool_relay_t* relay, read_view_t* view)
 	VALIDATE(str_isAllowedDnsName(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)), ERR_INVALID_DATA);
 
 	STATIC_ASSERT(SIZEOF(relay->dnsName) == DNS_NAME_SIZE_MAX, "wrong dns name buffer size");
-	view_copyWireToBuffer(relay->dnsName, view, relay->dnsNameSize);
+	view_parseBuffer(relay->dnsName, view, relay->dnsNameSize);
 }
 
 /*
@@ -1283,13 +1283,13 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		}
 		{
 			STATIC_ASSERT(SIZEOF(md->hash) == POOL_METADATA_HASH_LENGTH, "wrong pool metadata buffer size");
-			view_copyWireToBuffer(md->hash, &view, POOL_METADATA_HASH_LENGTH);
+			view_parseBuffer(md->hash, &view, POOL_METADATA_HASH_LENGTH);
 		}
 		{
 			md->urlSize = view_remainingSize(&view);
 			VALIDATE(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX, ERR_INVALID_DATA);
 			STATIC_ASSERT(SIZEOF(md->url) >= POOL_METADATA_URL_LENGTH_MAX, "wrong pool metada url size");
-			view_copyWireToBuffer(md->url, &view, md->urlSize);
+			view_parseBuffer(md->url, &view, md->urlSize);
 
 			// whitespace not allowed
 			VALIDATE(str_isPrintableAsciiWithoutSpaces(md->url, md->urlSize), ERR_INVALID_DATA);
