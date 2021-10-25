@@ -557,13 +557,24 @@ security_policy_t policyForSignTxStakePoolRegistrationInit(
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		// there should be exactly one owner given by path for which we provide a witness
 		DENY_IF(numOwners == 0);
+		ALLOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		ALLOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		DENY();
 		break;
 
 	default:
+		ASSERT(false);
 		break;
 	}
 
-	ALLOW();
+	DENY();
 }
 
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
