@@ -788,6 +788,10 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 
 	BODY_CTX->stageData.input = extractTransactionInput(wireDataBuffer, wireDataSize);
 
+	security_policy_t policy = policyForSignTxInput(ctx->commonTxData.txSigningMode);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		// add to tx
 		TRACE("Adding input to tx hash");
@@ -797,10 +801,6 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 		        BODY_CTX->stageData.input.parsedIndex
 		);
 	}
-
-	security_policy_t policy = policyForSignTxInput(ctx->commonTxData.txSigningMode);
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -888,15 +888,15 @@ static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 		BODY_CTX->feeReceived = true;
 	}
 
+	security_policy_t policy = policyForSignTxFee(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.fee);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		// add to tx
 		TRACE("Adding fee to tx hash");
 		txHashBuilder_addFee(&BODY_CTX->txHashBuilder, BODY_CTX->stageData.fee);
 	}
-
-	security_policy_t policy = policyForSignTxFee(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.fee);
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -1544,15 +1544,15 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 
 	}
 
-	const bool validateCanonicalOrdering = BODY_CTX->currentWithdrawal > 0;
-	_addWithdrawalToTxHash(validateCanonicalOrdering);
-
 	security_policy_t policy = policyForSignTxWithdrawal(
 	                                   ctx->commonTxData.txSigningMode,
 	                                   &BODY_CTX->stageData.withdrawal.stakeCredential
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
+
+	const bool validateCanonicalOrdering = BODY_CTX->currentWithdrawal > 0;
+	_addWithdrawalToTxHash(validateCanonicalOrdering);
 
 	{
 		// select UI steps
@@ -1715,15 +1715,15 @@ static void signTx_handleScriptDataHashAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 		BODY_CTX->scriptDataHashReceived = true;
 	}
 
+	security_policy_t policy = policyForSignTxScriptDataHash(ctx->commonTxData.txSigningMode);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		// add to tx
 		TRACE("Adding script data hash to tx hash");
 		txHashBuilder_addScriptDataHash(&BODY_CTX->txHashBuilder, BODY_CTX->stageData.scriptDataHash, SIZEOF(BODY_CTX->stageData.scriptDataHash));
 	}
-
-	security_policy_t policy = policyForSignTxScriptDataHash(ctx->commonTxData.txSigningMode);
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -1790,6 +1790,10 @@ static void signTx_handleCollateralAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 
 	BODY_CTX->stageData.collateral = extractTransactionInput(wireDataBuffer, wireDataSize);
 
+	security_policy_t policy = policyForSignTxCollaterals(ctx->commonTxData.txSigningMode);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		// add to tx
 		TRACE("Adding collateral to tx hash");
@@ -1799,10 +1803,6 @@ static void signTx_handleCollateralAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 		        BODY_CTX->stageData.collateral.parsedIndex
 		);
 	}
-
-	security_policy_t policy = policyForSignTxCollaterals(ctx->commonTxData.txSigningMode);
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -1892,6 +1892,10 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
+	security_policy_t policy = policyForSignTxRequiredSigners(ctx->commonTxData.txSigningMode);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		// add to tx
 		TRACE("Adding required signer to tx hash");
@@ -1909,10 +1913,6 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 			);
 		}
 	}
-
-	security_policy_t policy = policyForSignTxRequiredSigners(ctx->commonTxData.txSigningMode);
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -1979,6 +1979,10 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UN
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
+	security_policy_t policy = policyForSignTxConfirm();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		// compute txHash
 		TRACE("Finalizing tx hash");
@@ -1987,10 +1991,6 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UN
 		        ctx->txHash, SIZEOF(ctx->txHash)
 		);
 	}
-
-	security_policy_t policy = policyForSignTxConfirm();
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI step
