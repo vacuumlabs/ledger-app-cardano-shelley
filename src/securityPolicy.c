@@ -226,6 +226,7 @@ security_policy_t policyForSignTxInit(
         bool includeScriptDataHash
 )
 {
+	DENY_UNLESS(isValidNetworkId(networkId));
 	// Deny shelley mainnet with weird byron protocol magic
 	DENY_IF(networkId == MAINNET_NETWORK_ID && protocolMagic != MAINNET_PROTOCOL_MAGIC);
 	// Note: testnets can still use byron mainnet protocol magic so we can't deny the opposite direction
@@ -255,16 +256,14 @@ security_policy_t policyForSignTxInit(
 		break;
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-		WARN_IF(numCollaterals != 0);
 		WARN_IF(numCollaterals == 0);
 		WARN_UNLESS(includeScriptDataHash);
+		WARN();
 		break;
 
 	default:
 		ASSERT(false);
 	}
-
-	DENY_UNLESS(isValidNetworkId(networkId));
 
 	WARN_IF(networkId != MAINNET_NETWORK_ID && networkId != TESTNET_NETWORK_ID);
 	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
