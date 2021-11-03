@@ -89,7 +89,7 @@ static inline void view_appendBuffer(write_view_t* view, const uint8_t* sourceBu
 {
 	view_check(view);
 	VALIDATE(length <= view_remainingSize(view), ERR_DATA_TOO_LARGE);
-	memcpy(view->ptr, sourceBuffer, length);
+	memmove(view->ptr, sourceBuffer, length);
 	view->ptr += length;
 	view_check(view);
 }

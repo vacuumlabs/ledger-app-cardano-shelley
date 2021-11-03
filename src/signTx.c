@@ -1157,7 +1157,7 @@ static void _fillHashFromStakeCredential(const stake_credential_t* stakeCredenti
 	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
 		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		memcpy(hash, stakeCredential->scriptHash, SIZEOF(stakeCredential->scriptHash));
+		memmove(hash, stakeCredential->scriptHash, SIZEOF(stakeCredential->scriptHash));
 		break;
 	default:
 		ASSERT(false);
