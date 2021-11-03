@@ -3,7 +3,6 @@
 #include "hash.h"
 #include "cbor.h"
 #include "cardano.h"
-#include "crc32.h"
 #include "bufView.h"
 
 // this tracing is rarely needed
@@ -771,9 +770,9 @@ static void _relay_addIpv6(tx_hash_builder_t* builder, const ipv6_t* ipv6)
 
 		// serialized as 4 big-endian uint32
 		// we need a local copy of the data to make the following pointer tricks work
-		// the copy is created by memcpy instead of struct assignment to avoid compiler optimizing it away
+		// the copy is created by memmove instead of struct assignment to avoid compiler optimizing it away
 		uint8_t ipBuffer[IPV6_SIZE];
-		memcpy(ipBuffer, ipv6->ip, SIZEOF(ipBuffer));
+		memmove(ipBuffer, ipv6->ip, SIZEOF(ipBuffer));
 		STATIC_ASSERT(SIZEOF(ipBuffer) == 16, "wrong ipv6 size");
 
 		uint32_t* as_uint32 = (uint32_t*) ipBuffer;
