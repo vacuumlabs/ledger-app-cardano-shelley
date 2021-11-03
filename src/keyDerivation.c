@@ -6,7 +6,6 @@
 #include "keyDerivation.h"
 #include "cbor.h"
 #include "hash.h"
-#include "crc32.h"
 #include "base58.h"
 #include "utils.h"
 #include "endian.h"

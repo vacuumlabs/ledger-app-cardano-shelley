@@ -130,7 +130,7 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 		int64_t negativeValue;
 		// reinterpret an actually negative value hidden in an unsigned in the safe way
 		STATIC_ASSERT(SIZEOF(negativeValue) == SIZEOF(value), "incompatible signed and unsigned type sizes");
-		memcpy(&negativeValue, &value, SIZEOF(value));
+		memmove(&negativeValue, &value, SIZEOF(value));
 		if (negativeValue >= 0) {
 			THROW(ERR_UNEXPECTED_TOKEN);
 		}

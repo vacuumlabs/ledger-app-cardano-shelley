@@ -182,12 +182,8 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 			uint8_t numRelays[4];
 		}* wireHeader = (void*) wireDataBuffer;
 
-		#ifndef FUZZING
-		// FIXME: the following fails when compiling for x86
-		VALIDATE(wireDataSize == SIZEOF(*wireHeader), ERR_INVALID_DATA);
-		#else
-		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
-		#endif
+		// can't use SIZEOF because it fails for x86 for fuzzing
+		VALIDATE(wireDataSize == sizeof(*wireHeader), ERR_INVALID_DATA);
 
 		uint64_t numOwners = u4be_read(wireHeader->numOwners);
 		uint64_t numRelays = u4be_read(wireHeader->numRelays);
@@ -929,7 +925,7 @@ static void handleRelay_dns_ui_runStep()
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME) {
 		char dnsNameStr[1 + DNS_NAME_SIZE_MAX];
 		ASSERT(relay->dnsNameSize <= DNS_NAME_SIZE_MAX);
-		memcpy(dnsNameStr, relay->dnsName, relay->dnsNameSize);
+		memmove(dnsNameStr, relay->dnsName, relay->dnsNameSize);
 		dnsNameStr[relay->dnsNameSize] = '\0';
 		ASSERT(strlen(dnsNameStr) == relay->dnsNameSize);
 
@@ -1191,7 +1187,7 @@ static void handleMetadata_ui_runStep()
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_URL) {
 		char metadataUrlStr[1 + POOL_METADATA_URL_LENGTH_MAX];
 		ASSERT(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX);
-		memcpy(metadataUrlStr, md->url, md->urlSize);
+		memmove(metadataUrlStr, md->url, md->urlSize);
 		metadataUrlStr[md->urlSize] = '\0';
 		ASSERT(strlen(metadataUrlStr) == md->urlSize);
 
