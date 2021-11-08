@@ -41,8 +41,8 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 
 bool is_tx_network_verifiable(
         sign_tx_signingmode_t txSigningMode,
-        uint16_t numOutputs,
-        uint16_t numWithdrawals
+        uint32_t numOutputs,
+        uint32_t numWithdrawals
 )
 {
 	if (numOutputs > 0) return true;
@@ -107,7 +107,7 @@ security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
 	}
 }
 
-security_policy_t policyForGetPublicKeysInit(size_t numPaths)
+security_policy_t policyForGetPublicKeysInit(uint32_t numPaths)
 {
 	PROMPT_IF(numPaths > 1);
 
@@ -237,12 +237,12 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 // Initiate transaction signing
 security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
-        uint8_t networkId,
+        uint32_t networkId,
         uint32_t protocolMagic,
-        uint16_t numInputs MARK_UNUSED,
-        uint16_t numOutputs,
-        uint16_t numCertificates,
-        uint16_t numWithdrawals,
+        uint32_t numInputs MARK_UNUSED,
+        uint32_t numOutputs,
+        uint32_t numCertificates,
+        uint32_t numWithdrawals,
         bool includeMint
 )
 {
@@ -552,7 +552,7 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 
 security_policy_t policyForSignTxStakePoolRegistrationInit(
         sign_tx_signingmode_t txSigningMode,
-        size_t numOwners
+        uint32_t numOwners
 )
 {
 	switch (txSigningMode) {
@@ -643,7 +643,7 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const sign_tx_signingmode_t txSigningMode,
         const pool_owner_t* owner,
-        uint16_t numOwnersGivenByPath
+        uint32_t numOwnersGivenByPath
 )
 {
 	if (owner->keyReferenceType == KEY_REFERENCE_PATH) {
