@@ -11,13 +11,13 @@
 
 bool is_tx_network_verifiable(
         sign_tx_signingmode_t txSigningMode,
-        uint16_t numOutputs,
-        uint16_t numWithdrawals
+        uint32_t numOutputs,
+        uint32_t numWithdrawals
 );
 
 security_policy_t policyForDerivePrivateKey(const bip44_path_t* path);
 
-security_policy_t policyForGetPublicKeysInit(size_t numPaths);
+security_policy_t policyForGetPublicKeysInit(uint32_t numPaths);
 security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec);
 security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pathSpec);
 
@@ -27,12 +27,12 @@ security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressPar
 
 security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
-        uint8_t networkId,
+        uint32_t networkId,
         uint32_t protocolMagic,
-        uint16_t numInputs,
-        uint16_t numOutputs,
-        uint16_t numCertificates,
-        uint16_t numWithdrawals,
+        uint32_t numInputs,
+        uint32_t numOutputs,
+        uint32_t numCertificates,
+        uint32_t numWithdrawals,
         bool includeMint
 );
 
@@ -73,7 +73,7 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 );
 security_policy_t policyForSignTxStakePoolRegistrationInit(
         sign_tx_signingmode_t txSigningMode,
-        size_t numOwners
+        uint32_t numOwners
 );
 security_policy_t policyForSignTxStakePoolRegistrationPoolId(
         sign_tx_signingmode_t txSigningMode,
@@ -89,7 +89,7 @@ security_policy_t policyForSignTxStakePoolRegistrationRewardAccount(
 security_policy_t policyForSignTxStakePoolRegistrationOwner(
         const sign_tx_signingmode_t txSigningMode,
         const pool_owner_t* owner,
-        uint16_t numOwnersGivenByPath
+        uint32_t numOwnersGivenByPath
 );
 security_policy_t policyForSignTxStakePoolRegistrationRelay(
         const sign_tx_signingmode_t txSigningMode,
