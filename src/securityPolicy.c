@@ -364,6 +364,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 		DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_PATH);
 		DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
 		SHOW_UNLESS(is_standard_base_address(params));
+		SHOW_IF(includeDatumHash);
 		ALLOW();
 		break;
 	}
