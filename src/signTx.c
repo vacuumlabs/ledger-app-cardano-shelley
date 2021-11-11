@@ -1709,7 +1709,7 @@ static void signTx_handleScriptDataHashAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 		STATIC_ASSERT(SIZEOF(BODY_CTX->stageData.scriptDataHash) == SCRIPT_DATA_HASH_LENGTH, "wrong script data hash length");
-		view_copyWireToBuffer(BODY_CTX->stageData.scriptDataHash, &view, SCRIPT_DATA_HASH_LENGTH);
+		view_parseBuffer(BODY_CTX->stageData.scriptDataHash, &view, SCRIPT_DATA_HASH_LENGTH);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
 		BODY_CTX->scriptDataHashReceived = true;
@@ -1886,7 +1886,7 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 			_parsePathSpec(&view, &BODY_CTX->stageData.requiredSigner.keyPath);
 			break;
 		case REQUIRED_SIGNER_WITH_HASH:
-			view_copyWireToBuffer(BODY_CTX->stageData.requiredSigner.keyHash, &view, PUBLIC_KEY_SIZE);
+			view_parseBuffer(BODY_CTX->stageData.requiredSigner.keyHash, &view, PUBLIC_KEY_SIZE);
 			break;
 		}
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);

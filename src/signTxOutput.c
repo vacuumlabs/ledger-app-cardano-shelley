@@ -602,7 +602,7 @@ static void signTxOutput_handleDatumHashAPDU(uint8_t* wireDataBuffer, size_t wir
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 		STATIC_ASSERT(SIZEOF(subctx->stateData.datumHash) == OUTPUT_DATUM_HASH_LENGTH, "wrong datum hash length");
-		view_copyWireToBuffer(subctx->stateData.datumHash, &view, OUTPUT_DATUM_HASH_LENGTH);
+		view_parseBuffer(subctx->stateData.datumHash, &view, OUTPUT_DATUM_HASH_LENGTH);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
 		subctx->datumHashReceived = true;
