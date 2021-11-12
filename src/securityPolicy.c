@@ -286,7 +286,7 @@ security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		ALLOW();
 		break;
-	
+
 	default:
 		ASSERT(false);
 		DENY();
@@ -530,20 +530,45 @@ security_policy_t policyForSignTxCertificateStaking(
 		ASSERT(false);
 	}
 
-	switch (txSigningMode) {
-	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+	switch (stakeCredential->type) {
+	case STAKE_CREDENTIAL_KEY_PATH:
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			break;
+
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+			DENY();
+			break;
+
+		default:
+			ASSERT(false);
+			break;
+		}
 		break;
-	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:	//TODO(KoMa) refresh this when more info is revealed about Plutus key derivation paths
-	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
+
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			break;
+
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+			DENY();
+			break;
+
+		default:
+			ASSERT(false);
+			break;
+		}
 		break;
+
 	default:
 		ASSERT(false);
+		break;
 	}
-
 
 	PROMPT();
 }
@@ -588,6 +613,7 @@ security_policy_t policyForSignTxStakePoolRegistrationInit(
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		DENY();
 		break;
 
@@ -738,26 +764,46 @@ security_policy_t policyForSignTxWithdrawal(
         const stake_credential_t* stakeCredential
 )
 {
-	switch (txSigningMode) {
-	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_KEY_PATH);
+	switch (stakeCredential->type) {
+	case STAKE_CREDENTIAL_KEY_PATH:
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
-		SHOW();
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			SHOW();
+			break;
+
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+			DENY();
+			break;
+
+		default:
+			ASSERT(false);
+			break;
+		}
 		break;
 
-	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH);
-		SHOW();
-		break;
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			SHOW();
+			break;
 
-	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:	//TODO(KoMa) only ordinary keys allowed here?
-		DENY_UNLESS(stakeCredential->type == STAKE_CREDENTIAL_SCRIPT_HASH || bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
-		SHOW();
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+			DENY();
+			break;
+
+		default:
+			ASSERT(false);
+			break;
+		}
 		break;
 
 	default:
 		ASSERT(false);
+		break;
 	}
 
 	DENY(); // should not be reached

@@ -1167,7 +1167,6 @@ static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCr
 		view_parseBuffer(stakeCredential->scriptHash, view, SIZEOF(stakeCredential->scriptHash));
 		break;
 	}
-
 	default:
 		ASSERT(false);
 	}
