@@ -1050,6 +1050,14 @@ static void signTx_handleCertificate_ui_runStep()
 			        this_fn
 			);
 			break;
+		case STAKE_CREDENTIAL_KEY_HASH:
+			ui_displayHexBufferScreen(
+			        "Staking key hash",
+			        BODY_CTX->stageData.certificate.stakeCredential.keyHash,
+			        SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.keyHash),
+			        this_fn
+			);
+			break;
 		case STAKE_CREDENTIAL_SCRIPT_HASH:
 			ui_displayHexBufferScreen(
 			        "Staking script hash",
@@ -1162,6 +1170,11 @@ static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCr
 	case STAKE_CREDENTIAL_KEY_PATH:
 		_parsePathSpec(view, &stakeCredential->keyPath);
 		break;
+	case STAKE_CREDENTIAL_KEY_HASH: {
+		STATIC_ASSERT(SIZEOF(stakeCredential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
+		view_parseBuffer(stakeCredential->keyHash, view, SIZEOF(stakeCredential->keyHash));
+		break;
+	}
 	case STAKE_CREDENTIAL_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
 		view_parseBuffer(stakeCredential->scriptHash, view, SIZEOF(stakeCredential->scriptHash));
@@ -1234,6 +1247,11 @@ static void _fillHashFromStakeCredential(const stake_credential_t* stakeCredenti
 	switch (stakeCredential->type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
 		_fillHashFromPath(&stakeCredential->keyPath, hash, hashSize);
+		break;
+	case STAKE_CREDENTIAL_KEY_HASH:
+		ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
+		STATIC_ASSERT(SIZEOF(stakeCredential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
+		memmove(hash, stakeCredential->keyHash, SIZEOF(stakeCredential->keyHash));
 		break;
 	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
@@ -1430,6 +1448,18 @@ static void signTx_handleWithdrawal_ui_runStep()
 			rewardAccount.path = BODY_CTX->stageData.withdrawal.stakeCredential.keyPath;
 			break;
 		}
+		case STAKE_CREDENTIAL_KEY_HASH: {
+			rewardAccount.keyReferenceType = KEY_REFERENCE_HASH;
+			constructRewardAddressFromHash(
+			        ctx->commonTxData.networkId,
+			        REWARD_HASH_SOURCE_KEY,
+			        BODY_CTX->stageData.withdrawal.stakeCredential.keyHash,
+			        SIZEOF(BODY_CTX->stageData.withdrawal.stakeCredential.keyHash),
+			        rewardAccount.hashBuffer,
+			        SIZEOF(rewardAccount.hashBuffer)
+			);
+			break;
+		}
 		case STAKE_CREDENTIAL_SCRIPT_HASH: {
 			rewardAccount.keyReferenceType = KEY_REFERENCE_HASH;
 			constructRewardAddressFromHash(
@@ -1472,6 +1502,16 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 		constructRewardAddressFromKeyPath(
 		        &BODY_CTX->stageData.withdrawal.stakeCredential.keyPath,
 		        ctx->commonTxData.networkId,
+		        rewardAddress,
+		        SIZEOF(rewardAddress)
+		);
+		break;
+	case STAKE_CREDENTIAL_KEY_HASH:
+		constructRewardAddressFromHash(
+		        ctx->commonTxData.networkId,
+		        REWARD_HASH_SOURCE_KEY,
+		        BODY_CTX->stageData.withdrawal.stakeCredential.keyHash,
+		        SIZEOF(BODY_CTX->stageData.withdrawal.stakeCredential.keyHash),
 		        rewardAddress,
 		        SIZEOF(rewardAddress)
 		);
