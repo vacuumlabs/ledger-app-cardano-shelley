@@ -75,6 +75,7 @@ typedef struct {
 	stake_credential_type_t type;
 	union {
 		bip44_path_t keyPath;
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
 		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
 	};
 } stake_credential_t;

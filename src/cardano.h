@@ -110,7 +110,8 @@ typedef enum {
 
 typedef enum {
 	STAKE_CREDENTIAL_KEY_PATH = 0,
-	STAKE_CREDENTIAL_SCRIPT_HASH = 1,
+	STAKE_CREDENTIAL_KEY_HASH = 1,
+	STAKE_CREDENTIAL_SCRIPT_HASH = 2,
 } stake_credential_type_t;
 
 typedef enum {
