@@ -460,6 +460,27 @@ void txHashBuilder_enterCertificates(tx_hash_builder_t* builder)
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES;
 }
 
+static uint32_t getStakeCredentialSource(const stake_credential_type_t stakeCredentialType)
+{
+	enum {
+		KEY = 0,
+		SCRIPT = 1
+	};
+	switch (stakeCredentialType)
+	{
+	case STAKE_CREDENTIAL_KEY_PATH:
+	case STAKE_CREDENTIAL_KEY_HASH:
+		return KEY;
+		break;
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
+		return SCRIPT;
+		break;	
+	default:
+		ASSERT(false);
+		break;
+	}
+}
+
 // staking key certificate registration or deregistration
 void txHashBuilder_addCertificate_stakingHash(
         tx_hash_builder_t* builder,
@@ -494,7 +515,7 @@ void txHashBuilder_addCertificate_stakingHash(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredentialType);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, getStakeCredentialSource(stakeCredentialType));
 			}
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingHashSize);
@@ -536,7 +557,7 @@ void txHashBuilder_addCertificate_delegation(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredentialType);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, getStakeCredentialSource(stakeCredentialType));
 			}
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingKeyHashSize);
