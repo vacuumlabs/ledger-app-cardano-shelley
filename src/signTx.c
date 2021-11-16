@@ -1919,13 +1919,13 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 		BODY_CTX->stageData.requiredSigner.type = parse_u1be(&view);
-		STATIC_ASSERT(SIZEOF(BODY_CTX->stageData.requiredSigner.keyHash) == PUBLIC_KEY_SIZE, "wrong key hash length");
+		STATIC_ASSERT(SIZEOF(BODY_CTX->stageData.requiredSigner.keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong key hash length");
 		switch (BODY_CTX->stageData.requiredSigner.type) {
 		case REQUIRED_SIGNER_WITH_PATH:
 			_parsePathSpec(&view, &BODY_CTX->stageData.requiredSigner.keyPath);
 			break;
 		case REQUIRED_SIGNER_WITH_HASH:
-			view_parseBuffer(BODY_CTX->stageData.requiredSigner.keyHash, &view, PUBLIC_KEY_SIZE);
+			view_parseBuffer(BODY_CTX->stageData.requiredSigner.keyHash, &view, ADDRESS_KEY_HASH_LENGTH);
 			break;
 		}
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);

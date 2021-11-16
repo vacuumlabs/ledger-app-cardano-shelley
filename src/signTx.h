@@ -126,7 +126,7 @@ typedef enum {
 typedef struct {
 	sign_tx_required_signer_mode_t type;
 	union {
-		uint8_t keyHash[PUBLIC_KEY_SIZE];
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
 		bip44_path_t keyPath;
 	};
 } ins_sign_tx_required_signer_t;
