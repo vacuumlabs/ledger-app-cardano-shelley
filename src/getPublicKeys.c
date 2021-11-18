@@ -23,6 +23,7 @@ static void parsePath(read_view_t* view)
 {
 	view_skipBytes(view, bip44_parseFromWire(&ctx->pathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 	BIP44_PRINTF(&ctx->pathSpec);
+	PRINTF("\n");
 }
 
 static void advanceStage()
