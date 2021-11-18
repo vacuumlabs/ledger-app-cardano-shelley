@@ -15,12 +15,17 @@ void respondSuccessEmptyMsg()
 
 bool violatesSingleAccountOrStoreIt(const bip44_path_t* path)
 {
+	PRINTF("Considering path ");
+	BIP44_PRINTF(path);
+	PRINTF(" for single account security model\n");
+
 	single_account_data_t* singleAccountData = &(instructionState.signTxContext.commonTxData.singleAccountData);
 
 	if (!bip44_hasOrdinaryWalletKeyPrefix(path) || !bip44_containsAccount(path)) {
 		TRACE("Invalid path in single account check");
 		ASSERT(false);
 	}
+
 	const bool isByron = bip44_hasByronPrefix(path);
 	const uint32_t account = bip44_getAccount(path);
 	if (singleAccountData->isStored) {
@@ -29,7 +34,7 @@ bool violatesSingleAccountOrStoreIt(const bip44_path_t* path)
 			return true;
 		}
 		const bool combinesByronAndShelley = singleAccountData->isByron != isByron;
-		const bool combinationAllowed = (storedAccount == 0);
+		const bool combinationAllowed = (storedAccount == 0 + HARDENED_BIP32);
 		if (combinesByronAndShelley && !combinationAllowed) {
 			return true;
 		}

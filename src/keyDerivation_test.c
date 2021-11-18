@@ -17,7 +17,7 @@ void testcase_derivePrivateKey(uint32_t* path, uint32_t pathLen, const char* exp
 	bip44_path_t pathSpec;
 	ASSERT(pathLen <= BIP44_MAX_PATH_ELEMENTS);
 	pathSpec_init(&pathSpec, path, pathLen);
-	bip44_PRINTF(&pathSpec);
+	BIP44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	uint8_t expected[64];
@@ -78,7 +78,7 @@ void testcase_derivePublicKey(uint32_t* path, uint32_t pathLen, const char* expe
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	bip44_PRINTF(&pathSpec);
+	BIP44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	chain_code_t chainCode;
@@ -147,7 +147,7 @@ void testcase_deriveChainCode(uint32_t* path, uint32_t pathLen, const char* expe
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	bip44_PRINTF(&pathSpec);
+	BIP44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	derivePrivateKey(&pathSpec, &chainCode, &privateKey);

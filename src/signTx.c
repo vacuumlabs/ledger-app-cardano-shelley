@@ -1071,6 +1071,7 @@ static void _parsePathSpec(read_view_t* view, bip44_path_t* pathSpec)
 	view_skipBytes(view, bip44_parseFromWire(pathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 	TRACE();
 	BIP44_PRINTF(pathSpec);
+	PRINTF("\n");
 }
 
 static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCredential)
@@ -1739,6 +1740,10 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 
 		size_t parsedSize = bip44_parseFromWire(&WITNESS_CTX->stageData.witness.path, wireDataBuffer, wireDataSize);
 		VALIDATE(parsedSize == wireDataSize, ERR_INVALID_DATA);
+
+		TRACE();
+		BIP44_PRINTF(&WITNESS_CTX->stageData.witness.path);
+		PRINTF("\n");
 	}
 
 	security_policy_t policy = POLICY_DENY;

@@ -20,7 +20,7 @@ void testcase_deriveAddress_byron(uint32_t* path, uint32_t pathLen, uint32_t pro
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	bip44_PRINTF(&pathSpec);
+	BIP44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	uint8_t address[128];
