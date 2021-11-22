@@ -356,7 +356,7 @@ static inline void checkForFinishedSubmachines()
 // ============================== INIT ==============================
 
 enum {
-	HANDLE_INIT_STEP_PROMPT_TYPE = 100,
+	HANDLE_INIT_STEP_PROMPT_SIGNINGMODE = 100,
 	HANDLE_INIT_STEP_DISPLAY_NETWORK_DETAILS,
 	HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING,
 	HANDLE_INIT_STEP_NO_COLLATERALS_WARNING,
@@ -382,9 +382,14 @@ static void signTx_handleInit_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_INIT_STEP_PROMPT_TYPE) {
-		char bodyTxt[SIZEOF("Pool operator") + 1 + SIZEOF("transaction?") + 1];
-		snprintf(bodyTxt, SIZEOF(bodyTxt), "%s transaction?", ((const char*)PIC(uiSigningModeName[ctx->commonTxData.txSigningMode - SIGN_TX_SIGNINGMODE_ORDINARY_TX])));
+	UI_STEP(HANDLE_INIT_STEP_PROMPT_SIGNINGMODE) {
+		char bodyTxt[SIZEOF("Pool operator") + 1 + SIZEOF("transaction?") + 1 + 1];
+		const uint32_t signingModeStrIndex = ctx->commonTxData.txSigningMode - SIGN_TX_SIGNINGMODE_ORDINARY_TX;
+		ASSERT(signingModeStrIndex < ARRAY_LEN(uiSigningModeName));
+		snprintf(bodyTxt, SIZEOF(bodyTxt), "%s transaction?", ((const char*)PIC(uiSigningModeName[signingModeStrIndex])));
+		// Make sure we have space after, so we know snprintf didn't truncate the text
+		// snprintf's return value cannot be trusted with this SDK
+		ASSERT(strlen(bodyTxt) < SIZEOF(bodyTxt) - 1);
 		ui_displayPrompt(
 		        "Start new",
 		        bodyTxt,
@@ -394,8 +399,11 @@ static void signTx_handleInit_ui_runStep()
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_NETWORK_DETAILS) {
-		if (!(ctx->commonTxData.networkId != MAINNET_NETWORK_ID && ctx->commonTxData.networkId != TESTNET_NETWORK_ID)
-		    || ctx->commonTxData.protocolMagic != MAINNET_PROTOCOL_MAGIC) {
+		const bool usualNetworkId = ctx->commonTxData.networkId == MAINNET_NETWORK_ID || ctx->commonTxData.networkId == TESTNET_NETWORK_ID;
+		const bool usualProtocolMagic = ctx->commonTxData.protocolMagic == MAINNET_PROTOCOL_MAGIC;
+
+		if (usualNetworkId && usualProtocolMagic) {
+			// no need to display the network details
 			UI_STEP_JUMP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING);
 		}
 
@@ -414,14 +422,16 @@ static void signTx_handleInit_ui_runStep()
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_NO_COLLATERALS_WARNING) {
-		if (ctx->commonTxData.txSigningMode != SIGN_TX_SIGNINGMODE_PLUTUS_TX || ctx->numCollaterals != 0) {
+		const bool noCollateralsIsUnusual = ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX;
+		if (!noCollateralsIsUnusual || ctx->numCollaterals > 0) {
 			UI_STEP_JUMP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING);
 		}
 		ui_displayPaginatedText("WARNING:", "No collaterals given for Plutus transaction", this_fn);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING) {
-		if (ctx->commonTxData.txSigningMode != SIGN_TX_SIGNINGMODE_PLUTUS_TX || ctx->includeScriptDataHash) {
+		const bool noScriptDataHashIsUnusual = ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX;
+		if (!noScriptDataHashIsUnusual || ctx->includeScriptDataHash) {
 			UI_STEP_JUMP(HANDLE_INIT_STEP_RESPOND);
 		}
 		ui_displayPaginatedText("WARNING:", "No script data given for Plutus transaction", this_fn);
@@ -562,8 +572,8 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		// select UI steps
 		switch (policy) {
 	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_WARN_UNUSUAL,    HANDLE_INIT_STEP_PROMPT_TYPE);
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_STEP_PROMPT_TYPE);
+			CASE(POLICY_PROMPT_WARN_UNUSUAL,    HANDLE_INIT_STEP_PROMPT_SIGNINGMODE);
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_STEP_PROMPT_SIGNINGMODE);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT,   HANDLE_INIT_STEP_RESPOND);
 	#undef   CASE
 		default:

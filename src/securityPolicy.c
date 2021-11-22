@@ -549,13 +549,13 @@ security_policy_t policyForSignTxCertificateStaking(
 		}
 		break;
 
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
+	case STAKE_CREDENTIAL_KEY_HASH:
 		switch (txSigningMode) {
-		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 			break;
 
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 			DENY();
 			break;
 
@@ -565,13 +565,13 @@ security_policy_t policyForSignTxCertificateStaking(
 		}
 		break;
 
-	case STAKE_CREDENTIAL_KEY_HASH:
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 			break;
 
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 			DENY();
 			break;
 
@@ -800,6 +800,22 @@ security_policy_t policyForSignTxWithdrawal(
 		}
 		break;
 
+	case STAKE_CREDENTIAL_KEY_HASH:
+		switch (txSigningMode) {
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			SHOW();
+			break;
+
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+			DENY();
+			break;
+
+		default:
+			ASSERT(false);
+			break;
+		}
+
 	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
@@ -816,22 +832,6 @@ security_policy_t policyForSignTxWithdrawal(
 			break;
 		}
 		break;
-
-	case STAKE_CREDENTIAL_KEY_HASH:
-		switch (txSigningMode) {
-		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-			SHOW();
-			break;
-
-		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-			DENY();
-			break;
-
-		default:
-			ASSERT(false);
-			break;
-		}
 
 	default:
 		ASSERT(false);
