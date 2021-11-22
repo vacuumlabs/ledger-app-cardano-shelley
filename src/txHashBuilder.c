@@ -169,7 +169,7 @@ void txHashBuilder_addInput(
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 		{
-			ASSERT(utxoHashSize == 32);
+			ASSERT(utxoHashSize == TX_HASH_LENGTH);
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
 			BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
 		}
@@ -466,15 +466,14 @@ static uint32_t getStakeCredentialSource(const stake_credential_type_t stakeCred
 		KEY = 0,
 		SCRIPT = 1
 	};
-	switch (stakeCredentialType)
-	{
+	switch (stakeCredentialType) {
 	case STAKE_CREDENTIAL_KEY_PATH:
 	case STAKE_CREDENTIAL_KEY_HASH:
 		return KEY;
 		break;
 	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		return SCRIPT;
-		break;	
+		break;
 	default:
 		ASSERT(false);
 		break;
@@ -1252,7 +1251,7 @@ void txHashBuilder_addScriptDataHash(
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, scriptHashDataSize);
 		BUILDER_APPEND_DATA(scriptHashData, scriptHashDataSize);
 	}
-	builder->state = TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA;
+	builder->state = TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH;
 }
 
 static void txHashBuilder_assertCanLeaveScriptDataHash(tx_hash_builder_t* builder)
@@ -1260,7 +1259,7 @@ static void txHashBuilder_assertCanLeaveScriptDataHash(tx_hash_builder_t* builde
 	_TRACE("state = %u", builder->state);
 
 	switch (builder->state) {
-	case TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA:
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
 		break;
 
 	case TX_HASH_BUILDER_IN_MINT:
@@ -1285,7 +1284,7 @@ void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder)
 
 	txHashBuilder_assertCanLeaveScriptDataHash(builder);
 	{
-		// Enter inputs
+		// Enter collateral inputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERALS);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingCollaterals);
 	}
@@ -1311,7 +1310,7 @@ void txHashBuilder_addCollateral(
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 		{
-			ASSERT(utxoHashSize == 32);
+			ASSERT(utxoHashSize == TX_HASH_LENGTH);
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
 			BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
 		}
@@ -1330,7 +1329,7 @@ static void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
 		ASSERT(builder->remainingCollaterals == 0);
 		break;
 
-	case TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA:
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
 	case TX_HASH_BUILDER_IN_MINT:
 	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
 	case TX_HASH_BUILDER_IN_AUX_DATA:
@@ -1352,7 +1351,7 @@ void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder)
 
 	txHashBuilder_assertCanLeaveCollaterals(builder);
 	{
-		// Enter inputs
+		// Enter required signers
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_REQUIRED_SIGNERS);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingRequiredSigners);
 	}
@@ -1391,7 +1390,7 @@ static void txHashBuilder_assertCanLeaveRequiredSigners(tx_hash_builder_t* build
 		break;
 
 	case TX_HASH_BUILDER_IN_COLLATERALS:
-	case TX_HASH_BUILDER_IN_SCRIPT_HASH_DATA:
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
 	case TX_HASH_BUILDER_IN_MINT:
 	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
 	case TX_HASH_BUILDER_IN_AUX_DATA:
