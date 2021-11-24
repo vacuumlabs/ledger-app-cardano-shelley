@@ -212,6 +212,31 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 	return _policyForDeriveAddress(addressParams, POLICY_SHOW_BEFORE_RESPONSE);
 }
 
+bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic)
+{
+	const bool usualNetworkId =
+	        networkId == MAINNET_NETWORK_ID ||
+	        networkId == TESTNET_NETWORK_ID;
+	const bool usualProtocolMagic = (protocolMagic == MAINNET_PROTOCOL_MAGIC);
+	return usualNetworkId && usualProtocolMagic;
+}
+
+bool needsRunningScriptWarning(int32_t numCollaterals)
+{
+	return numCollaterals > 0;
+}
+
+bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollaterals)
+{
+	const bool collateralExpected = (signingMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX);
+	return collateralExpected && (numCollaterals == 0);
+}
+
+bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash)
+{
+	const bool scriptDataHashExpected = (signingMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX);
+	return scriptDataHashExpected && !includesScriptDataHash;
+}
 
 // Initiate transaction signing
 security_policy_t policyForSignTxInit(
@@ -232,7 +257,7 @@ security_policy_t policyForSignTxInit(
 	// Note: testnets can still use byron mainnet protocol magic so we can't deny the opposite direction
 
 	// certain combinations of tx body elements are forbidden
-	// because of potential cross-witnessing
+	// mostly because of potential cross-witnessing
 	switch (txSigningMode) {
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
@@ -256,17 +281,20 @@ security_policy_t policyForSignTxInit(
 		break;
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-		WARN_IF(numCollaterals == 0);
-		WARN_UNLESS(includeScriptDataHash);
-		WARN();
+		// no tx body element is forbidden in general
 		break;
 
 	default:
 		ASSERT(false);
 	}
 
-	WARN_IF(networkId != MAINNET_NETWORK_ID && networkId != TESTNET_NETWORK_ID);
-	WARN_IF(protocolMagic != MAINNET_PROTOCOL_MAGIC);
+	// there are separate screens for various warnings
+	// the return value of the policy only says that at least one should be applied
+	// and the need for individual warnings is reassessed in the UI machine
+	WARN_UNLESS(isNetworkUsual(networkId, protocolMagic));
+	WARN_IF(needsRunningScriptWarning(numCollaterals));
+	WARN_IF(needsMissingCollateralWarning(txSigningMode, numCollaterals));
+	WARN_IF(needsMissingScriptDataHashWarning(txSigningMode, includeScriptDataHash));
 
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
 	PROMPT();
