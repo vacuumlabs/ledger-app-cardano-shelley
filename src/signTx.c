@@ -399,14 +399,10 @@ static void signTx_handleInit_ui_runStep()
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_NETWORK_DETAILS) {
-		const bool usualNetworkId = ctx->commonTxData.networkId == MAINNET_NETWORK_ID || ctx->commonTxData.networkId == TESTNET_NETWORK_ID;
-		const bool usualProtocolMagic = ctx->commonTxData.protocolMagic == MAINNET_PROTOCOL_MAGIC;
-
-		if (usualNetworkId && usualProtocolMagic) {
+		if (isNetworkUsual(ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic)) {
 			// no need to display the network details
 			UI_STEP_JUMP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING);
 		}
-
 		ui_displayNetworkParamsScreen(
 		        "Network details",
 		        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
@@ -415,23 +411,21 @@ static void signTx_handleInit_ui_runStep()
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING) {
-		if (ctx->numCollaterals == 0) {
+		if (!needsRunningScriptWarning(ctx->numCollaterals)) {
 			UI_STEP_JUMP(HANDLE_INIT_STEP_NO_COLLATERALS_WARNING);
 		}
 		ui_displayPaginatedText("WARNING:", "Plutus script will be run", this_fn);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_NO_COLLATERALS_WARNING) {
-		const bool noCollateralsIsUnusual = ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX;
-		if (!noCollateralsIsUnusual || ctx->numCollaterals > 0) {
+		if (!needsMissingCollateralWarning(ctx->commonTxData.txSigningMode, ctx->numCollaterals)) {
 			UI_STEP_JUMP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING);
 		}
 		ui_displayPaginatedText("WARNING:", "No collaterals given for Plutus transaction", this_fn);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING) {
-		const bool noScriptDataHashIsUnusual = ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX;
-		if (!noScriptDataHashIsUnusual || ctx->includeScriptDataHash) {
+		if (!needsMissingScriptDataHashWarning(ctx->commonTxData.txSigningMode, ctx->includeScriptDataHash)) {
 			UI_STEP_JUMP(HANDLE_INIT_STEP_RESPOND);
 		}
 		ui_displayPaginatedText("WARNING:", "No script data given for Plutus transaction", this_fn);

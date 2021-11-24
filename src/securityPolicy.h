@@ -18,6 +18,10 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParams);
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams);
 
+bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic);
+bool needsRunningScriptWarning(int32_t numCollaterals);
+bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollaterals);
+bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash);
 
 security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
