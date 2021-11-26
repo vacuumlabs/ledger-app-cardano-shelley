@@ -372,9 +372,9 @@ void run_txHashBuilder_test()
 	                   true, // validity interval start
 	                   true, // mint
 	                   false, // script hash data
-	                   0,	//TODO(KoMa) testing
-	                   0	//TODO(KoMa) testing
-	                  );
+	                   0,	// collaterals not tested yet
+	                   0	// required signers not tested yet
+	                  );	// if these tests ever return to actually being used, they should be added
 
 	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {
