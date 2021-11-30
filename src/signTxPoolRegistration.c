@@ -787,7 +787,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 			PRINTF("\n");
 
 			subctx->numOwnersGivenByPath++;
-			ASSERT(!ctx->poolOwnerByPath);
+			VALIDATE(!ctx->poolOwnerByPath, ERR_INVALID_DATA);
 			ctx->poolOwnerByPath = true;
 			memmove(&ctx->poolOwnerPath, &owner->path, SIZEOF(owner->path));
 			break;

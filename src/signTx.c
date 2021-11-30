@@ -2266,7 +2266,7 @@ ins_sign_tx_aux_data_context_t* accessAuxDataContext()
 		#ifndef DEVEL
 		ASSERT(false);
 		#endif
-		return NULL;
+		THROW(ERR_ASSERT);
 	}
 }
 
@@ -2295,7 +2295,7 @@ ins_sign_tx_body_context_t* accessBodyContext()
 		#ifndef DEVEL
 		ASSERT(false);
 		#endif
-		return NULL;
+		THROW(ERR_ASSERT);
 	}
 }
 
@@ -2310,6 +2310,6 @@ ins_sign_tx_witness_context_t* accessWitnessContext()
 		#ifndef DEVEL
 		ASSERT(false);
 		#endif
-		return NULL;
+		THROW(ERR_ASSERT);
 	}
 }

@@ -213,15 +213,9 @@ ins_sign_tx_body_context_t* accessBodyContext();
 ins_sign_tx_witness_context_t* accessWitnessContext();
 
 
-#ifdef DEVEL
-#define AUX_DATA_CTX (ASSERT(accessAuxDataContext() != NULL), accessAuxDataContext())
-#define BODY_CTX (ASSERT(accessBodyContext() != NULL), accessBodyContext())
-#define WITNESS_CTX (ASSERT(accessWitnessContext() != NULL), accessWitnessContext())
-#else
 #define AUX_DATA_CTX (accessAuxDataContext())
 #define BODY_CTX (accessBodyContext())
 #define WITNESS_CTX (accessWitnessContext())
-#endif
 
 handler_fn_t signTx_handleAPDU;
 
