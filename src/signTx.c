@@ -4,7 +4,7 @@
 #include "cardano.h"
 #include "addressUtilsByron.h"
 #include "addressUtilsShelley.h"
-#include "uiHelpers.h"
+#include "uiHelpers.h"e
 #include "signTxUtils.h"
 #include "uiScreens.h"
 #include "txHashBuilder.h"
@@ -1045,7 +1045,7 @@ static void signTx_handleCertificatePoolRetirement_ui_runStep()
 	}
 	UI_STEP(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_EPOCH) {
 		ui_displayUint64Screen(
-		        "at the end of epoch",
+		        "at the begin of epoch",
 		        BODY_CTX->stageData.certificate.epoch,
 		        this_fn
 		);
