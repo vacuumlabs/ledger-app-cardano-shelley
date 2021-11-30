@@ -4,7 +4,7 @@
 #include "cardano.h"
 #include "addressUtilsByron.h"
 #include "addressUtilsShelley.h"
-#include "uiHelpers.h"e
+#include "uiHelpers.h"
 #include "signTxUtils.h"
 #include "uiScreens.h"
 #include "txHashBuilder.h"
