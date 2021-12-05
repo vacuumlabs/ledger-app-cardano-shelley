@@ -487,11 +487,11 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_WARN_UNUSUAL,    HANDLE_INIT_STEP_DISPLAY_DETAILS);
 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_INIT_STEP_CONFIRM);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT,   HANDLE_INIT_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -725,9 +725,9 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_INPUT_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -820,10 +820,10 @@ static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_FEE_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_FEE_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -896,10 +896,10 @@ static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wir
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TTL_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TTL_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1476,10 +1476,10 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, siz
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_WITHDRAWAL_STEP_DISPLAY_AMOUNT);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_WITHDRAWAL_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1545,10 +1545,10 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, uint8_t* wireData
 	{
 		// select UI step
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VALIDITY_INTERVAL_START_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VALIDITY_INTERVAL_START_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1655,10 +1655,10 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UN
 	{
 		// select UI step
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1776,11 +1776,11 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 	{
 		// choose UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_WARN_UNUSUAL,  HANDLE_WITNESS_STEP_WARNING);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_WITNESS_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_WITNESS_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1796,8 +1796,8 @@ typedef void subhandler_fn_t(uint8_t p2, uint8_t* dataBuffer, size_t dataSize);
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
 	switch (p1) {
-#	define  CASE(P1, HANDLER) case P1: return HANDLER;
-#	define  DEFAULT(HANDLER)  default: return HANDLER;
+	#define  CASE(P1, HANDLER) case P1: return HANDLER;
+	#define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(0x01, signTx_handleInitAPDU);
 		/*
 		* Auxiliary data have to be handled before tx body because of memory consumption:
@@ -1817,8 +1817,8 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x0a, signTx_handleConfirmAPDU);
 		CASE(0x0f, signTx_handleWitnessAPDU);
 		DEFAULT(NULL)
-#	undef   CASE
-#	undef   DEFAULT
+	#undef   CASE
+	#undef   DEFAULT
 	}
 }
 

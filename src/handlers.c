@@ -20,7 +20,7 @@
 handler_fn_t* lookupHandler(uint8_t ins)
 {
 	switch (ins) {
-#	define  CASE(INS, HANDLER) case INS: return HANDLER;
+	#define  CASE(INS, HANDLER) case INS: return HANDLER;
 		// 0x0* -  app status calls
 		CASE(0x00, getVersion_handleAPDU);
 		CASE(0x01, getSerial_handleAPDU);
@@ -39,7 +39,7 @@ handler_fn_t* lookupHandler(uint8_t ins)
 		CASE(0xF0, handleRunTests);
 		//   0xF1  reserved for INS_SET_HEADLESS_INTERACTION
 		#endif // DEVEL
-#	undef   CASE
+	#undef   CASE
 	default:
 		return NULL;
 	}

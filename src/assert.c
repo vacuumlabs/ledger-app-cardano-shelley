@@ -27,7 +27,7 @@ void assert(
 			THROW(ERR_ASSERT);
 		}
 		#else
-#			error "RESET_ON_CRASH should be enabled in non-devel mode!"
+			#error "RESET_ON_CRASH should be enabled in non-devel mode!"
 		#endif // DEVEL
 	}
 	#endif
