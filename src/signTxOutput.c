@@ -172,10 +172,10 @@ static void signTx_handleOutput_addressBytes()
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -264,10 +264,10 @@ static void signTx_handleOutput_addressParams()
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -517,10 +517,10 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 	{
 		// select UI step
 		switch (subctx->outputSecurityPolicy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOKEN_STEP_DISPLAY_NAME);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TOKEN_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -596,10 +596,10 @@ static void signTxOutput_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, 
 	{
 		// select UI step
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}

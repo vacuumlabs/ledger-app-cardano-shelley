@@ -366,10 +366,10 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, displayUiStep);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_KEY_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -449,10 +449,10 @@ static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, siz
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_VRF_KEY_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_VRF_KEY_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -674,10 +674,10 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 
 	{
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -809,10 +809,10 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OWNER_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OWNER_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1108,10 +1108,10 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 
 		// select UI steps and call ui handler
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, respondStep);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, displayStep);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1213,10 +1213,10 @@ static void handleNullMetadata()
 
 		// select UI step
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_NULL_METADATA_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_NULL_METADATA_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1287,10 +1287,10 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 
 		// select UI step
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_METADATA_STEP_DISPLAY_URL);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_METADATA_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1393,10 +1393,10 @@ static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MAR
 	{
 		// select UI step
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
-#	undef   CASE
+	#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
