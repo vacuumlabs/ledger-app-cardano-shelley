@@ -273,11 +273,11 @@ static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
 
 	// these handlers might read additional data from the view
 	switch (nativeScriptType) {
-	#define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
+#define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
 		CASE(NATIVE_SCRIPT_ALL, deriveNativeScriptHash_handleAll);
 		CASE(NATIVE_SCRIPT_ANY, deriveNativeScriptHash_handleAny);
 		CASE(NATIVE_SCRIPT_N_OF_K, deriveNativeScriptHash_handleNofK);
-	#undef   CASE
+#undef   CASE
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
@@ -373,11 +373,11 @@ static void deriveNativeScriptHash_handleSimpleScript(read_view_t* view)
 
 	// parse data
 	switch (nativeScriptType) {
-	#define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
+#define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
 		CASE(NATIVE_SCRIPT_PUBKEY, deriveNativeScriptHash_handlePubkey);
 		CASE(NATIVE_SCRIPT_INVALID_BEFORE, deriveNativeScriptHash_handleInvalidBefore);
 		CASE(NATIVE_SCRIPT_INVALID_HEREAFTER, deriveNativeScriptHash_handleInvalidHereafter);
-	#undef   CASE
+#undef   CASE
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
@@ -430,10 +430,10 @@ static void deriveNativeScriptHash_handleWholeNativeScriptFinish(read_view_t* vi
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	switch (displayFormat) {
-	#define  CASE(FORMAT, DISPLAY_FN) case FORMAT: nativeScriptHashBuilder_finalize(&ctx->hashBuilder, ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH); DISPLAY_FN(); break;
+#define  CASE(FORMAT, DISPLAY_FN) case FORMAT: nativeScriptHashBuilder_finalize(&ctx->hashBuilder, ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH); DISPLAY_FN(); break;
 		CASE(DISPLAY_NATIVE_SCRIPT_HASH_BECH32, deriveNativeScriptHash_displayNativeScriptHash_bech32);
 		CASE(DISPLAY_NATIVE_SCRIPT_HASH_POLICY_ID, deriveNativeScriptHash_displayNativeScriptHash_policyId);
-	#undef	CASE
+#undef	CASE
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
@@ -450,14 +450,14 @@ enum {
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
 	switch (p1) {
-	#define  CASE(P1, HANDLER) case P1: return HANDLER;
-	#define  DEFAULT(HANDLER)  default: return HANDLER;
+#define  CASE(P1, HANDLER) case P1: return HANDLER;
+#define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(STAGE_COMPLEX_SCRIPT_START, deriveNativeScriptHash_handleComplexScriptStart);
 		CASE(STAGE_ADD_SIMPLE_SCRIPT, deriveNativeScriptHash_handleSimpleScript);
 		CASE(STAGE_WHOLE_NATIVE_SCRIPT_FINISH, deriveNativeScriptHash_handleWholeNativeScriptFinish)
 		DEFAULT(NULL);
-	#undef   CASE
-	#undef   DEFAULT
+#undef   CASE
+#undef   DEFAULT
 	}
 }
 

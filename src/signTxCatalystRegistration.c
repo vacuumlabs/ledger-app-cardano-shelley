@@ -164,10 +164,10 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 	{
 		// select UI steps
 		switch (policy) {
-	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VOTING_KEY_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VOTING_KEY_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -259,11 +259,11 @@ static void signTxCatalystRegistration_handleStakingKeyAPDU(uint8_t* wireDataBuf
 	{
 		// select UI step
 		switch (policy) {
-	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_STAKING_KEY_STEP_WARNING);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_STAKING_KEY_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_STAKING_KEY_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -374,11 +374,11 @@ static void signTxCatalystRegistration_handleVotingRewardsAddressAPDU(uint8_t* w
 	{
 		// select UI steps
 		switch (policy) {
-	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_WARNING);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -453,10 +453,10 @@ static void signTxCatalystRegistration_handleNonceAPDU(uint8_t* wireDataBuffer, 
 	{
 		// select UI steps
 		switch (policy) {
-	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_NONCE_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_NONCE_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -561,10 +561,10 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 	{
 		// select UI steps
 		switch (policy) {
-	#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}

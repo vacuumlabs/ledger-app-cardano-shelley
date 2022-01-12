@@ -112,11 +112,11 @@ void signOpCert_handleAPDU(
 	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
 
 	switch (policy) {
-	#define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
+#define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,    UI_STEP_WARNING);
 		CASE(POLICY_PROMPT_BEFORE_RESPONSE, UI_STEP_CONFIRM_START);
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   UI_STEP_RESPOND);
-	#undef   CASE
+#undef   CASE
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
