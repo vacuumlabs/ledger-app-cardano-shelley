@@ -1055,16 +1055,18 @@ static void signTx_handleCertificate_ui_runStep()
 			);
 			break;
 		case STAKE_CREDENTIAL_KEY_HASH:
-			ui_displayHexBufferScreen(
+			ui_displayBech32Screen(
 			        "Staking key hash",
+			        "stake_vkh",
 			        BODY_CTX->stageData.certificate.stakeCredential.keyHash,
 			        SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.keyHash),
 			        this_fn
 			);
 			break;
 		case STAKE_CREDENTIAL_SCRIPT_HASH:
-			ui_displayHexBufferScreen(
+			ui_displayBech32Screen(
 			        "Staking script hash",
+			        "script",
 			        BODY_CTX->stageData.certificate.stakeCredential.scriptHash,
 			        SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.scriptHash),
 			        this_fn
