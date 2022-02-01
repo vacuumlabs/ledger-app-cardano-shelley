@@ -19,6 +19,12 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams);
 
 bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic);
+bool isTxNetworkIdVerifiable(
+        bool includeNetworkId,
+        uint32_t numOutputs,
+        uint32_t numWithdrawals,
+        sign_tx_signingmode_t txSigningMode
+);
 bool needsRunningScriptWarning(int32_t numCollaterals);
 bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollaterals);
 bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash);
@@ -27,12 +33,14 @@ security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
         uint32_t networkId,
         uint32_t protocolMagic,
+        uint16_t numOutputs,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint,
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
-        bool includeScriptDataHash
+        bool includeScriptDataHash,
+        bool includeNetworkId
 );
 
 security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);

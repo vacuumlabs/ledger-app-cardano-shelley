@@ -232,6 +232,30 @@ bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic)
 	return usualNetworkId && usualProtocolMagic;
 }
 
+bool isTxNetworkIdVerifiable(
+        bool includeNetworkId,
+        uint32_t numOutputs,
+        uint32_t numWithdrawals,
+        sign_tx_signingmode_t txSigningMode
+)
+{
+	if (includeNetworkId) return true;
+
+	if (numOutputs > 0) return true;
+	if (numWithdrawals > 0) return true;
+
+	switch (txSigningMode) {
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		// pool registration certificate contains pool reward account
+		return true;
+
+	default:
+		return false;
+	}
+}
+
 bool needsRunningScriptWarning(int32_t numCollaterals)
 {
 	return numCollaterals > 0;
@@ -254,12 +278,14 @@ security_policy_t policyForSignTxInit(
         sign_tx_signingmode_t txSigningMode,
         uint32_t networkId,
         uint32_t protocolMagic,
+        uint16_t numOutputs,
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint,
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
-        bool includeScriptDataHash
+        bool includeScriptDataHash,
+        bool includeNetworkId
 )
 {
 	DENY_UNLESS(isValidNetworkId(networkId));
@@ -306,6 +332,8 @@ security_policy_t policyForSignTxInit(
 	WARN_IF(needsRunningScriptWarning(numCollaterals));
 	WARN_IF(needsMissingCollateralWarning(txSigningMode, numCollaterals));
 	WARN_IF(needsMissingScriptDataHashWarning(txSigningMode, includeScriptDataHash));
+
+	WARN_UNLESS(isTxNetworkIdVerifiable(includeNetworkId, numOutputs, numWithdrawals, txSigningMode));
 
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
 	PROMPT();

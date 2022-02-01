@@ -273,6 +273,9 @@ void ui_displayRewardAccountScreen(
         ui_callback_fn_t callback
 )
 {
+	// WARNING: reward account must be displayed in full (not just a key derivation path)
+	// because the network id security policy relies on it
+
 	ASSERT(isValidNetworkId(networkId));
 
 	uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];

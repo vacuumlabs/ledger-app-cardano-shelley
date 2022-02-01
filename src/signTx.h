@@ -191,6 +191,7 @@ typedef struct {
 	bool includeScriptDataHash;
 	uint16_t numCollaterals;
 	uint16_t numRequiredSigners;
+	bool includeNetworkId;
 	uint16_t numWitnesses;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];

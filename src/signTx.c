@@ -399,15 +399,29 @@ static void signTx_handleInit_ui_runStep()
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_DISPLAY_NETWORK_DETAILS) {
-		if (isNetworkUsual(ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic)) {
-			// no need to display the network details
-			UI_STEP_JUMP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING);
+		const bool isNetworkIdVerifiable = isTxNetworkIdVerifiable(
+		        ctx->includeNetworkId,
+		        ctx->numOutputs, ctx->numWithdrawals,
+		        ctx->commonTxData.txSigningMode
+		                                   );
+		if (isNetworkIdVerifiable) {
+			if (isNetworkUsual(ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic)) {
+				// no need to display the network details
+				UI_STEP_JUMP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING);
+			}
+			ui_displayNetworkParamsScreen(
+			        "Network details",
+			        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
+			        this_fn
+			);
+		} else {
+			// technically, no pool reg. certificate as well, but the UI message would be too long
+			ui_displayPaginatedText(
+			        "Warning:",
+			        "cannot verify network id: no outputs or withrawals",
+			        this_fn
+			);
 		}
-		ui_displayNetworkParamsScreen(
-		        "Network details",
-		        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
-		        this_fn
-		);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING) {
@@ -464,6 +478,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 			uint8_t includeValidityIntervalStart;
 			uint8_t includeMint;
 			uint8_t includeScriptDataHash;
+			uint8_t includeNetworkId;
 			uint8_t txSigningMode;
 
 			uint8_t numInputs[4];
@@ -500,6 +515,9 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 
 		ctx->includeScriptDataHash = signTx_parseIncluded(wireHeader->includeScriptDataHash);
 		TRACE("Include script data hash %d", ctx->includeScriptDataHash);
+
+		ctx->includeNetworkId = signTx_parseIncluded(wireHeader->includeScriptDataHash);
+		TRACE("Include network id %d", ctx->includeNetworkId);
 
 		ctx->commonTxData.txSigningMode = wireHeader->txSigningMode;
 		TRACE("Signing mode %d", (int) ctx->commonTxData.txSigningMode);
@@ -553,12 +571,14 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	                                   ctx->commonTxData.txSigningMode,
 	                                   ctx->commonTxData.networkId,
 	                                   ctx->commonTxData.protocolMagic,
+	                                   ctx->numOutputs,
 	                                   ctx->numCertificates,
 	                                   ctx->numWithdrawals,
 	                                   ctx->includeMint,
 	                                   ctx->numCollaterals,
 	                                   ctx->numRequiredSigners,
-	                                   ctx->includeScriptDataHash
+	                                   ctx->includeScriptDataHash,
+	                                   ctx->includeNetworkId
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
