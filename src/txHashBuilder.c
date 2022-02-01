@@ -66,7 +66,8 @@ void txHashBuilder_init(
         bool includeMint,
         bool includeScriptDataHash,
         uint16_t numCollaterals,
-        uint16_t numRequiredSigners
+        uint16_t numRequiredSigners,
+        bool includeNetworkId
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -77,6 +78,10 @@ void txHashBuilder_init(
 	TRACE("includeAuxData = %u", includeAuxData);
 	TRACE("includeValidityIntervalStart = %u", includeValidityIntervalStart);
 	TRACE("includeMint = %u", includeMint);
+	TRACE("includeScriptDataHash = %u", includeScriptDataHash);
+	TRACE("numCollaterals = %u", numCollaterals);
+	TRACE("numRequiredSigners = %u", numRequiredSigners);
+	TRACE("includeNetworkId = %u", includeNetworkId);
 
 	blake2b_256_init(&builder->txHash);
 
@@ -119,10 +124,10 @@ void txHashBuilder_init(
 		builder->remainingRequiredSigners = numRequiredSigners;
 		if (numRequiredSigners > 0) numItems++;
 
-		// network id always included
-		numItems++;
+		builder->includeNetworkId = includeNetworkId;
+		if (includeNetworkId) numItems++;
 
-		ASSERT((4 <= numItems) && (numItems <= 13));
+		ASSERT((3 <= numItems) && (numItems <= 13));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -416,6 +421,7 @@ void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl)
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveFee(builder);
+	ASSERT(builder->includeTtl);
 
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_TTL);
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, ttl);
@@ -1001,6 +1007,7 @@ static void txHashBuilder_assertCanLeaveCertificates(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_CERTIFICATES:
+		// we are asserting no remainingCertificates below
 		break;
 
 	case TX_HASH_BUILDER_IN_TTL:
@@ -1063,6 +1070,7 @@ static void txHashBuilder_assertCanLeaveWithdrawals(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+		// we are asserting no remainingCertificates below
 		break;
 
 	case TX_HASH_BUILDER_IN_CERTIFICATES:
@@ -1121,6 +1129,7 @@ void txHashBuilder_addValidityIntervalStart(tx_hash_builder_t* builder, uint64_t
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveAuxData(builder);
+	ASSERT(builder->includeValidityIntervalStart);
 
 	// add validity interval start item into the main tx body map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_VALIDITY_INTERVAL_START);
@@ -1156,6 +1165,8 @@ void txHashBuilder_enterMint(tx_hash_builder_t* builder)
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveValidityIntervalStart(builder);
+	ASSERT(builder->includeMint);
+
 	{
 		// Enter mint
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_MINT);
@@ -1281,6 +1292,8 @@ void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder)
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveScriptDataHash(builder);
+	// TODO 	ASSERT(builder->remainingCollaterals > 0); prichadza do uvahy, ze ich je 0? pozriet cip 21
+
 	{
 		// Enter collateral inputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERALS);
@@ -1324,7 +1337,7 @@ static void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_COLLATERALS:
-		ASSERT(builder->remainingCollaterals == 0);
+		// we are asserting no remainingCollaterals below
 		break;
 
 	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
@@ -1341,6 +1354,8 @@ static void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
 	default:
 		ASSERT(false);
 	}
+
+	ASSERT(builder->remainingCollaterals == 0);
 }
 
 void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder)
@@ -1348,6 +1363,8 @@ void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder)
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveCollaterals(builder);
+	// TODO 	ASSERT(builder->remainingRequiredSigners > 0); prichadza do uvahy, ze ich je 0? pozriet cip 21
+
 	{
 		// Enter required signers
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_REQUIRED_SIGNERS);
@@ -1384,7 +1401,7 @@ static void txHashBuilder_assertCanLeaveRequiredSigners(tx_hash_builder_t* build
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
-		ASSERT(builder->remainingRequiredSigners == 0);
+		// we are asserting no remainingRequiredSigners below
 		break;
 
 	case TX_HASH_BUILDER_IN_COLLATERALS:
@@ -1402,6 +1419,8 @@ static void txHashBuilder_assertCanLeaveRequiredSigners(tx_hash_builder_t* build
 	default:
 		ASSERT(false);
 	}
+
+	ASSERT(builder->remainingRequiredSigners == 0);
 }
 
 void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId)
@@ -1409,6 +1428,7 @@ void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId)
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveRequiredSigners(builder);
+	ASSERT(builder->includeNetworkId);
 
 	// add network id item into the main tx body map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_NETWORK_ID);
@@ -1421,7 +1441,27 @@ static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d", builder->state);
 
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_NETWORK_ID);
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_NETWORK_ID:
+		break;
+
+	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
+	case TX_HASH_BUILDER_IN_COLLATERALS:
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveRequiredSigners(builder);
+		ASSERT(!builder->includeNetworkId);
+		break;
+
+	default:
+		ASSERT(false);
+	}
 }
 
 void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)

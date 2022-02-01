@@ -94,7 +94,8 @@ static inline void advanceStage()
 			        ctx->includeMint,
 			        ctx->includeScriptDataHash,
 			        ctx->numCollaterals,
-			        ctx->numRequiredSigners
+			        ctx->numRequiredSigners,
+			        ctx->includeNetworkId
 			);
 			txHashBuilder_enterInputs(&BODY_CTX->txHashBuilder);
 		}
@@ -229,7 +230,10 @@ static inline void advanceStage()
 
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
 		ASSERT(BODY_CTX->currentRequiredSigners == ctx->numRequiredSigners);
-		txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
+		if (ctx->includeNetworkId) {
+			// we are not waiting for any APDU here, network id is already known from the init APDU
+			txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
+		}
 		ctx->stage = SIGN_STAGE_CONFIRM;
 		break;
 
@@ -516,7 +520,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		ctx->includeScriptDataHash = signTx_parseIncluded(wireHeader->includeScriptDataHash);
 		TRACE("Include script data hash %d", ctx->includeScriptDataHash);
 
-		ctx->includeNetworkId = signTx_parseIncluded(wireHeader->includeScriptDataHash);
+		ctx->includeNetworkId = signTx_parseIncluded(wireHeader->includeNetworkId);
 		TRACE("Include network id %d", ctx->includeNetworkId);
 
 		ctx->commonTxData.txSigningMode = wireHeader->txSigningMode;

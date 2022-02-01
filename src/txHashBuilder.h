@@ -76,6 +76,7 @@ typedef struct {
 	bool includeValidityIntervalStart;
 	bool includeMint;
 	bool includeScriptDataHash;
+	bool includeNetworkId;
 
 	union {
 		struct {
@@ -106,7 +107,8 @@ void txHashBuilder_init(
         bool includeMint,
         bool includeScriptDataHash,
         uint16_t numCollaterals,
-        uint16_t numRequiredSigners
+        uint16_t numRequiredSigners,
+        bool includeNetworkId
 );
 
 void txHashBuilder_enterInputs(tx_hash_builder_t* builder);
