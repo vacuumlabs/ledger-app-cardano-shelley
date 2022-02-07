@@ -39,14 +39,9 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
-static inline bool containsScriptHash(const uint8_t addressType)
+static inline bool allows_datum_hash(const uint8_t addressType)
 {
-	if (determineSpendingChoice(addressType) == SPENDING_SCRIPT_HASH)
-		return true;
-	if (determineStakingChoice(addressType) == STAKING_SCRIPT_HASH)
-		return true;
-
-	return false;
+	return (determineSpendingChoice(addressType) == SPENDING_SCRIPT_HASH);
 }
 
 
@@ -379,7 +374,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	const uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
 
 	if (includeDatumHash) {
-		DENY_UNLESS(containsScriptHash(addressType));
+		DENY_UNLESS(allows_datum_hash(addressType));
 	}
 
 	switch (addressType) {
@@ -430,7 +425,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 {
 	DENY_UNLESS(isValidAddressParams(params));
 	if (includeDatumHash) {
-		DENY_UNLESS(containsScriptHash(params->type));
+		DENY_UNLESS(allows_datum_hash(params->type));
 	}
 
 	// address type and network identification
