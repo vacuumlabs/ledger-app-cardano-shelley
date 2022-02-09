@@ -52,7 +52,7 @@ void ui_idle(void)
 	#if defined(TARGET_NANOS)
 	nanos_clear_timer();
 	UX_MENU_DISPLAY(0, menu_main, NULL);
-	#elif defined(TARGET_NANOX)
+	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
 	// reserve a display stack slot if none yet
 	if (G_ux.stack_count == 0) {
 		ux_stack_push();

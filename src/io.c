@@ -32,7 +32,7 @@ void nanos_set_timer(int ms, timeout_callback_fn_t* cb)
 			callback(ux_allowed); \
 		} \
 	} while(0)
-#elif defined(TARGET_NANOX)
+#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
 #define HANDLE_UX_TICKER_EVENT(ux_allowed) do {} while(0)
 #endif
 

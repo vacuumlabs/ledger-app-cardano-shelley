@@ -1,5 +1,5 @@
 #include <bolos_target.h> // we need target definitions
-#if defined(TARGET_NANOX)
+#if defined(TARGET_NANOX) || defined(TARGET_NANOS2)
 
 #include <os_io_seproxyhal.h>
 #include "menu.h"
