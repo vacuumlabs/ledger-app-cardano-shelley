@@ -147,6 +147,11 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		}
 	}
+
+	security_policy_t policy = policyForCatalystRegistrationVotingKey();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		aux_data_hash_builder_t* auxDataHashBuilder = &AUX_DATA_CTX->auxDataHashBuilder;
 		auxDataHashBuilder_catalystRegistration_enter(auxDataHashBuilder);
@@ -155,11 +160,6 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 		        auxDataHashBuilder, subctx->stateData.votingPubKey, CATALYST_VOTING_PUBLIC_KEY_LENGTH
 		);
 	}
-
-	security_policy_t policy = policyForCatalystRegistrationVotingKey();
-
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -441,14 +441,14 @@ static void signTxCatalystRegistration_handleNonceAPDU(uint8_t* wireDataBuffer, 
 		        subctx->stateData.nonce
 		);
 	}
+
+	security_policy_t policy = policyForCatalystRegistrationNonce();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		auxDataHashBuilder_catalystRegistration_addNonce(&AUX_DATA_CTX->auxDataHashBuilder, subctx->stateData.nonce);
 	}
-
-	security_policy_t policy = policyForCatalystRegistrationNonce();
-
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps
@@ -535,6 +535,10 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
+	security_policy_t policy = policyForCatalystRegistrationConfirm();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		aux_data_hash_builder_t* auxDataHashBuilder = &AUX_DATA_CTX->auxDataHashBuilder;
 		{
@@ -551,12 +555,6 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 
 		auxDataHashBuilder_finalize(auxDataHashBuilder, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 	}
-
-
-	security_policy_t policy = policyForCatalystRegistrationConfirm();
-
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
 
 	{
 		// select UI steps

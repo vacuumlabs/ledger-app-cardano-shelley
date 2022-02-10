@@ -93,9 +93,10 @@ static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wi
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
-	txHashBuilder_addMint_topLevelData(&BODY_CTX->txHashBuilder, subctx->numAssetGroups);
 	subctx->mintSecurityPolicy = policyForSignTxMintInit(commonTxData->txSigningMode);
 	ENSURE_NOT_DENIED(subctx->mintSecurityPolicy);
+
+	txHashBuilder_addMint_topLevelData(&BODY_CTX->txHashBuilder, subctx->numAssetGroups);
 
 	respondSuccessEmptyMsg();
 	advanceState();

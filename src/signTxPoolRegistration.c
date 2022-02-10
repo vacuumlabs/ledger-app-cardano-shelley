@@ -441,10 +441,12 @@ static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, siz
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
-	txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
-	        &BODY_CTX->txHashBuilder,
-	        subctx->stateData.vrfKeyHash, SIZEOF(subctx->stateData.vrfKeyHash)
-	);
+	{
+		txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
+		        &BODY_CTX->txHashBuilder,
+		        subctx->stateData.vrfKeyHash, SIZEOF(subctx->stateData.vrfKeyHash)
+		);
+	}
 
 	{
 		// select UI steps
@@ -1206,11 +1208,17 @@ static void handleMetadata_ui_runStep()
 
 static void handleNullMetadata()
 {
-	{
-		security_policy_t policy = policyForSignTxStakePoolRegistrationNoMetadata();
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
+	security_policy_t policy = policyForSignTxStakePoolRegistrationNoMetadata();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
+	{
+		// add null metadata to certificate
+		TRACE("Adding null pool metadata to tx hash");
+		txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(&BODY_CTX->txHashBuilder);
+	}
+
+	{
 		// select UI step
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
@@ -1220,11 +1228,6 @@ static void handleNullMetadata()
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
-	}
-	{
-		// add null metadata to certificate
-		TRACE("Adding null pool metadata to tx hash");
-		txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(&BODY_CTX->txHashBuilder);
 	}
 
 	handleNullMetadata_ui_runStep();
@@ -1280,21 +1283,9 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	{
-		security_policy_t policy = policyForSignTxStakePoolRegistrationMetadata();
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
-
-		// select UI step
-		switch (policy) {
-#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_METADATA_STEP_DISPLAY_URL);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_METADATA_STEP_RESPOND);
-#undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
-	}
+	security_policy_t policy = policyForSignTxStakePoolRegistrationMetadata();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// add metadata to tx
@@ -1304,6 +1295,18 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		        subctx->stateData.metadata.url, subctx->stateData.metadata.urlSize,
 		        subctx->stateData.metadata.hash, SIZEOF(subctx->stateData.metadata.hash)
 		);
+	}
+
+	{
+		// select UI step
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_METADATA_STEP_DISPLAY_URL);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_METADATA_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
 	}
 
 	handleMetadata_ui_runStep();

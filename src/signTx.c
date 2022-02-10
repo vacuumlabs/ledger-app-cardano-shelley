@@ -1693,6 +1693,15 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, uint8_t* wireData
 	ENSURE_NOT_DENIED(policy);
 
 	{
+		TRACE("Adding validity interval start to tx hash");
+		txHashBuilder_addValidityIntervalStart(
+		        &BODY_CTX->txHashBuilder,
+		        BODY_CTX->stageData.validityIntervalStart
+		);
+		TRACE();
+	}
+
+	{
 		// select UI step
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
@@ -1702,15 +1711,6 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, uint8_t* wireData
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
-	}
-
-	{
-		TRACE("Adding validity interval start to tx hash");
-		txHashBuilder_addValidityIntervalStart(
-		        &BODY_CTX->txHashBuilder,
-		        BODY_CTX->stageData.validityIntervalStart
-		);
-		TRACE();
 	}
 
 	signTx_handleValidityInterval_ui_runStep();
@@ -2157,18 +2157,14 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 		PRINTF("\n");
 	}
 
-	security_policy_t policy = POLICY_DENY;
-	{
-		// get policy
-		policy = policyForSignTxWitness(
-		                 ctx->commonTxData.txSigningMode,
-		                 &WITNESS_CTX->stageData.witness.path,
-		                 ctx->includeMint,
-		                 ctx->poolOwnerByPath ? &ctx->poolOwnerPath : NULL
-		         );
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
-	}
+	security_policy_t policy = policyForSignTxWitness(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &WITNESS_CTX->stageData.witness.path,
+	                                   ctx->includeMint,
+	                                   ctx->poolOwnerByPath ? &ctx->poolOwnerPath : NULL
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// compute witness
