@@ -16,7 +16,7 @@
 #*******************************************************************************
 
 APPNAME      = "Cardano ADA"
-APPVERSION_M = 3
+APPVERSION_M = 4
 APPVERSION_N = 0
 APPVERSION_P = 0
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
