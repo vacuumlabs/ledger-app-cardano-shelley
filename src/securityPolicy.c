@@ -373,10 +373,6 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	const address_type_t addressType = getAddressType(rawAddressBuffer[0]);
 	const uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
 
-	if (includeDatumHash) {
-		DENY_UNLESS(allows_datum_hash(addressType));
-	}
-
 	switch (addressType) {
 
 	case BYRON:
@@ -391,6 +387,13 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	default: // shelley types allowed in output
 		DENY_IF(addressNetworkId != networkId);
 		break;
+	}
+
+	if (includeDatumHash) {
+		DENY_UNLESS(allows_datum_hash(addressType));
+		// no Plutus elements for pool registration
+		DENY_IF(txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER);
+		DENY_IF(txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR);
 	}
 
 	switch (txSigningMode) {
@@ -424,9 +427,6 @@ security_policy_t policyForSignTxOutputAddressParams(
 )
 {
 	DENY_UNLESS(isValidAddressParams(params));
-	if (includeDatumHash) {
-		DENY_UNLESS(allows_datum_hash(params->type));
-	}
 
 	// address type and network identification
 	switch (params->type) {
@@ -443,6 +443,13 @@ security_policy_t policyForSignTxOutputAddressParams(
 	default: // shelley types allowed in output
 		DENY_IF(params->networkId != networkId);
 		break;
+	}
+
+	if (includeDatumHash) {
+		DENY_UNLESS(allows_datum_hash(params->type));
+		// no Plutus elements for pool registration
+		DENY_IF(txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER);
+		DENY_IF(txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR);
 	}
 
 	switch (txSigningMode) {
