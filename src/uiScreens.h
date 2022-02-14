@@ -162,7 +162,8 @@ __noinline_due_to_stack__
 void ui_displayInputScreen(
         const char* screenHeader,
         const sign_tx_transaction_input_t* input,
-        ui_callback_fn_t callback);
+        ui_callback_fn_t callback
+);
 
 #ifdef DEVEL
 void run_uiScreens_test();

@@ -28,7 +28,7 @@ static inline void initTxBodyCtx()
 		BODY_CTX->currentCertificate = 0;
 		BODY_CTX->currentWithdrawal = 0;
 		BODY_CTX->currentCollateral = 0;
-		BODY_CTX->currentRequiredSigners = 0;
+		BODY_CTX->currentRequiredSigner = 0;
 		BODY_CTX->feeReceived = false;
 		BODY_CTX->ttlReceived = false;
 		BODY_CTX->validityIntervalStartReceived = false;
@@ -229,7 +229,7 @@ static inline void advanceStage()
 	// intentional fallthrough
 
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
-		ASSERT(BODY_CTX->currentRequiredSigners == ctx->numRequiredSigners);
+		ASSERT(BODY_CTX->currentRequiredSigner == ctx->numRequiredSigners);
 		if (ctx->includeNetworkId) {
 			// we are not waiting for any APDU here, network id is already known from the init APDU
 			txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
@@ -432,7 +432,7 @@ static void signTx_handleInit_ui_runStep()
 		if (!needsRunningScriptWarning(ctx->numCollaterals)) {
 			UI_STEP_JUMP(HANDLE_INIT_STEP_NO_COLLATERALS_WARNING);
 		}
-		ui_displayPaginatedText("WARNING:", "Plutus script will be run", this_fn);
+		ui_displayPaginatedText("WARNING:", "Plutus script will be evaluated", this_fn);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_NO_COLLATERALS_WARNING) {
@@ -550,7 +550,7 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		ctx->numCertificates      = (uint16_t) u4be_read(wireHeader->numCertificates);
 		ctx->numWithdrawals       = (uint16_t) u4be_read(wireHeader->numWithdrawals);
 		ctx->numWitnesses         = (uint16_t) u4be_read(wireHeader->numWitnesses);
-		ctx->numCollaterals		  = (uint16_t) u4be_read(wireHeader->numCollaterals);
+		ctx->numCollaterals       = (uint16_t) u4be_read(wireHeader->numCollaterals);
 		ctx->numRequiredSigners	  = (uint16_t) u4be_read(wireHeader->numRequiredSigners);
 
 		TRACE(
@@ -1923,10 +1923,10 @@ static void signTx_handleRequiredSigner_ui_runStep()
 		respondSuccessEmptyMsg();
 
 		// Advance stage to the next input
-		ASSERT(BODY_CTX->currentRequiredSigners < ctx->numRequiredSigners);
-		BODY_CTX->currentRequiredSigners++;
+		ASSERT(BODY_CTX->currentRequiredSigner < ctx->numRequiredSigners);
+		BODY_CTX->currentRequiredSigner++;
 
-		if (BODY_CTX->currentRequiredSigners == ctx->numRequiredSigners) {
+		if (BODY_CTX->currentRequiredSigner == ctx->numRequiredSigners) {
 			advanceStage();
 		}
 	}
@@ -1940,7 +1940,7 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_BODY_REQUIRED_SIGNERS);
-		ASSERT(BODY_CTX->currentRequiredSigners < ctx->numRequiredSigners);
+		ASSERT(BODY_CTX->currentRequiredSigner < ctx->numRequiredSigners);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
