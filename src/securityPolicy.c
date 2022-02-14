@@ -1114,8 +1114,11 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 	DENY(); // should not be reached
 }
 
-security_policy_t policyForSignTxCollaterals(const sign_tx_signingmode_t txSigningMode)
+security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSigningMode)
 {
+	// we do not impose restrictions on individual collateral inputs
+	// because a HW wallet cannot verify anything about the input
+
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		SHOW();
@@ -1135,9 +1138,11 @@ security_policy_t policyForSignTxCollaterals(const sign_tx_signingmode_t txSigni
 	DENY();
 }
 
-security_policy_t policyForSignTxRequiredSigners(const sign_tx_signingmode_t txSigningMode)
+security_policy_t policyForSignTxRequiredSigner(const sign_tx_signingmode_t txSigningMode)
 {
-	//TODO rework when more information is available
+	// we do not impose restrictions on individual signer paths because
+	// even if we did, it could be circumvented by passing key hash directly
+
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		SHOW();
