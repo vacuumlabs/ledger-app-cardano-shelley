@@ -173,7 +173,7 @@ static void signTx_handleOutput_addressBytes()
 	{
 		// add to tx
 		ASSERT(subctx->stateData.output.address.size > 0);
-		ASSERT(subctx->stateData.output.address.size < BUFFER_SIZE_PARANOIA);
+		ASSERT(subctx->stateData.output.address.size <= MAX_ADDRESS_SIZE);
 
 		txHashBuilder_addOutput_topLevelData(
 		        &BODY_CTX->txHashBuilder,
@@ -204,11 +204,13 @@ enum {
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN = 3200,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO,
+	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_INVALID,
 };
 
+__noinline_due_to_stack__
 static void signTx_handleOutput_addressParams_ui_runStep()
 {
 	output_context_t* subctx = accessSubcontext();
@@ -231,6 +233,18 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO) {
 		ui_displayStakingInfoScreen(&subctx->stateData.output.params, this_fn);
+	}
+	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE];
+		size_t addressSize = deriveAddress(&subctx->stateData.output.params, addressBuffer, SIZEOF(addressBuffer));
+		ASSERT(addressSize > 0);
+		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
+
+		ui_displayAddressScreen(
+		        "Address",
+		        addressBuffer, addressSize,
+		        this_fn
+		);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT) {
 		ui_displayAdaAmountScreen("Send", subctx->stateData.output.adaAmount, this_fn);
@@ -268,7 +282,7 @@ static void signTx_handleOutput_addressParams()
 		                             SIZEOF(addressBuffer)
 		                     );
 		ASSERT(addressSize > 0);
-		ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
+		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
 
 		txHashBuilder_addOutput_topLevelData(
 		        &BODY_CTX->txHashBuilder,
