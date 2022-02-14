@@ -271,8 +271,10 @@ bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
-	// We have to have space for terminating null
-	ASSERT(outSize > 0);
+	// we need space for the terminating \0
+	// and one more byte to check whether
+	// snprintf has enough space to print everything
+	ASSERT(outSize >= BIP44_PATH_STRING_SIZE_MAX + 1);
 	char* ptr = out;
 	char* end = (out + outSize);
 
@@ -283,13 +285,13 @@ size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 		size_t availableSize = (size_t) (end - ptr); \
 		/* Note(ppershing): We do not bother checking return */ \
 		/* value of snprintf as it always returns 0. */ \
-		/* Go figure out ... */ \
+		/* Go figure ... */ \
 		snprintf(ptr, availableSize, fmt, ##__VA_ARGS__); \
 		size_t res = strlen(ptr); \
 		/* if snprintf filled all the remaining space, there is no space for '\0', */ \
-		/* i.e. outSize is insufficient, we messed something up */ \
-		/* usually, outSize >= BIP44_PATH_STRING_SIZE_MAX */ \
-		ASSERT(res + 1 <= availableSize); \
+		/* or the information is not displayed in full, */ \
+		/* and that's a serious security risk */ \
+		ASSERT(res + 1 < availableSize); \
 		ptr += res; \
 	}
 
@@ -307,8 +309,8 @@ size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 		}
 	}
 #undef WRITE
-	ASSERT(ptr < end);
 	ASSERT(ptr >= out);
+	ASSERT(ptr + 1 < end);
 
 	return ptr - out;
 }
@@ -496,7 +498,7 @@ bool bip44_pathsEqual(const bip44_path_t* lhs, const bip44_path_t* rhs)
 #ifdef DEVEL
 void bip44_PRINTF(const bip44_path_t* pathSpec)
 {
-	char tmp[BIP44_PATH_STRING_SIZE_MAX];
+	char tmp[BIP44_PATH_STRING_SIZE_MAX + 1];
 	SIZEOF(*pathSpec);
 	bip44_printToStr(pathSpec, tmp, SIZEOF(tmp));
 	PRINTF("%s", tmp);

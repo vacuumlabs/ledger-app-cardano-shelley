@@ -84,8 +84,9 @@ void ui_displayPathScreen(
 	ASSERT(strlen(firstLine) > 0);
 	ASSERT(strlen(firstLine) < BUFFER_SIZE_PARANOIA);
 
-	char pathStr[1 + BIP44_PATH_STRING_SIZE_MAX];
+	char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1];
 	bip44_printToStr(path, pathStr, SIZEOF(pathStr));
+	ASSERT(strlen(pathStr) + 1 < SIZEOF(pathStr));
 
 	ui_displayPaginatedText(
 	        firstLine,
@@ -230,7 +231,7 @@ static void _displayRewardAccountWithDescriptionScreen(
         ui_callback_fn_t callback
 )
 {
-	char description[BIP44_PATH_STRING_SIZE_MAX + MAX_HUMAN_REWARD_ACCOUNT_SIZE + 1];
+	char description[BIP44_PATH_STRING_SIZE_MAX + MAX_HUMAN_REWARD_ACCOUNT_SIZE + 2];
 	explicit_bzero(description, SIZEOF(description));
 	size_t descLen = 0; // description length
 
@@ -239,12 +240,12 @@ static void _displayRewardAccountWithDescriptionScreen(
 	}
 	{
 		// add bech32-encoded reward account
-		ASSERT(descLen <= BIP44_PATH_STRING_SIZE_MAX);
-		ASSERT(descLen + 1 <= SIZEOF(description));
+		ASSERT(descLen < BIP44_PATH_STRING_SIZE_MAX);
+		ASSERT(descLen + 1 < SIZEOF(description));
 
 		if (descLen > 0) {
 			// add a space after path if the path is present
-			ASSERT(descLen + 2 <= SIZEOF(description));
+			ASSERT(descLen + 2 < SIZEOF(description));
 			description[descLen++] = ' ';
 			description[descLen] = '\0';
 		}
@@ -256,7 +257,7 @@ static void _displayRewardAccountWithDescriptionScreen(
 			           );
 		}
 		ASSERT(descLen == strlen(description));
-		ASSERT(descLen + 1 <= SIZEOF(description));
+		ASSERT(descLen + 1 < SIZEOF(description));
 	}
 
 	ui_displayPaginatedText(

@@ -19,7 +19,7 @@ void testcase_printToStr(const uint32_t* path, uint32_t pathLen, size_t outputSi
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	char result[BIP44_PATH_STRING_SIZE_MAX];
+	char result[BIP44_PATH_STRING_SIZE_MAX + 1];
 	ASSERT(outputSize <= SIZEOF(result));
 
 	size_t resultLen = bip44_printToStr(&pathSpec, result, outputSize);
