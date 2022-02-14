@@ -485,7 +485,7 @@ size_t deriveAssetFingerprint(
 
 	size_t len = bech32_encode("asset", fingerprintBuffer, SIZEOF(fingerprintBuffer), fingerprint, fingerprintMaxSize);
 	ASSERT(len == strlen(fingerprint));
-	ASSERT(len + 1 <= fingerprintMaxSize);
+	ASSERT(len + 1 < fingerprintMaxSize);
 
 	return len;
 }
@@ -499,13 +499,14 @@ void ui_displayAssetFingerprintScreen(
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 
 	char fingerprint[200];
+	explicit_bzero(fingerprint, SIZEOF(fingerprint));
 
 	deriveAssetFingerprint(
 	        tokenGroup->policyId, SIZEOF(tokenGroup->policyId),
 	        assetNameBytes, assetNameSize,
 	        fingerprint, SIZEOF(fingerprint)
 	);
-	ASSERT(strlen(fingerprint) + 1 <= SIZEOF(fingerprint));
+	ASSERT(strlen(fingerprint) + 1 < SIZEOF(fingerprint));
 
 	ui_displayPaginatedText(
 	        "Asset fingerprint",
