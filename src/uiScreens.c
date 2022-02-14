@@ -341,9 +341,6 @@ void ui_displaySpendingInfoScreen(
         ui_callback_fn_t callback
 )
 {
-	char spendingInfo[120];
-	explicit_bzero(spendingInfo, SIZEOF(spendingInfo));
-
 	switch (determineSpendingChoice(addressParams->type)) {
 
 	case SPENDING_PATH: {
