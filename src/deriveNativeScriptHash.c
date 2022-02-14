@@ -75,8 +75,8 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 	// 10 - length of the leading prefix: "Position: "
 	// 11 - max length for the position information for one level: "x."
 	//      where x is 2^32-1
-	// 1  - the ending null byte
-	char positionDescription[10 + 11 * (MAX_SCRIPT_DEPTH - 1) + 1];
+	// 2  - the ending null byte + 1B for checking if all text has been printed
+	char positionDescription[10 + 11 * (MAX_SCRIPT_DEPTH - 1) + 2];
 	explicit_bzero(positionDescription, SIZEOF(positionDescription));
 	char* ptr = BEGIN(positionDescription);
 	char* end = END(positionDescription);
@@ -92,6 +92,7 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 		STATIC_ASSERT(sizeof(position) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(position), "signed type for %u");
 		snprintf(ptr, (end - ptr), "%u.", position);
+		ASSERT(strlen(positionDescription) + 1 < SIZEOF(positionDescription));
 		ptr += strlen(ptr);
 	}
 
@@ -99,7 +100,7 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 	ASSERT(ptr > BEGIN(positionDescription));
 	*(ptr - 1) = '\0';
 
-	ASSERT(strlen(positionDescription) + 1 <= SIZEOF(positionDescription));
+	ASSERT(strlen(positionDescription) + 1 < SIZEOF(positionDescription));
 
 	VALIDATE(uiPaginatedText_canFitStringIntoFullText(positionDescription), ERR_INVALID_DATA);
 
@@ -159,10 +160,13 @@ static void deriveScriptHash_display_ui_runStep()
 		case UI_SCRIPT_ANY: {
 			// max possible length 35: "Contains n nested scripts."
 			// where n is 2^32-1
-			char text[36] = {0};
+			char text[37];
+			explicit_bzero(text, SIZEOF(text));
 			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
 			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
 			snprintf(text, SIZEOF(text), "Contains %u nested scripts.", ctx->complexScripts[ctx->level].remainingScripts);
+			// make sure all the information is displayed to the user
+			ASSERT(strlen(text) + 1 < SIZEOF(text));
 
 			ui_displayPaginatedText(
 			        HEADER,
@@ -174,12 +178,15 @@ static void deriveScriptHash_display_ui_runStep()
 		case UI_SCRIPT_N_OF_K: {
 			// max possible length 85: "Requires n out of k signatures. Contains k nested scripts."
 			// where n and k is 2^32-1
-			char text[86] = {0};
+			char text[87];
+			explicit_bzero(text, SIZEOF(text));
 			STATIC_ASSERT(sizeof(ctx->scriptContent.requiredScripts) <= sizeof(unsigned), "oversized type for %u");
 			STATIC_ASSERT(!IS_SIGNED(ctx->scriptContent.requiredScripts), "signed type for %u");
 			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
 			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
 			snprintf(text, SIZEOF(text), "Requires %u out of %u signatures. Contains %u nested scripts", ctx->scriptContent.requiredScripts, ctx->complexScripts[ctx->level].remainingScripts, ctx->complexScripts[ctx->level].remainingScripts);
+			// make sure all the information is displayed to the user
+			ASSERT(strlen(text) + 1 < SIZEOF(text));
 
 			ui_displayPaginatedText(
 			        HEADER,
