@@ -447,6 +447,7 @@ void ui_displayStakingInfoScreen(
 
 	ASSERT(heading != NULL);
 	ASSERT(strlen(stakingInfo) > 0);
+	ASSERT(strlen(stakingInfo) + 1 < SIZEOF(stakingInfo));
 
 	ui_displayPaginatedText(
 	        heading,

@@ -483,7 +483,8 @@ void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* ou
 	        blockchainPointer.txIndex,
 	        blockchainPointer.certificateIndex
 	);
-	ASSERT(strlen(out) + 1 <= outSize);
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(out) + 1 < outSize);
 }
 
 // bech32 for Shelley, base58 for Byron
