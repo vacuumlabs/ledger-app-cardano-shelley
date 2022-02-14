@@ -30,14 +30,14 @@ void ui_displayBech32Screen(
 		ASSERT(bufferSize <= BECH32_BUFFER_SIZE_MAX);
 	}
 
-	char encodedStr[10 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX]; // rough upper bound on required size
+	char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX]; // rough upper bound on required size
 	explicit_bzero(encodedStr, SIZEOF(encodedStr));
 
 	{
 		size_t len = bech32_encode(bech32Prefix, buffer, bufferSize, encodedStr, SIZEOF(encodedStr));
 
 		ASSERT(len == strlen(encodedStr));
-		ASSERT(len + 1 <= SIZEOF(encodedStr));
+		ASSERT(len + 1 < SIZEOF(encodedStr));
 	}
 
 	ui_displayPaginatedText(
@@ -280,7 +280,7 @@ void ui_displayRewardAccountScreen(
 	ASSERT(isValidNetworkId(networkId));
 
 	uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
-	char firstLine[20];
+	char firstLine[32];
 	explicit_bzero(firstLine, SIZEOF(firstLine));
 
 	switch (rewardAccount->keyReferenceType) {
@@ -323,8 +323,9 @@ void ui_displayRewardAccountScreen(
 
 	{
 		const size_t len = strlen(firstLine);
-		ASSERT(len < SIZEOF(firstLine));
 		ASSERT(len > 0);
+		// make sure all the information is displayed to the user
+		ASSERT(len + 1 < SIZEOF(firstLine));
 	}
 
 	_displayRewardAccountWithDescriptionScreen(
@@ -700,6 +701,8 @@ void ui_displayPoolOwnerScreen(
 		STATIC_ASSERT(sizeof(ownerIndex + 1) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(ownerIndex + 1), "signed type for %u");
 		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
+		// make sure all the information is displayed to the user
+		ASSERT(strlen(firstLine) + 1 < SIZEOF(firstLine));
 
 		_displayRewardAccountWithDescriptionScreen(
 		        owner->keyReferenceType,
@@ -724,6 +727,8 @@ void ui_displayPoolRelayScreen(
 		STATIC_ASSERT(sizeof(relayIndex + 1) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(relayIndex + 1), "signed type for %u");
 		snprintf(firstLine, SIZEOF(firstLine), "Relay #%u", relayIndex + 1);
+		// make sure all the information is displayed to the user
+		ASSERT(strlen(firstLine) + 1 < SIZEOF(firstLine));
 	}
 
 	ui_displayPaginatedText(
@@ -821,9 +826,12 @@ void ui_displayInputScreen(
 	ASSERT(length == 2 * SIZEOF(input->txHashBuffer));
 
 	// parsedIndex 32 bit (10) + separator (" / ") + utxo hash hex format + \0
-	char inputStr[10 + 3 + SIZEOF(input->txHashBuffer) * 2 + 1];
+	// + 1 byte to detect if everything has been written
+	char inputStr[10 + 3 + SIZEOF(input->txHashBuffer) * 2 + 1 + 1];
 
 	snprintf(inputStr, SIZEOF(inputStr), "%u / %s", input->parsedIndex, txHex);
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(inputStr) + 1 < SIZEOF(inputStr));
 
 	ui_displayPaginatedText(
 	        screenHeader,

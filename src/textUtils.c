@@ -43,7 +43,8 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	const char *suffix = " ADA";
 	const size_t suffixLength = strlen(suffix);
 
-	ASSERT(rawSize + suffixLength + 1 <= outSize);
+	// make sure all the information is displayed to the user
+	ASSERT(rawSize + suffixLength + 1 < outSize);
 
 	// Copy reversed & append terminator
 	for (size_t i = 0; i < rawSize; i++) {
