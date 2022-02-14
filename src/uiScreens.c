@@ -740,7 +740,7 @@ void ui_displayIpv4Screen(
         ui_callback_fn_t callback
 )
 {
-	char ipStr[IPV4_STR_SIZE_MAX];
+	char ipStr[IPV4_STR_SIZE_MAX + 1];
 	explicit_bzero(ipStr, SIZEOF(ipStr));
 
 	if (ipv4->isNull) {
@@ -749,7 +749,8 @@ void ui_displayIpv4Screen(
 		inet_ntop4(ipv4->ip, ipStr, SIZEOF(ipStr));
 	}
 
-	ASSERT(strlen(ipStr) + 1 <= SIZEOF(ipStr));
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(ipStr) + 1 < SIZEOF(ipStr));
 
 	ui_displayPaginatedText(
 	        "IPv4 address",
@@ -763,7 +764,7 @@ void ui_displayIpv6Screen(
         ui_callback_fn_t callback
 )
 {
-	char ipStr[IPV6_STR_SIZE_MAX];
+	char ipStr[IPV6_STR_SIZE_MAX + 1];
 	explicit_bzero(ipStr, SIZEOF(ipStr));
 
 	if (ipv6->isNull) {
@@ -772,7 +773,8 @@ void ui_displayIpv6Screen(
 		inet_ntop6(ipv6->ip, ipStr, SIZEOF(ipStr));
 	}
 
-	ASSERT(strlen(ipStr) + 1 <= SIZEOF(ipStr));
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(ipStr) + 1 < SIZEOF(ipStr));
 
 	ui_displayPaginatedText(
 	        "IPv6 address",
@@ -786,7 +788,7 @@ void ui_displayIpPortScreen(
         ui_callback_fn_t callback
 )
 {
-	char portStr[sizeof "65536"];
+	char portStr[1 + (sizeof "65536")];
 	explicit_bzero(portStr, SIZEOF(portStr));
 
 	if (port->isNull) {
@@ -797,7 +799,8 @@ void ui_displayIpPortScreen(
 		snprintf(portStr, SIZEOF(portStr), "%u", port->number);
 	}
 
-	ASSERT(strlen(portStr) + 1 <= SIZEOF(portStr));
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(portStr) + 1 < SIZEOF(portStr));
 
 	ui_displayPaginatedText(
 	        "Port",

@@ -53,7 +53,7 @@ void inet_ntop4 (const uint8_t *src, char *dst, size_t dstSize)
 
 	snprintf(dst, dstSize, fmt, src[0], src[1], src[2], src[3]);
 
-	ASSERT(strlen(dst) + 1 <= dstSize);
+	ASSERT(strlen(dst) + 1 < dstSize);
 }
 
 /*
@@ -155,10 +155,7 @@ void inet_ntop6 (const uint8_t *src, char *dst, size_t dstSize)
 	ASSERT(tp < tmp + SIZEOF(tmp));
 	*tp++ = '\0';
 
-	/*
-	 * Check for overflow, copy, and we're done.
-	 */
-	ASSERT(strlen(tmp) + 1 <= dstSize);
+	ASSERT(strlen(tmp) + 1 < dstSize);
 
 	strncpy(dst, tmp, dstSize);
 }
