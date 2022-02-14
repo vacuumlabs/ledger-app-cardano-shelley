@@ -391,9 +391,9 @@ static void signTx_handleInit_ui_runStep()
 		const uint32_t signingModeStrIndex = ctx->commonTxData.txSigningMode - SIGN_TX_SIGNINGMODE_ORDINARY_TX;
 		ASSERT(signingModeStrIndex < ARRAY_LEN(uiSigningModeName));
 		snprintf(bodyTxt, SIZEOF(bodyTxt), "%s transaction?", ((const char*)PIC(uiSigningModeName[signingModeStrIndex])));
-		// Make sure we have space after, so we know snprintf didn't truncate the text
-		// snprintf's return value cannot be trusted with this SDK
-		ASSERT(strlen(bodyTxt) < SIZEOF(bodyTxt) - 1);
+		// make sure all the information is displayed to the user
+		ASSERT(strlen(bodyTxt) + 1 < SIZEOF(bodyTxt));
+
 		ui_displayPrompt(
 		        "Start new",
 		        bodyTxt,
@@ -764,8 +764,12 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_INPUT_STEP_DISPLAY) {
-		char headerText[18];
+		char headerText[20];
+		explicit_bzero(headerText, SIZEOF(headerText));
 		snprintf(headerText, SIZEOF(headerText), "Input #%u", BODY_CTX->currentInput);
+		// make sure all the information is displayed to the user
+		ASSERT(strlen(headerText) + 1 < SIZEOF(headerText));
+
 		ui_displayInputScreen(headerText, &BODY_CTX->stageData.input, this_fn);
 	}
 
@@ -1121,6 +1125,8 @@ static void signTx_handleCertificate_ui_runStep()
 		default:
 			ASSERT(false);
 		}
+		// make sure all the information is displayed to the user
+		ASSERT(strlen(description) + 1 < SIZEOF(description));
 
 		ui_displayPrompt(
 		        "Confirm",
@@ -1827,8 +1833,12 @@ static void signTx_handleCollateral_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_COLLATERAL_STEP_DISPLAY) {
-		char headerText[18];
+		char headerText[20];
+		explicit_bzero(headerText, SIZEOF(headerText));
 		snprintf(headerText, SIZEOF(headerText), "Collateral #%u", BODY_CTX->currentCollateral);
+		// make sure all the information is displayed to the user
+		ASSERT(strlen(headerText) + 1 < SIZEOF(headerText));
+
 		ui_displayInputScreen(headerText, &BODY_CTX->stageData.collateral, this_fn);
 	}
 
