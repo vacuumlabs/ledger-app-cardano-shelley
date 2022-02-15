@@ -2014,7 +2014,8 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 // ============================== CONFIRM ==============================
 
 enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 1000,
+	HANDLE_CONFIRM_STEP_TXID = 1000,
+	HANDLE_CONFIRM_STEP_FINAL_CONFIRM,
 	HANDLE_CONFIRM_STEP_RESPOND,
 	HANDLE_CONFIRM_STEP_INVALID,
 };
@@ -2027,6 +2028,14 @@ static void signTx_handleConfirm_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
+	UI_STEP(HANDLE_CONFIRM_STEP_TXID) {
+		ASSERT(ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX);
+		ui_displayHexBufferScreen(
+		        "Transaction id",
+		        ctx->txHash, SIZEOF(ctx->txHash),
+		        this_fn
+		);
+	}
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(
 		        "Confirm",
@@ -2043,6 +2052,16 @@ static void signTx_handleConfirm_ui_runStep()
 		advanceStage();
 	}
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
+}
+
+static bool _shouldDisplayTxId(sign_tx_signingmode_t signingMode)
+{
+	switch(signingMode) {
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		return true;
+	default:
+		return false;
+	}
 }
 
 __noinline_due_to_stack__
@@ -2077,9 +2096,11 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UN
 
 	{
 		// select UI step
+		const int firstStep = (_shouldDisplayTxId(ctx->commonTxData.txSigningMode)) ?
+		                      HANDLE_CONFIRM_STEP_TXID : HANDLE_CONFIRM_STEP_FINAL_CONFIRM;
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, firstStep);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
 #undef   CASE
 		default:
