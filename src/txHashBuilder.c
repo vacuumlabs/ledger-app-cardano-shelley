@@ -1187,7 +1187,7 @@ void txHashBuilder_addMint_topLevelData(
 	//   { * policy_id => { * asset_name => uint } }
 	// ]
 	BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numAssetGroups);
-	ASSERT(0 != numAssetGroups);
+	ASSERT(numAssetGroups > 0);
 	builder->state = TX_HASH_BUILDER_IN_MINT_ASSET_GROUP;
 }
 

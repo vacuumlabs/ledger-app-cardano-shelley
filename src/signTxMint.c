@@ -70,6 +70,43 @@ static inline void advanceState()
 	TRACE("Advancing mint state to: %d", subctx->state);
 }
 
+enum {
+	HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY = 9200,
+	HANDLE_MINT_TOP_LEVEL_DATA_RESPOND,
+	HANDLE_MINT_TOP_LEVEL_DATA_INVALID,
+};
+
+__noinline_due_to_stack__
+static void signTxMint_handleTopLevelData_ui_runStep()
+{
+	mint_context_t* subctx = accessSubcontext();
+	TRACE("UI step %d", subctx->ui_step);
+
+	ui_callback_fn_t* this_fn = signTxMint_handleTopLevelData_ui_runStep;
+
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY) {
+		char secondLine[50] = {0};
+		explicit_bzero(secondLine, SIZEOF(secondLine));
+		STATIC_ASSERT(!IS_SIGNED(subctx->numAssetGroups), "signed type for %u");
+		snprintf(secondLine, SIZEOF(secondLine), "%u asset groups", subctx->numAssetGroups);
+		ASSERT(strlen(secondLine) + 1 < SIZEOF(secondLine));
+
+		ui_displayPaginatedText(
+			"Mint",
+			secondLine,
+			this_fn
+		);
+	}
+	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		advanceState();
+	}
+	UI_STEP_END(HANDLE_MINT_TOP_LEVEL_DATA_INVALID);
+}
+
 static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
@@ -98,8 +135,8 @@ static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wi
 
 	txHashBuilder_addMint_topLevelData(&BODY_CTX->txHashBuilder, subctx->numAssetGroups);
 
-	respondSuccessEmptyMsg();
-	advanceState();
+	subctx->ui_step = HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY;
+	signTxMint_handleTopLevelData_ui_runStep();
 }
 
 enum {

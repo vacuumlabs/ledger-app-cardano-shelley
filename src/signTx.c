@@ -1741,8 +1741,6 @@ static void signTx_handleMintAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 	// all mint handling is delegated to a state sub-machine
 	VALIDATE(signTxMint_isValidInstruction(p2), ERR_INVALID_DATA);
 	signTxMint_handleAPDU(p2, wireDataBuffer, wireDataSize);
-
-	// TODO display an introductory mint message?
 }
 
 // ========================= SCRIPT DATA HASH ==========================
