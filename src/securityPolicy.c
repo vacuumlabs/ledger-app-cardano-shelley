@@ -948,6 +948,7 @@ static inline security_policy_t _multisigWitnessPolicy(const bip44_path_t* path,
 	case PATH_MINT_KEY:
 		DENY_UNLESS(mintPresent);
 		SHOW();
+		break;
 
 	default:
 		DENY();
@@ -955,12 +956,11 @@ static inline security_policy_t _multisigWitnessPolicy(const bip44_path_t* path,
 	}
 }
 
-static inline security_policy_t _plutusWitnessPolicy(const bip44_path_t* path, bool mintPresent)
+static inline security_policy_t _plutusWitnessPolicy(const bip44_path_t* path, bool mintPresent MARK_UNUSED)
 {
 	switch (bip44_classifyPath(path)) {
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
-	case PATH_POOL_COLD_KEY:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(path));
@@ -968,9 +968,12 @@ static inline security_policy_t _plutusWitnessPolicy(const bip44_path_t* path, b
 		break;
 
 	case PATH_MINT_KEY:
-		DENY_UNLESS(mintPresent);
+		// it is not clear if it should be allowed even if mint is not present
+		// but witnesses are shown, and we don't want to block Plutus script authors
 		SHOW();
+		break;
 
+	case PATH_POOL_COLD_KEY:
 	default:
 		DENY();
 		break;
