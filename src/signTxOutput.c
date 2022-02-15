@@ -118,7 +118,8 @@ static inline void advanceState()
 // ============================== TOP LEVEL DATA ==============================
 
 enum {
-	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS = 3100,
+	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM = 3100,
+	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS,
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT,
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND,
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
@@ -134,6 +135,13 @@ static void signTx_handleOutput_address_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
+	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM) {
+		ui_displayPaginatedText(
+		        "WARNING: output",
+		        "missing datum (could be required)",
+		        this_fn
+		);
+	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
 		ASSERT(subctx->stateData.output.address.size <= SIZEOF(subctx->stateData.output.address.buffer));
 		ui_displayAddressScreen(
@@ -189,6 +197,7 @@ static void signTx_handleOutput_addressBytes()
 		// select UI steps
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_WARN_UNUSUAL,  HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
 #undef   CASE
@@ -222,7 +231,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN) {
-		ui_displayPaginatedText("Send to", "change output", this_fn);
+		ui_displayPaginatedText("Change", "output", this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
 		if (determineSpendingChoice(subctx->stateData.output.params.type) == SPENDING_NONE) {

@@ -2111,8 +2111,8 @@ static void signTx_handleWitness_ui_runStep()
 
 	UI_STEP(HANDLE_WITNESS_STEP_WARNING) {
 		ui_displayPaginatedText(
-		        "Warning!",
-		        "Host asks for unusual witness",
+		        "WARNING:",
+		        "unusual witness requested",
 		        this_fn
 		);
 	}

@@ -39,6 +39,7 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
+// spending part of the address is a script hash
 static inline bool allows_datum_hash(const uint8_t addressType)
 {
 	return (determineSpendingChoice(addressType) == SPENDING_SCRIPT_HASH);
@@ -410,6 +411,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		// We always show third-party output addresses
+		WARN_IF(allows_datum_hash(addressType) && !includeDatumHash);
 		SHOW();
 		break;
 
@@ -420,7 +422,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	DENY(); // should not be reached
 }
 
-// For each output given by derivation path
+// For each output given by payment derivation path
 security_policy_t policyForSignTxOutputAddressParams(
         sign_tx_signingmode_t txSigningMode,
         const addressParams_t* params,
@@ -447,6 +449,12 @@ security_policy_t policyForSignTxOutputAddressParams(
 		break;
 	}
 
+	// this captures the essence of a change output: money stays
+	// on an address where payment is fully controlled by this device
+	DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_PATH);
+	// Note: if we allowed script hash in spending part, we must add a warning
+	// for missing datum (see policyForSignTxOutputAddressBytes)
+
 	if (includeDatumHash) {
 		DENY_UNLESS(allows_datum_hash(params->type));
 		// no Plutus elements for pool registration
@@ -458,7 +466,6 @@ security_policy_t policyForSignTxOutputAddressParams(
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX: {
-		DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_PATH);
 		DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
 		SHOW_UNLESS(is_standard_base_address(params));
 		SHOW_IF(includeDatumHash);
@@ -469,6 +476,8 @@ security_policy_t policyForSignTxOutputAddressParams(
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX: {
 		// all outputs should be given as external addresses
+		// Note: if we relax this, some of the above restrictions may apply
+		// e.g. the single account mode
 		DENY();
 		break;
 	}
@@ -501,6 +510,10 @@ security_policy_t policyForSignTxOutputConfirm(
 	case POLICY_SHOW_BEFORE_RESPONSE:
 		PROMPT_IF(numAssetGroups > 0);
 		ALLOW();
+		break;
+
+	case POLICY_PROMPT_WARN_UNUSUAL:
+		PROMPT();
 		break;
 
 	default:
