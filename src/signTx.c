@@ -371,10 +371,10 @@ enum {
 
 typedef char* charPtr;
 const charPtr uiSigningModeName[] = {
-	"Ordinary",
-	"Pool owner",
-	"Pool operator",
-	"Multisig",
+	"ordinary",
+	"pool owner",
+	"pool operator",
+	"multisig",
 	"Plutus"
 };
 
@@ -440,7 +440,7 @@ static void signTx_handleInit_ui_runStep()
 		if (!needsMissingCollateralWarning(ctx->commonTxData.txSigningMode, ctx->numCollaterals)) {
 			UI_STEP_JUMP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING);
 		}
-		ui_displayPaginatedText("WARNING:", "No collaterals given for Plutus transaction", this_fn);
+		ui_displayPaginatedText("WARNING:", "No collateral given for Plutus transaction", this_fn);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING) {

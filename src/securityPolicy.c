@@ -455,6 +455,9 @@ security_policy_t policyForSignTxOutputAddressParams(
 	// Note: if we allowed script hash in spending part, we must add a warning
 	// for missing datum (see policyForSignTxOutputAddressBytes)
 
+	ASSERT(determineSpendingChoice(params->type) == SPENDING_PATH);
+	DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
+
 	if (includeDatumHash) {
 		DENY_UNLESS(allows_datum_hash(params->type));
 		// no Plutus elements for pool registration
@@ -466,19 +469,24 @@ security_policy_t policyForSignTxOutputAddressParams(
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX: {
-		DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
 		SHOW_UNLESS(is_standard_base_address(params));
 		SHOW_IF(includeDatumHash);
 		ALLOW();
 		break;
 	}
 
-	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX: {
 		// all outputs should be given as external addresses
-		// Note: if we relax this, some of the above restrictions may apply
-		// e.g. the single account mode
+		// because generally, more than one party is needed to sign
+		// spending from a multisig address, so no change outputs
 		DENY();
+		break;
+	}
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX: {
+		// the output could affect script validation so it must not be entirely hidden
+		// Note: if we relax this, some of the above restrictions may apply
+		SHOW();
 		break;
 	}
 
