@@ -20,7 +20,7 @@ void testcase_assetFingerprint(
 	decode_hex(assetNameHex, assetName, SIZEOF(assetName));
 	size_t assetNameSize = strlen(assetNameHex) / 2;
 
-	char fingerprint[200];
+	char fingerprint[200] = {0};
 
 	deriveAssetFingerprint(
 	        policyId, SIZEOF(policyId),

@@ -73,7 +73,7 @@ void inet_ntop6 (const uint8_t *src, char *dst, size_t dstSize)
 	 * Keep this in mind if you think this function should have been coded
 	 * to use pointer overlays.  All the world's not a VAX.
 	 */
-	char tmp[IPV6_STR_SIZE_MAX];
+	char tmp[IPV6_STR_SIZE_MAX] = {0};
 	struct {
 		int base, len;
 	} best, cur;

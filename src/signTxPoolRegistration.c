@@ -911,7 +911,8 @@ static void handleRelay_dns_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME) {
-		char dnsNameStr[1 + DNS_NAME_SIZE_MAX];
+		char dnsNameStr[1 + DNS_NAME_SIZE_MAX] = {0};
+		explicit_bzero(dnsNameStr, SIZEOF(dnsNameStr));
 		ASSERT(relay->dnsNameSize <= DNS_NAME_SIZE_MAX);
 		memmove(dnsNameStr, relay->dnsName, relay->dnsNameSize);
 		dnsNameStr[relay->dnsNameSize] = '\0';
@@ -1173,7 +1174,8 @@ static void handleMetadata_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_URL) {
-		char metadataUrlStr[1 + POOL_METADATA_URL_LENGTH_MAX];
+		char metadataUrlStr[1 + POOL_METADATA_URL_LENGTH_MAX] = {0};
+		explicit_bzero(metadataUrlStr, SIZEOF(metadataUrlStr));
 		ASSERT(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX);
 		memmove(metadataUrlStr, md->url, md->urlSize);
 		metadataUrlStr[md->urlSize] = '\0';
@@ -1186,7 +1188,8 @@ static void handleMetadata_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_HASH) {
-		char metadataHashHex[1 + 2 * POOL_METADATA_HASH_LENGTH];
+		char metadataHashHex[1 + 2 * POOL_METADATA_HASH_LENGTH] = {0};
+		explicit_bzero(metadataHashHex, SIZEOF(metadataHashHex));
 		size_t len = str_formatMetadata(
 		                     md->hash, SIZEOF(md->hash),
 		                     metadataHashHex, SIZEOF(metadataHashHex)

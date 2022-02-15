@@ -387,7 +387,8 @@ static void signTx_handleInit_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_INIT_STEP_PROMPT_SIGNINGMODE) {
-		char bodyTxt[SIZEOF("Pool operator") + 1 + SIZEOF("transaction?") + 1 + 1];
+		char bodyTxt[SIZEOF("Pool operator") + 1 + SIZEOF("transaction?") + 1 + 1] = {0};
+		explicit_bzero(bodyTxt, SIZEOF(bodyTxt));
 		const uint32_t signingModeStrIndex = ctx->commonTxData.txSigningMode - SIGN_TX_SIGNINGMODE_ORDINARY_TX;
 		ASSERT(signingModeStrIndex < ARRAY_LEN(uiSigningModeName));
 		snprintf(bodyTxt, SIZEOF(bodyTxt), "%s transaction?", ((const char*)PIC(uiSigningModeName[signingModeStrIndex])));
@@ -764,7 +765,7 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_INPUT_STEP_DISPLAY) {
-		char headerText[20];
+		char headerText[20] = {0};
 		explicit_bzero(headerText, SIZEOF(headerText));
 		snprintf(headerText, SIZEOF(headerText), "Input #%u", BODY_CTX->currentInput);
 		// make sure all the information is displayed to the user
@@ -1106,7 +1107,7 @@ static void signTx_handleCertificate_ui_runStep()
 		}
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_CONFIRM) {
-		char description[50];
+		char description[50] = {0};
 		explicit_bzero(description, SIZEOF(description));
 
 		switch (BODY_CTX->stageData.certificate.type) {
@@ -1831,7 +1832,7 @@ static void signTx_handleCollateral_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_COLLATERAL_STEP_DISPLAY) {
-		char headerText[20];
+		char headerText[20] = {0};
 		explicit_bzero(headerText, SIZEOF(headerText));
 		snprintf(headerText, SIZEOF(headerText), "Collateral #%u", BODY_CTX->currentCollateral);
 		// make sure all the information is displayed to the user

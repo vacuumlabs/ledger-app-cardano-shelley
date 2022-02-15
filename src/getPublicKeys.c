@@ -154,7 +154,7 @@ static void getPublicKeys_handleInit_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 	UI_STEP(HANDLE_INIT_UI_STEP_CONFIRM) {
-		char secondLine[100];
+		char secondLine[100] = {0};
 		explicit_bzero(secondLine, SIZEOF(secondLine));
 		STATIC_ASSERT(sizeof(ctx->numPaths) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(ctx->numPaths), "signed type for %u");

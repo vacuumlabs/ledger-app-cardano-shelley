@@ -76,7 +76,7 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 	// 11 - max length for the position information for one level: "x."
 	//      where x is 2^32-1
 	// 2  - the ending null byte + 1B for checking if all text has been printed
-	char positionDescription[10 + 11 * (MAX_SCRIPT_DEPTH - 1) + 2];
+	char positionDescription[10 + 11 * (MAX_SCRIPT_DEPTH - 1) + 2] = {0};
 	explicit_bzero(positionDescription, SIZEOF(positionDescription));
 	char* ptr = BEGIN(positionDescription);
 	char* end = END(positionDescription);
@@ -160,7 +160,7 @@ static void deriveScriptHash_display_ui_runStep()
 		case UI_SCRIPT_ANY: {
 			// max possible length 35: "Contains n nested scripts."
 			// where n is 2^32-1
-			char text[37];
+			char text[37] = {0};
 			explicit_bzero(text, SIZEOF(text));
 			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
 			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
@@ -178,7 +178,7 @@ static void deriveScriptHash_display_ui_runStep()
 		case UI_SCRIPT_N_OF_K: {
 			// max possible length 85: "Requires n out of k signatures. Contains k nested scripts."
 			// where n and k is 2^32-1
-			char text[87];
+			char text[87] = {0};
 			explicit_bzero(text, SIZEOF(text));
 			STATIC_ASSERT(sizeof(ctx->scriptContent.requiredScripts) <= sizeof(unsigned), "oversized type for %u");
 			STATIC_ASSERT(!IS_SIGNED(ctx->scriptContent.requiredScripts), "signed type for %u");

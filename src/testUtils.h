@@ -52,7 +52,8 @@
 		/* pass through assertions */ \
 		THROW(ERR_ASSERT); \
 	} CATCH_OTHER (e) { \
-		char msg[50]; \
+		char msg[50] = {0}; \
+		explicit_bzero(msg, SIZEOF(msg)); \
 		snprintf(msg, sizeof(msg), "%s:%d x%x", __FILE__, __LINE__, e); \
 		ASSERT_WITH_MSG(false, msg); \
 	} FINALLY { \
