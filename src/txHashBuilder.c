@@ -1292,7 +1292,8 @@ void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder)
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveScriptDataHash(builder);
-	// TODO 	ASSERT(builder->remainingCollaterals > 0); prichadza do uvahy, ze ich je 0? pozriet cip 21
+	// we don't allow an empty list for an optional item
+	ASSERT(builder->remainingCollaterals > 0);
 
 	{
 		// Enter collateral inputs
@@ -1363,7 +1364,8 @@ void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder)
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveCollaterals(builder);
-	// TODO 	ASSERT(builder->remainingRequiredSigners > 0); prichadza do uvahy, ze ich je 0? pozriet cip 21
+	// we don't allow an empty list for an optional item
+	ASSERT(builder->remainingRequiredSigners > 0);
 
 	{
 		// Enter required signers
