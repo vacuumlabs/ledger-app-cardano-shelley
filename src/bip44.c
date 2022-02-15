@@ -73,11 +73,13 @@ bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec)
 #undef CHECK
 }
 
+// /44'/1815' or /1852'/1815'
 bool bip44_hasOrdinaryWalletKeyPrefix(const bip44_path_t* pathSpec)
 {
 	return bip44_hasByronPrefix(pathSpec) || bip44_hasShelleyPrefix(pathSpec);
 }
 
+// /1854'/1815'
 bool bip44_hasMultisigWalletKeyPrefix(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
@@ -88,6 +90,7 @@ bool bip44_hasMultisigWalletKeyPrefix(const bip44_path_t* pathSpec)
 #undef CHECK
 }
 
+// /1855'/1815'
 bool bip44_hasMintKeyPrefix(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
@@ -98,6 +101,7 @@ bool bip44_hasMintKeyPrefix(const bip44_path_t* pathSpec)
 #undef CHECK
 }
 
+// /1853'/1815'
 bool bip44_hasPoolColdKeyPrefix(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false

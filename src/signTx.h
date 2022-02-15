@@ -129,7 +129,7 @@ typedef struct {
 		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
 		bip44_path_t keyPath;
 	};
-} ins_sign_tx_required_signer_t;
+} sign_tx_required_signer_t;
 
 typedef struct {
 	uint16_t currentInput;
@@ -158,7 +158,7 @@ typedef struct {
 		uint64_t validityIntervalStart;
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
 		sign_tx_transaction_input_t collateral;
-		ins_sign_tx_required_signer_t requiredSigner;
+		sign_tx_required_signer_t requiredSigner;
 	} stageData; // TODO rename to reflect single-APDU scope
 
 	union {

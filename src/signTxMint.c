@@ -94,9 +94,9 @@ static void signTxMint_handleTopLevelData_ui_runStep()
 		ASSERT(strlen(secondLine) + 1 < SIZEOF(secondLine));
 
 		ui_displayPaginatedText(
-			"Mint",
-			secondLine,
-			this_fn
+		        "Mint",
+		        secondLine,
+		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_RESPOND) {

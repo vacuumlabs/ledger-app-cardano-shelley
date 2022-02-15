@@ -1971,7 +1971,10 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForSignTxRequiredSigner(ctx->commonTxData.txSigningMode);
+	security_policy_t policy = policyForSignTxRequiredSigner(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.requiredSigner
+	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 

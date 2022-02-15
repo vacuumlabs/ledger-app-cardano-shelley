@@ -1138,20 +1138,34 @@ security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSignin
 	DENY();
 }
 
-security_policy_t policyForSignTxRequiredSigner(const sign_tx_signingmode_t txSigningMode)
+static bool required_signers_allowed(const sign_tx_signingmode_t txSigningMode)
 {
-	// we do not impose restrictions on individual signer paths because
-	// even if we did, it could be circumvented by passing key hash directly
-
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+security_policy_t policyForSignTxRequiredSigner(
+        const sign_tx_signingmode_t txSigningMode,
+        sign_tx_required_signer_t* requiredSigner
+)
+{
+	DENY_UNLESS(required_signers_allowed(txSigningMode));
+
+	switch(requiredSigner->type) {
+
+	case REQUIRED_SIGNER_WITH_HASH:
 		SHOW();
 		break;
 
-	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case REQUIRED_SIGNER_WITH_PATH:
+		SHOW_IF(bip44_hasShelleyPrefix(&requiredSigner->keyPath));
+		SHOW_IF(bip44_hasMultisigWalletKeyPrefix(&requiredSigner->keyPath));
+		SHOW_IF(bip44_hasMintKeyPrefix(&requiredSigner->keyPath));
 		DENY();
 		break;
 
@@ -1159,7 +1173,7 @@ security_policy_t policyForSignTxRequiredSigner(const sign_tx_signingmode_t txSi
 		ASSERT(false);
 	}
 
-	DENY();
+	DENY(); // should not be reached
 }
 
 security_policy_t policyForSignTxConfirm()

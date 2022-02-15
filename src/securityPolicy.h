@@ -126,7 +126,10 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 
 security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSigningMode);
 
-security_policy_t policyForSignTxRequiredSigner(const sign_tx_signingmode_t txSigningMode);
+security_policy_t policyForSignTxRequiredSigner(
+        const sign_tx_signingmode_t txSigningMode,
+        sign_tx_required_signer_t* requiredSigner
+);
 
 security_policy_t policyForSignTxWitness(
         sign_tx_signingmode_t txSigningMode,
