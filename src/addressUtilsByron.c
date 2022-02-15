@@ -26,7 +26,7 @@ void addressRootFromExtPubKey(
 	STATIC_ASSERT(SIZEOF(*extPubKey) == EXTENDED_PUBKEY_SIZE, "wrong ext pub key size");
 	ASSERT(outSize == ADDRESS_ROOT_SIZE);
 
-	uint8_t cborBuffer[64 + 10];
+	uint8_t cborBuffer[64 + 10] = {0};
 	write_view_t cbor = make_write_view(cborBuffer, END(cborBuffer));
 
 	{
@@ -52,7 +52,7 @@ void addressRootFromExtPubKey(
 	}
 
 	// cborBuffer is hashed twice. First by sha3_256 and then by blake2b_224
-	uint8_t cborShaHash[32];
+	uint8_t cborShaHash[32] = {0};
 	sha3_256_hash(
 	        VIEW_PROCESSED_TO_TUPLE_BUF_SIZE(&cbor),
 	        cborShaHash, SIZEOF(cborShaHash)
@@ -92,7 +92,7 @@ size_t cborEncodePubkeyAddressInner(
 					view_appendToken(&out, CBOR_TYPE_UNSIGNED, PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY); /* map key for protocol magic */
 
 					// Protocol magic itself is bytes with cbor-encoded content
-					uint8_t scratch[10];
+					uint8_t scratch[10] = {0};
 					size_t scratchSize = cbor_writeToken(CBOR_TYPE_UNSIGNED, protocolMagic, scratch, SIZEOF(scratch));
 					view_appendToken(&out, CBOR_TYPE_BYTES, scratchSize);
 					view_appendBuffer(&out, scratch, scratchSize);
@@ -258,7 +258,7 @@ size_t deriveRawAddress(
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	uint8_t addressRoot[28];
+	uint8_t addressRoot[28] = {0};
 	{
 		extendedPublicKey_t extPubKey;
 
@@ -284,7 +284,7 @@ size_t deriveAddress_byron(
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	uint8_t rawAddressBuffer[40];
+	uint8_t rawAddressBuffer[40] = {0};
 	size_t rawAddressSize = deriveRawAddress(
 	                                pathSpec, protocolMagic,
 	                                rawAddressBuffer, SIZEOF(rawAddressBuffer)

@@ -263,7 +263,7 @@ static void handlePoolKey_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID) {
-		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
 		_toPoolKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
 		ui_displayBech32Screen(
@@ -339,7 +339,7 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 
 	{
 		// key derivation must not be done before DENY security policy is enforced
-		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
 		_toPoolKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
 		txHashBuilder_poolRegistrationCertificate_poolKeyHash(
@@ -665,7 +665,7 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 
 	{
 		// key derivation must not be done before DENY security policy is enforced
-		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
+		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE] = {0};
 		rewardAccountToBuffer(&subctx->stateData.poolRewardAccount, commonTxData->networkId, rewardAccountBuffer);
 
 		txHashBuilder_poolRegistrationCertificate_rewardAccount(
@@ -724,7 +724,7 @@ static void _addOwnerToTxHash()
 {
 	pool_owner_t* owner = &accessSubcontext()->stateData.owner;
 
-	uint8_t ownerKeyHash[ADDRESS_KEY_HASH_LENGTH];
+	uint8_t ownerKeyHash[ADDRESS_KEY_HASH_LENGTH] = {0};
 
 	switch (owner->keyReferenceType) {
 

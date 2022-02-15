@@ -8,7 +8,7 @@
 void testcase_base58(const char* inputHex, const char* expectedStr)
 {
 	PRINTF("testcase_base58: %s\n", inputHex);
-	uint8_t inputBuffer[100];
+	uint8_t inputBuffer[100] = {0};
 	size_t inputSize;
 	inputSize = decode_hex(inputHex, inputBuffer, SIZEOF(inputBuffer));
 	char outputStr[100] = {0};

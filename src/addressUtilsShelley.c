@@ -163,7 +163,7 @@ static size_t view_appendAddressPublicKeyHash(write_view_t* view, const bip44_pa
 {
 	TRACE_STACK_USAGE();
 
-	uint8_t hashedPubKey[ADDRESS_KEY_HASH_LENGTH];
+	uint8_t hashedPubKey[ADDRESS_KEY_HASH_LENGTH] = {0};
 	bip44_pathToKeyHash(keyDerivationPath, hashedPubKey, SIZEOF(hashedPubKey));
 
 	view_appendBuffer(view, hashedPubKey, SIZEOF(hashedPubKey));
@@ -256,7 +256,7 @@ static size_t view_appendVariableLengthUInt(write_view_t* view, uint64_t value)
 
 	ASSERT(value > 0);
 
-	uint8_t chunks[10]; // 7-bit chunks of the input bits, at most 10 in uint64
+	uint8_t chunks[10] = {0}; // 7-bit chunks of the input bits, at most 10 in uint64
 	size_t outputSize = 0;
 	{
 		blockchainIndex_t bits = value;

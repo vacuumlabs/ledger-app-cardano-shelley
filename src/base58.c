@@ -29,8 +29,8 @@ size_t base58_encode(
         char* outStr, size_t outMaxSize
 )
 {
-	uint8_t tmpBuffer[MAX_BUFFER_SIZE];
-	uint8_t buffer[MAX_BUFFER_SIZE * 2];
+	uint8_t tmpBuffer[MAX_BUFFER_SIZE] = {0};
+	uint8_t buffer[MAX_BUFFER_SIZE * 2] = {0};
 	size_t startAt;
 	size_t zeroCount = 0;
 

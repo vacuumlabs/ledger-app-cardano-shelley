@@ -178,7 +178,7 @@ static void signTxMint_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wire
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE];
+		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE] = {0};
 		view_parseBuffer(candidatePolicyId, &view, MINTING_POLICY_ID_SIZE);
 
 		if (subctx->currentAssetGroup > 0) {
@@ -278,7 +278,7 @@ static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataS
 
 		const size_t candidateAssetNameSize = parse_u4be(&view);
 		VALIDATE(candidateAssetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
-		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX];
+		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX] = {0};
 		view_parseBuffer(candidateAssetNameBytes, &view, candidateAssetNameSize);
 
 		if (subctx->currentToken > 0) {

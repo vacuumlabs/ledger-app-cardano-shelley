@@ -46,7 +46,7 @@ static void blake2b_256_append_cbor_tx_body(
         uint8_t type, uint64_t value
 )
 {
-	uint8_t buffer[10];
+	uint8_t buffer[10] = {0};
 	size_t size = cbor_writeToken(type, value, buffer, SIZEOF(buffer));
 	TRACE_BUFFER(buffer, size);
 	blake2b_256_append(hashCtx, buffer, size);
@@ -832,13 +832,13 @@ static void _relay_addIpv6(tx_hash_builder_t* builder, const ipv6_t* ipv6)
 		// serialized as 4 big-endian uint32
 		// we need a local copy of the data to make the following pointer tricks work
 		// the copy is created by memmove instead of struct assignment to avoid compiler optimizing it away
-		uint8_t ipBuffer[IPV6_SIZE];
+		uint8_t ipBuffer[IPV6_SIZE] = {0};
 		memmove(ipBuffer, ipv6->ip, SIZEOF(ipBuffer));
 		STATIC_ASSERT(SIZEOF(ipBuffer) == 16, "wrong ipv6 size");
 
 		uint32_t* as_uint32 = (uint32_t*) ipBuffer;
 		for (size_t i = 0; i < 4; i++) {
-			uint8_t chunk[4];
+			uint8_t chunk[4] = {0};
 			u4be_write(chunk, as_uint32[i]);
 			BUILDER_APPEND_DATA(chunk, 4);
 		}

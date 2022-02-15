@@ -63,7 +63,7 @@ static void test_cbor_peek_token()
 
 	ITERATE(it, testVectors) {
 		PRINTF("test_cbor_peek_token %s\n", PTR_PIC(it->hex));
-		uint8_t buf[20];
+		uint8_t buf[20] = {0};
 		size_t bufSize = decode_hex(PTR_PIC(it->hex), buf, SIZEOF(buf));
 
 		cbor_token_t res = cbor_parseToken(buf, bufSize);
@@ -99,7 +99,7 @@ static void test_cbor_parse_noncanonical()
 
 	ITERATE(it, testVectors) {
 		PRINTF("test_cbor_parse_noncanonical %s\n", PTR_PIC(it->hex));
-		uint8_t buf[20];
+		uint8_t buf[20] = {0};
 		size_t bufSize = decode_hex(PTR_PIC(it->hex), buf, SIZEOF(buf));
 		EXPECT_THROWS(cbor_parseToken(buf, bufSize), ERR_UNEXPECTED_TOKEN);
 	}
@@ -167,9 +167,9 @@ static void test_cbor_serialization()
 
 	ITERATE(it, testVectors) {
 		PRINTF("test_cbor_serialization %s\n", PTR_PIC(it->hex));
-		uint8_t expected[50];
+		uint8_t expected[50] = {0};
 		size_t expectedSize = decode_hex(PTR_PIC(it->hex), expected, SIZEOF(expected));
-		uint8_t buffer[50];
+		uint8_t buffer[50] = {0};
 		size_t bufferSize = cbor_writeToken(it->type, it->value, buffer, SIZEOF(buffer));
 		EXPECT_EQ(bufferSize, expectedSize);
 		EXPECT_EQ_BYTES(buffer, expected, expectedSize);
@@ -185,7 +185,7 @@ static void test_cbor_serialization()
 	};
 
 	ITERATE(it, invalidVectors) {
-		uint8_t buf[10];
+		uint8_t buf[10] = {0};
 		EXPECT_THROWS(cbor_writeToken(it->type, 0, buf, SIZEOF(buf)), ERR_UNEXPECTED_TOKEN);
 	}
 }

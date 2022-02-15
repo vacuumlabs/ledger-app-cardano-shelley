@@ -7,7 +7,7 @@
 void testcase_bech32(const char* hrp, const char* inputBytesHex, const char* expectedStr)
 {
 	PRINTF("testcase_bech32: %s %s\n", hrp, inputBytesHex);
-	uint8_t inputBuffer[100];
+	uint8_t inputBuffer[100] = {0};
 	size_t inputSize;
 	inputSize = decode_hex(inputBytesHex, inputBuffer, SIZEOF(inputBuffer));
 

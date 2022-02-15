@@ -102,7 +102,7 @@ size_t bech32_encode(const char *hrp, const uint8_t *bytes, size_t bytesSize,
 	ASSERT(maxOutputSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(bytesSize < BUFFER_SIZE_PARANOIA);
 
-	uint8_t data5bit[(8 * MAX_BYTES + 4) / 5]; // ceiling of (8/5 * MAX_BYTES_LEN) = 104
+	uint8_t data5bit[(8 * MAX_BYTES + 4) / 5] = {0}; // ceiling of (8/5 * MAX_BYTES_LEN) = 104
 	size_t data5bitLength = 0;
 	{
 		const int OUTBITS = 5;

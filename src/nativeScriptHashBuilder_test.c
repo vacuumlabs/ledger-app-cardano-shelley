@@ -5,7 +5,7 @@
 #include "testUtils.h"
 
 #define BUF_FROM_STR(name, size) \
-	uint8_t name[size]; \
+	uint8_t name[size] = {0}; \
 	decode_hex(name##Str, name, size); \
 
 #define BEFORE_EACH \
@@ -13,7 +13,7 @@
 	nativeScriptHashBuilder_init(&builder); \
 
 #define FINALIZE \
-	uint8_t result[SCRIPT_HASH_LENGTH]; \
+	uint8_t result[SCRIPT_HASH_LENGTH] = {0}; \
 	nativeScriptHashBuilder_finalize(&builder, result, ADDRESS_KEY_HASH_LENGTH);\
 	PRINTF("Native script hash hex\n");\
 	PRINTF("%.*h\n", 32, result);

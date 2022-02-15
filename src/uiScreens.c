@@ -281,7 +281,7 @@ void ui_displayRewardAccountScreen(
 
 	ASSERT(isValidNetworkId(networkId));
 
-	uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
+	uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE] = {0};
 	char firstLine[32] = {0};
 	explicit_bzero(firstLine, SIZEOF(firstLine));
 
@@ -471,7 +471,7 @@ size_t deriveAssetFingerprint(
 	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 
-	uint8_t hashInput[MINTING_POLICY_ID_SIZE + ASSET_NAME_SIZE_MAX];
+	uint8_t hashInput[MINTING_POLICY_ID_SIZE + ASSET_NAME_SIZE_MAX] = {0};
 	const size_t hashInputSize = policyIdSize + assetNameSize;
 	{
 		write_view_t view = make_write_view(hashInput, hashInput + SIZEOF(hashInput));
@@ -480,7 +480,7 @@ size_t deriveAssetFingerprint(
 		ASSERT(view_processedSize(&view) == hashInputSize);
 	}
 
-	uint8_t fingerprintBuffer[ASSET_FINGERPRINT_SIZE];
+	uint8_t fingerprintBuffer[ASSET_FINGERPRINT_SIZE] = {0};
 	blake2b_160_hash(hashInput, hashInputSize, fingerprintBuffer, SIZEOF(fingerprintBuffer));
 
 	size_t len = bech32_encode("asset", fingerprintBuffer, SIZEOF(fingerprintBuffer), fingerprint, fingerprintMaxSize);
@@ -676,7 +676,7 @@ void ui_displayPoolOwnerScreen(
 		ASSERT(ownerIndex < POOL_MAX_OWNERS);
 	}
 	{
-		uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
+		uint8_t rewardAddress[REWARD_ACCOUNT_SIZE] = {0};
 
 		switch (owner->keyReferenceType) {
 		case KEY_REFERENCE_PATH: {

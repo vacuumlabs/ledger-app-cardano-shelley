@@ -7,7 +7,7 @@ static void signRawMessage(privateKey_t* privateKey,
                            const uint8_t* messageBuffer, size_t messageSize,
                            uint8_t* outBuffer, size_t outSize)
 {
-	uint8_t signature[64];
+	uint8_t signature[64] = {0};
 	ASSERT(messageSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(outSize == SIZEOF(signature));
 

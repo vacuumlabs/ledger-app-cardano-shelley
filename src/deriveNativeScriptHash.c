@@ -305,7 +305,7 @@ static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
-	uint8_t pubkeyHash[ADDRESS_KEY_HASH_LENGTH];
+	uint8_t pubkeyHash[ADDRESS_KEY_HASH_LENGTH] = {0};
 	bip44_pathToKeyHash(&ctx->scriptContent.pubkeyPath, pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
 	nativeScriptHashBuilder_addScript_pubkey(&ctx->hashBuilder, pubkeyHash, SIZEOF(pubkeyHash));
 

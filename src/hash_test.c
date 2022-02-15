@@ -13,16 +13,16 @@ void testcase_chunks_blake2b_512(
 	PRINTF("testcase_chunks_blake2b_512\n");
 	blake2b_512_context_t ctx;
 	blake2b_512_init(&ctx);
-	uint8_t outputBuffer[64];
+	uint8_t outputBuffer[64] = {0};
 	for (unsigned i = 0; i < chunksCount; i++) {
-		uint8_t chunkBuffer[20];
+		uint8_t chunkBuffer[20] = {0};
 		size_t chunkSize = decode_hex(PTR_PIC(chunksHex[i]), chunkBuffer, SIZEOF(chunkBuffer));
 
 		blake2b_512_append(&ctx, chunkBuffer, chunkSize);
 	}
 	blake2b_512_finalize(&ctx, outputBuffer, SIZEOF(outputBuffer));
 
-	uint8_t expectedBuffer[64];
+	uint8_t expectedBuffer[64] = {0};
 	size_t expectedSize = decode_hex(expectedHex, expectedBuffer, SIZEOF(expectedBuffer));
 	ASSERT(expectedSize == 64);
 
@@ -32,14 +32,14 @@ void testcase_chunks_blake2b_512(
 void testcase_blake2b_224(const char* inputHex, const char* expectedHex)
 {
 	PRINTF("testcase_blake2b_224 %s\n", inputHex);
-	uint8_t inputBuffer[200];
+	uint8_t inputBuffer[200] = {0};
 	size_t inputSize = decode_hex(inputHex, inputBuffer, SIZEOF(inputBuffer));
 
-	uint8_t expectedBuffer[28];
+	uint8_t expectedBuffer[28] = {0};
 	size_t expectedSize = decode_hex(expectedHex, expectedBuffer, SIZEOF(expectedBuffer));
 
 	ASSERT(expectedSize == 28);
-	uint8_t outputBuffer[28];
+	uint8_t outputBuffer[28] = {0};
 	blake2b_224_hash(inputBuffer, inputSize, outputBuffer, SIZEOF(outputBuffer));
 	EXPECT_EQ_BYTES(expectedBuffer, outputBuffer, expectedSize);
 }
@@ -47,14 +47,14 @@ void testcase_blake2b_224(const char* inputHex, const char* expectedHex)
 void testcase_blake2b_160(const char* inputHex, const char* expectedHex)
 {
 	PRINTF("testcase_blake2b_160 %s\n", inputHex);
-	uint8_t inputBuffer[200];
+	uint8_t inputBuffer[200] = {0};
 	size_t inputSize = decode_hex(inputHex, inputBuffer, SIZEOF(inputBuffer));
 
-	uint8_t expectedBuffer[20];
+	uint8_t expectedBuffer[20] = {0};
 	size_t expectedSize = decode_hex(expectedHex, expectedBuffer, SIZEOF(expectedBuffer));
 
 	ASSERT(expectedSize == 20);
-	uint8_t outputBuffer[20];
+	uint8_t outputBuffer[20] = {0};
 	blake2b_160_hash(inputBuffer, inputSize, outputBuffer, SIZEOF(outputBuffer));
 	EXPECT_EQ_BYTES(expectedBuffer, outputBuffer, expectedSize);
 }

@@ -1314,7 +1314,7 @@ static void _addCertificateDataToTx(
 	TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
 
 	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "incompatible hash sizes");
-	uint8_t stakingHash[ADDRESS_KEY_HASH_LENGTH];
+	uint8_t stakingHash[ADDRESS_KEY_HASH_LENGTH] = {0};
 
 	switch (BODY_CTX->stageData.certificate.type) {
 
@@ -1532,7 +1532,7 @@ static void signTx_handleWithdrawal_ui_runStep()
 __noinline_due_to_stack__
 static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 {
-	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE];
+	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE] = {0};
 
 	switch (BODY_CTX->stageData.withdrawal.stakeCredential.type) {
 	case STAKE_CREDENTIAL_KEY_PATH:
@@ -1983,7 +1983,7 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer,
 		// add to tx
 		TRACE("Adding required signer to tx hash");
 		if (BODY_CTX->stageData.requiredSigner.type == REQUIRED_SIGNER_WITH_PATH) {
-			uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+			uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH] = {0};
 			bip44_pathToKeyHash(&BODY_CTX->stageData.requiredSigner.keyPath, keyHash, SIZEOF(keyHash));
 			txHashBuilder_addRequiredSigner(
 			        &BODY_CTX->txHashBuilder,

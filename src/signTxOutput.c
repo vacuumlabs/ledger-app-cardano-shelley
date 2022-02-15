@@ -235,7 +235,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 		ui_displayStakingInfoScreen(&subctx->stateData.output.params, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
-		uint8_t addressBuffer[MAX_ADDRESS_SIZE];
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
 		size_t addressSize = deriveAddress(&subctx->stateData.output.params, addressBuffer, SIZEOF(addressBuffer));
 		ASSERT(addressSize > 0);
 		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
@@ -275,7 +275,7 @@ static void signTx_handleOutput_addressParams()
 
 	{
 		// add to tx
-		uint8_t addressBuffer[MAX_ADDRESS_SIZE];
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
 		size_t addressSize = deriveAddress(
 		                             &subctx->stateData.output.params,
 		                             addressBuffer,
@@ -426,7 +426,7 @@ static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wi
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE];
+		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE] = {0};
 		view_parseBuffer(candidatePolicyId, &view, MINTING_POLICY_ID_SIZE);
 
 		if (subctx->currentAssetGroup > 0) {
@@ -527,7 +527,7 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 
 		const size_t candidateAssetNameSize = parse_u4be(&view);
 		VALIDATE(candidateAssetNameSize <= ASSET_NAME_SIZE_MAX, ERR_INVALID_DATA);
-		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX];
+		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX] = {0};
 		view_parseBuffer(candidateAssetNameBytes, &view, candidateAssetNameSize);
 
 		if (subctx->currentToken > 0) {
