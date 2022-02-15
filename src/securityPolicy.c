@@ -220,11 +220,13 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 
 bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic)
 {
-	const bool usualNetworkId =
-	        networkId == MAINNET_NETWORK_ID ||
-	        networkId == TESTNET_NETWORK_ID;
-	const bool usualProtocolMagic = (protocolMagic == MAINNET_PROTOCOL_MAGIC);
-	return usualNetworkId && usualProtocolMagic;
+	if (networkId == MAINNET_NETWORK_ID && protocolMagic == MAINNET_PROTOCOL_MAGIC)
+		return true;
+
+	if (networkId == TESTNET_NETWORK_ID && protocolMagic == TESTNET_PROTOCOL_MAGIC)
+		return true;
+
+	return false;
 }
 
 bool isTxNetworkIdVerifiable(
