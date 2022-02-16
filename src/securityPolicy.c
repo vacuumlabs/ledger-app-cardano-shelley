@@ -459,7 +459,10 @@ security_policy_t policyForSignTxOutputAddressParams(
 	DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
 
 	if (includeDatumHash) {
+		// together with the above requirement on SPENDING_PATH,
+		// this forbids datum in change outputs entirely
 		DENY_UNLESS(allows_datum_hash(params->type));
+
 		// no Plutus elements for pool registration
 		DENY_IF(txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER);
 		DENY_IF(txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR);
