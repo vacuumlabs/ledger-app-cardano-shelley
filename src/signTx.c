@@ -1761,7 +1761,12 @@ static void signTx_handleScriptDataHash_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_SCRIPT_DATA_HASH_STEP_DISPLAY) {
-		ui_displayHexBufferScreen("Script data hash", BODY_CTX->stageData.scriptDataHash, SCRIPT_DATA_HASH_LENGTH, this_fn);
+		ui_displayBech32Screen(
+		        "Script data hash",
+		        "script_data",
+		        BODY_CTX->stageData.scriptDataHash, SCRIPT_DATA_HASH_LENGTH,
+		        this_fn
+		);
 	}
 	UI_STEP(HANDLE_SCRIPT_DATA_HASH_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -1919,7 +1924,13 @@ static void signTx_handleRequiredSigner_ui_runStep()
 			ui_displayPathScreen("Required signer", &BODY_CTX->stageData.requiredSigner.keyPath, this_fn);
 			break;
 		case REQUIRED_SIGNER_WITH_HASH:
-			ui_displayHexBufferScreen("Required signer", BODY_CTX->stageData.requiredSigner.keyHash, SIZEOF(BODY_CTX->stageData.requiredSigner.keyHash), this_fn);
+			ui_displayBech32Screen(
+			        "Required signer",
+			        "req_signer_vkh",
+			        BODY_CTX->stageData.requiredSigner.keyHash,
+			        SIZEOF(BODY_CTX->stageData.requiredSigner.keyHash),
+			        this_fn
+			);
 			break;
 
 		default:

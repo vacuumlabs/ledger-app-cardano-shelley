@@ -601,7 +601,12 @@ static void signTxOutput_handleDatumHash_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_DATUM_HASH_STEP_DISPLAY) {
-		ui_displayHexBufferScreen("Datum hash", subctx->stateData.datumHash, OUTPUT_DATUM_HASH_LENGTH, this_fn);
+		ui_displayBech32Screen(
+		        "Datum hash",
+		        "datum",
+		        subctx->stateData.datumHash, OUTPUT_DATUM_HASH_LENGTH,
+		        this_fn
+		);
 	}
 	UI_STEP(HANDLE_DATUM_HASH_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
