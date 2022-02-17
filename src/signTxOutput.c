@@ -561,6 +561,7 @@ static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDat
 		// select UI step
 		switch (subctx->outputSecurityPolicy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_TOKEN_STEP_DISPLAY_NAME);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOKEN_STEP_DISPLAY_NAME);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TOKEN_STEP_RESPOND);
 #undef   CASE
