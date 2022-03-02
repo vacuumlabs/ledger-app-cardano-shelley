@@ -705,7 +705,8 @@ void ui_displayPoolOwnerScreen(
 		explicit_bzero(firstLine, SIZEOF(firstLine));
 		STATIC_ASSERT(sizeof(ownerIndex + 1) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(ownerIndex + 1), "signed type for %u");
-		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex + 1);
+		// indexed from 0 as discuss with IOHK on Slack
+		snprintf(firstLine, SIZEOF(firstLine), "Owner #%u", ownerIndex);
 		// make sure all the information is displayed to the user
 		ASSERT(strlen(firstLine) + 1 < SIZEOF(firstLine));
 
@@ -731,7 +732,8 @@ void ui_displayPoolRelayScreen(
 	{
 		STATIC_ASSERT(sizeof(relayIndex + 1) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(relayIndex + 1), "signed type for %u");
-		snprintf(firstLine, SIZEOF(firstLine), "Relay #%u", relayIndex + 1);
+		// indexed from 0 as discussed with IOHK on Slack
+		snprintf(firstLine, SIZEOF(firstLine), "Relay #%u", relayIndex);
 		// make sure all the information is displayed to the user
 		ASSERT(strlen(firstLine) + 1 < SIZEOF(firstLine));
 	}

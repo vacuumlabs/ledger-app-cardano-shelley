@@ -767,6 +767,7 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP(HANDLE_INPUT_STEP_DISPLAY) {
 		char headerText[20] = {0};
 		explicit_bzero(headerText, SIZEOF(headerText));
+		// indexed from 0 as agreed with IOHK on Slack
 		snprintf(headerText, SIZEOF(headerText), "Input #%u", BODY_CTX->currentInput);
 		// make sure all the information is displayed to the user
 		ASSERT(strlen(headerText) + 1 < SIZEOF(headerText));
@@ -1839,6 +1840,7 @@ static void signTx_handleCollateral_ui_runStep()
 	UI_STEP(HANDLE_COLLATERAL_STEP_DISPLAY) {
 		char headerText[20] = {0};
 		explicit_bzero(headerText, SIZEOF(headerText));
+		// indexed from 0 as agreed with IOHK on Slack
 		snprintf(headerText, SIZEOF(headerText), "Collateral #%u", BODY_CTX->currentCollateral);
 		// make sure all the information is displayed to the user
 		ASSERT(strlen(headerText) + 1 < SIZEOF(headerText));
