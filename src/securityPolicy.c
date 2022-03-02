@@ -394,9 +394,12 @@ security_policy_t policyForSignTxOutputAddressBytes(
 
 	if (includeDatumHash) {
 		DENY_UNLESS(allows_datum_hash(addressType));
-		// no Plutus elements for pool registration
-		DENY_IF(txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER);
-		DENY_IF(txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR);
+		// no Plutus elements for pool registration, only allow in other modes
+		DENY_UNLESS(
+			txSigningMode == SIGN_TX_SIGNINGMODE_ORDINARY_TX ||
+			txSigningMode == SIGN_TX_SIGNINGMODE_MULTISIG_TX ||
+			txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX
+		);
 	}
 
 	switch (txSigningMode) {
