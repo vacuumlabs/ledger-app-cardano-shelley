@@ -650,7 +650,7 @@ static inline bool isValidStakingInfo(const addressParams_t* params)
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(isStakingInfoConsistentWithAddressType(params));
 	if (params->stakingDataSource == STAKING_KEY_PATH) {
-		CHECK(bip44_isOrdinaryStakingKeyPath(&params->stakingKeyPath));
+		CHECK(bip44_classifyPath(&params->stakingKeyPath) == PATH_ORDINARY_STAKING_KEY);
 	}
 	return true;
 #undef CHECK

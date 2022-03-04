@@ -100,9 +100,10 @@ security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
 // Initiate getting extended public key or extended public key bulk
 security_policy_t policyForGetPublicKeysInit(uint32_t numPaths)
 {
-	// bulk key export, some keys are hidden, the user must be notified
+	// in a bulk key export, some keys are hidden, the user must be notified
 	PROMPT_IF(numPaths > 1);
 
+	// for a single key, the policy for displaying it is determined later
 	ALLOW();
 }
 
@@ -171,13 +172,6 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 	switch (addressParams->type) {
 
 	case BASE_PAYMENT_KEY_STAKE_KEY:
-		// path type should match addressParams->type
-		DENY_IF(bip44_classifyPath(&addressParams->spendingKeyPath) != PATH_ORDINARY_SPENDING_KEY);
-		DENY_IF(
-		        addressParams->stakingDataSource == STAKING_KEY_PATH &&
-		        bip44_classifyPath(&addressParams->stakingKeyPath) != PATH_ORDINARY_STAKING_KEY
-		);
-
 		// unusual path
 		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
 		WARN_IF(
@@ -190,18 +184,14 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 	case POINTER_KEY:
 	case ENTERPRISE_KEY:
 	case BYRON:
-		// path type should match addressParams->type
-		DENY_IF(bip44_classifyPath(&addressParams->spendingKeyPath) != PATH_ORDINARY_SPENDING_KEY);
-
 		// unusual path
 		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
 		break;
 
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
 	case REWARD_KEY:
-		// path type should match addressParams->type
+		// we only support derivation based on key path
 		DENY_IF(addressParams->stakingDataSource != STAKING_KEY_PATH);
-		DENY_IF(bip44_classifyPath(&addressParams->stakingKeyPath) != PATH_ORDINARY_STAKING_KEY);
 
 		// unusual path
 		WARN_IF(!bip44_isPathReasonable(&addressParams->stakingKeyPath));
