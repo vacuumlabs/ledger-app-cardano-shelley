@@ -138,7 +138,7 @@ static void signTx_handleOutput_address_ui_runStep()
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM) {
 		ui_displayPaginatedText(
 		        "WARNING: output",
-		        "missing datum (could be required)",
+		        "could be unspendable due to missing datum",
 		        this_fn
 		);
 	}
