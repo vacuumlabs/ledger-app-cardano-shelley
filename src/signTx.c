@@ -2044,7 +2044,7 @@ static void signTx_handleConfirm_ui_runStep()
 	UI_STEP(HANDLE_CONFIRM_STEP_TXID) {
 		ASSERT(ctx->commonTxData.txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX);
 		ui_displayHexBufferScreen(
-		        "Tx body hash",
+		        "Transaction id",
 		        ctx->txHash, SIZEOF(ctx->txHash),
 		        this_fn
 		);
