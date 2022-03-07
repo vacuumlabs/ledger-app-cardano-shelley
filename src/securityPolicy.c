@@ -315,14 +315,17 @@ security_policy_t policyForSignTxInit(
 		// mint must not be combined with pool registration certificates
 		DENY_IF(includeMint);
 
-		// collaterals and required signers are allowed only in PLUTUS_TX
-		DENY_IF(numCollaterals != 0 || numRequiredSigners != 0);
+		// no Plutus elements for pool registrations
+		DENY_IF(includeScriptDataHash);
+		DENY_IF(numCollaterals > 0);
+		DENY_IF(numRequiredSigners > 0);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		// collaterals and required signers are allowed only in PLUTUS_TX
-		DENY_IF(numCollaterals != 0 || numRequiredSigners != 0);
+		DENY_IF(numCollaterals > 0);
+		DENY_IF(numRequiredSigners > 0);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
