@@ -114,6 +114,7 @@ enum {
 	DISPLAY_UI_STEP_SPENDING_INFO,
 	DISPLAY_UI_STEP_STAKING_INFO,
 	DISPLAY_UI_STEP_ADDRESS,
+	DISPLAY_UI_STEP_CONFIRM,
 	DISPLAY_UI_STEP_RESPOND,
 	DISPLAY_UI_STEP_INVALID
 };
@@ -176,6 +177,14 @@ static void deriveAddress_display_ui_runStep()
 		        "Address",
 		        ctx->address.buffer, ctx->address.size,
 		        this_fn
+		);
+	}
+	UI_STEP(DISPLAY_UI_STEP_CONFIRM) {
+		ui_displayPrompt(
+		        "Confirm",
+		        "address?",
+		        this_fn,
+		        respond_with_user_reject
 		);
 	}
 	UI_STEP(DISPLAY_UI_STEP_RESPOND) {
