@@ -51,23 +51,24 @@ static inline bool allows_datum_hash(const uint8_t addressType)
 // WARNING: unless you are doing something exceptional,
 // policies must come in the order DENY > WARN > PROMPT/SHOW > ALLOW
 
-#define DENY()                          return POLICY_DENY;
-#define DENY_IF(expr)      if (expr)    return POLICY_DENY;
-#define DENY_UNLESS(expr)  if (!(expr)) return POLICY_DENY;
+#define DENY()                            return POLICY_DENY;
+#define DENY_IF(expr)        if (expr)    return POLICY_DENY;
+#define DENY_UNLESS(expr)    if (!(expr)) return POLICY_DENY;
 
-#define WARN()                          return POLICY_PROMPT_WARN_UNUSUAL;
-#define WARN_IF(expr)      if (expr)    return POLICY_PROMPT_WARN_UNUSUAL;
-#define WARN_UNLESS(expr)  if (!(expr)) return POLICY_PROMPT_WARN_UNUSUAL;
+#define WARN()                            return POLICY_PROMPT_WARN_UNUSUAL;
+#define WARN_IF(expr)        if (expr)    return POLICY_PROMPT_WARN_UNUSUAL;
+#define WARN_UNLESS(expr)    if (!(expr)) return POLICY_PROMPT_WARN_UNUSUAL;
 
-#define PROMPT()                        return POLICY_PROMPT_BEFORE_RESPONSE;
-#define PROMPT_IF(expr)    if (expr)    return POLICY_PROMPT_BEFORE_RESPONSE;
+#define PROMPT()                          return POLICY_PROMPT_BEFORE_RESPONSE;
+#define PROMPT_IF(expr)      if (expr)    return POLICY_PROMPT_BEFORE_RESPONSE;
+#define PROMPT_UNLESS(expr)  if (!(expr)) return POLICY_PROMPT_BEFORE_RESPONSE;
 
-#define ALLOW()                         return POLICY_ALLOW_WITHOUT_PROMPT;
-#define ALLOW_IF(expr)     if (expr)    return POLICY_ALLOW_WITHOUT_PROMPT;
+#define ALLOW()                           return POLICY_ALLOW_WITHOUT_PROMPT;
+#define ALLOW_IF(expr)       if (expr)    return POLICY_ALLOW_WITHOUT_PROMPT;
 
-#define SHOW()                          return POLICY_SHOW_BEFORE_RESPONSE;
-#define SHOW_IF(expr)      if (expr)    return POLICY_SHOW_BEFORE_RESPONSE;
-#define SHOW_UNLESS(expr)  if (!(expr)) return POLICY_SHOW_BEFORE_RESPONSE;
+#define SHOW()                            return POLICY_SHOW_BEFORE_RESPONSE;
+#define SHOW_IF(expr)        if (expr)    return POLICY_SHOW_BEFORE_RESPONSE;
+#define SHOW_UNLESS(expr)    if (!(expr)) return POLICY_SHOW_BEFORE_RESPONSE;
 
 
 security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
@@ -113,6 +114,13 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 	switch (bip44_classifyPath(pathSpec)) {
 
 	case PATH_ORDINARY_ACCOUNT:
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+		// show Byron paths
+		PROMPT_UNLESS(bip44_hasShelleyPrefix(pathSpec));
+		// do not bother the user with confirmation --- required by LedgerLive to improve UX
+		ALLOW();
+		break;
+
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_ACCOUNT:
@@ -120,7 +128,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_MINT_KEY:
 	case PATH_POOL_COLD_KEY:
-		WARN_IF(!bip44_isPathReasonable(pathSpec));
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 		// ask for permission
 		PROMPT();
 		break;
@@ -145,13 +153,13 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_MINT_KEY:
-		WARN_IF(!bip44_isPathReasonable(pathSpec));
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 		// we do not show these paths since there may be many of them
 		ALLOW();
 		break;
 
 	case PATH_POOL_COLD_KEY:
-		WARN_IF(!bip44_isPathReasonable(pathSpec));
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 		// but ask for permission when pool cold key is requested
 		PROMPT();
 		break;
@@ -165,6 +173,7 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 }
 
 // common policy for DENY and WARN cases in returnDeriveAddress and showDeriveAddress
+// successPolicy is returned if no DENY or WARN applies
 static security_policy_t _policyForDeriveAddress(const addressParams_t* addressParams, security_policy_t successPolicy)
 {
 	DENY_UNLESS(isValidAddressParams(addressParams));
@@ -173,7 +182,7 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 		// unusual path
-		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
+		WARN_UNLESS(bip44_isPathReasonable(&addressParams->spendingKeyPath));
 		WARN_IF(
 		        addressParams->stakingDataSource == STAKING_KEY_PATH &&
 		        !bip44_isPathReasonable(&addressParams->stakingKeyPath)
@@ -185,7 +194,7 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 	case ENTERPRISE_KEY:
 	case BYRON:
 		// unusual path
-		WARN_IF(!bip44_isPathReasonable(&addressParams->spendingKeyPath));
+		WARN_UNLESS(bip44_isPathReasonable(&addressParams->spendingKeyPath));
 		break;
 
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
@@ -194,7 +203,7 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 		DENY_IF(addressParams->stakingDataSource != STAKING_KEY_PATH);
 
 		// unusual path
-		WARN_IF(!bip44_isPathReasonable(&addressParams->stakingKeyPath));
+		WARN_UNLESS(bip44_isPathReasonable(&addressParams->stakingKeyPath));
 		break;
 
 	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
