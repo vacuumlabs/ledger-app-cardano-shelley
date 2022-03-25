@@ -27,7 +27,7 @@ void run_auxDataHashBuilder_test()
 	auxDataHashBuilder_catalystRegistration_enterPayload(&builder);
 
 	{
-		uint8_t tmp[32];
+		uint8_t tmp[32] = {0};
 		size_t tmpSize = decode_hex(votingKey, tmp, SIZEOF(tmp));
 		auxDataHashBuilder_catalystRegistration_addVotingKey(
 		        &builder,
@@ -36,7 +36,7 @@ void run_auxDataHashBuilder_test()
 	}
 
 	{
-		uint8_t tmp[32];
+		uint8_t tmp[32] = {0};
 		size_t tmpSize = decode_hex(stakingKey, tmp, SIZEOF(tmp));
 		auxDataHashBuilder_catalystRegistration_addStakingKey(
 		        &builder,
@@ -45,7 +45,7 @@ void run_auxDataHashBuilder_test()
 	}
 
 	{
-		uint8_t tmp[57];
+		uint8_t tmp[57] = {0};
 		size_t tmpSize = decode_hex(votingRewardsAddress, tmp, SIZEOF(tmp));
 		auxDataHashBuilder_catalystRegistration_addVotingRewardsAddress(
 		        &builder,
@@ -56,10 +56,10 @@ void run_auxDataHashBuilder_test()
 	auxDataHashBuilder_catalystRegistration_addNonce(&builder, nonce);
 
 	{
-		uint8_t result[AUX_DATA_HASH_LENGTH];
+		uint8_t result[AUX_DATA_HASH_LENGTH] = {0};
 		auxDataHashBuilder_catalystRegistration_finalizePayload(&builder, result, SIZEOF(result));
 
-		uint8_t expected[AUX_DATA_HASH_LENGTH];
+		uint8_t expected[AUX_DATA_HASH_LENGTH] = {0};
 		decode_hex(expectedCatalystVotingRegistrationPayloadHashHex, expected, SIZEOF(expected));
 
 		PRINTF("Catalyst registration payload hash hex\n");
@@ -69,7 +69,7 @@ void run_auxDataHashBuilder_test()
 	}
 
 	{
-		uint8_t tmp[64];
+		uint8_t tmp[64] = {0};
 		size_t tmpSize = decode_hex(catalystRegistrationSignature, tmp, SIZEOF(tmp));
 		auxDataHashBuilder_catalystRegistration_addSignature(
 		        &builder,
@@ -80,10 +80,10 @@ void run_auxDataHashBuilder_test()
 	auxDataHashBuilder_catalystRegistration_addAuxiliaryScripts(&builder);
 
 	{
-		uint8_t result[AUX_DATA_HASH_LENGTH];
+		uint8_t result[AUX_DATA_HASH_LENGTH] = {0};
 		auxDataHashBuilder_finalize(&builder, result, SIZEOF(result));
 
-		uint8_t expected[AUX_DATA_HASH_LENGTH];
+		uint8_t expected[AUX_DATA_HASH_LENGTH] = {0};
 		decode_hex(expectedAuxDataHashHex, expected, SIZEOF(expected));
 
 		PRINTF("Transaction auxiliary data hash hex\n");

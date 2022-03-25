@@ -13,14 +13,14 @@ void testcase_assetFingerprint(
 {
 	PRINTF("testcase %s %s\n", policyIdHex, assetNameHex);
 
-	uint8_t policyId[28];
+	uint8_t policyId[28] = {0};
 	decode_hex(policyIdHex, policyId, SIZEOF(policyId));
 
-	uint8_t assetName[32];
+	uint8_t assetName[32] = {0};
 	decode_hex(assetNameHex, assetName, SIZEOF(assetName));
 	size_t assetNameSize = strlen(assetNameHex) / 2;
 
-	char fingerprint[200];
+	char fingerprint[200] = {0};
 
 	deriveAssetFingerprint(
 	        policyId, SIZEOF(policyId),

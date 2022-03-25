@@ -31,7 +31,7 @@ typedef void ui_callback_fn_t();
 				ASSERT(false);
 
 #ifdef FUZZING
-// Flatten UI control flows. Every step will be 
+// Flatten UI control flows. Every step will be
 // called and validated without manual interaction
 // Starting from the first defined step
 #define UI_STEP(NEXT_STEP) \

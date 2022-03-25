@@ -49,11 +49,11 @@ static void deriveAddress_handleReturn()
 	prepareResponse();
 
 	switch (policy) {
-#	define  CASE(POLICY, STEP) case POLICY: {ctx->ui_step=STEP; break;}
+#define  CASE(POLICY, STEP) case POLICY: {ctx->ui_step=STEP; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,    RETURN_UI_STEP_WARNING);
 		CASE(POLICY_PROMPT_BEFORE_RESPONSE, RETURN_UI_STEP_BEGIN);
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   RETURN_UI_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
@@ -114,6 +114,7 @@ enum {
 	DISPLAY_UI_STEP_SPENDING_INFO,
 	DISPLAY_UI_STEP_STAKING_INFO,
 	DISPLAY_UI_STEP_ADDRESS,
+	DISPLAY_UI_STEP_CONFIRM,
 	DISPLAY_UI_STEP_RESPOND,
 	DISPLAY_UI_STEP_INVALID
 };
@@ -129,10 +130,10 @@ static void deriveAddress_handleDisplay()
 	prepareResponse();
 
 	switch (policy) {
-#	define  CASE(policy, step) case policy: {ctx->ui_step=step; break;}
+#define  CASE(policy, step) case policy: {ctx->ui_step=step; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,  DISPLAY_UI_STEP_WARNING);
 		CASE(POLICY_SHOW_BEFORE_RESPONSE, DISPLAY_UI_STEP_INSTRUCTIONS);
-#	undef   CASE
+#undef   CASE
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
@@ -178,6 +179,14 @@ static void deriveAddress_display_ui_runStep()
 		        this_fn
 		);
 	}
+	UI_STEP(DISPLAY_UI_STEP_CONFIRM) {
+		ui_displayPrompt(
+		        "Confirm",
+		        "address?",
+		        this_fn,
+		        respond_with_user_reject
+		);
+	}
 	UI_STEP(DISPLAY_UI_STEP_RESPOND) {
 		io_send_buf(SUCCESS, NULL, 0);
 		ui_idle();
@@ -209,10 +218,10 @@ void deriveAddress_handleAPDU(
 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
 	switch (p1) {
-#	define  CASE(P1, HANDLER_FN) case P1: {HANDLER_FN(); break;}
+#define  CASE(P1, HANDLER_FN) case P1: {HANDLER_FN(); break;}
 		CASE(P1_RETURN,  deriveAddress_handleReturn);
 		CASE(P1_DISPLAY, deriveAddress_handleDisplay);
-#	undef  CASE
+#undef   CASE
 	default:
 		THROW(ERR_INVALID_REQUEST_PARAMETERS);
 	}

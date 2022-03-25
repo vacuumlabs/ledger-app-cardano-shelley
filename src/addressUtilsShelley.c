@@ -76,7 +76,7 @@ uint8_t getNetworkId(uint8_t addressHeader)
 
 bool isValidNetworkId(uint8_t networkId)
 {
-	return networkId <= 0b1111;
+	return networkId <= MAXIMUM_NETWORK_ID;
 }
 
 bool isValidStakingChoice(staking_data_source_t stakingDataSource)
@@ -131,15 +131,42 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 #undef CONSISTENT_WITH
 }
 
+staking_data_source_t determineStakingChoice(address_type_t addressType)
+{
+	switch (addressType) {
+	case BASE_PAYMENT_KEY_STAKE_KEY:
+	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+	case REWARD_KEY:
+		return STAKING_KEY_HASH;
+
+	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
+	case REWARD_SCRIPT:
+		return STAKING_SCRIPT_HASH;
+
+	case POINTER_KEY:
+	case POINTER_SCRIPT:
+		return BLOCKCHAIN_POINTER;
+
+	case ENTERPRISE_KEY:
+	case ENTERPRISE_SCRIPT:
+	case BYRON:
+		return NO_STAKING;
+
+	default:
+		ASSERT(false);
+	}
+}
+
 __noinline_due_to_stack__
 static size_t view_appendAddressPublicKeyHash(write_view_t* view, const bip44_path_t* keyDerivationPath)
 {
 	TRACE_STACK_USAGE();
 
-	uint8_t hashedPubKey[ADDRESS_KEY_HASH_LENGTH];
+	uint8_t hashedPubKey[ADDRESS_KEY_HASH_LENGTH] = {0};
 	bip44_pathToKeyHash(keyDerivationPath, hashedPubKey, SIZEOF(hashedPubKey));
 
-	view_appendData(view, hashedPubKey, SIZEOF(hashedPubKey));
+	view_appendBuffer(view, hashedPubKey, SIZEOF(hashedPubKey));
 
 	return ADDRESS_KEY_HASH_LENGTH;
 }
@@ -169,7 +196,7 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 
 	size_t size = 0;
 	{
-		view_appendData(&out, &header, 1);
+		view_appendBuffer(&out, &header, 1);
 		++size;
 	}
 	STATIC_ASSERT(SIZEOF(addressParams->spendingScriptHash) == SCRIPT_HASH_LENGTH, "bad spending script hash size");
@@ -182,7 +209,7 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 	break;
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
 	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT: {
-		view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+		view_appendBuffer(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
 		size += SCRIPT_HASH_LENGTH;
 	}
 	break;
@@ -200,13 +227,13 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 	break;
 
 	case STAKING_KEY_HASH: {
-		view_appendData(&out, addressParams->stakingKeyHash, ADDRESS_KEY_HASH_LENGTH);
+		view_appendBuffer(&out, addressParams->stakingKeyHash, ADDRESS_KEY_HASH_LENGTH);
 		size += ADDRESS_KEY_HASH_LENGTH;
 	}
 	break;
 
 	case STAKING_SCRIPT_HASH: {
-		view_appendData(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
+		view_appendBuffer(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
 		size += SCRIPT_HASH_LENGTH;
 	}
 	break;
@@ -223,13 +250,13 @@ static size_t view_appendVariableLengthUInt(write_view_t* view, uint64_t value)
 
 	if (value == 0) {
 		uint8_t byte = 0;
-		view_appendData(view, &byte, 1);
+		view_appendBuffer(view, &byte, 1);
 		return 1;
 	}
 
 	ASSERT(value > 0);
 
-	uint8_t chunks[10]; // 7-bit chunks of the input bits, at most 10 in uint64
+	uint8_t chunks[10] = {0}; // 7-bit chunks of the input bits, at most 10 in uint64
 	size_t outputSize = 0;
 	{
 		blockchainIndex_t bits = value;
@@ -243,10 +270,10 @@ static size_t view_appendVariableLengthUInt(write_view_t* view, uint64_t value)
 	for (size_t i = outputSize - 1; i > 0; --i) {
 		// highest bit set to 1 since more bytes follow
 		uint8_t nextByte = chunks[i] | 0b10000000;
-		view_appendData(view, &nextByte, 1);
+		view_appendBuffer(view, &nextByte, 1);
 	}
 	// write the remaining byte, highest bit 0
-	view_appendData(view, &chunks[0], 1);
+	view_appendBuffer(view, &chunks[0], 1);
 
 	return outputSize;
 }
@@ -264,13 +291,13 @@ static size_t deriveAddress_pointer(
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
-		view_appendData(&out, &addressHeader, 1);
+		view_appendBuffer(&out, &addressHeader, 1);
 	}
 	{
 		if (addressType == POINTER_KEY) {
 			view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
 		} else {
-			view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+			view_appendBuffer(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
 		}
 
 		STATIC_ASSERT(SCRIPT_HASH_LENGTH == ADDRESS_KEY_HASH_LENGTH, "incompatible hash lengths");
@@ -300,13 +327,13 @@ static size_t deriveAddress_enterprise(
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
-		view_appendData(&out, &addressHeader, 1);
+		view_appendBuffer(&out, &addressHeader, 1);
 	}
 	{
 		if (addressType == ENTERPRISE_KEY) {
 			view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
 		} else {
-			view_appendData(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+			view_appendBuffer(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
 		}
 	}
 	{
@@ -334,7 +361,7 @@ static size_t deriveAddress_reward(
 
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
-		view_appendData(&out, &addressHeader, 1);
+		view_appendBuffer(&out, &addressHeader, 1);
 	}
 	{
 		// no spending data
@@ -344,10 +371,11 @@ static size_t deriveAddress_reward(
 			const bip44_path_t* stakingKeyPath = &addressParams->stakingKeyPath;
 			// staking key path expected (corresponds to reward account)
 			BIP44_PRINTF(stakingKeyPath);
+			PRINTF("\n");
 			ASSERT(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
 			view_appendAddressPublicKeyHash(&out, stakingKeyPath);
 		} else {
-			view_appendData(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
+			view_appendBuffer(&out, addressParams->stakingScriptHash, SCRIPT_HASH_LENGTH);
 		}
 	}
 
@@ -393,10 +421,10 @@ size_t constructRewardAddressFromHash(
 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
 	{
 		const uint8_t addressHeader = constructShelleyAddressHeader((source == REWARD_HASH_SOURCE_KEY) ? REWARD_KEY : REWARD_SCRIPT, networkId);
-		view_appendData(&out, &addressHeader, 1);
+		view_appendBuffer(&out, &addressHeader, 1);
 	}
 	{
-		view_appendData(&out, hashBuffer, hashSize);
+		view_appendBuffer(&out, hashBuffer, hashSize);
 	}
 
 	const int ADDRESS_LENGTH = REWARD_ACCOUNT_SIZE;
@@ -408,12 +436,9 @@ size_t constructRewardAddressFromHash(
 size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(isValidAddressParams(addressParams));
 
 	const bip44_path_t* spendingPath = &addressParams->spendingKeyPath;
-
-	if (addressParams->type == BYRON) {
-		return deriveAddress_byron(spendingPath, addressParams->protocolMagic, outBuffer, outSize);
-	}
 
 	// shelley
 	switch (addressParams->type) {
@@ -433,9 +458,9 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 	case REWARD_SCRIPT:
 		return deriveAddress_reward(addressParams, outBuffer, outSize);
 	case BYRON:
-		ASSERT(false);
+		return deriveAddress_byron(spendingPath, addressParams->protocolMagic, outBuffer, outSize);
 	default:
-		THROW(ERR_UNSUPPORTED_ADDRESS_TYPE);
+		ASSERT(false);
 	}
 	return BUFFER_SIZE_PARANOIA + 1;
 }
@@ -458,7 +483,8 @@ void printBlockchainPointerToStr(blockchainPointer_t blockchainPointer, char* ou
 	        blockchainPointer.txIndex,
 	        blockchainPointer.certificateIndex
 	);
-	ASSERT(strlen(out) + 1 <= outSize);
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(out) + 1 < outSize);
 }
 
 // bech32 for Shelley, base58 for Byron
@@ -525,7 +551,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	// address type
 	params->type = parse_u1be(view);
 	TRACE("Address type: 0x%x", params->type);
-	VALIDATE(isSupportedAddressType(params->type), ERR_UNSUPPORTED_ADDRESS_TYPE);
+	VALIDATE(isSupportedAddressType(params->type), ERR_INVALID_DATA);
 
 	// protocol magic / network id
 	if (params->type == BYRON) {
@@ -545,6 +571,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case BYRON:
 		view_skipBytes(view, bip44_parseFromWire(&params->spendingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 		BIP44_PRINTF(&params->spendingKeyPath);
+		PRINTF("\n");
 		break;
 
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
@@ -552,7 +579,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case POINTER_SCRIPT:
 	case ENTERPRISE_SCRIPT: {
 		STATIC_ASSERT(SIZEOF(params->spendingScriptHash) == SCRIPT_HASH_LENGTH, "Wrong address key hash length");
-		view_copyWireToBuffer(params->spendingScriptHash, view, SCRIPT_HASH_LENGTH);
+		view_parseBuffer(params->spendingScriptHash, view, SCRIPT_HASH_LENGTH);
 		TRACE("Spending script hash: ");
 		TRACE_BUFFER(params->spendingScriptHash, SIZEOF(params->spendingScriptHash));
 		break;
@@ -582,11 +609,12 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case STAKING_KEY_PATH:
 		view_skipBytes(view, bip44_parseFromWire(&params->stakingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
 		BIP44_PRINTF(&params->stakingKeyPath);
+		PRINTF("\n");
 		break;
 
 	case STAKING_KEY_HASH: {
 		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
-		view_copyWireToBuffer(params->stakingKeyHash, view, ADDRESS_KEY_HASH_LENGTH);
+		view_parseBuffer(params->stakingKeyHash, view, ADDRESS_KEY_HASH_LENGTH);
 		TRACE("Staking key hash: ");
 		TRACE_BUFFER(params->stakingKeyHash, SIZEOF(params->stakingKeyHash));
 		break;
@@ -594,7 +622,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 
 	case STAKING_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(params->stakingScriptHash) == SCRIPT_HASH_LENGTH, "Wrong script hash length");
-		view_copyWireToBuffer(params->stakingScriptHash, view, SCRIPT_HASH_LENGTH);
+		view_parseBuffer(params->stakingScriptHash, view, SCRIPT_HASH_LENGTH);
 		TRACE("Staking script hash: ");
 		TRACE_BUFFER(params->stakingScriptHash, SIZEOF(params->stakingScriptHash));
 		break;
@@ -622,7 +650,7 @@ static inline bool isValidStakingInfo(const addressParams_t* params)
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(isStakingInfoConsistentWithAddressType(params));
 	if (params->stakingDataSource == STAKING_KEY_PATH) {
-		CHECK(bip44_isOrdinaryStakingKeyPath(&params->stakingKeyPath));
+		CHECK(bip44_classifyPath(&params->stakingKeyPath) == PATH_ORDINARY_STAKING_KEY);
 	}
 	return true;
 #undef CHECK

@@ -115,10 +115,10 @@ static void addTwoMultiassetTokenGroups(tx_hash_builder_t* builder,
                                         addTokenGroupFun tokenGroupAdder, addTokenFun tokenAdder)
 {
 	// we reuse the buffers to avoid wasting stack
-	uint8_t policy[MINTING_POLICY_ID_SIZE];
+	uint8_t policy[MINTING_POLICY_ID_SIZE] = {0};
 	explicit_bzero(policy, SIZEOF(policy));
 
-	uint8_t assetNameBuffer[ASSET_NAME_SIZE_MAX];
+	uint8_t assetNameBuffer[ASSET_NAME_SIZE_MAX] = {0};
 	explicit_bzero(assetNameBuffer, SIZEOF(assetNameBuffer));
 
 	policy[0] = 1;
@@ -152,18 +152,29 @@ static void addMultiassetMint(tx_hash_builder_t* builder)
 	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addMint_tokenGroup, &addMintTokenProxy);
 }
 
+static void outputTokenHandler(
+        tx_hash_builder_t* builder,
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
+        uint64_t amount
+)
+{
+	txHashBuilder_addOutput_token(builder, assetNameBuffer, assetNameSize, amount, false);
+}
+
+
 static void addMultiassetOutput(tx_hash_builder_t* builder)
 {
-	uint8_t tmp[70];
+	uint8_t tmp[70] = {0};
 	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
 	txHashBuilder_addOutput_topLevelData(
 	        builder,
 	        tmp, tmpSize,
 	        outputs[1].amount,
-	        2
+	        2,
+	        false
 	);
 
-	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &txHashBuilder_addOutput_token);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &outputTokenHandler);
 }
 
 static void addOutputs(tx_hash_builder_t* builder)
@@ -173,13 +184,13 @@ static void addOutputs(tx_hash_builder_t* builder)
 	addMultiassetOutput(builder);
 
 	ITERATE(it, outputs) {
-		uint8_t tmp[70];
+		uint8_t tmp[70] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
 		txHashBuilder_addOutput_topLevelData(
 		        builder,
 		        tmp, tmpSize,
 		        it->amount,
-		        0
+		        0, false
 		);
 	}
 
@@ -189,13 +200,13 @@ static void addOutputs(tx_hash_builder_t* builder)
 
 static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 {
-	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
-	uint8_t vrfKeyHash[VRF_KEY_HASH_LENGTH];
+	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
+	uint8_t vrfKeyHash[VRF_KEY_HASH_LENGTH] = {0};
 	uint64_t pledge = 500000000;
 	uint64_t cost = 340000000;
 	uint64_t marginNumerator = 1;
 	uint64_t marginDenominator = 1;
-	uint8_t rewardAccount[REWARD_ACCOUNT_SIZE];
+	uint8_t rewardAccount[REWARD_ACCOUNT_SIZE] = {0};
 
 	size_t poolKeyHashSize = decode_hex(
 	                                 "5631EDE662CFB10FD5FD69B4667101DD289568E12BCF5F64D1C406FC",
@@ -223,7 +234,7 @@ static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 
 	txHashBuilder_addPoolRegistrationCertificate_enterOwners(builder);
 
-	uint8_t owner1[28];
+	uint8_t owner1[28] = {0};
 	size_t owner1Size = decode_hex("3A7F09D3DF4CF66A7399C2B05BFA234D5A29560C311FC5DB4C490711", owner1, SIZEOF(owner1));
 	ASSERT(owner1Size == SIZEOF(owner1));
 
@@ -259,12 +270,12 @@ static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 		txHashBuilder_addPoolRegistrationCertificate_addRelay(builder, &relay2);
 	}
 
-	uint8_t metadataHash[32];
+	uint8_t metadataHash[32] = {0};
 	size_t metadataHashSize = decode_hex("914C57C1F12BBF4A82B12D977D4F274674856A11ED4B9B95BD70F5D41C5064A6", metadataHash, SIZEOF(metadataHash));
 	ASSERT(metadataHashSize == SIZEOF(metadataHash));
 
 	const char* metadataUrl = "https://teststakepool.com";
-	uint8_t urlBuffer[DNS_NAME_SIZE_MAX];
+	uint8_t urlBuffer[DNS_NAME_SIZE_MAX] = {0};
 	size_t urlSize = str_textToBuffer(metadataUrl, urlBuffer, SIZEOF(urlBuffer));
 	ASSERT(urlSize <= DNS_NAME_SIZE_MAX);
 
@@ -273,7 +284,7 @@ static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
 
 static void addPoolRetirementCertificate(tx_hash_builder_t* builder)
 {
-	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
 	uint64_t epoch = 1000;
 
 	size_t poolKeyHashSize = decode_hex(
@@ -294,7 +305,7 @@ static void addCertificates(tx_hash_builder_t* builder)
 	txHashBuilder_enterCertificates(builder);
 
 	ITERATE(it, registrationCertificates) {
-		uint8_t tmp[70];
+		uint8_t tmp[70] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
 		txHashBuilder_addCertificate_stakingHash(
 		        builder,
@@ -305,7 +316,7 @@ static void addCertificates(tx_hash_builder_t* builder)
 	}
 
 	ITERATE(it, deregistrationCertificates) {
-		uint8_t tmp[70];
+		uint8_t tmp[70] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
 		txHashBuilder_addCertificate_stakingHash(
 		        builder,
@@ -320,12 +331,12 @@ static void addCertificates(tx_hash_builder_t* builder)
 	addPoolRetirementCertificate(builder);
 
 	ITERATE(it, delegationCertificates) {
-		uint8_t tmp_credential[70];
+		uint8_t tmp_credential[70] = {0};
 		size_t tmpSize_credential = decode_hex(
 		                                    PTR_PIC(it->stakingKeyHash),
 		                                    tmp_credential, SIZEOF(tmp_credential)
 		                            );
-		uint8_t tmp_pool[70];
+		uint8_t tmp_pool[70] = {0};
 		size_t tmpSize_pool = decode_hex(PTR_PIC(it->poolKeyHash), tmp_pool, SIZEOF(tmp_pool));
 		txHashBuilder_addCertificate_delegation(
 		        builder, STAKE_CREDENTIAL_KEY_PATH,
@@ -359,12 +370,16 @@ void run_txHashBuilder_test()
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
 	                   true, // validity interval start
-	                   true // mint
-	                  );
+	                   true, // mint
+	                   false, // script hash data
+	                   0,	// collaterals not tested yet
+	                   0,	// required signers not tested yet
+	                   true
+	                  );	// if these tests ever return to actually being used, they should be added
 
 	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {
-		uint8_t tmp[TX_HASH_LENGTH];
+		uint8_t tmp[TX_HASH_LENGTH] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->txHashHex), tmp, SIZEOF(tmp));
 		txHashBuilder_addInput(
 		        &builder,
@@ -384,7 +399,7 @@ void run_txHashBuilder_test()
 	txHashBuilder_enterWithdrawals(&builder);
 
 	ITERATE(it, withdrawals) {
-		uint8_t tmp[70];
+		uint8_t tmp[70] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->rewardAddress), tmp, SIZEOF(tmp));
 		txHashBuilder_addWithdrawal(
 		        &builder,
@@ -395,7 +410,7 @@ void run_txHashBuilder_test()
 
 	{
 		const char auxDataHashHex[] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
-		uint8_t tmp[AUX_DATA_HASH_LENGTH];
+		uint8_t tmp[AUX_DATA_HASH_LENGTH] = {0};
 		size_t tmpSize = decode_hex(auxDataHashHex, tmp, SIZEOF(tmp));
 		ASSERT(tmpSize == AUX_DATA_HASH_LENGTH);
 		txHashBuilder_addAuxData(&builder, tmp, tmpSize);
@@ -405,10 +420,10 @@ void run_txHashBuilder_test()
 
 	addMint(&builder);
 
-	uint8_t result[TX_HASH_LENGTH];
+	uint8_t result[TX_HASH_LENGTH] = {0};
 	txHashBuilder_finalize(&builder, result, SIZEOF(result));
 
-	uint8_t expected[TX_HASH_LENGTH];
+	uint8_t expected[TX_HASH_LENGTH] = {0};
 	decode_hex(expectedHex, expected, SIZEOF(expected));
 
 	PRINTF("result\n");

@@ -17,10 +17,10 @@ void testcase_derivePrivateKey(uint32_t* path, uint32_t pathLen, const char* exp
 	bip44_path_t pathSpec;
 	ASSERT(pathLen <= BIP44_MAX_PATH_ELEMENTS);
 	pathSpec_init(&pathSpec, path, pathLen);
-	bip44_PRINTF(&pathSpec);
+	BIP44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
-	uint8_t expected[64];
+	uint8_t expected[64] = {0};
 	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));
 
 	chain_code_t chainCode;
@@ -78,7 +78,7 @@ void testcase_derivePublicKey(uint32_t* path, uint32_t pathLen, const char* expe
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	bip44_PRINTF(&pathSpec);
+	BIP44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	chain_code_t chainCode;
@@ -86,10 +86,10 @@ void testcase_derivePublicKey(uint32_t* path, uint32_t pathLen, const char* expe
 	derivePrivateKey(&pathSpec, &chainCode, &privateKey);
 	cx_ecfp_public_key_t publicKey;
 	deriveRawPublicKey(&privateKey, &publicKey);
-	uint8_t publicKeyRaw[32];
+	uint8_t publicKeyRaw[32] = {0};
 	extractRawPublicKey(&publicKey, publicKeyRaw, SIZEOF(publicKeyRaw));
 
-	uint8_t expectedBuffer[32];
+	uint8_t expectedBuffer[32] = {0};
 	decode_hex(expected, expectedBuffer, SIZEOF(expectedBuffer));
 	EXPECT_EQ_BYTES(expectedBuffer, publicKeyRaw, SIZEOF(expectedBuffer));
 }
@@ -147,12 +147,12 @@ void testcase_deriveChainCode(uint32_t* path, uint32_t pathLen, const char* expe
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	bip44_PRINTF(&pathSpec);
+	BIP44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
 	derivePrivateKey(&pathSpec, &chainCode, &privateKey);
 
-	uint8_t expectedBuffer[32];
+	uint8_t expectedBuffer[32] = {0};
 	decode_hex(expectedHex, expectedBuffer, 32);
 	EXPECT_EQ_BYTES(expectedBuffer, chainCode.code, 32);
 }

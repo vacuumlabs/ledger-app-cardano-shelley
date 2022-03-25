@@ -142,11 +142,16 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 			read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 			STATIC_ASSERT(SIZEOF(subctx->stateData.votingPubKey) == CATALYST_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
-			view_copyWireToBuffer(subctx->stateData.votingPubKey, &view, CATALYST_VOTING_PUBLIC_KEY_LENGTH);
+			view_parseBuffer(subctx->stateData.votingPubKey, &view, CATALYST_VOTING_PUBLIC_KEY_LENGTH);
 
 			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 		}
 	}
+
+	security_policy_t policy = policyForCatalystRegistrationVotingKey();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		aux_data_hash_builder_t* auxDataHashBuilder = &AUX_DATA_CTX->auxDataHashBuilder;
 		auxDataHashBuilder_catalystRegistration_enter(auxDataHashBuilder);
@@ -156,18 +161,13 @@ static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuff
 		);
 	}
 
-	security_policy_t policy = policyForCatalystRegistrationVotingKey();
-
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
-
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VOTING_KEY_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VOTING_KEY_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -259,11 +259,11 @@ static void signTxCatalystRegistration_handleStakingKeyAPDU(uint8_t* wireDataBuf
 	{
 		// select UI step
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_STAKING_KEY_STEP_WARNING);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_STAKING_KEY_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_STAKING_KEY_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -299,7 +299,7 @@ static void signTxCatalystRegistration_handleVotingRewardsAddress_addressParams_
 		);
 	}
 	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
-		uint8_t addressBuffer[MAX_ADDRESS_SIZE];
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
 		size_t addressSize = deriveAddress(
 		                             &subctx->stateData.votingRewardsAddressParams,
 		                             addressBuffer,
@@ -357,7 +357,7 @@ static void signTxCatalystRegistration_handleVotingRewardsAddressAPDU(uint8_t* w
 
 	{
 		ASSERT(isShelleyAddressType(subctx->stateData.votingRewardsAddressParams.type));
-		uint8_t addressBuffer[MAX_ADDRESS_SIZE];
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
 		size_t addressSize = deriveAddress(
 		                             &subctx->stateData.votingRewardsAddressParams,
 		                             addressBuffer,
@@ -374,11 +374,11 @@ static void signTxCatalystRegistration_handleVotingRewardsAddressAPDU(uint8_t* w
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_WARNING);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -441,22 +441,22 @@ static void signTxCatalystRegistration_handleNonceAPDU(uint8_t* wireDataBuffer, 
 		        subctx->stateData.nonce
 		);
 	}
-	{
-		auxDataHashBuilder_catalystRegistration_addNonce(&AUX_DATA_CTX->auxDataHashBuilder, subctx->stateData.nonce);
-	}
 
 	security_policy_t policy = policyForCatalystRegistrationNonce();
-
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	{
+		auxDataHashBuilder_catalystRegistration_addNonce(&AUX_DATA_CTX->auxDataHashBuilder, subctx->stateData.nonce);
+	}
+
+	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_NONCE_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_NONCE_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -502,7 +502,7 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 		struct {
 			uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
 			uint8_t signature[ED25519_SIGNATURE_LENGTH];
-		} wireResponse;
+		} wireResponse = {0};
 
 		STATIC_ASSERT(SIZEOF(subctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong aux data hash length");
 		memmove(wireResponse.auxDataHash, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
@@ -535,10 +535,14 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
+	security_policy_t policy = policyForCatalystRegistrationConfirm();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
 	{
 		aux_data_hash_builder_t* auxDataHashBuilder = &AUX_DATA_CTX->auxDataHashBuilder;
 		{
-			uint8_t votingPayloadHashBuffer[CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH];
+			uint8_t votingPayloadHashBuffer[CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH] = {0};
 			auxDataHashBuilder_catalystRegistration_finalizePayload(auxDataHashBuilder, votingPayloadHashBuffer, AUX_DATA_HASH_LENGTH);
 			getCatalystVotingRegistrationSignature(
 			        &subctx->stakingKeyPath,
@@ -552,19 +556,13 @@ static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer
 		auxDataHashBuilder_finalize(auxDataHashBuilder, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 	}
 
-
-	security_policy_t policy = policyForCatalystRegistrationConfirm();
-
-	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
-
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}

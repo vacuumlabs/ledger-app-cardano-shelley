@@ -6,7 +6,28 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [3.0.0](TBD) - [TBD]
+## [4.0.0](TBD) - [TBD]
+
+Support for Alonzo era (Plutus scripts)
+
+### Added
+
+- support for all new Alonzo transaction elements
+- support for stake credentials given by key hash
+- a new transaction signing mode for Plutus transactions
+
+### Changed
+
+- the account on HD derivation path must be the same across the transaction elements (incl. witnesses)
+- bech32 instead of hex in certain places in the UI as described in [CIP 5](https://cips.cardano.org/cips/cip5/)
+
+### Fixed
+
+- pool registration transaction witness must be consistent with the path of the owner (for `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER`)
+- wrong pool retirement epoch UI text
+
+
+## [3.0.0](https://github.com/LedgerHQ/app-cardano/compare/2.4.1...LedgerHQ:3.0.0) - [October 8th 2021]
 
 Script elements in transactions and support for native scripts
 

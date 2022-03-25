@@ -8,10 +8,10 @@
 void testcase_base58(const char* inputHex, const char* expectedStr)
 {
 	PRINTF("testcase_base58: %s\n", inputHex);
-	uint8_t inputBuffer[100];
+	uint8_t inputBuffer[100] = {0};
 	size_t inputSize;
 	inputSize = decode_hex(inputHex, inputBuffer, SIZEOF(inputBuffer));
-	char outputStr[100];
+	char outputStr[100] = {0};
 	size_t outputLen = base58_encode(inputBuffer, inputSize, outputStr, SIZEOF(outputStr));
 	EXPECT_EQ(outputLen, strlen(expectedStr));
 	EXPECT_EQ_BYTES(expectedStr, outputStr, outputLen + 1);

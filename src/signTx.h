@@ -19,6 +19,7 @@ typedef enum {
 	SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER = 4,
 	SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR = 5,
 	SIGN_TX_SIGNINGMODE_MULTISIG_TX = 6,
+	SIGN_TX_SIGNINGMODE_PLUTUS_TX = 7,
 } sign_tx_signingmode_t;
 
 typedef enum {
@@ -37,8 +38,11 @@ typedef enum {
 	SIGN_STAGE_BODY_VALIDITY_INTERVAL = 34,
 	SIGN_STAGE_BODY_MINT = 35,
 	SIGN_STAGE_BODY_MINT_SUBMACHINE = 36,
-	SIGN_STAGE_CONFIRM = 37,
-	SIGN_STAGE_WITNESSES = 38,
+	SIGN_STAGE_BODY_SCRIPT_DATA_HASH = 37,
+	SIGN_STAGE_BODY_COLLATERALS = 38,
+	SIGN_STAGE_BODY_REQUIRED_SIGNERS = 39,
+	SIGN_STAGE_CONFIRM = 40,
+	SIGN_STAGE_WITNESSES = 41,
 } sign_tx_stage_t;
 
 enum {
@@ -46,8 +50,16 @@ enum {
 	SIGN_MAX_OUTPUTS = UINT16_MAX,
 	SIGN_MAX_CERTIFICATES = UINT16_MAX,
 	SIGN_MAX_REWARD_WITHDRAWALS = UINT16_MAX,
+	SIGN_MAX_COLLATERALS = UINT16_MAX,
+	SIGN_MAX_REQUIRED_SIGNERS = UINT16_MAX,
 	SIGN_MAX_WITNESSES = SIGN_MAX_INPUTS + SIGN_MAX_OUTPUTS + SIGN_MAX_CERTIFICATES + SIGN_MAX_REWARD_WITHDRAWALS,
 };
+
+typedef struct {
+	bool isStored;
+	bool isByron;
+	uint32_t accountNumber;
+} single_account_data_t;
 
 typedef struct {
 	// significantly affects restrictions on the tx
@@ -55,12 +67,15 @@ typedef struct {
 
 	uint8_t networkId; // part of Shelley address
 	uint32_t protocolMagic; // part of Byron address
+
+	single_account_data_t singleAccountData;
 } common_tx_data_t;
 
 typedef struct {
 	stake_credential_type_t type;
 	union {
 		bip44_path_t keyPath;
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
 		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
 	};
 } stake_credential_t;
@@ -76,6 +91,11 @@ typedef struct {
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
 
 } sign_tx_certificate_data_t;
+
+typedef struct {
+	uint8_t txHashBuffer[TX_HASH_LENGTH];
+	uint32_t parsedIndex;
+} sign_tx_transaction_input_t;
 
 typedef struct {
 	bip44_path_t path;
@@ -98,27 +118,47 @@ typedef struct {
 	} stageContext;
 } ins_sign_tx_aux_data_context_t;
 
+typedef enum {
+	REQUIRED_SIGNER_WITH_PATH = 0,
+	REQUIRED_SIGNER_WITH_HASH = 1
+} sign_tx_required_signer_mode_t;
+
+typedef struct {
+	sign_tx_required_signer_mode_t type;
+	union {
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		bip44_path_t keyPath;
+	};
+} sign_tx_required_signer_t;
+
 typedef struct {
 	uint16_t currentInput;
 	uint16_t currentOutput;
 	uint16_t currentCertificate;
 	uint16_t currentWithdrawal;
+	uint16_t currentCollateral;
+	uint16_t currentRequiredSigner;
 
 	bool feeReceived;
 	bool ttlReceived;
 	bool validityIntervalStartReceived;
 	bool mintReceived;
+	bool scriptDataHashReceived;
 
 	// TODO move these to commonTxData?
 	tx_hash_builder_t txHashBuilder;
 
 	// this holds data valid only through the processing of a single APDU
 	union {
+		sign_tx_transaction_input_t input;
 		uint64_t fee;
 		uint64_t ttl;
 		sign_tx_certificate_data_t certificate;
 		sign_tx_withdrawal_data_t withdrawal;
 		uint64_t validityIntervalStart;
+		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
+		sign_tx_transaction_input_t collateral;
+		sign_tx_required_signer_t requiredSigner;
 	} stageData; // TODO rename to reflect single-APDU scope
 
 	union {
@@ -148,6 +188,10 @@ typedef struct {
 	uint16_t numWithdrawals; // reward withdrawals
 	bool includeValidityIntervalStart;
 	bool includeMint;
+	bool includeScriptDataHash;
+	uint16_t numCollaterals;
+	uint16_t numRequiredSigners;
+	bool includeNetworkId;
 	uint16_t numWitnesses;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
@@ -159,6 +203,9 @@ typedef struct {
 		ins_sign_tx_witness_context_t witnesses_ctx;
 	} txPartCtx;
 
+	bool poolOwnerByPath;
+	bip44_path_t poolOwnerPath;
+
 	int ui_step;
 } ins_sign_tx_context_t;
 
@@ -167,15 +214,9 @@ ins_sign_tx_body_context_t* accessBodyContext();
 ins_sign_tx_witness_context_t* accessWitnessContext();
 
 
-#ifdef DEVEL
-#define AUX_DATA_CTX (ASSERT(accessAuxDataContext() != NULL), accessAuxDataContext())
-#define BODY_CTX (ASSERT(accessBodyContext() != NULL), accessBodyContext())
-#define WITNESS_CTX (ASSERT(accessWitnessContext() != NULL), accessWitnessContext())
-#else
 #define AUX_DATA_CTX (accessAuxDataContext())
 #define BODY_CTX (accessBodyContext())
 #define WITNESS_CTX (accessWitnessContext())
-#endif
 
 handler_fn_t signTx_handleAPDU;
 

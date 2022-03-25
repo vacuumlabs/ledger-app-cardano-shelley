@@ -3,7 +3,6 @@
 #include "hash.h"
 #include "cbor.h"
 #include "cardano.h"
-#include "crc32.h"
 #include "bufView.h"
 
 // this tracing is rarely needed
@@ -47,7 +46,7 @@ static void blake2b_256_append_cbor_tx_body(
         uint8_t type, uint64_t value
 )
 {
-	uint8_t buffer[10];
+	uint8_t buffer[10] = {0};
 	size_t size = cbor_writeToken(type, value, buffer, SIZEOF(buffer));
 	TRACE_BUFFER(buffer, size);
 	blake2b_256_append(hashCtx, buffer, size);
@@ -64,7 +63,11 @@ void txHashBuilder_init(
         uint16_t numWithdrawals,
         bool includeAuxData,
         bool includeValidityIntervalStart,
-        bool includeMint
+        bool includeMint,
+        bool includeScriptDataHash,
+        uint16_t numCollaterals,
+        uint16_t numRequiredSigners,
+        bool includeNetworkId
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -75,6 +78,10 @@ void txHashBuilder_init(
 	TRACE("includeAuxData = %u", includeAuxData);
 	TRACE("includeValidityIntervalStart = %u", includeValidityIntervalStart);
 	TRACE("includeMint = %u", includeMint);
+	TRACE("includeScriptDataHash = %u", includeScriptDataHash);
+	TRACE("numCollaterals = %u", numCollaterals);
+	TRACE("numRequiredSigners = %u", numRequiredSigners);
+	TRACE("includeNetworkId = %u", includeNetworkId);
 
 	blake2b_256_init(&builder->txHash);
 
@@ -108,7 +115,19 @@ void txHashBuilder_init(
 		builder->includeMint = includeMint;
 		if (includeMint) numItems++;
 
-		ASSERT((3 <= numItems) && (numItems <= 9));
+		builder->includeScriptDataHash = includeScriptDataHash;
+		if (includeScriptDataHash) numItems++;
+
+		builder->remainingCollaterals = numCollaterals;
+		if (numCollaterals > 0) numItems++;
+
+		builder->remainingRequiredSigners = numRequiredSigners;
+		if (numRequiredSigners > 0) numItems++;
+
+		builder->includeNetworkId = includeNetworkId;
+		if (includeNetworkId) numItems++;
+
+		ASSERT((3 <= numItems) && (numItems <= 13));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -155,7 +174,7 @@ void txHashBuilder_addInput(
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 		{
-			ASSERT(utxoHashSize == 32);
+			ASSERT(utxoHashSize == TX_HASH_LENGTH);
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
 			BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
 		}
@@ -190,7 +209,8 @@ void txHashBuilder_addOutput_topLevelData(
         tx_hash_builder_t* builder,
         const uint8_t* addressBuffer, size_t addressSize,
         uint64_t amount,
-        uint16_t numAssetGroups
+        uint16_t numAssetGroups,
+        bool includeDatumHash
 )
 {
 	_TRACE("state = %d, remainingOutputs = %u", builder->state, builder->remainingOutputs);
@@ -206,7 +226,7 @@ void txHashBuilder_addOutput_topLevelData(
 		//   Unsigned[amount]
 		// ]
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumHash);
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
 				BUILDER_APPEND_DATA(addressBuffer, addressSize);
@@ -215,7 +235,11 @@ void txHashBuilder_addOutput_topLevelData(
 				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
 			}
 		}
-		builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+		if (includeDatumHash) {
+			builder->state = TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH;
+		} else {
+			builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+		}
 	} else {
 		builder->multiassetData.remainingAssetGroups = numAssetGroups;
 		// Array(2)[
@@ -228,7 +252,7 @@ void txHashBuilder_addOutput_topLevelData(
 		//   ]
 		// ]
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumHash);
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
 				BUILDER_APPEND_DATA(addressBuffer, addressSize);
@@ -335,7 +359,8 @@ void txHashBuilder_addOutput_tokenGroup(
 void txHashBuilder_addOutput_token(
         tx_hash_builder_t* builder,
         const uint8_t* assetNameBuffer, size_t assetNameSize,
-        uint64_t amount
+        uint64_t amount,
+        bool includeDatumHash
 )
 {
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
@@ -343,9 +368,25 @@ void txHashBuilder_addOutput_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         TX_HASH_BUILDER_IN_OUTPUTS_TOKEN,
 	         TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP,
-	         TX_HASH_BUILDER_IN_OUTPUTS,
+	         includeDatumHash ? TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH : TX_HASH_BUILDER_IN_OUTPUTS,
 	         CBOR_TYPE_UNSIGNED);
 }
+
+void txHashBuilder_addOutput_datumHash(
+        tx_hash_builder_t* builder,
+        const uint8_t* datumHashBuffer, size_t datumHashSize
+)
+{
+	ASSERT(datumHashSize == OUTPUT_DATUM_HASH_LENGTH);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH);
+
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, datumHashSize);
+		BUILDER_APPEND_DATA(datumHashBuffer, datumHashSize);
+	}
+	builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+}
+
 
 static void txHashBuilder_assertCanLeaveOutputs(tx_hash_builder_t* builder)
 {
@@ -380,6 +421,7 @@ void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl)
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveFee(builder);
+	ASSERT(builder->includeTtl);
 
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_TTL);
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, ttl);
@@ -424,6 +466,24 @@ void txHashBuilder_enterCertificates(tx_hash_builder_t* builder)
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES;
 }
 
+static uint32_t getStakeCredentialSource(const stake_credential_type_t stakeCredentialType)
+{
+	enum {
+		KEY = 0,
+		SCRIPT = 1
+	};
+	switch (stakeCredentialType) {
+	case STAKE_CREDENTIAL_KEY_PATH:
+	case STAKE_CREDENTIAL_KEY_HASH:
+		return KEY;
+	case STAKE_CREDENTIAL_SCRIPT_HASH:
+		return SCRIPT;
+	default:
+		ASSERT(false);
+		break;
+	}
+}
+
 // staking key certificate registration or deregistration
 void txHashBuilder_addCertificate_stakingHash(
         tx_hash_builder_t* builder,
@@ -458,7 +518,7 @@ void txHashBuilder_addCertificate_stakingHash(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredentialType);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, getStakeCredentialSource(stakeCredentialType));
 			}
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingHashSize);
@@ -500,7 +560,7 @@ void txHashBuilder_addCertificate_delegation(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredentialType);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, getStakeCredentialSource(stakeCredentialType));
 			}
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingKeyHashSize);
@@ -771,14 +831,14 @@ static void _relay_addIpv6(tx_hash_builder_t* builder, const ipv6_t* ipv6)
 
 		// serialized as 4 big-endian uint32
 		// we need a local copy of the data to make the following pointer tricks work
-		// the copy is created by memcpy instead of struct assignment to avoid compiler optimizing it away
-		uint8_t ipBuffer[IPV6_SIZE];
-		memcpy(ipBuffer, ipv6->ip, SIZEOF(ipBuffer));
+		// the copy is created by memmove instead of struct assignment to avoid compiler optimizing it away
+		uint8_t ipBuffer[IPV6_SIZE] = {0};
+		memmove(ipBuffer, ipv6->ip, SIZEOF(ipBuffer));
 		STATIC_ASSERT(SIZEOF(ipBuffer) == 16, "wrong ipv6 size");
 
 		uint32_t* as_uint32 = (uint32_t*) ipBuffer;
 		for (size_t i = 0; i < 4; i++) {
-			uint8_t chunk[4];
+			uint8_t chunk[4] = {0};
 			u4be_write(chunk, as_uint32[i]);
 			BUILDER_APPEND_DATA(chunk, 4);
 		}
@@ -947,6 +1007,7 @@ static void txHashBuilder_assertCanLeaveCertificates(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_CERTIFICATES:
+		// we are asserting no remainingCertificates below
 		break;
 
 	case TX_HASH_BUILDER_IN_TTL:
@@ -1009,6 +1070,7 @@ static void txHashBuilder_assertCanLeaveWithdrawals(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+		// we are asserting no remainingCertificates below
 		break;
 
 	case TX_HASH_BUILDER_IN_CERTIFICATES:
@@ -1067,6 +1129,7 @@ void txHashBuilder_addValidityIntervalStart(tx_hash_builder_t* builder, uint64_t
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveAuxData(builder);
+	ASSERT(builder->includeValidityIntervalStart);
 
 	// add validity interval start item into the main tx body map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_VALIDITY_INTERVAL_START);
@@ -1102,6 +1165,8 @@ void txHashBuilder_enterMint(tx_hash_builder_t* builder)
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveValidityIntervalStart(builder);
+	ASSERT(builder->includeMint);
+
 	{
 		// Enter mint
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_MINT);
@@ -1122,7 +1187,7 @@ void txHashBuilder_addMint_topLevelData(
 	//   { * policy_id => { * asset_name => uint } }
 	// ]
 	BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numAssetGroups);
-	ASSERT(0 != numAssetGroups);
+	ASSERT(numAssetGroups > 0);
 	builder->state = TX_HASH_BUILDER_IN_MINT_ASSET_GROUP;
 }
 
@@ -1179,10 +1244,231 @@ static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 	}
 }
 
+void txHashBuilder_addScriptDataHash(
+        tx_hash_builder_t* builder,
+        const uint8_t* scriptHashData, size_t scriptHashDataSize
+)
+{
+	_TRACE("state = %d", builder->state);
+
+	ASSERT(scriptHashDataSize == SCRIPT_DATA_HASH_LENGTH);
+	txHashBuilder_assertCanLeaveMint(builder);
+	ASSERT(builder->includeScriptDataHash);
+
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_SCRIPT_HASH_DATA);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, scriptHashDataSize);
+		BUILDER_APPEND_DATA(scriptHashData, scriptHashDataSize);
+	}
+	builder->state = TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH;
+}
+
+static void txHashBuilder_assertCanLeaveScriptDataHash(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %u", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
+		break;
+
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveMint(builder);
+		ASSERT(!builder->includeScriptDataHash);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+}
+
+void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveScriptDataHash(builder);
+	// we don't allow an empty list for an optional item
+	ASSERT(builder->remainingCollaterals > 0);
+
+	{
+		// Enter collateral inputs
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERALS);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingCollaterals);
+	}
+	builder->state = TX_HASH_BUILDER_IN_COLLATERALS;
+}
+
+void txHashBuilder_addCollateral(
+        tx_hash_builder_t* builder,
+        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
+        uint32_t utxoIndex
+)
+{
+	_TRACE("state = %d, remainingCollaterals = %u", builder->state, builder->remainingCollaterals);
+
+	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERALS);
+	ASSERT(builder->remainingCollaterals > 0);
+	builder->remainingCollaterals--;
+	// Array(2)[
+	//    Bytes[hash],
+	//    Unsigned[index]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+		{
+			ASSERT(utxoHashSize == TX_HASH_LENGTH);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
+			BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, utxoIndex);
+		}
+	}
+}
+
+static void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %u", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_COLLATERALS:
+		// we are asserting no remainingCollaterals below
+		break;
+
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveScriptDataHash(builder);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	ASSERT(builder->remainingCollaterals == 0);
+}
+
+void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveCollaterals(builder);
+	// we don't allow an empty list for an optional item
+	ASSERT(builder->remainingRequiredSigners > 0);
+
+	{
+		// Enter required signers
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_REQUIRED_SIGNERS);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingRequiredSigners);
+	}
+	builder->state = TX_HASH_BUILDER_IN_REQUIRED_SIGNERS;
+}
+
+void txHashBuilder_addRequiredSigner(
+        tx_hash_builder_t* builder,
+        const uint8_t* vkeyBuffer, size_t vkeySize
+)
+{
+	_TRACE("state = %d, remainingRequiredSigners = %u", builder->state, builder->remainingRequiredSigners);
+
+	ASSERT(vkeySize < BUFFER_SIZE_PARANOIA);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_REQUIRED_SIGNERS);
+	ASSERT(builder->remainingRequiredSigners > 0);
+	builder->remainingRequiredSigners--;
+	// Array(2)[
+	//    Bytes[hash],
+	//    Unsigned[index]
+	// ]
+	{
+		ASSERT(vkeySize == ADDRESS_KEY_HASH_LENGTH);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, vkeySize);
+		BUILDER_APPEND_DATA(vkeyBuffer, vkeySize);
+	}
+}
+
+static void txHashBuilder_assertCanLeaveRequiredSigners(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %u", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
+		// we are asserting no remainingRequiredSigners below
+		break;
+
+	case TX_HASH_BUILDER_IN_COLLATERALS:
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveCollaterals(builder);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	ASSERT(builder->remainingRequiredSigners == 0);
+}
+
+void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveRequiredSigners(builder);
+	ASSERT(builder->includeNetworkId);
+
+	// add network id item into the main tx body map
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_NETWORK_ID);
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, networkId);
+
+	builder->state = TX_HASH_BUILDER_IN_NETWORK_ID;
+}
+
+static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_NETWORK_ID:
+		break;
+
+	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
+	case TX_HASH_BUILDER_IN_COLLATERALS:
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveRequiredSigners(builder);
+		ASSERT(!builder->includeNetworkId);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+}
 
 void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
 {
-	txHashBuilder_assertCanLeaveMint(builder);
+	txHashBuilder_assertCanLeaveNetworkId(builder);
 
 	ASSERT(outSize == TX_HASH_LENGTH);
 	{
