@@ -93,7 +93,7 @@ static void getPublicKeys_respondOneKey_ui_runStep()
 
 		io_send_buf(SUCCESS, (uint8_t*) &ctx->extPubKey, SIZEOF(ctx->extPubKey));
 		ctx->responseReadyMagic = 0; // just for safety
-		ui_displayBusy(); // needs to happen after I/O
+		ui_displayBusy(); // displays dots, called after I/O to avoid freezing
 
 		ctx->currentPath++;
 		TRACE("Current path: %u / %u", ctx->currentPath, ctx->numPaths);
