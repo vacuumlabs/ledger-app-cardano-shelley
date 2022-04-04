@@ -2071,9 +2071,8 @@ static void signTx_handleConfirm_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
-		// respond
 		io_send_buf(SUCCESS, ctx->txHash, SIZEOF(ctx->txHash));
-		ui_displayBusy();
+		ui_displayBusy(); // displays dots, called after I/O to avoid freezing
 
 		advanceStage();
 	}
