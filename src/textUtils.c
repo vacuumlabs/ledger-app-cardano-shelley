@@ -12,7 +12,7 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	char scratchBuffer[30] = {0};
+	char scratchBuffer[40] = {0};
 	explicit_bzero(scratchBuffer, SIZEOF(scratchBuffer));
 	char* ptr = BEGIN(scratchBuffer);
 	char* end = END(scratchBuffer);

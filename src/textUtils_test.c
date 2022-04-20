@@ -10,7 +10,7 @@ void testcase_formatAda(
 )
 {
 	PRINTF("testcase_formatAda %s\n", expected);
-	char tmp[30] = {0};
+	char tmp[40] = {0};
 	size_t len = str_formatAdaAmount(amount, tmp, SIZEOF(tmp));
 	EXPECT_EQ(len, strlen(expected));
 	EXPECT_EQ(strcmp(tmp, expected), 0);
@@ -32,13 +32,14 @@ void test_formatAda()
 		PRINTF("test_formatAda edge cases");
 		char tmp[16] = {0};
 		memset(tmp, 'X', SIZEOF(tmp));
-		str_formatAdaAmount(0, tmp, 13);
+		str_formatAdaAmount(0, tmp, 14);
 		EXPECT_EQ(tmp[12], 0);
-		EXPECT_EQ(tmp[13], 'X');
+		EXPECT_EQ(tmp[14], 'X');
 
-		EXPECT_THROWS(str_formatAdaAmount(10000000, tmp, 13),
+		memset(tmp, 'X', SIZEOF(tmp));
+		EXPECT_THROWS(str_formatAdaAmount(10000000, tmp, 14),
 		              ERR_ASSERT);
-		EXPECT_EQ(tmp[13], 'X');
+		EXPECT_EQ(tmp[14], 'X');
 	}
 }
 

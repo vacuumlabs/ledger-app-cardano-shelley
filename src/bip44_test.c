@@ -38,23 +38,23 @@ void run_bip44_test()
 	}
 
 	TESTCASE(
-	        (1, 2, 3, 4, 5), BIP44_PATH_STRING_SIZE_MAX,
+	        (1, 2, 3, 4, 5), BIP44_PATH_STRING_SIZE_MAX + 1,
 	        "m/1/2/3/4/5"
 	);
 	TESTCASE(
-	        (1, 2, 3, 4, 5), 12,
+	        (1, 2, 3, 4, 5), BIP44_PATH_STRING_SIZE_MAX + 1,
 	        "m/1/2/3/4/5"
 	);
 	TESTCASE(
-	        (), 2,
+	        (), BIP44_PATH_STRING_SIZE_MAX + 1,
 	        "m"
 	);
 	TESTCASE(
-	        (HD + 44, HD + 1815, HD + 0, 1, 55), BIP44_PATH_STRING_SIZE_MAX,
+	        (HD + 44, HD + 1815, HD + 0, 1, 55), BIP44_PATH_STRING_SIZE_MAX + 1,
 	        "m/44'/1815'/0'/1/55"
 	);
 	TESTCASE(
-	        (HD + 44, HD + 1815), 60,
+	        (HD + 44, HD + 1815), BIP44_PATH_STRING_SIZE_MAX + 1,
 	        "m/44'/1815'"
 	);
 #undef TESTCASE
