@@ -3,6 +3,7 @@
 
 #include "common.h"
 
+size_t str_formatDecimalAmount(uint64_t amount, size_t places, char* out, size_t outSize);
 size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize);
 
 size_t str_formatUint64(uint64_t number, char* out, size_t outSize);
