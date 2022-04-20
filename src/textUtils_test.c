@@ -4,6 +4,47 @@
 #include "textUtils.h"
 #include "testUtils.h"
 
+void testcase_formatDecimal(
+        uint64_t amount,
+        size_t places,
+        const char* expected
+)
+{
+	PRINTF("testcase_formatDecimal %s\n", expected);
+	char tmp[30] = {0};
+	size_t len = str_formatDecimalAmount(amount, places, tmp, SIZEOF(tmp));
+	EXPECT_EQ(len, strlen(expected));
+	EXPECT_EQ(strcmp(tmp, expected), 0);
+}
+
+void test_formatDecimal()
+{
+	testcase_formatDecimal(0, 0, "0");
+	testcase_formatDecimal(0, 4, "0.0000");
+	testcase_formatDecimal(1, 8, "0.00000001");
+	testcase_formatDecimal(10, 8, "0.00000010");
+	testcase_formatDecimal(123456, 4, "12.3456");
+	testcase_formatDecimal(1000000, 3, "1,000.000");
+	testcase_formatDecimal(
+	        12345678901234567890u, 12,
+	        "12,345,678.901234567890"
+	);
+
+	{
+		PRINTF("test_formatDecimal edge cases");
+		char tmp[16] = {0};
+		memset(tmp, 'X', SIZEOF(tmp));
+		str_formatDecimalAmount(0, 4, tmp, 9);
+		EXPECT_EQ(tmp[6], 0);
+		EXPECT_EQ(tmp[7], 'X');
+
+		memset(tmp, 'X', SIZEOF(tmp));
+		EXPECT_THROWS(str_formatDecimalAmount(10000000, 5, tmp, 9),
+		              ERR_ASSERT);
+		EXPECT_EQ(tmp[9], 'X');
+	}
+}
+
 void testcase_formatAda(
         uint64_t amount,
         const char* expected
@@ -143,6 +184,7 @@ void test_formatInt64()
 
 void run_textUtils_test()
 {
+	test_formatDecimal();
 	test_formatAda();
 	test_formatTtl();
 	test_formatUint64();

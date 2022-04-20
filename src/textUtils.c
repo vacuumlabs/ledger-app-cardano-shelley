@@ -8,9 +8,10 @@
 		ptr++; \
 	}
 
-size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
+size_t str_formatDecimalAmount(uint64_t amount, size_t places, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(places <= UINT8_MAX);
 
 	char scratchBuffer[40] = {0};
 	explicit_bzero(scratchBuffer, SIZEOF(scratchBuffer));
@@ -20,11 +21,13 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	// We print in reverse
 
 	// decimal digits
-	for (int dec = 0; dec < 6; dec++) {
+	for (size_t dec = 0; dec < places; dec++) {
 		WRITE_CHAR(ptr, end, '0' + (amount % 10));
 		amount /= 10;
 	}
-	WRITE_CHAR(ptr, end, '.');
+	if (places > 0) {
+		WRITE_CHAR(ptr, end, '.');
+	}
 	// We want at least one iteration
 	int place = 0;
 	do {
@@ -40,18 +43,31 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	// Size without terminating character
 	STATIC_ASSERT(sizeof(ptr - scratchBuffer) == sizeof(size_t), "bad size_t size");
 	size_t rawSize = (size_t) (ptr - scratchBuffer);
-
-	const char *suffix = " ADA";
-	const size_t suffixLength = strlen(suffix);
-
-	// make sure all the information is displayed to the user
-	ASSERT(rawSize + suffixLength + 1 < outSize);
+	ASSERT(rawSize + 1 <= outSize);
 
 	// Copy reversed & append terminator
 	for (size_t i = 0; i < rawSize; i++) {
 		out[i] = scratchBuffer[rawSize - 1 - i];
 	}
 	out[rawSize] = 0;
+
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(out) == rawSize);
+
+	return rawSize;
+}
+
+size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
+{
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
+	size_t rawSize = str_formatDecimalAmount(amount, 6, out, outSize);
+
+	const char *suffix = " ADA";
+	const size_t suffixLength = strlen(suffix);
+
+	// make sure all the information is displayed to the user
+	ASSERT(rawSize + suffixLength + 1 < outSize);
 
 	snprintf(out + rawSize, outSize - rawSize, "%s", suffix);
 	ASSERT(strlen(out) == rawSize + suffixLength);
@@ -105,20 +121,24 @@ size_t str_formatUint64(uint64_t number, char* out, size_t outSize)
 	return strlen(out);
 }
 
+uint64_t abs_int64(int64_t number)
+{
+	if (number < 0) {
+		if (number == INT64_MIN) {
+			return ((uint64_t)INT64_MAX) + 1;
+		} else {
+			return (uint64_t)(-number);
+		}
+	} else {
+		return (uint64_t)number;
+	}
+}
+
 size_t str_formatInt64(int64_t number, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	uint64_t signlessNumber;
-	if (number < 0) {
-		if (number == INT64_MIN) {
-			signlessNumber = ((uint64_t)INT64_MAX) + 1;
-		} else {
-			signlessNumber = (uint64_t)(-number);
-		}
-	} else {
-		signlessNumber = (uint64_t)number;
-	}
+	const uint64_t signlessNumber = abs_int64(number);
 	{
 		char tmpReversed[30] = {0};
 		explicit_bzero(tmpReversed, SIZEOF(tmpReversed));
