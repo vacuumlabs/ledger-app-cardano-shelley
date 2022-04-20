@@ -277,7 +277,7 @@ size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 	// we need space for the terminating \0
 	// and one more byte to check whether
-	// snprintf has enough space to print everything
+	// everything was printed
 	ASSERT(outSize >= BIP44_PATH_STRING_SIZE_MAX + 1);
 	char* ptr = out;
 	char* end = (out + outSize);
