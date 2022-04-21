@@ -121,20 +121,24 @@ size_t str_formatUint64(uint64_t number, char* out, size_t outSize)
 	return strlen(out);
 }
 
+uint64_t abs_int64(int64_t number)
+{
+	if (number < 0) {
+		if (number == INT64_MIN) {
+			return ((uint64_t)INT64_MAX) + 1;
+		} else {
+			return (uint64_t)(-number);
+		}
+	} else {
+		return (uint64_t)number;
+	}
+}
+
 size_t str_formatInt64(int64_t number, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	uint64_t signlessNumber;
-	if (number < 0) {
-		if (number == INT64_MIN) {
-			signlessNumber = ((uint64_t)INT64_MAX) + 1;
-		} else {
-			signlessNumber = (uint64_t)(-number);
-		}
-	} else {
-		signlessNumber = (uint64_t)number;
-	}
+	const uint64_t signlessNumber = abs_int64(number);
 	{
 		char tmpReversed[30] = {0};
 		explicit_bzero(tmpReversed, SIZEOF(tmpReversed));

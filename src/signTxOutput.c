@@ -7,6 +7,7 @@
 #include "textUtils.h"
 #include "bufView.h"
 #include "securityPolicy.h"
+#include "tokens.h"
 
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 
@@ -499,8 +500,9 @@ static void signTxOutput_handleToken_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_AMOUNT) {
-		ui_displayUint64Screen(
-		        "Token amount",
+		ui_displayTokenAmountOutputScreen(
+		        &subctx->stateData.tokenGroup,
+		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
 		        subctx->stateData.token.amount,
 		        this_fn
 		);
