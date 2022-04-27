@@ -12,7 +12,8 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 {
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	char scratchBuffer[30];
+	char scratchBuffer[30] = {0};
+	explicit_bzero(scratchBuffer, SIZEOF(scratchBuffer));
 	char* ptr = BEGIN(scratchBuffer);
 	char* end = END(scratchBuffer);
 
@@ -43,9 +44,8 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 	const char *suffix = " ADA";
 	const size_t suffixLength = strlen(suffix);
 
-	if (rawSize + suffixLength + 1 > outSize) {
-		THROW(ERR_DATA_TOO_LARGE);
-	}
+	// make sure all the information is displayed to the user
+	ASSERT(rawSize + suffixLength + 1 < outSize);
 
 	// Copy reversed & append terminator
 	for (size_t i = 0; i < rawSize; i++) {
@@ -79,9 +79,8 @@ static size_t stringifyUint64ToBufferReverse(uint64_t number, char* buffer, size
 static void printReversedStringToBuffer(const char* reversed, char* out, size_t outSize)
 {
 	const size_t reversedSize = strlen(reversed);
-	if (reversedSize + 1 > outSize) {
-		THROW(ERR_DATA_TOO_LARGE);
-	}
+	ASSERT(outSize >= reversedSize + 1);
+
 	for (size_t i = 0; i < reversedSize; i++) {
 		out[i] = reversed[reversedSize - 1 - i];
 	}
@@ -95,7 +94,8 @@ size_t str_formatUint64(uint64_t number, char* out, size_t outSize)
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	{
-		char tmpReversed[30];
+		char tmpReversed[30] = {0};
+		explicit_bzero(tmpReversed, SIZEOF(tmpReversed));
 
 		stringifyUint64ToBufferReverse(number, tmpReversed, SIZEOF(tmpReversed));
 		const size_t reversedSize = strlen(tmpReversed);
@@ -120,7 +120,8 @@ size_t str_formatInt64(int64_t number, char* out, size_t outSize)
 		signlessNumber = (uint64_t)number;
 	}
 	{
-		char tmpReversed[30];
+		char tmpReversed[30] = {0};
+		explicit_bzero(tmpReversed, SIZEOF(tmpReversed));
 		//size without the potential '-' sign
 		stringifyUint64ToBufferReverse(signlessNumber, tmpReversed, SIZEOF(tmpReversed) - 1);
 		size_t reversedLength = strlen(tmpReversed);
@@ -137,7 +138,8 @@ size_t str_formatInt64(int64_t number, char* out, size_t outSize)
 #ifdef DEVEL
 void str_traceAdaAmount(const char* prefix, uint64_t amount)
 {
-	char adaAmountStr[100];
+	char adaAmountStr[100] = {0};
+	explicit_bzero(adaAmountStr, SIZEOF(adaAmountStr));
 
 	const size_t prefixLen = strlen(prefix);
 	ASSERT(prefixLen <= 50);
@@ -150,14 +152,18 @@ void str_traceAdaAmount(const char* prefix, uint64_t amount)
 
 void str_traceUint64(uint64_t number)
 {
-	char numberStr[30];
+	char numberStr[30] = {0};
+	explicit_bzero(numberStr, SIZEOF(numberStr));
+
 	str_formatUint64(number, numberStr, SIZEOF(numberStr));
 	TRACE("%s", numberStr);
 }
 
 void str_traceInt64(int64_t number)
 {
-	char numberStr[30];
+	char numberStr[30] = {0};
+	explicit_bzero(numberStr, SIZEOF(numberStr));
+
 	str_formatInt64(number, numberStr, SIZEOF(numberStr));
 	TRACE("%s", numberStr);
 }

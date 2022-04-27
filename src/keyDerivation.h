@@ -5,7 +5,6 @@
 #include "handlers.h"
 #include "bip44.h"
 
-
 #define PUBLIC_KEY_SIZE      (32)
 #define CHAIN_CODE_SIZE      (32)
 #define EXTENDED_PUBKEY_SIZE (CHAIN_CODE_SIZE + PUBLIC_KEY_SIZE)

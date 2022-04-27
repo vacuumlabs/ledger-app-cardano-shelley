@@ -13,6 +13,7 @@
 #include "securityPolicy.h"
 #include "signTxPoolRegistration.h"
 
+static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 
 static pool_registration_context_t* accessSubcontext()
@@ -182,12 +183,8 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 			uint8_t numRelays[4];
 		}* wireHeader = (void*) wireDataBuffer;
 
-		#ifndef FUZZING
-		// FIXME: the following fails when compiling for x86
-		VALIDATE(wireDataSize == SIZEOF(*wireHeader), ERR_INVALID_DATA);
-		#else
-		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
-		#endif
+		// can't use SIZEOF because it fails for x86 for fuzzing
+		VALIDATE(wireDataSize == sizeof(*wireHeader), ERR_INVALID_DATA);
 
 		uint64_t numOwners = u4be_read(wireHeader->numOwners);
 		uint64_t numRelays = u4be_read(wireHeader->numRelays);
@@ -202,17 +199,14 @@ static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_
 		ASSERT_TYPE(subctx->numRelays, uint16_t);
 		subctx->numOwners = (uint16_t) numOwners;
 		subctx->numRelays = (uint16_t) numRelays;
-
-		switch (commonTxData->txSigningMode) {
-		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-			// there should be exactly one owner given by path for which we provide a witness
-			VALIDATE(subctx->numOwners >= 1, ERR_INVALID_DATA);
-			break;
-
-		default:
-			// nothing to validate in other cases
-			break;
-		}
+	}
+	{
+		security_policy_t policy = policyForSignTxStakePoolRegistrationInit(
+		                                   commonTxData->txSigningMode,
+		                                   subctx->numOwners
+		                           );
+		TRACE("Policy: %d", (int) policy);
+		ENSURE_NOT_DENIED(policy);
 	}
 	{
 		txHashBuilder_poolRegistrationCertificate_enter(
@@ -269,7 +263,7 @@ static void handlePoolKey_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID) {
-		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
 		_toPoolKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
 		ui_displayBech32Screen(
@@ -296,7 +290,7 @@ static void _parsePoolId(read_view_t* view)
 
 	case KEY_REFERENCE_HASH: {
 		STATIC_ASSERT(SIZEOF(key->hash) == POOL_KEY_HASH_LENGTH, "wrong pool id key hash size");
-		view_copyWireToBuffer(key->hash, view, POOL_KEY_HASH_LENGTH);
+		view_parseBuffer(key->hash, view, POOL_KEY_HASH_LENGTH);
 		TRACE_BUFFER(key->hash, SIZEOF(key->hash));
 		break;
 	}
@@ -345,7 +339,7 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 
 	{
 		// key derivation must not be done before DENY security policy is enforced
-		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
+		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
 		_toPoolKeyHash(&subctx->stateData.poolId, poolKeyHash);
 
 		txHashBuilder_poolRegistrationCertificate_poolKeyHash(
@@ -372,10 +366,10 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, si
 
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, displayUiStep);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_KEY_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -447,18 +441,20 @@ static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, siz
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
-	txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
-	        &BODY_CTX->txHashBuilder,
-	        subctx->stateData.vrfKeyHash, SIZEOF(subctx->stateData.vrfKeyHash)
-	);
+	{
+		txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
+		        &BODY_CTX->txHashBuilder,
+		        subctx->stateData.vrfKeyHash, SIZEOF(subctx->stateData.vrfKeyHash)
+		);
+	}
 
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_VRF_KEY_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_VRF_KEY_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -616,7 +612,7 @@ static void _parsePoolRewardAccount(read_view_t* view)
 
 	case KEY_REFERENCE_HASH: {
 		STATIC_ASSERT(SIZEOF(rewardAccount->hashBuffer) == REWARD_ACCOUNT_SIZE, "wrong reward account hash buffer size");
-		view_copyWireToBuffer(rewardAccount->hashBuffer, view, REWARD_ACCOUNT_SIZE);
+		view_parseBuffer(rewardAccount->hashBuffer, view, REWARD_ACCOUNT_SIZE);
 		TRACE_BUFFER(rewardAccount->hashBuffer, SIZEOF(rewardAccount->hashBuffer));
 
 		const uint8_t header = getAddressHeader(rewardAccount->hashBuffer, SIZEOF(rewardAccount->hashBuffer));
@@ -669,7 +665,7 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 
 	{
 		// key derivation must not be done before DENY security policy is enforced
-		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE];
+		uint8_t rewardAccountBuffer[REWARD_ACCOUNT_SIZE] = {0};
 		rewardAccountToBuffer(&subctx->stateData.poolRewardAccount, commonTxData->networkId, rewardAccountBuffer);
 
 		txHashBuilder_poolRegistrationCertificate_rewardAccount(
@@ -680,10 +676,10 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuff
 
 	{
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -717,19 +713,6 @@ static void handleOwner_ui_runStep()
 
 		subctx->currentOwner++;
 		if (subctx->currentOwner == subctx->numOwners) {
-			switch (commonTxData->txSigningMode) {
-			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-				VALIDATE(subctx->numOwnersGivenByPath == 1, ERR_INVALID_DATA);
-				break;
-
-			case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-				ASSERT(subctx->numOwnersGivenByPath == 0);
-				break;
-
-			default:
-				ASSERT(false);
-			}
-
 			advanceState();
 		}
 	}
@@ -741,7 +724,7 @@ static void _addOwnerToTxHash()
 {
 	pool_owner_t* owner = &accessSubcontext()->stateData.owner;
 
-	uint8_t ownerKeyHash[ADDRESS_KEY_HASH_LENGTH];
+	uint8_t ownerKeyHash[ADDRESS_KEY_HASH_LENGTH] = {0};
 
 	switch (owner->keyReferenceType) {
 
@@ -793,7 +776,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 
 		case KEY_REFERENCE_HASH: {
 			STATIC_ASSERT(SIZEOF(owner->keyHash) == ADDRESS_KEY_HASH_LENGTH, "wrong owner.keyHash size");
-			view_copyWireToBuffer(owner->keyHash, &view, ADDRESS_KEY_HASH_LENGTH);
+			view_parseBuffer(owner->keyHash, &view, ADDRESS_KEY_HASH_LENGTH);
 			TRACE_BUFFER(owner->keyHash, SIZEOF(owner->keyHash));
 			break;
 		}
@@ -806,8 +789,9 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 			PRINTF("\n");
 
 			subctx->numOwnersGivenByPath++;
-			VALIDATE(subctx->numOwnersGivenByPath <= 1, ERR_INVALID_DATA);
-
+			VALIDATE(!ctx->poolOwnerByPath, ERR_INVALID_DATA);
+			ctx->poolOwnerByPath = true;
+			memmove(&ctx->poolOwnerPath, &owner->path, SIZEOF(owner->path));
 			break;
 		}
 
@@ -818,7 +802,7 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(commonTxData->txSigningMode, owner);
+	security_policy_t policy = policyForSignTxStakePoolRegistrationOwner(commonTxData->txSigningMode, owner, subctx->numOwnersGivenByPath);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -827,10 +811,10 @@ static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size
 	{
 		// select UI steps
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OWNER_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OWNER_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -927,9 +911,10 @@ static void handleRelay_dns_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME) {
-		char dnsNameStr[1 + DNS_NAME_SIZE_MAX];
+		char dnsNameStr[1 + DNS_NAME_SIZE_MAX] = {0};
+		explicit_bzero(dnsNameStr, SIZEOF(dnsNameStr));
 		ASSERT(relay->dnsNameSize <= DNS_NAME_SIZE_MAX);
-		memcpy(dnsNameStr, relay->dnsName, relay->dnsNameSize);
+		memmove(dnsNameStr, relay->dnsName, relay->dnsNameSize);
 		dnsNameStr[relay->dnsNameSize] = '\0';
 		ASSERT(strlen(dnsNameStr) == relay->dnsNameSize);
 
@@ -983,7 +968,7 @@ static void _parseIpv4(ipv4_t* ipv4, read_view_t* view)
 	if (isIpv4Given == ITEM_INCLUDED_YES) {
 		ipv4->isNull = false;
 		STATIC_ASSERT(sizeof(ipv4->ip) == IPV4_SIZE, "wrong ipv4 size"); // SIZEOF does not work for 4-byte buffers
-		view_copyWireToBuffer(ipv4->ip, view, IPV4_SIZE);
+		view_parseBuffer(ipv4->ip, view, IPV4_SIZE);
 		TRACE("ipv4");
 		TRACE_BUFFER(ipv4->ip, IPV4_SIZE);
 	} else {
@@ -998,7 +983,7 @@ static void _parseIpv6(ipv6_t* ipv6, read_view_t* view)
 	if (isIpv6Given == ITEM_INCLUDED_YES) {
 		ipv6->isNull = false;
 		STATIC_ASSERT(SIZEOF(ipv6->ip) == IPV6_SIZE, "wrong ipv6 size");
-		view_copyWireToBuffer(ipv6->ip, view, IPV6_SIZE);
+		view_parseBuffer(ipv6->ip, view, IPV6_SIZE);
 		TRACE("ipv6");
 		TRACE_BUFFER(ipv6->ip, IPV6_SIZE);
 	} else {
@@ -1014,7 +999,7 @@ static void _parseDnsName(pool_relay_t* relay, read_view_t* view)
 	VALIDATE(str_isAllowedDnsName(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)), ERR_INVALID_DATA);
 
 	STATIC_ASSERT(SIZEOF(relay->dnsName) == DNS_NAME_SIZE_MAX, "wrong dns name buffer size");
-	view_copyWireToBuffer(relay->dnsName, view, relay->dnsNameSize);
+	view_parseBuffer(relay->dnsName, view, relay->dnsNameSize);
 }
 
 /*
@@ -1126,10 +1111,10 @@ static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size
 
 		// select UI steps and call ui handler
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, respondStep);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, displayStep);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
@@ -1189,9 +1174,10 @@ static void handleMetadata_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_URL) {
-		char metadataUrlStr[1 + POOL_METADATA_URL_LENGTH_MAX];
+		char metadataUrlStr[1 + POOL_METADATA_URL_LENGTH_MAX] = {0};
+		explicit_bzero(metadataUrlStr, SIZEOF(metadataUrlStr));
 		ASSERT(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX);
-		memcpy(metadataUrlStr, md->url, md->urlSize);
+		memmove(metadataUrlStr, md->url, md->urlSize);
 		metadataUrlStr[md->urlSize] = '\0';
 		ASSERT(strlen(metadataUrlStr) == md->urlSize);
 
@@ -1202,7 +1188,8 @@ static void handleMetadata_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_HASH) {
-		char metadataHashHex[1 + 2 * POOL_METADATA_HASH_LENGTH];
+		char metadataHashHex[1 + 2 * POOL_METADATA_HASH_LENGTH] = {0};
+		explicit_bzero(metadataHashHex, SIZEOF(metadataHashHex));
 		size_t len = str_formatMetadata(
 		                     md->hash, SIZEOF(md->hash),
 		                     metadataHashHex, SIZEOF(metadataHashHex)
@@ -1224,25 +1211,26 @@ static void handleMetadata_ui_runStep()
 
 static void handleNullMetadata()
 {
-	{
-		security_policy_t policy = policyForSignTxStakePoolRegistrationNoMetadata();
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
+	security_policy_t policy = policyForSignTxStakePoolRegistrationNoMetadata();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
-		// select UI step
-		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_NULL_METADATA_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_NULL_METADATA_STEP_RESPOND);
-#	undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
-	}
 	{
 		// add null metadata to certificate
 		TRACE("Adding null pool metadata to tx hash");
 		txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(&BODY_CTX->txHashBuilder);
+	}
+
+	{
+		// select UI step
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {accessSubcontext()->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_NULL_METADATA_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_NULL_METADATA_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
 	}
 
 	handleNullMetadata_ui_runStep();
@@ -1283,13 +1271,13 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		}
 		{
 			STATIC_ASSERT(SIZEOF(md->hash) == POOL_METADATA_HASH_LENGTH, "wrong pool metadata buffer size");
-			view_copyWireToBuffer(md->hash, &view, POOL_METADATA_HASH_LENGTH);
+			view_parseBuffer(md->hash, &view, POOL_METADATA_HASH_LENGTH);
 		}
 		{
 			md->urlSize = view_remainingSize(&view);
 			VALIDATE(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX, ERR_INVALID_DATA);
 			STATIC_ASSERT(SIZEOF(md->url) >= POOL_METADATA_URL_LENGTH_MAX, "wrong pool metada url size");
-			view_copyWireToBuffer(md->url, &view, md->urlSize);
+			view_parseBuffer(md->url, &view, md->urlSize);
 
 			// whitespace not allowed
 			VALIDATE(str_isPrintableAsciiWithoutSpaces(md->url, md->urlSize), ERR_INVALID_DATA);
@@ -1298,21 +1286,9 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	{
-		security_policy_t policy = policyForSignTxStakePoolRegistrationMetadata();
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
-
-		// select UI step
-		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_METADATA_STEP_DISPLAY_URL);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_METADATA_STEP_RESPOND);
-#	undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
-	}
+	security_policy_t policy = policyForSignTxStakePoolRegistrationMetadata();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
 
 	{
 		// add metadata to tx
@@ -1322,6 +1298,18 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffe
 		        subctx->stateData.metadata.url, subctx->stateData.metadata.urlSize,
 		        subctx->stateData.metadata.hash, SIZEOF(subctx->stateData.metadata.hash)
 		);
+	}
+
+	{
+		// select UI step
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_METADATA_STEP_DISPLAY_URL);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_METADATA_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
 	}
 
 	handleMetadata_ui_runStep();
@@ -1411,10 +1399,10 @@ static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MAR
 	{
 		// select UI step
 		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
-#	undef   CASE
+#undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}

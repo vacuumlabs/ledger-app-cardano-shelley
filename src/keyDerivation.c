@@ -6,7 +6,6 @@
 #include "keyDerivation.h"
 #include "cbor.h"
 #include "hash.h"
-#include "crc32.h"
 #include "base58.h"
 #include "utils.h"
 #include "endian.h"
@@ -25,7 +24,7 @@ void derivePrivateKey(
 	// if the path is invalid, it's a bug in previous validation
 	ASSERT(policyForDerivePrivateKey(pathSpec) != POLICY_DENY);
 
-	uint8_t privateKeyRawBuffer[64];
+	uint8_t privateKeyRawBuffer[64] = {0};
 
 	STATIC_ASSERT(SIZEOF(chainCode->code) == 32, "bad chain code length");
 	explicit_bzero(chainCode->code, SIZEOF(chainCode->code));

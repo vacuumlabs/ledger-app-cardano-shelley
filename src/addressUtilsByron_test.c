@@ -20,13 +20,13 @@ void testcase_deriveAddress_byron(uint32_t* path, uint32_t pathLen, uint32_t pro
 	bip44_path_t pathSpec;
 	pathSpec_init(&pathSpec, path, pathLen);
 
-	bip44_PRINTF(&pathSpec);
+	BIP44_PRINTF(&pathSpec);
 	PRINTF("\n");
 
-	uint8_t address[128];
+	uint8_t address[128] = {0};
 	size_t addressSize = deriveAddress_byron(&pathSpec, protocolMagic, address, SIZEOF(address));
 
-	uint8_t expected[100];
+	uint8_t expected[100] = {0};
 	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));
 
 	EXPECT_EQ(addressSize, expectedSize);
@@ -37,7 +37,7 @@ void testcase_extractProtocolMagicSucceeds(const char* addressHex, uint32_t expe
 {
 	PRINTF("testcase_extractProtocolMagicSucceeds\n");
 
-	uint8_t address[100];
+	uint8_t address[100] = {0};
 	size_t addressSize = decode_hex(addressHex, address, SIZEOF(address));
 
 	uint32_t protocolMagic = extractProtocolMagic(address, addressSize);
@@ -49,7 +49,7 @@ void testcase_extractProtocolMagicThrows(const char* addressHex, uint32_t expect
 {
 	PRINTF("testcase_extractProtocolMagicThrows\n");
 
-	uint8_t address[100];
+	uint8_t address[100] = {0};
 	size_t addressSize = decode_hex(addressHex, address, SIZEOF(address));
 
 	EXPECT_THROWS(extractProtocolMagic(address, addressSize), expectedErrorCode);
@@ -102,7 +102,7 @@ void testProtocolMagicExtractionSucceeds()
 
 	TESTCASE(
 	        "82d818584983581c9c708538a763ff27169987a489e35057ef3cd3778c05e96f7ba9450ea201581e581c9c1722f7e446689256e1a30260f3510d558d99d0c391f2ba89cb697702451a4170cb17001a6979126c",
-	        1097911063
+	        TESTNET_PROTOCOL_MAGIC
 	);
 
 	TESTCASE(

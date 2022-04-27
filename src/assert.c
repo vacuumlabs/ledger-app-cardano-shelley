@@ -13,6 +13,7 @@ void assert(
         #endif
 )
 {
+	// *INDENT-OFF*
 	if (cond) return; // everything holds
 	#ifdef RESET_ON_CRASH
 	io_seproxyhal_se_reset();
@@ -27,8 +28,9 @@ void assert(
 			THROW(ERR_ASSERT);
 		}
 		#else
-#			error "RESET_ON_CRASH should be enabled in non-devel mode!"
+			#error "RESET_ON_CRASH should be enabled in non-devel mode!"
 		#endif // DEVEL
 	}
 	#endif
+	// *INDENT-ON*
 }

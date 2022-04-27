@@ -75,8 +75,8 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 	// 10 - length of the leading prefix: "Position: "
 	// 11 - max length for the position information for one level: "x."
 	//      where x is 2^32-1
-	// 1  - the ending null byte
-	char positionDescription[10 + 11 * (MAX_SCRIPT_DEPTH - 1) + 1];
+	// 2  - the ending null byte + 1B for checking if all text has been printed
+	char positionDescription[10 + 11 * (MAX_SCRIPT_DEPTH - 1) + 2] = {0};
 	explicit_bzero(positionDescription, SIZEOF(positionDescription));
 	char* ptr = BEGIN(positionDescription);
 	char* end = END(positionDescription);
@@ -92,6 +92,7 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 		STATIC_ASSERT(sizeof(position) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(position), "signed type for %u");
 		snprintf(ptr, (end - ptr), "%u.", position);
+		ASSERT(strlen(positionDescription) + 1 < SIZEOF(positionDescription));
 		ptr += strlen(ptr);
 	}
 
@@ -99,7 +100,7 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 	ASSERT(ptr > BEGIN(positionDescription));
 	*(ptr - 1) = '\0';
 
-	ASSERT(strlen(positionDescription) + 1 <= SIZEOF(positionDescription));
+	ASSERT(strlen(positionDescription) + 1 < SIZEOF(positionDescription));
 
 	VALIDATE(uiPaginatedText_canFitStringIntoFullText(positionDescription), ERR_INVALID_DATA);
 
@@ -159,10 +160,13 @@ static void deriveScriptHash_display_ui_runStep()
 		case UI_SCRIPT_ANY: {
 			// max possible length 35: "Contains n nested scripts."
 			// where n is 2^32-1
-			char text[36] = {0};
+			char text[37] = {0};
+			explicit_bzero(text, SIZEOF(text));
 			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
 			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
 			snprintf(text, SIZEOF(text), "Contains %u nested scripts.", ctx->complexScripts[ctx->level].remainingScripts);
+			// make sure all the information is displayed to the user
+			ASSERT(strlen(text) + 1 < SIZEOF(text));
 
 			ui_displayPaginatedText(
 			        HEADER,
@@ -174,12 +178,15 @@ static void deriveScriptHash_display_ui_runStep()
 		case UI_SCRIPT_N_OF_K: {
 			// max possible length 85: "Requires n out of k signatures. Contains k nested scripts."
 			// where n and k is 2^32-1
-			char text[86] = {0};
+			char text[87] = {0};
+			explicit_bzero(text, SIZEOF(text));
 			STATIC_ASSERT(sizeof(ctx->scriptContent.requiredScripts) <= sizeof(unsigned), "oversized type for %u");
 			STATIC_ASSERT(!IS_SIGNED(ctx->scriptContent.requiredScripts), "signed type for %u");
 			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
 			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
 			snprintf(text, SIZEOF(text), "Requires %u out of %u signatures. Contains %u nested scripts", ctx->scriptContent.requiredScripts, ctx->complexScripts[ctx->level].remainingScripts, ctx->complexScripts[ctx->level].remainingScripts);
+			// make sure all the information is displayed to the user
+			ASSERT(strlen(text) + 1 < SIZEOF(text));
 
 			ui_displayPaginatedText(
 			        HEADER,
@@ -273,11 +280,11 @@ static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
 
 	// these handlers might read additional data from the view
 	switch (nativeScriptType) {
-#	define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
+#define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
 		CASE(NATIVE_SCRIPT_ALL, deriveNativeScriptHash_handleAll);
 		CASE(NATIVE_SCRIPT_ANY, deriveNativeScriptHash_handleAny);
 		CASE(NATIVE_SCRIPT_N_OF_K, deriveNativeScriptHash_handleNofK);
-#	undef   CASE
+#undef   CASE
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
@@ -298,7 +305,7 @@ static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
-	uint8_t pubkeyHash[ADDRESS_KEY_HASH_LENGTH];
+	uint8_t pubkeyHash[ADDRESS_KEY_HASH_LENGTH] = {0};
 	bip44_pathToKeyHash(&ctx->scriptContent.pubkeyPath, pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
 	nativeScriptHashBuilder_addScript_pubkey(&ctx->hashBuilder, pubkeyHash, SIZEOF(pubkeyHash));
 
@@ -308,7 +315,7 @@ static void deriveNativeScriptHash_handleDeviceOwnedPubkey(read_view_t* view)
 static void deriveNativeScriptHash_handleThirdPartyPubkey(read_view_t* view)
 {
 	STATIC_ASSERT(SIZEOF(ctx->scriptContent.pubkeyHash) == ADDRESS_KEY_HASH_LENGTH, "incorrect key hash size in script");
-	view_copyWireToBuffer(ctx->scriptContent.pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
+	view_parseBuffer(ctx->scriptContent.pubkeyHash, view, ADDRESS_KEY_HASH_LENGTH);
 	TRACE_BUFFER(ctx->scriptContent.pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
 
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
@@ -373,11 +380,11 @@ static void deriveNativeScriptHash_handleSimpleScript(read_view_t* view)
 
 	// parse data
 	switch (nativeScriptType) {
-#	define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
+#define  CASE(TYPE, HANDLER) case TYPE: HANDLER(view); break;
 		CASE(NATIVE_SCRIPT_PUBKEY, deriveNativeScriptHash_handlePubkey);
 		CASE(NATIVE_SCRIPT_INVALID_BEFORE, deriveNativeScriptHash_handleInvalidBefore);
 		CASE(NATIVE_SCRIPT_INVALID_HEREAFTER, deriveNativeScriptHash_handleInvalidHereafter);
-#	undef   CASE
+#undef   CASE
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
@@ -430,10 +437,10 @@ static void deriveNativeScriptHash_handleWholeNativeScriptFinish(read_view_t* vi
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	switch (displayFormat) {
-#	define  CASE(FORMAT, DISPLAY_FN) case FORMAT: nativeScriptHashBuilder_finalize(&ctx->hashBuilder, ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH); DISPLAY_FN(); break;
+#define  CASE(FORMAT, DISPLAY_FN) case FORMAT: nativeScriptHashBuilder_finalize(&ctx->hashBuilder, ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH); DISPLAY_FN(); break;
 		CASE(DISPLAY_NATIVE_SCRIPT_HASH_BECH32, deriveNativeScriptHash_displayNativeScriptHash_bech32);
 		CASE(DISPLAY_NATIVE_SCRIPT_HASH_POLICY_ID, deriveNativeScriptHash_displayNativeScriptHash_policyId);
-#	undef	CASE
+#undef	CASE
 	default:
 		THROW(ERR_INVALID_DATA);
 	}
@@ -450,14 +457,14 @@ enum {
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
 	switch (p1) {
-#	define  CASE(P1, HANDLER) case P1: return HANDLER;
-#	define  DEFAULT(HANDLER)  default: return HANDLER;
+#define  CASE(P1, HANDLER) case P1: return HANDLER;
+#define  DEFAULT(HANDLER)  default: return HANDLER;
 		CASE(STAGE_COMPLEX_SCRIPT_START, deriveNativeScriptHash_handleComplexScriptStart);
 		CASE(STAGE_ADD_SIMPLE_SCRIPT, deriveNativeScriptHash_handleSimpleScript);
 		CASE(STAGE_WHOLE_NATIVE_SCRIPT_FINISH, deriveNativeScriptHash_handleWholeNativeScriptFinish)
 		DEFAULT(NULL);
-#	undef   CASE
-#	undef   DEFAULT
+#undef   CASE
+#undef   DEFAULT
 	}
 }
 

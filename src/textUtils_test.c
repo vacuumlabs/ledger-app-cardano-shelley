@@ -10,7 +10,7 @@ void testcase_formatAda(
 )
 {
 	PRINTF("testcase_formatAda %s\n", expected);
-	char tmp[30];
+	char tmp[30] = {0};
 	size_t len = str_formatAdaAmount(amount, tmp, SIZEOF(tmp));
 	EXPECT_EQ(len, strlen(expected));
 	EXPECT_EQ(strcmp(tmp, expected), 0);
@@ -30,14 +30,14 @@ void test_formatAda()
 
 	{
 		PRINTF("test_formatAda edge cases");
-		char tmp[16];
+		char tmp[16] = {0};
 		memset(tmp, 'X', SIZEOF(tmp));
 		str_formatAdaAmount(0, tmp, 13);
 		EXPECT_EQ(tmp[12], 0);
 		EXPECT_EQ(tmp[13], 'X');
 
 		EXPECT_THROWS(str_formatAdaAmount(10000000, tmp, 13),
-		              ERR_DATA_TOO_LARGE);
+		              ERR_ASSERT);
 		EXPECT_EQ(tmp[13], 'X');
 	}
 }
@@ -50,7 +50,7 @@ void testcase_formatTtl(
 	PRINTF("testcase_formatTtl %s\n", expected);
 
 	{
-		char tmp[30];
+		char tmp[30] = {0};
 		size_t len = str_formatValidityBoundary(ttl, tmp, SIZEOF(tmp));
 		EXPECT_EQ(len, strlen(expected));
 		EXPECT_EQ(strcmp(tmp, expected), 0);
@@ -58,7 +58,7 @@ void testcase_formatTtl(
 
 	{
 		// check for buffer overflows
-		char tmp[30];
+		char tmp[30] = {0};
 		EXPECT_THROWS(str_formatValidityBoundary(ttl, tmp, strlen(expected)), ERR_ASSERT);
 	}
 }
@@ -86,7 +86,7 @@ void testcase_formatUint64(
 	PRINTF("testcase_formatUint64 %s\n", expected);
 
 	{
-		char tmp[30];
+		char tmp[30] = {0};
 		size_t len = str_formatUint64(number, tmp, SIZEOF(tmp));
 		EXPECT_EQ(len, strlen(expected));
 		EXPECT_EQ(strcmp(tmp, expected), 0);
@@ -94,8 +94,8 @@ void testcase_formatUint64(
 
 	{
 		// check for buffer overflows
-		char tmp[30];
-		EXPECT_THROWS(str_formatUint64(number, tmp, strlen(expected)), ERR_DATA_TOO_LARGE);
+		char tmp[30] = {0};
+		EXPECT_THROWS(str_formatUint64(number, tmp, strlen(expected)), ERR_ASSERT);
 	}
 }
 
@@ -107,7 +107,7 @@ void testcase_formatInt64(
 	PRINTF("testcase_formatInt64 %s\n", expected);
 
 	{
-		char tmp[30];
+		char tmp[30] = {0};
 		size_t len = str_formatInt64(number, tmp, SIZEOF(tmp));
 		EXPECT_EQ(len, strlen(expected));
 		EXPECT_EQ(strcmp(tmp, expected), 0);
@@ -115,8 +115,8 @@ void testcase_formatInt64(
 
 	{
 		// check for buffer overflows
-		char tmp[30];
-		EXPECT_THROWS(str_formatInt64(number, tmp, strlen(expected)), ERR_DATA_TOO_LARGE);
+		char tmp[30] = {0};
+		EXPECT_THROWS(str_formatInt64(number, tmp, strlen(expected)), ERR_ASSERT);
 	}
 }
 
