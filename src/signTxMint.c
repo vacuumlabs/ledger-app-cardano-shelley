@@ -341,8 +341,8 @@ static void signTxMint_handleConfirm_ui_runStep()
 
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(
-		        "Confirm mint?",
-		        "",
+		        "Confirm",
+		        "mint?",
 		        this_fn,
 		        respond_with_user_reject
 		);

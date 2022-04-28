@@ -5,8 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [4.0.1](TBD) - [TBD]
 
-## [4.0.0](TBD) - [TBD]
+Fix UI messages
+
+### Fixed
+
+- certain messages displayed to users have been changed to better fit on the screen
+
+
+## [4.0.0](https://github.com/LedgerHQ/app-cardano/compare/3.0.0...LedgerHQ:v4.0.0) - [April 25th 2022]
 
 Support for Alonzo era (Plutus scripts)
 

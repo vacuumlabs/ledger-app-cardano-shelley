@@ -369,14 +369,29 @@ enum {
 	HANDLE_INIT_STEP_INVALID,
 } ;
 
-typedef char* charPtr;
-const charPtr uiSigningModeName[] = {
-	"ordinary",
-	"pool owner",
-	"pool operator",
-	"multisig",
-	"Plutus"
-};
+const char *_newTxLine1(sign_tx_signingmode_t txSigningMode)
+{
+	switch (txSigningMode) {
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		return "New ordinary";
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		return "New pool owner";
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		return "New pool operator";
+
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		return "New multisig";
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		return "New Plutus";
+
+	default:
+		ASSERT(false);
+	}
+}
 
 static void signTx_handleInit_ui_runStep()
 {
@@ -387,17 +402,9 @@ static void signTx_handleInit_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_INIT_STEP_PROMPT_SIGNINGMODE) {
-		char bodyTxt[SIZEOF("Pool operator") + 1 + SIZEOF("transaction?") + 1 + 1] = {0};
-		explicit_bzero(bodyTxt, SIZEOF(bodyTxt));
-		const uint32_t signingModeStrIndex = ctx->commonTxData.txSigningMode - SIGN_TX_SIGNINGMODE_ORDINARY_TX;
-		ASSERT(signingModeStrIndex < ARRAY_LEN(uiSigningModeName));
-		snprintf(bodyTxt, SIZEOF(bodyTxt), "%s transaction?", ((const char*)PIC(uiSigningModeName[signingModeStrIndex])));
-		// make sure all the information is displayed to the user
-		ASSERT(strlen(bodyTxt) + 1 < SIZEOF(bodyTxt));
-
 		ui_displayPrompt(
-		        "Start new",
-		        bodyTxt,
+		        _newTxLine1(ctx->commonTxData.txSigningMode),
+		        "transaction?",
 		        this_fn,
 		        respond_with_user_reject
 		);
