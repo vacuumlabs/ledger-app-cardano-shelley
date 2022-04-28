@@ -675,8 +675,8 @@ static void signTxOutput_handleConfirm_ui_runStep()
 
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(
-		        "Confirm output?",
-		        "",
+		        "Confirm",
+		        "output?",
 		        this_fn,
 		        respond_with_user_reject
 		);
