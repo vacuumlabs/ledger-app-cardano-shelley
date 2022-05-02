@@ -1,3 +1,4 @@
+#include "app_mode.h"
 #include "signTx.h"
 #include "state.h"
 #include "bech32.h"
@@ -369,7 +370,7 @@ enum {
 	HANDLE_INIT_STEP_INVALID,
 } ;
 
-const char *_newTxLine1(sign_tx_signingmode_t txSigningMode)
+static const char *_newTxLine1(sign_tx_signingmode_t txSigningMode)
 {
 	switch (txSigningMode) {
 
@@ -577,6 +578,12 @@ static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wi
 		// However, an input is needed for certificate replay protection (enforced by node),
 		// so double-check this protection is no longer necessary before allowing no inputs.
 		VALIDATE(ctx->numInputs > 0, ERR_INVALID_DATA);
+	}
+
+	{
+		// default values for variables whose value is not given in the APDU
+		ctx->poolOwnerByPath = false;
+		ctx->shouldDisplayTxid = false;
 	}
 
 	security_policy_t policy = policyForSignTxInit(
@@ -2077,8 +2084,16 @@ static void signTx_handleConfirm_ui_runStep()
 static bool _shouldDisplayTxId(sign_tx_signingmode_t signingMode)
 {
 	switch(signingMode) {
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		if (ctx->shouldDisplayTxid && app_mode_expert())
+			return true;
+		return false;
+
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		return true;
+
 	default:
 		return false;
 	}

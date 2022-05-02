@@ -9,6 +9,7 @@
 #include "securityPolicy.h"
 
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
+static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 
 static output_context_t* accessSubcontext()
 {
@@ -372,6 +373,10 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 		subctx->numAssetGroups = (uint16_t) numAssetGroups;
 
 		subctx->includeDatumHash = signTx_parseIncluded(parse_u1be(&view));
+		if (subctx->includeDatumHash) {
+			// it's easier to verify all Plutus-related things via txid all at once
+			ctx->shouldDisplayTxid = true;
+		}
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
