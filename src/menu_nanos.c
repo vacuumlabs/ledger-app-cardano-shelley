@@ -7,6 +7,24 @@
 #include "getVersion.h"
 #include "glyphs.h"
 #include "utils.h"
+#include "app_mode.h"
+
+char expertModeString[9];
+
+static void h_expert_toggle()
+{
+	app_mode_set_expert(!app_mode_expert());
+	h_expert_update();
+	UX_MENU_DISPLAY(1, menu_main, NULL);
+}
+
+void h_expert_update()
+{
+	snprintf(expertModeString, SIZEOF(expertModeString), "disabled");
+	if (app_mode_expert()) {
+		snprintf(expertModeString, SIZEOF(expertModeString), "enabled");
+	}
+}
 
 // Here we define the main menu, using the Ledger-provided menu API. This menu
 // turns out to be fairly unimportant for Nano S apps, since commands are sent
@@ -54,6 +72,7 @@ const ux_menu_entry_t menu_main[] = {
 	#else
 	{NULL, NULL, 0, NULL, "Waiting for", "commands...", 0, 0},
 	#endif
+	{NULL, h_expert_toggle, 0, NULL, "Expert mode:", expertModeString, 33, 12},
 	{menu_about, NULL, 0, NULL, "About", NULL, 0, 0},
 	{NULL, os_sched_exit_ui_callback, 0, &C_icon_dashboard, "Quit app", NULL, 50, 29},
 	UX_MENU_END,
