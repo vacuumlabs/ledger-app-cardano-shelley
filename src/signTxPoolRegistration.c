@@ -1340,8 +1340,8 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS) {
 		if (subctx->numOwners == 0) {
 			ui_displayPaginatedText(
-			        "No pool owners",
-			        "",
+			        "No",
+			        "pool owners",
 			        this_fn
 			);
 		} else {
@@ -1352,8 +1352,8 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 		bool isOperator = commonTxData->txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR;
 		if ((subctx->numRelays == 0) && isOperator) {
 			ui_displayPaginatedText(
-			        "No pool relays",
-			        "",
+			        "No",
+			        "pool relays",
 			        this_fn
 			);
 		} else {
