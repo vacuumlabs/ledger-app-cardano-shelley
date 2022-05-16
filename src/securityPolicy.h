@@ -25,8 +25,9 @@ bool isTxNetworkIdVerifiable(
         uint32_t numWithdrawals,
         sign_tx_signingmode_t txSigningMode
 );
-bool needsRunningScriptWarning(int32_t numCollaterals);
-bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollaterals);
+bool needsRunningScriptWarning(int32_t numCollateralInputs);
+bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollateralInputs);
+bool needsUnknownCollateralWarning(sign_tx_signingmode_t signingMode, bool includesTotalCollateral);
 bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash);
 
 security_policy_t policyForSignTxInit(
@@ -37,31 +38,65 @@ security_policy_t policyForSignTxInit(
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint,
-        uint16_t numCollaterals,
-        uint16_t numRequiredSigners,
         bool includeScriptDataHash,
-        bool includeNetworkId
+        uint16_t numCollateralInputs,
+        uint16_t numRequiredSigners,
+        bool includeNetworkId,
+        bool includeCollateralOutput,
+        bool includeTotalCollateral,
+        uint16_t numReferenceInputs
 );
 
 security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);
 
+bool needsMissingDatumWarning(const tx_output_destination_t* destination, bool includeDatum);
+
 security_policy_t policyForSignTxOutputAddressBytes(
+        const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
-        const uint8_t* rawAddressBuffer, size_t rawAddressSize,
-        const uint8_t networkId, const uint32_t protocolMagic,
-        bool includeDatumHash
+        const uint8_t networkId, const uint32_t protocolMagic
 );
 security_policy_t policyForSignTxOutputAddressParams(
+        const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
-        const addressParams_t* params,
-        const uint8_t networkId, const uint32_t protocolMagic,
-        bool includeDatumHash
+        const uint8_t networkId, const uint32_t protocolMagic
 );
 security_policy_t policyForSignTxOutputDatumHash(
         security_policy_t outputPolicy
 );
+
+security_policy_t policyForSignTxOutputRefScript(
+        security_policy_t outputPolicy
+);
+
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t addressPolicy,
+        uint64_t numAssetGroups,
+        bool containsDatum,
+        bool containsRefScript
+);
+
+security_policy_t policyForSignTxCollateralOutputAddressBytes(
+        const tx_output_description_t* output,
+        sign_tx_signingmode_t txSigningMode,
+        const uint8_t networkId, const uint32_t protocolMagic
+);
+security_policy_t policyForSignTxCollateralOutputAddressParams(
+        const tx_output_description_t* output,
+        sign_tx_signingmode_t txSigningMode,
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool isTotalCollateralIncluded
+);
+security_policy_t policyForSignTxCollateralOutputAdaAmount(
+        security_policy_t outputPolicy,
+        bool isTotalCollateralPresent
+);
+security_policy_t policyForSignTxCollateralOutputTokens(
+        security_policy_t outputPolicy,
+        const tx_output_description_t* output
+);
+security_policy_t policyForSignTxCollateralOutputConfirm(
+        security_policy_t outputPolicy,
         uint64_t numAssetGroups
 );
 
@@ -127,7 +162,10 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy);
 
 security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSigningMode);
 
-security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSigningMode);
+security_policy_t policyForSignTxCollateralInput(
+        const sign_tx_signingmode_t txSigningMode,
+        bool isTotalCollateralIncluded
+);
 
 security_policy_t policyForSignTxRequiredSigner(
         const sign_tx_signingmode_t txSigningMode,
@@ -140,6 +178,10 @@ security_policy_t policyForSignTxWitness(
         bool mintPresent,
         const bip44_path_t* poolOwnerPath
 );
+
+security_policy_t policyForSignTxTotalCollateral();
+
+security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSigningMode);
 
 security_policy_t policyForSignTxConfirm();
 

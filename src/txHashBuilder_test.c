@@ -7,7 +7,7 @@
 #include "testUtils.h"
 
 
-static struct {
+static const struct {
 	const char* txHashHex;
 	int index;
 } inputs[] = {
@@ -29,7 +29,7 @@ static struct {
 	},
 };
 
-static struct {
+static const struct {
 	const char* rawAddressHex;
 	uint64_t amount;
 } outputs[] = {
@@ -102,7 +102,8 @@ static struct {
 	}
 };
 
-static const char* expectedHex = "a185a8ec05862e17cae482c1d5407f3f3dae472212e8b7fb06e7ae8322e9529e";
+static const char* expectedHex = "7d772be6f4bebee00b469ca2793b3636594a9b16267cf23ae40236065387b3f0";
+static const char* scriptDataHash = "853cbe68f7fccdeeeb0fd7b711ea147912190c35ac52d9d94080ae82809b2f84";
 
 typedef void(*addTokenGroupFun)(tx_hash_builder_t* builder,
                                 const uint8_t* policyIdBuffer, size_t policyIdSize,
@@ -139,9 +140,9 @@ static void addTwoMultiassetTokenGroups(tx_hash_builder_t* builder,
 	tokenAdder(builder, assetNameBuffer, 1, 220);
 }
 
-static void addMintTokenProxy(tx_hash_builder_t* builder,
-                              const uint8_t* assetNameBuffer, size_t assetNameSize,
-                              uint64_t amount)
+static void mintTokenHandler(tx_hash_builder_t* builder,
+                             const uint8_t* assetNameBuffer, size_t assetNameSize,
+                             uint64_t amount)
 {
 	txHashBuilder_addMint_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
 }
@@ -149,7 +150,14 @@ static void addMintTokenProxy(tx_hash_builder_t* builder,
 static void addMultiassetMint(tx_hash_builder_t* builder)
 {
 	txHashBuilder_addMint_topLevelData(builder, 2);
-	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addMint_tokenGroup, &addMintTokenProxy);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addMint_tokenGroup, &mintTokenHandler);
+}
+
+static void addMint(tx_hash_builder_t* builder)
+{
+	txHashBuilder_enterMint(builder);
+
+	addMultiassetMint(builder);
 }
 
 static void outputTokenHandler(
@@ -158,21 +166,29 @@ static void outputTokenHandler(
         uint64_t amount
 )
 {
-	txHashBuilder_addOutput_token(builder, assetNameBuffer, assetNameSize, amount, false);
+	txHashBuilder_addOutput_token(builder, assetNameBuffer, assetNameSize, amount);
 }
 
 
-static void addMultiassetOutput(tx_hash_builder_t* builder)
+static void addMultiassetOutput(tx_hash_builder_t* builder, tx_output_serialization_format_t const* outputFormat)
 {
 	uint8_t tmp[70] = {0};
 	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
-	txHashBuilder_addOutput_topLevelData(
-	        builder,
-	        tmp, tmpSize,
-	        outputs[1].amount,
-	        2,
-	        false
-	);
+	tx_output_description_t output = {
+		.format = (*outputFormat),
+		.destination = {
+			.type = DESTINATION_THIRD_PARTY,
+			.address = {
+				.buffer = tmp,
+				.size = tmpSize,
+			},
+		},
+		.amount = outputs[1].amount,
+		.numAssetGroups = 2,
+		.includeDatum = false,
+		.includeRefScript = false
+	};
+	txHashBuilder_addOutput_topLevelData(builder, &output);
 
 	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &outputTokenHandler);
 }
@@ -181,21 +197,98 @@ static void addOutputs(tx_hash_builder_t* builder)
 {
 	txHashBuilder_enterOutputs(builder);
 
-	addMultiassetOutput(builder);
+	tx_output_serialization_format_t outputFormat = ARRAY_LEGACY;
+	addMultiassetOutput(builder, &outputFormat);
 
 	ITERATE(it, outputs) {
 		uint8_t tmp[70] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
+		tx_output_description_t output = {
+			.format = outputFormat,
+			.destination = {
+				.type = DESTINATION_THIRD_PARTY,
+				.address = {
+					.size = tmpSize,
+					.buffer = tmp,
+				}
+			},
+			.amount = it->amount,
+			.numAssetGroups = 0,
+			.includeDatum = false,
+			.includeRefScript = false
+		};
 		txHashBuilder_addOutput_topLevelData(
 		        builder,
-		        tmp, tmpSize,
-		        it->amount,
-		        0, false
+		        &output
 		);
 	}
 
 	// added for the second time to more thoroughly check the state machine
-	addMultiassetOutput(builder);
+	addMultiassetOutput(builder, &outputFormat);
+
+	//New output format
+	outputFormat = MAP_BABBAGE;
+
+	addMultiassetOutput(builder, &outputFormat);
+
+	ITERATE(it, outputs) {
+		uint8_t tmp[70] = {0};
+		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
+
+		tx_output_description_t output = {
+			.format = outputFormat,
+			.destination = {
+				.type = DESTINATION_THIRD_PARTY,
+				.address = {
+					.buffer = tmp,
+					.size = tmpSize,
+				},
+			},
+			.amount = it->amount,
+			.numAssetGroups = 0,
+			.includeDatum = false,
+			.includeRefScript = false
+		};
+		txHashBuilder_addOutput_topLevelData(builder, &output);
+	}
+
+	// added for the second time to more thoroughly check the state machine
+	addMultiassetOutput(builder, &outputFormat);
+}
+
+static void collateralOutputTokenHandler(tx_hash_builder_t* builder,
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
+        uint64_t amount)
+{
+	txHashBuilder_addCollateralOutput_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
+}
+//TODO: more generic function to handle similar? or just merge to addCollRet?
+static void addMultiassetCollateralOutput(tx_hash_builder_t* builder, tx_output_serialization_format_t outputFormat)
+{
+	uint8_t tmp[70] = {0};
+	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
+	tx_output_description_t output = {
+		.format = outputFormat,
+		.destination = {
+			.type = DESTINATION_THIRD_PARTY,
+			.address = {
+				.buffer = tmp,
+				.size = tmpSize,
+			},
+		},
+		.amount = outputs[1].amount,
+		.numAssetGroups = 2,
+		.includeDatum = false,
+		.includeRefScript = false
+	};
+	txHashBuilder_addCollateralOutput(builder, &output);
+
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addCollateralOutput_tokenGroup, &collateralOutputTokenHandler);
+}
+
+static void addCollateralOutput(tx_hash_builder_t* builder)
+{
+	addMultiassetCollateralOutput(builder, MAP_BABBAGE);
 }
 
 static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
@@ -346,13 +439,6 @@ static void addCertificates(tx_hash_builder_t* builder)
 	}
 }
 
-static void addMint(tx_hash_builder_t* builder)
-{
-	txHashBuilder_enterMint(builder);
-
-	addMultiassetMint(builder);
-}
-
 void run_txHashBuilder_test()
 {
 	PRINTF("txHashBuilder test\n");
@@ -365,18 +451,23 @@ void run_txHashBuilder_test()
 	                               1;  // stake pool registration certificate
 
 	txHashBuilder_init(&builder,
-	                   ARRAY_LEN(inputs), ARRAY_LEN(outputs) + 2, // +2 for multiasset outputs
+	                   ARRAY_LEN(inputs),
+	                   (ARRAY_LEN(outputs) + 2) * 2, // +2 for multiasset outputs *2 for new format
 	                   true, // ttl
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
 	                   true, // validity interval start
 	                   true, // mint
-	                   false, // script hash data
-	                   0,	// collaterals not tested yet
-	                   0,	// required signers not tested yet
-	                   false // network id
+	                   true, // script hash data
+	                   1,	// collateral inputs
+	                   1,	// required
+	                   true, // network id
+	                   true, // collateral return output,
+	                   true, // total collateral,
+	                   ARRAY_LEN(inputs)	// reference inputs
 	                  );
 
+	//  0 : set<transaction_input>    ; inputs
 	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {
 		uint8_t tmp[TX_HASH_LENGTH] = {0};
@@ -386,15 +477,15 @@ void run_txHashBuilder_test()
 		input.index = it->index;
 		txHashBuilder_addInput(&builder, &input);
 	}
-
+	//  1 : [* transaction_output]
 	addOutputs(&builder);
-
+	//  2 : coin    ; fee
 	txHashBuilder_addFee(&builder, 42);
-
+	//  ? 3 : uint  ; time to live
 	txHashBuilder_addTtl(&builder, 235000);
-
+	//  ? 4 : [* certificate]
 	addCertificates(&builder);
-
+	//  ? 5 : withdrawals
 	txHashBuilder_enterWithdrawals(&builder);
 
 	ITERATE(it, withdrawals) {
@@ -406,7 +497,7 @@ void run_txHashBuilder_test()
 		        it->amount
 		);
 	}
-
+	//  ? 7 : auxiliary_data_hash
 	{
 		const char auxDataHashHex[] = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 		uint8_t tmp[AUX_DATA_HASH_LENGTH] = {0};
@@ -414,10 +505,49 @@ void run_txHashBuilder_test()
 		ASSERT(tmpSize == AUX_DATA_HASH_LENGTH);
 		txHashBuilder_addAuxData(&builder, tmp, tmpSize);
 	}
-
+	//  ? 8 : uint  ; validity interval start
 	txHashBuilder_addValidityIntervalStart(&builder, 33);
-
+	//  ? 9 : mint
 	addMint(&builder);
+	//  ? 11 : script_data_hash
+	{
+		uint8_t scriptHashData[SCRIPT_DATA_HASH_LENGTH] = {0};
+		size_t hashSize = decode_hex(scriptDataHash, scriptHashData, SIZEOF(scriptHashData));
+		txHashBuilder_addScriptDataHash(&builder, scriptHashData, hashSize);
+	}
+	//  ? 13 : set<transaction_input> ; collateral inputs
+	{
+		txHashBuilder_enterCollateralInputs(&builder);
+		uint8_t tmp[TX_HASH_LENGTH] = {0};
+		size_t tmpSize = decode_hex(PTR_PIC(inputs[0].txHashHex), tmp, SIZEOF(tmp));
+		tx_input_t input;
+		memmove(input.txHashBuffer, tmp, tmpSize);
+		input.index = inputs[0].index;
+		txHashBuilder_addCollateralInput(&builder, &input);
+	}
+	//  ? 14 : required_signers
+	{
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH] = {0};
+		txHashBuilder_enterRequiredSigners(&builder);
+		txHashBuilder_addRequiredSigner(&builder, keyHash, SIZEOF(keyHash));
+	}
+	//  ? 15 : network_id
+	txHashBuilder_addNetworkId(&builder, 0);
+	//  ? 16 : transaction_output     ; collateral return
+	addCollateralOutput(&builder);
+	//  ? 17 : coin                   ; total collateral
+	txHashBuilder_addTotalCollateral(&builder, 10);
+	//  ? 18 : set<transaction_input> ; reference inputs
+	txHashBuilder_enterReferenceInputs(&builder);
+
+	ITERATE(it, inputs) {
+		uint8_t tmp[TX_HASH_LENGTH] = {0};
+		size_t tmpSize = decode_hex(PTR_PIC(it->txHashHex), tmp, SIZEOF(tmp));
+		tx_input_t input;
+		memmove(input.txHashBuffer, tmp, tmpSize);
+		input.index = it->index;
+		txHashBuilder_addReferenceInput(&builder, &input);
+	}
 
 	uint8_t result[TX_HASH_LENGTH] = {0};
 	txHashBuilder_finalize(&builder, result, SIZEOF(result));
