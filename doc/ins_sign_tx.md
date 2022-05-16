@@ -99,6 +99,7 @@ So only the hash is transferred and displayed and the user has to use other mean
 | Auxiliary data hash | 32 | |
 
 **Data for AUX_DATA_TYPE_CATALYST_REGISTRATION**
+
 |Field| Length | Comments|
 |-----|--------|---------|
 | Auxiliary data type | 1 | `AUX_DATA_TYPE_CATALYST_REGISTRATION=0x01` |
