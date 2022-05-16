@@ -67,7 +67,8 @@ void txHashBuilder_init(
         bool includeScriptDataHash,
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
-        bool includeNetworkId
+        bool includeNetworkId,
+        bool includeTotalCollateral
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -82,6 +83,7 @@ void txHashBuilder_init(
 	TRACE("numCollaterals = %u", numCollaterals);
 	TRACE("numRequiredSigners = %u", numRequiredSigners);
 	TRACE("includeNetworkId = %u", includeNetworkId);
+	TRACE("includeTotalCollateral = %u", includeTotalCollateral);
 
 	blake2b_256_init(&builder->txHash);
 
@@ -127,7 +129,10 @@ void txHashBuilder_init(
 		builder->includeNetworkId = includeNetworkId;
 		if (includeNetworkId) numItems++;
 
-		ASSERT((3 <= numItems) && (numItems <= 13));
+		builder->includeTotalCollateral = includeTotalCollateral;
+		if (includeTotalCollateral) numItems++;
+
+		ASSERT((3 <= numItems) && (numItems <= 14));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -1460,9 +1465,51 @@ static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
 	}
 }
 
+void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txColl)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveNetworkId(builder);
+	ASSERT(builder->includeTotalCollateral);
+
+
+	// add TotalCollateral item into the main tx body map
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_TOTAL_COLLATERAL);
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, txColl);
+
+	builder->state = TX_HASH_BUILDER_IN_TOTAL_COLLATERAL;
+}
+
+static void txHashBuilder_assertCanLeaveTotalCollateral(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_TOTAL_COLLATERAL:
+		break;
+	case TX_HASH_BUILDER_IN_NETWORK_ID:
+	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
+	case TX_HASH_BUILDER_IN_COLLATERALS:
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveRequiredSigners(builder);
+		ASSERT(!builder->includeTotalCollateral);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+}
+
 void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
 {
-	txHashBuilder_assertCanLeaveNetworkId(builder);
+	txHashBuilder_assertCanLeaveTotalCollateral(builder);
 
 	ASSERT(outSize == TX_HASH_LENGTH);
 	{
