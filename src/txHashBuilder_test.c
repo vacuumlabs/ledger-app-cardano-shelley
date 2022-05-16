@@ -102,7 +102,7 @@ static struct {
 	}
 };
 
-static const char* expectedHex = "a185a8ec05862e17cae482c1d5407f3f3dae472212e8b7fb06e7ae8322e9529e";
+static const char* expectedHex = "ed9adb43f35d7cc4d2a920929c23ff6a96fedbf21af66520583423fe57a59cb9";
 
 typedef void(*addTokenGroupFun)(tx_hash_builder_t* builder,
                                 const uint8_t* policyIdBuffer, size_t policyIdSize,
@@ -374,7 +374,8 @@ void run_txHashBuilder_test()
 	                   false, // script hash data
 	                   0,	// collaterals not tested yet
 	                   0,	// required signers not tested yet
-	                   false // network id
+	                   false, // network id
+	                   true // total collaterals
 	                  );
 
 	txHashBuilder_enterInputs(&builder);
@@ -418,6 +419,8 @@ void run_txHashBuilder_test()
 	txHashBuilder_addValidityIntervalStart(&builder, 33);
 
 	addMint(&builder);
+
+	txHashBuilder_addTotalCollateral(&builder, 10);
 
 	uint8_t result[TX_HASH_LENGTH] = {0};
 	txHashBuilder_finalize(&builder, result, SIZEOF(result));

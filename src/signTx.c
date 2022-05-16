@@ -96,7 +96,8 @@ static inline void advanceStage()
 			        ctx->includeScriptDataHash,
 			        ctx->numCollaterals,
 			        ctx->numRequiredSigners,
-			        ctx->includeNetworkId
+			        ctx->includeNetworkId,
+			        ctx->includeTotalCollateral
 			);
 			txHashBuilder_enterInputs(&BODY_CTX->txHashBuilder);
 		}
@@ -234,6 +235,13 @@ static inline void advanceStage()
 		if (ctx->includeNetworkId) {
 			// we are not waiting for any APDU here, network id is already known from the init APDU
 			txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
+		}
+		ctx->stage = SIGN_STAGE_BODY_TOTAL_COLLATERAL;
+		break;
+
+	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
+		if (ctx->includeTotalCollateral) {
+			txHashBuilder_addTotalCollateral(&BODY_CTX->txHashBuilder, ctx->txColl);
 		}
 		ctx->stage = SIGN_STAGE_CONFIRM;
 		break;
