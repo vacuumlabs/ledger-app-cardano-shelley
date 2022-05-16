@@ -95,7 +95,6 @@ typedef struct {
 	uint64_t amount;
 } output_token_amount_t;
 
-
 // ==============================  CERTIFICATES  ==============================
 
 #define POOL_METADATA_URL_LENGTH_MAX 64

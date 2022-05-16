@@ -102,7 +102,6 @@ static void signTxMint_handleTopLevelData_ui_runStep()
 	}
 	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceState();
 	}
 	UI_STEP_END(HANDLE_MINT_TOP_LEVEL_DATA_INVALID);
@@ -157,7 +156,6 @@ static void signTxMint_handleAssetGroup_ui_runStep()
 
 	UI_STEP(HANDLE_ASSET_GROUP_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceState();
 	}
 	UI_STEP_END(HANDLE_ASSET_GROUP_STEP_INVALID);
