@@ -1209,10 +1209,26 @@ security_policy_t policyForSignTxWitness(
 }
 
 // For transaction auxiliary data
-security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType MARK_UNUSED)
+security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType)
 {
-	SHOW_IF(app_mode_expert());
-	ALLOW();
+	switch (auxDataType) {
+
+	case AUX_DATA_TYPE_ARBITRARY_HASH:
+		SHOW_IF(app_mode_expert());
+		ALLOW();
+
+	case AUX_DATA_TYPE_CATALYST_REGISTRATION:
+		// this is the policy for the initial prompt
+		// details of the registration are governed by separate policies
+		// (see policyForCatalystRegistration...)
+		SHOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
 // For transaction validity interval start
