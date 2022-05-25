@@ -42,8 +42,9 @@ typedef enum {
 	SIGN_STAGE_BODY_COLLATERALS = 38,
 	SIGN_STAGE_BODY_REQUIRED_SIGNERS = 39,
 	SIGN_STAGE_BODY_TOTAL_COLLATERAL = 40,
-	SIGN_STAGE_CONFIRM = 41,
-	SIGN_STAGE_WITNESSES = 42,
+	SIGN_STAGE_BODY_REFERENCE_INPUTS = 41,
+	SIGN_STAGE_CONFIRM = 42,
+	SIGN_STAGE_WITNESSES = 43,
 } sign_tx_stage_t;
 
 enum {
@@ -141,6 +142,7 @@ typedef struct {
 	uint16_t currentWithdrawal;
 	uint16_t currentCollateral;
 	uint16_t currentRequiredSigner;
+	uint16_t currentReferenceInputs;
 
 	bool feeReceived;
 	bool ttlReceived;
@@ -197,6 +199,7 @@ typedef struct {
 	uint16_t numWitnesses;
 	bool includeTotalCollateral;
 	uint64_t txColl;
+	uint16_t numReferenceInputs;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
 	uint8_t txHash[TX_HASH_LENGTH];
@@ -204,7 +207,7 @@ typedef struct {
 	union {
 		ins_sign_tx_aux_data_context_t aux_data_ctx;
 		ins_sign_tx_body_context_t body_ctx;
-		ins_sign_tx_witness_context_t witnesses_ctx;                      
+		ins_sign_tx_witness_context_t witnesses_ctx;
 	} txPartCtx;
 
 	bool poolOwnerByPath;

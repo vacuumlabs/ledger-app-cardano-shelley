@@ -21,6 +21,7 @@ enum {
 	TX_BODY_KEY_NETWORK_ID = 15,
 	TX_BODY_KEY_COLLATERAL_RETURN = 16, //CollRet
 	TX_BODY_KEY_TOTAL_COLLATERAL = 17, //TxColl
+	TX_BODY_KEY_REFERENCE_INPUTS = 18, //refInputs
 };
 
 /* The state machine of the tx hash builder is driven by user calls.
@@ -64,7 +65,8 @@ typedef enum {
 	TX_HASH_BUILDER_IN_REQUIRED_SIGNERS = 1300,
 	TX_HASH_BUILDER_IN_NETWORK_ID = 1400,
 	TX_HASH_BUILDER_IN_TOTAL_COLLATERAL = 1500,
-	TX_HASH_BUILDER_FINISHED = 1600,
+	TX_HASH_BUILDER_IN_REFERENCE_INPUTS = 1600,
+	TX_HASH_BUILDER_FINISHED = 1700,
 } tx_hash_builder_state_t;
 
 typedef struct {
@@ -74,6 +76,7 @@ typedef struct {
 	uint16_t remainingCertificates;
 	uint16_t remainingCollaterals;
 	uint16_t remainingRequiredSigners;
+	uint16_t remainingReferenceInputs;
 	bool includeTtl;
 	bool includeAuxData;
 	bool includeValidityIntervalStart;
@@ -113,7 +116,8 @@ void txHashBuilder_init(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
-        bool includeTotalCollateral
+        bool includeTotalCollateral,
+        uint16_t numReferenceInputs
 );
 
 void txHashBuilder_enterInputs(tx_hash_builder_t* builder);
@@ -256,6 +260,12 @@ void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId);
 
 void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txColl);
 
+void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder);
+void txHashBuilder_addReferenceInputs(
+        tx_hash_builder_t* builder,
+        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
+        uint32_t utxoIndex
+);
 void txHashBuilder_finalize(
         tx_hash_builder_t* builder,
         uint8_t* outBuffer, size_t outSize
