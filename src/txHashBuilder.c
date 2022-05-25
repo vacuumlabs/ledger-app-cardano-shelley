@@ -68,7 +68,8 @@ void txHashBuilder_init(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
-        bool includeTotalCollateral
+        bool includeTotalCollateral,
+        uint16_t numReferenceInputs
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -84,6 +85,7 @@ void txHashBuilder_init(
 	TRACE("numRequiredSigners = %u", numRequiredSigners);
 	TRACE("includeNetworkId = %u", includeNetworkId);
 	TRACE("includeTotalCollateral = %u", includeTotalCollateral);
+	TRACE("numReferenceInputs = %u", numReferenceInputs);
 
 	blake2b_256_init(&builder->txHash);
 
@@ -132,7 +134,10 @@ void txHashBuilder_init(
 		builder->includeTotalCollateral = includeTotalCollateral;
 		if (includeTotalCollateral) numItems++;
 
-		ASSERT((3 <= numItems) && (numItems <= 14));
+		builder->remainingReferenceInputs = numReferenceInputs;
+		numItems++; // an array that is always included (even if empty)
+
+		ASSERT((3 <= numItems) && (numItems <= 15));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -1507,9 +1512,81 @@ static void txHashBuilder_assertCanLeaveTotalCollateral(tx_hash_builder_t* build
 	}
 }
 
+void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder )
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveTotalCollateral(builder);
+	{
+		// Enter inputs
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_REFERENCE_INPUTS);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingReferenceInputs);
+	}
+	builder->state = TX_HASH_BUILDER_IN_REFERENCE_INPUTS;
+
+}
+void txHashBuilder_addReferenceInputs(
+        tx_hash_builder_t* builder,
+        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
+        uint32_t utxoIndex
+)
+{
+	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingInputs);
+
+	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_REFERENCE_INPUTS);
+	ASSERT(builder->remainingReferenceInputs > 0);
+	builder->remainingReferenceInputs--;
+	// Array(2)[
+	//    Bytes[hash],
+	//    Unsigned[index]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+		{
+			ASSERT(utxoHashSize == TX_HASH_LENGTH);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
+			BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, utxoIndex);
+		}
+	}
+}
+
+
+static void txHashBuilder_assertCanLeaveReferenceInputs(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_REFERENCE_INPUTS:
+		break;
+	case TX_HASH_BUILDER_IN_TOTAL_COLLATERAL:
+	case TX_HASH_BUILDER_IN_NETWORK_ID:
+	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
+	case TX_HASH_BUILDER_IN_COLLATERALS:
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveRequiredSigners(builder);
+		ASSERT(!builder->includeTotalCollateral);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+	ASSERT(builder->remainingReferenceInputs == 0);
+}
+
 void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
 {
-	txHashBuilder_assertCanLeaveTotalCollateral(builder);
+	txHashBuilder_assertCanLeaveReferenceInputs(builder);
 
 	ASSERT(outSize == TX_HASH_LENGTH);
 	{

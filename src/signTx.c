@@ -97,7 +97,8 @@ static inline void advanceStage()
 			        ctx->numCollaterals,
 			        ctx->numRequiredSigners,
 			        ctx->includeNetworkId,
-			        ctx->includeTotalCollateral
+			        ctx->includeTotalCollateral,
+			        ctx->numReferenceInputs
 			);
 			txHashBuilder_enterInputs(&BODY_CTX->txHashBuilder);
 		}
@@ -242,6 +243,15 @@ static inline void advanceStage()
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 		if (ctx->includeTotalCollateral) {
 			txHashBuilder_addTotalCollateral(&BODY_CTX->txHashBuilder, ctx->txColl);
+		}
+		ctx->stage = SIGN_STAGE_BODY_REFERENCE_INPUTS;
+		break;
+
+	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
+		ASSERT(BODY_CTX->currentReferenceInputs == ctx->numReferenceInputs);
+
+		if (ctx->numReferenceInputs) {
+			txHashBuilder_enterReferenceInputs(&BODY_CTX->txHashBuilder);
 		}
 		ctx->stage = SIGN_STAGE_CONFIRM;
 		break;

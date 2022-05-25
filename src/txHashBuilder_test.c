@@ -102,7 +102,7 @@ static struct {
 	}
 };
 
-static const char* expectedHex = "ed9adb43f35d7cc4d2a920929c23ff6a96fedbf21af66520583423fe57a59cb9";
+static const char* expectedHex = "cce5566007ac3803d0197fab1bb2e23895c8ee93d20c8a53b034c5b28070aae7";
 
 typedef void(*addTokenGroupFun)(tx_hash_builder_t* builder,
                                 const uint8_t* policyIdBuffer, size_t policyIdSize,
@@ -365,7 +365,8 @@ void run_txHashBuilder_test()
 	                               1;  // stake pool registration certificate
 
 	txHashBuilder_init(&builder,
-	                   ARRAY_LEN(inputs), ARRAY_LEN(outputs) + 2, // +2 for multiasset outputs
+	                   ARRAY_LEN(inputs),
+	                   ARRAY_LEN(outputs) + 2, // +2 for multiasset outputs
 	                   true, // ttl
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
@@ -375,7 +376,8 @@ void run_txHashBuilder_test()
 	                   0,	// collaterals not tested yet
 	                   0,	// required signers not tested yet
 	                   false, // network id
-	                   true // total collaterals
+	                   true, // total collaterals,
+	                   ARRAY_LEN(inputs)	// reference inputs not tested yet
 	                  );
 
 	txHashBuilder_enterInputs(&builder);
@@ -421,6 +423,18 @@ void run_txHashBuilder_test()
 	addMint(&builder);
 
 	txHashBuilder_addTotalCollateral(&builder, 10);
+
+	txHashBuilder_enterReferenceInputs(&builder);
+
+	ITERATE(it, inputs) { //TODO: maybe new constants for refinputs?
+		uint8_t tmp[TX_HASH_LENGTH] = {0};
+		size_t tmpSize = decode_hex(PTR_PIC(it->txHashHex), tmp, SIZEOF(tmp));
+		txHashBuilder_addReferenceInputs(
+		        &builder,
+		        tmp, tmpSize,
+		        it->index
+		);
+	}
 
 	uint8_t result[TX_HASH_LENGTH] = {0};
 	txHashBuilder_finalize(&builder, result, SIZEOF(result));
