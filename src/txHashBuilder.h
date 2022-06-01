@@ -42,6 +42,8 @@ typedef enum {
 	TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP = 311,
 	TX_HASH_BUILDER_IN_OUTPUTS_TOKEN = 312,
 	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH = 313,
+	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION = 314,
+	TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERANCE = 315,
 	TX_HASH_BUILDER_IN_FEE = 400,
 	TX_HASH_BUILDER_IN_TTL = 500,
 	TX_HASH_BUILDER_IN_CERTIFICATES = 600,
@@ -64,9 +66,10 @@ typedef enum {
 	TX_HASH_BUILDER_IN_COLLATERALS = 1200,
 	TX_HASH_BUILDER_IN_REQUIRED_SIGNERS = 1300,
 	TX_HASH_BUILDER_IN_NETWORK_ID = 1400,
-	TX_HASH_BUILDER_IN_TOTAL_COLLATERAL = 1500,
-	TX_HASH_BUILDER_IN_REFERENCE_INPUTS = 1600,
-	TX_HASH_BUILDER_FINISHED = 1700,
+	TX_HASH_BUILDER_IN_COLLATERAL_RETURN = 1500,
+	TX_HASH_BUILDER_IN_TOTAL_COLLATERAL = 1600,
+	TX_HASH_BUILDER_IN_REFERENCE_INPUTS = 1700,
+	TX_HASH_BUILDER_FINISHED = 1800,
 } tx_hash_builder_state_t;
 
 typedef struct {
@@ -83,6 +86,7 @@ typedef struct {
 	bool includeMint;
 	bool includeScriptDataHash;
 	bool includeNetworkId;
+	bool includeCollateralReturn;
 	bool includeTotalCollateral;
 
 	union {
@@ -116,6 +120,7 @@ void txHashBuilder_init(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
+        bool includeCollateralReturn,
         bool includeTotalCollateral,
         uint16_t numReferenceInputs
 );
@@ -145,6 +150,11 @@ void txHashBuilder_addOutput_token(
 void txHashBuilder_addOutput_datumHash(
         tx_hash_builder_t* builder,
         const uint8_t* datumHashBuffer, size_t datumHashSize
+);
+
+void txHashBuilder_addOutput_datumOption(
+        tx_hash_builder_t* builder,
+        const uint8_t* bytesBuffer, size_t bufferSize, uint8_t datumOption, bool includeScriptref
 );
 
 void txHashBuilder_addFee(tx_hash_builder_t* builder, uint64_t fee);

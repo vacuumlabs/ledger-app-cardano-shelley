@@ -197,6 +197,7 @@ typedef struct {
 	uint16_t numRequiredSigners;
 	bool includeNetworkId;
 	uint16_t numWitnesses;
+	bool includeCollateralReturn;
 	bool includeTotalCollateral;
 	uint64_t txColl;
 	uint16_t numReferenceInputs;

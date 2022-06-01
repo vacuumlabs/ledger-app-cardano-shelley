@@ -54,7 +54,7 @@ static void blake2b_256_append_cbor_tx_body(
 
 /* End of hash computation utilities. */
 
-static void cbor_append_txInput(const tx_hash_builder_t *builder, const uint8_t *utxoHashBuffer, size_t utxoHashSize,
+static void cbor_append_txInput(tx_hash_builder_t *builder, const uint8_t *utxoHashBuffer, size_t utxoHashSize,
                                 uint32_t utxoIndex)
 {
 	// Array(2)[
@@ -72,10 +72,10 @@ static void cbor_append_txInput(const tx_hash_builder_t *builder, const uint8_t 
 	}
 }
 
-static void cbor_append_legacy_txOutput(const tx_hash_builder_t *builder, const uint8_t *addressBuffer, size_t addressSize,
+static void cbor_append_legacy_txOutput(tx_hash_builder_t *builder, const uint8_t *addressBuffer, size_t addressSize,
                                         uint64_t amount, bool includeDatumHash)
 {
-	// Array(2)[
+	// Array(2 + includeDatumHash)[
 	//   Bytes[address]
 	//   Unsigned[amount]
 	// ]
@@ -89,28 +89,39 @@ static void cbor_append_legacy_txOutput(const tx_hash_builder_t *builder, const 
 	}
 }
 
-static void cbor_append_post_alonzo_txOutput(const tx_hash_builder_t *builder, const uint8_t *addressBuffer, size_t addressSize,
+static void cbor_append_post_alonzo_txOutput(tx_hash_builder_t *builder, const uint8_t *addressBuffer, size_t addressSize,
         uint64_t amount, bool includeDatumOption, bool includeScriptRef)
 {
 	// Array(2 + includeDatumOption + includeScriptRef)[
 	//   Bytes[address]
 	//   Unsigned[amount]
-	//   Array (3)[uint, nint, Bytes[plutus_data]]   ;datum_option
+	//   Array (2)[
+	//      Unsigned[option]
+	//      Bytes[buffer]   ; hash or plutus data
+	//   ]
 	//   Bytes[script_ref]    ;script_ref
-
-
-	//
 	// ]
+
 	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumOption + includeScriptRef);
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
 		BUILDER_APPEND_DATA(addressBuffer, addressSize);
 	}
-    {
-        BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
-    }
-	//TODO: add datum_option
-	//todo: add script_ref
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
+	}
+
+	//TODO: Move this to approperiate place. Where is the appropriate place? New method for adding post alonzo txout? or the existing one?
+	//or does advancing the stae in cbor_append methods makes sense?
+	if (includeDatumOption) {
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION;
+	}
+	if (includeScriptRef) {
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERANCE;
+	}
+	if (!(includeDatumOption || includeScriptRef)) { //remove if implemented similar to existing addoutput_toplevelData
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+	}
 }
 
 void txHashBuilder_init(
@@ -127,6 +138,7 @@ void txHashBuilder_init(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
+        bool includeCollateralReturn,
         bool includeTotalCollateral,
         uint16_t numReferenceInputs
 )
@@ -143,6 +155,7 @@ void txHashBuilder_init(
 	TRACE("numCollaterals = %u", numCollaterals);
 	TRACE("numRequiredSigners = %u", numRequiredSigners);
 	TRACE("includeNetworkId = %u", includeNetworkId);
+	TRACE("includeCollateralReturn = %u", includeCollateralReturn);
 	TRACE("includeTotalCollateral = %u", includeTotalCollateral);
 	TRACE("numReferenceInputs = %u", numReferenceInputs);
 
@@ -190,13 +203,16 @@ void txHashBuilder_init(
 		builder->includeNetworkId = includeNetworkId;
 		if (includeNetworkId) numItems++;
 
+		builder->includeCollateralReturn = includeCollateralReturn;
+		if (includeCollateralReturn) numItems++;
+
 		builder->includeTotalCollateral = includeTotalCollateral;
 		if (includeTotalCollateral) numItems++;
 
 		builder->remainingReferenceInputs = numReferenceInputs;
 		numItems++; // an array that is always included (even if empty)
 
-		ASSERT((3 <= numItems) && (numItems <= 15));
+		ASSERT((3 <= numItems) && (numItems <= 16));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -426,6 +442,38 @@ void txHashBuilder_addOutput_datumHash(
 		BUILDER_APPEND_DATA(datumHashBuffer, datumHashSize);
 	}
 	builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+}
+
+void txHashBuilder_addOutput_datumOption(
+        tx_hash_builder_t* builder,
+        const uint8_t* bytesBuffer, size_t bufferSize, uint8_t datumOption, bool includeScriptref
+)
+{
+	ASSERT(bufferSize == OUTPUT_DATUM_HASH_LENGTH); //??
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION);
+
+
+	//   datum_option = [ 0, $hash32 // 1, data ]
+	//   Array(2)[
+	//     Unsigned[0]
+	//     Bytes[buffer]
+	//   ]
+
+	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, datumOption);
+	}
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
+		BUILDER_APPEND_DATA(bytesBuffer, bufferSize);
+	}
+
+	if (includeScriptref) {
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERANCE;
+	} else {
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+	}
+
 }
 
 
@@ -1491,11 +1539,66 @@ static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
 	}
 }
 
-void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txColl)
+void txHashBuilder_enterCollateralReturn(tx_hash_builder_t *builder)
 {
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveNetworkId(builder);
+	{
+		// Enter collateral output
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERAL_RETURN);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->includeCollateralReturn);
+	}
+	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_RETURN;
+}
+
+void txHashBuilder_addCollateralReturn(tx_hash_builder_t *builder,
+                                       const uint8_t *addressBuffer, size_t addressSize,
+                                       uint64_t amount)
+{
+	_TRACE("state = %d", builder->state);
+	ASSERT(builder->includeCollateralReturn);
+
+	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_RETURN);
+
+	//Append CollRet, we don't allow DatumHash
+	cbor_append_legacy_txOutput(builder, addressBuffer, addressSize, amount, false);
+	//TODO: update this to new txout format
+}
+
+static void txHashBuilder_assertCanLeaveCollateralReturn(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_COLLATERAL_RETURN:
+		break;
+	case TX_HASH_BUILDER_IN_NETWORK_ID:
+	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
+	case TX_HASH_BUILDER_IN_COLLATERALS:
+	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
+	case TX_HASH_BUILDER_IN_MINT:
+	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
+	case TX_HASH_BUILDER_IN_AUX_DATA:
+	case TX_HASH_BUILDER_IN_WITHDRAWALS:
+	case TX_HASH_BUILDER_IN_CERTIFICATES:
+	case TX_HASH_BUILDER_IN_TTL:
+	case TX_HASH_BUILDER_IN_FEE:
+		txHashBuilder_assertCanLeaveRequiredSigners(builder);
+		ASSERT(!builder->includeCollateralReturn);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+}
+
+void txHashBuilder_addTotalCollateral(tx_hash_builder_t *builder, uint64_t txColl)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveCollateralReturn(builder);
 	ASSERT(builder->includeTotalCollateral);
 
 
@@ -1513,6 +1616,7 @@ static void txHashBuilder_assertCanLeaveTotalCollateral(tx_hash_builder_t* build
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_TOTAL_COLLATERAL:
 		break;
+	case TX_HASH_BUILDER_IN_COLLATERAL_RETURN:
 	case TX_HASH_BUILDER_IN_NETWORK_ID:
 	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
 	case TX_HASH_BUILDER_IN_COLLATERALS:
@@ -1538,8 +1642,10 @@ void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder )
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveTotalCollateral(builder);
+	// we don't allow an empty list for an optional item
+	ASSERT(builder->remainingReferenceInputs > 0);
 	{
-		// Enter inputs
+		// Enter reference inputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_REFERENCE_INPUTS);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingReferenceInputs);
 	}
@@ -1552,7 +1658,7 @@ void txHashBuilder_addReferenceInputs(
         uint32_t utxoIndex
 )
 {
-	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingInputs);
+	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingReferenceInputs);
 
 	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_REFERENCE_INPUTS);
@@ -1571,6 +1677,7 @@ static void txHashBuilder_assertCanLeaveReferenceInputs(tx_hash_builder_t* build
 	case TX_HASH_BUILDER_IN_REFERENCE_INPUTS:
 		break;
 	case TX_HASH_BUILDER_IN_TOTAL_COLLATERAL:
+	case TX_HASH_BUILDER_IN_COLLATERAL_RETURN:
 	case TX_HASH_BUILDER_IN_NETWORK_ID:
 	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
 	case TX_HASH_BUILDER_IN_COLLATERALS:
@@ -1583,7 +1690,6 @@ static void txHashBuilder_assertCanLeaveReferenceInputs(tx_hash_builder_t* build
 	case TX_HASH_BUILDER_IN_TTL:
 	case TX_HASH_BUILDER_IN_FEE:
 		txHashBuilder_assertCanLeaveRequiredSigners(builder);
-		ASSERT(!builder->includeTotalCollateral);
 		break;
 
 	default:

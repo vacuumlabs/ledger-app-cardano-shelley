@@ -97,6 +97,7 @@ static inline void advanceStage()
 			        ctx->numCollaterals,
 			        ctx->numRequiredSigners,
 			        ctx->includeNetworkId,
+			        ctx->includeCollateralReturn,
 			        ctx->includeTotalCollateral,
 			        ctx->numReferenceInputs
 			);
