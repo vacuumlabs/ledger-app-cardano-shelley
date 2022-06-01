@@ -376,6 +376,7 @@ void run_txHashBuilder_test()
 	                   0,	// collaterals not tested yet
 	                   0,	// required signers not tested yet
 	                   false, // network id
+	                   true, // collateral return,
 	                   true, // total collaterals,
 	                   ARRAY_LEN(inputs)	// reference inputs not tested yet
 	                  );
