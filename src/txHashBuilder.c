@@ -54,6 +54,65 @@ static void blake2b_256_append_cbor_tx_body(
 
 /* End of hash computation utilities. */
 
+static void cbor_append_txInput(const tx_hash_builder_t *builder, const uint8_t *utxoHashBuffer, size_t utxoHashSize,
+                                uint32_t utxoIndex)
+{
+	// Array(2)[
+	//    Bytes[hash],
+	//    Unsigned[index]
+	// ]
+	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+	{
+		ASSERT(utxoHashSize == TX_HASH_LENGTH);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
+		BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
+	}
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, utxoIndex);
+	}
+}
+
+static void cbor_append_legacy_txOutput(const tx_hash_builder_t *builder, const uint8_t *addressBuffer, size_t addressSize,
+                                        uint64_t amount, bool includeDatumHash)
+{
+	// Array(2)[
+	//   Bytes[address]
+	//   Unsigned[amount]
+	// ]
+	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumHash);
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
+		BUILDER_APPEND_DATA(addressBuffer, addressSize);
+	}
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
+	}
+}
+
+static void cbor_append_post_alonzo_txOutput(const tx_hash_builder_t *builder, const uint8_t *addressBuffer, size_t addressSize,
+        uint64_t amount, bool includeDatumOption, bool includeScriptRef)
+{
+	// Array(2 + includeDatumOption + includeScriptRef)[
+	//   Bytes[address]
+	//   Unsigned[amount]
+	//   Array (3)[uint, nint, Bytes[plutus_data]]   ;datum_option
+	//   Bytes[script_ref]    ;script_ref
+
+
+	//
+	// ]
+	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumOption + includeScriptRef);
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
+		BUILDER_APPEND_DATA(addressBuffer, addressSize);
+	}
+    {
+        BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
+    }
+	//TODO: add datum_option
+	//todo: add script_ref
+}
+
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
         uint16_t numInputs,
@@ -174,21 +233,8 @@ void txHashBuilder_addInput(tx_hash_builder_t* builder, const tx_input_t* input)
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_INPUTS);
 	ASSERT(builder->remainingInputs > 0);
 	builder->remainingInputs--;
-	// Array(2)[
-	//    Bytes[hash],
-	//    Unsigned[index]
-	// ]
-	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
-		{
-			ASSERT(utxoHashSize == TX_HASH_LENGTH);
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
-			BUILDER_APPEND_DATA(input->txHashBuffer, utxoHashSize);
-		}
-		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, input->index);
-		}
-	}
+
+	cbor_append_txInput(builder, utxoHashBuffer, utxoHashSize, utxoIndex);
 }
 
 static void txHashBuilder_assertCanLeaveInputs(tx_hash_builder_t* builder)
@@ -228,20 +274,8 @@ void txHashBuilder_addOutput_topLevelData(
 	builder->remainingOutputs--;
 
 	if (numAssetGroups == 0) {
-		// Array(2)[
-		//   Bytes[address]
-		//   Unsigned[amount]
-		// ]
-		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumHash);
-			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
-				BUILDER_APPEND_DATA(addressBuffer, addressSize);
-			}
-			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
-			}
-		}
+
+		cbor_append_legacy_txOutput(builder, addressBuffer, addressSize, amount, includeDatumHash);
 		if (includeDatumHash) {
 			builder->state = TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH;
 		} else {
@@ -1319,21 +1353,8 @@ void txHashBuilder_addCollateral(tx_hash_builder_t* builder, const tx_input_t* c
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERALS);
 	ASSERT(builder->remainingCollaterals > 0);
 	builder->remainingCollaterals--;
-	// Array(2)[
-	//    Bytes[hash],
-	//    Unsigned[index]
-	// ]
-	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
-		{
-			ASSERT(utxoHashSize == TX_HASH_LENGTH);
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
-			BUILDER_APPEND_DATA(collInput->txHashBuffer, utxoHashSize);
-		}
-		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, collInput->index);
-		}
-	}
+
+	cbor_append_txInput(builder, utxoHashBuffer, utxoHashSize, utxoIndex);
 }
 
 static void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
@@ -1537,21 +1558,8 @@ void txHashBuilder_addReferenceInputs(
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_REFERENCE_INPUTS);
 	ASSERT(builder->remainingReferenceInputs > 0);
 	builder->remainingReferenceInputs--;
-	// Array(2)[
-	//    Bytes[hash],
-	//    Unsigned[index]
-	// ]
-	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
-		{
-			ASSERT(utxoHashSize == TX_HASH_LENGTH);
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
-			BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
-		}
-		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, utxoIndex);
-		}
-	}
+
+	cbor_append_txInput(builder, utxoHashBuffer, utxoHashSize, utxoIndex);
 }
 
 
