@@ -377,7 +377,7 @@ void run_txHashBuilder_test()
 	                   0,	// required signers not tested yet
 	                   false, // network id
 	                   true, // collateral return,
-	                   true, // total collaterals,
+	                   true, // total collateral,
 	                   ARRAY_LEN(inputs)	// reference inputs not tested yet
 	                  );
 
@@ -430,7 +430,7 @@ void run_txHashBuilder_test()
 	ITERATE(it, inputs) { //TODO: maybe new constants for refinputs?
 		uint8_t tmp[TX_HASH_LENGTH] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->txHashHex), tmp, SIZEOF(tmp));
-		txHashBuilder_addReferenceInputs(
+		txHashBuilder_addReferenceInput(
 		        &builder,
 		        tmp, tmpSize,
 		        it->index

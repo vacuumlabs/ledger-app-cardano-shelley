@@ -12,6 +12,8 @@
 enum {
 	OUTPUT_TYPE_ADDRESS_BYTES = 1,
 	OUTPUT_TYPE_ADDRESS_PARAMS = 2,
+	OUTPUT_TYPE_POST_ALONZO_ADDRESS_BYTES = 3,
+	OUTPUT_TYPE_POST_ALONZO_ADDRESS_PARAMS = 4,
 };
 
 
@@ -51,6 +53,7 @@ typedef struct {
 	uint16_t currentToken;
 	bool includeDatumHash;
 	bool datumHashReceived;
+	bool includeScriptRef;
 
 	// this affects whether amounts and tokens are shown
 	security_policy_t outputSecurityPolicy;

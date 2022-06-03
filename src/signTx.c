@@ -249,7 +249,7 @@ static inline void advanceStage()
 		break;
 
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
-		ASSERT(BODY_CTX->currentReferenceInputs == ctx->numReferenceInputs);
+		ASSERT(BODY_CTX->currentReferenceInput == ctx->numReferenceInputs);
 
 		if (ctx->numReferenceInputs) {
 			txHashBuilder_enterReferenceInputs(&BODY_CTX->txHashBuilder);
