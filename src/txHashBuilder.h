@@ -43,7 +43,7 @@ typedef enum {
 	TX_HASH_BUILDER_IN_OUTPUTS_TOKEN = 312,
 	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH = 313,
 	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION = 314,
-	TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERANCE = 315,
+	TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERENCE = 315,
 	TX_HASH_BUILDER_IN_FEE = 400,
 	TX_HASH_BUILDER_IN_TTL = 500,
 	TX_HASH_BUILDER_IN_CERTIFICATES = 600,
@@ -105,6 +105,23 @@ typedef struct {
 	blake2b_256_context_t txHash;
 } tx_hash_builder_t;
 
+typedef enum  {
+	LEGACY = 0,
+	POST_ALONZO = 1
+} tx_hash_builder_txOutput_format;
+
+typedef struct {
+	tx_hash_builder_txOutput_format format;
+	size_t addressSize;
+	const uint8_t *addressBuffer;
+
+	uint64_t amount;
+	uint16_t numAssetGroups;
+
+	bool includeDatumOption;
+	bool includeScriptRef;
+
+} tx_hash_builder_output;
 
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
@@ -131,10 +148,7 @@ void txHashBuilder_addInput(tx_hash_builder_t* builder, const tx_input_t* input)
 void txHashBuilder_enterOutputs(tx_hash_builder_t* builder);
 void txHashBuilder_addOutput_topLevelData(
         tx_hash_builder_t* builder,
-        const uint8_t* addressBuffer, size_t addressSize,
-        uint64_t amount,
-        uint16_t numAssetGroups,
-        bool includeDatumHash
+        tx_hash_builder_output const *output
 );
 void txHashBuilder_addOutput_tokenGroup(
         tx_hash_builder_t* builder,
@@ -152,10 +166,8 @@ void txHashBuilder_addOutput_datumHash(
         const uint8_t* datumHashBuffer, size_t datumHashSize
 );
 
-void txHashBuilder_addOutput_datumOption(
-        tx_hash_builder_t* builder,
-        const uint8_t* bytesBuffer, size_t bufferSize, uint8_t datumOption, bool includeScriptref
-);
+void txHashBuilder_addOutput_datumOption(tx_hash_builder_t *builder, datum_option_type_t datumOption, const uint8_t *buffer,
+        size_t bufferSize);
 
 void txHashBuilder_addFee(tx_hash_builder_t* builder, uint64_t fee);
 
@@ -271,7 +283,7 @@ void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId);
 void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txColl);
 
 void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder);
-void txHashBuilder_addReferenceInputs(
+void txHashBuilder_addReferenceInput(
         tx_hash_builder_t* builder,
         const uint8_t* utxoHashBuffer, size_t utxoHashSize,
         uint32_t utxoIndex
