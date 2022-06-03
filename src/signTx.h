@@ -142,7 +142,7 @@ typedef struct {
 	uint16_t currentWithdrawal;
 	uint16_t currentCollateral;
 	uint16_t currentRequiredSigner;
-	uint16_t currentReferenceInputs;
+	uint16_t currentReferenceInput;
 
 	bool feeReceived;
 	bool ttlReceived;

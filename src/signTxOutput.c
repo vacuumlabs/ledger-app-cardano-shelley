@@ -185,13 +185,73 @@ static void signTx_handleOutput_addressBytes()
 		ASSERT(subctx->stateData.output.address.size > 0);
 		ASSERT(subctx->stateData.output.address.size <= MAX_ADDRESS_SIZE);
 
+		tx_hash_builder_output txOut;
+
+		txOut.format = LEGACY;
+		txOut.addressSize = subctx->stateData.output.address.size;
+		txOut.addressBuffer = subctx->stateData.output.address.buffer;
+		txOut.amount = subctx->stateData.output.adaAmount;
+		txOut.numAssetGroups = subctx->numAssetGroups;
+		txOut.includeDatumOption = subctx->includeDatumHash;
+		txOut.includeScriptRef = false;//TODO: What happens with that?
+
 		txHashBuilder_addOutput_topLevelData(
 		        &BODY_CTX->txHashBuilder,
-		        subctx->stateData.output.address.buffer,
-		        subctx->stateData.output.address.size,
-		        subctx->stateData.output.adaAmount,
-		        subctx->numAssetGroups,
-		        subctx->includeDatumHash
+		        &txOut
+		);
+	}
+
+	{
+		// select UI steps
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_WARN_UNUSUAL,  HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+
+		signTx_handleOutput_address_ui_runStep();
+	}
+}
+
+static void signTx_handleOutput_postAlonzo_addressBytes()
+{
+	output_context_t* subctx = accessSubcontext();
+	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_POST_ALONZO_ADDRESS_BYTES);
+
+	security_policy_t policy = policyForSignTxOutputAddressBytes(
+	                                   commonTxData->txSigningMode,
+	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
+	                                   commonTxData->networkId, commonTxData->protocolMagic,
+	                                   subctx->includeDatumHash
+	                           );//TODO: new policy
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	subctx->outputSecurityPolicy = policy;
+
+	{
+		// add to tx
+		ASSERT(subctx->stateData.output.address.size > 0);
+		ASSERT(subctx->stateData.output.address.size <= MAX_ADDRESS_SIZE);
+
+		tx_hash_builder_output txOut;
+
+		txOut.format = POST_ALONZO;
+		txOut.addressBuffer = subctx->stateData.output.address.buffer;
+		txOut.addressSize = subctx->stateData.output.address.size;
+		txOut.amount = subctx->stateData.output.adaAmount;
+		txOut.numAssetGroups = subctx->numAssetGroups;
+		txOut.includeDatumOption = subctx->includeDatumHash;
+		txOut.includeScriptRef = false;//TODO: What happens with that?
+
+
+		txHashBuilder_addOutput_topLevelData(
+		        &BODY_CTX->txHashBuilder,
+		        &txOut
 		);
 	}
 
@@ -295,12 +355,79 @@ static void signTx_handleOutput_addressParams()
 		ASSERT(addressSize > 0);
 		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
 
+
+		tx_hash_builder_output txOut;
+
+		txOut.format = LEGACY;
+		txOut.addressBuffer = addressBuffer;
+		txOut.addressSize = addressSize;
+		txOut.amount = subctx->stateData.output.adaAmount;
+		txOut.numAssetGroups = subctx->numAssetGroups;
+		txOut.includeDatumOption = subctx->includeDatumHash;
+		txOut.includeScriptRef = false;//TODO: What happens with that?
+
 		txHashBuilder_addOutput_topLevelData(
 		        &BODY_CTX->txHashBuilder,
-		        addressBuffer, addressSize,
-		        subctx->stateData.output.adaAmount,
-		        subctx->numAssetGroups,
-		        subctx->includeDatumHash
+		        &txOut
+		);
+	}
+
+	{
+		// select UI steps
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+
+		signTx_handleOutput_addressParams_ui_runStep();
+	}
+}
+static void signTx_handleOutput_postAlonzo_addressParams()
+{
+	output_context_t* subctx = accessSubcontext();
+	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_POST_ALONZO_ADDRESS_PARAMS);
+
+	security_policy_t policy = policyForSignTxOutputAddressParams(
+	                                   commonTxData->txSigningMode,
+	                                   &subctx->stateData.output.params,
+	                                   commonTxData->networkId, commonTxData->protocolMagic,
+	                                   subctx->includeDatumHash
+	                           );//TODO add new policy
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	subctx->outputSecurityPolicy = policy;
+
+	{
+		// add to tx
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
+		size_t addressSize = deriveAddress(
+		                             &subctx->stateData.output.params,
+		                             addressBuffer,
+		                             SIZEOF(addressBuffer)
+		                     );
+		ASSERT(addressSize > 0);
+		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
+
+
+		tx_hash_builder_output txOut;
+
+		txOut.format = POST_ALONZO;
+		txOut.addressBuffer = addressBuffer;
+		txOut.addressSize = addressSize;
+		txOut.amount = subctx->stateData.output.adaAmount;
+		txOut.numAssetGroups = subctx->numAssetGroups;
+		txOut.includeDatumOption = subctx->includeDatumHash;
+		txOut.includeScriptRef = false;//TODO: What happens with that?
+
+
+		txHashBuilder_addOutput_topLevelData(
+		        &BODY_CTX->txHashBuilder,
+		        &txOut
 		);
 	}
 
@@ -341,6 +468,7 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 		TRACE("Output type %d", (int) subctx->stateData.output.outputType);
 
 		switch (output->outputType) {
+		case OUTPUT_TYPE_POST_ALONZO_ADDRESS_BYTES:
 		case OUTPUT_TYPE_ADDRESS_BYTES: {
 			STATIC_ASSERT(sizeof(output->address.size) >= 4, "wrong address size type");
 			output->address.size = parse_u4be(&view);
@@ -352,10 +480,12 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 			TRACE_BUFFER(output->address.buffer, output->address.size);
 			break;
 		}
+		case OUTPUT_TYPE_POST_ALONZO_ADDRESS_PARAMS:
 		case OUTPUT_TYPE_ADDRESS_PARAMS: {
 			view_parseAddressParams(&view, &output->params);
 			break;
 		}
+
 		default:
 			THROW(ERR_INVALID_DATA);
 		};
@@ -393,6 +523,14 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 
 		case OUTPUT_TYPE_ADDRESS_PARAMS:
 			signTx_handleOutput_addressParams();
+			break;
+
+		case OUTPUT_TYPE_POST_ALONZO_ADDRESS_BYTES:
+			signTx_handleOutput_postAlonzo_addressBytes();
+			break;
+
+		case OUTPUT_TYPE_POST_ALONZO_ADDRESS_PARAMS:
+			signTx_handleOutput_postAlonzo_addressParams();
 			break;
 
 		default:

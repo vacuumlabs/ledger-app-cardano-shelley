@@ -95,6 +95,10 @@ typedef struct {
 	uint64_t amount;
 } output_token_amount_t;
 
+typedef enum {
+	DATUM_OPTION_HASH = 0,
+	DATUM_OPTION_DATA = 1,
+} datum_option_type_t;
 
 // ==============================  CERTIFICATES  ==============================
 

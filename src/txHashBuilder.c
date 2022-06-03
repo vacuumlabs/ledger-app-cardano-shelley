@@ -14,7 +14,7 @@
 #define _TRACE(...) TRACE(__VA_ARGS__)
 #else
 #define _TRACE(...)
-#endif // DEVEL
+#endif // TRACE_TX_HASH_BUILDER
 
 
 /*
@@ -72,27 +72,57 @@ static void cbor_append_txInput(tx_hash_builder_t *builder, const uint8_t *utxoH
 	}
 }
 
-static void cbor_append_legacy_txOutput(tx_hash_builder_t *builder, const uint8_t *addressBuffer, size_t addressSize,
-                                        uint64_t amount, bool includeDatumHash)
+static void cbor_append_legacy_txOutput(tx_hash_builder_t *builder, tx_hash_builder_output const *output)
 {
-	// Array(2 + includeDatumHash)[
-	//   Bytes[address]
-	//   Unsigned[amount]
-	// ]
-	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumHash);
-	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
-		BUILDER_APPEND_DATA(addressBuffer, addressSize);
-	}
-	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
+	ASSERT(output->format == LEGACY);
+
+	if (output->numAssetGroups == 0) {
+		// Array(2 + includeDatumHash)[
+		//   Bytes[address]
+		//   Unsigned[amount]
+		//   //// entries added later, datum hash
+		// ]
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + output->includeDatumOption);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, output->addressSize);
+			BUILDER_APPEND_DATA(output->addressBuffer, output->addressSize);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, output->amount);
+		}
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_TOP_LEVEL_DATA;
+	} else {
+		builder->multiassetData.remainingAssetGroups = output->numAssetGroups;
+		// Array(2)[
+		//   Bytes[address]
+		//   Array(2)[]
+		//     Unsigned[amount]
+		//     Map(numAssetGroups)[
+		//       // entries added later, { * policy_id => { * asset_name => uint } }
+		//     ]
+		//   ]
+		// ]
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + output->includeDatumOption);
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, output->addressSize);
+				BUILDER_APPEND_DATA(output->addressBuffer, output->addressSize);
+			}
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+				{
+					BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, output->amount);
+					BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, output->numAssetGroups);
+				}
+			}
+		}
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP;
 	}
 }
 
-static void cbor_append_post_alonzo_txOutput(tx_hash_builder_t *builder, const uint8_t *addressBuffer, size_t addressSize,
-        uint64_t amount, bool includeDatumOption, bool includeScriptRef)
+static void cbor_append_post_alonzo_txOutput(tx_hash_builder_t *builder, tx_hash_builder_output const *output)
 {
-	// Array(2 + includeDatumOption + includeScriptRef)[
+	// Map(2 + includeDatumOption + includeScriptRef)[
 	//   Bytes[address]
 	//   Unsigned[amount]
 	//   Array (2)[
@@ -101,26 +131,58 @@ static void cbor_append_post_alonzo_txOutput(tx_hash_builder_t *builder, const u
 	//   ]
 	//   Bytes[script_ref]    ;script_ref
 	// ]
+	if (output->numAssetGroups == 0) {
 
-	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumOption + includeScriptRef);
-	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
-		BUILDER_APPEND_DATA(addressBuffer, addressSize);
-	}
-	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
-	}
+		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 2 + output->includeDatumOption + output->includeScriptRef);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, output->addressSize);
+			BUILDER_APPEND_DATA(output->addressBuffer, output->addressSize);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, output->amount);
+		}
 
-	//TODO: Move this to approperiate place. Where is the appropriate place? New method for adding post alonzo txout? or the existing one?
-	//or does advancing the stae in cbor_append methods makes sense?
-	if (includeDatumOption) {
-		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION;
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_TOP_LEVEL_DATA;
+	} else {
+		builder->multiassetData.remainingAssetGroups = output->numAssetGroups;
+		// Map(2 + includeDatumOption + includeScriptRef)[
+		//   Bytes[address]
+		//   Array(2)[]
+		//     Unsigned[amount]
+		//     Map(numAssetGroups)[
+		//       // entries added later, { * policy_id => { * asset_name => uint } }
+		//     ]
+		//   ]
+		// ]
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 2 + output->includeDatumOption + output->includeScriptRef);
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, output->addressSize);
+				BUILDER_APPEND_DATA(output->addressBuffer, output->addressSize);
+			}
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+				{
+					BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, output->amount);
+					BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, output->numAssetGroups);
+				}
+			}
+		}
+		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP;
 	}
-	if (includeScriptRef) {
-		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERANCE;
-	}
-	if (!(includeDatumOption || includeScriptRef)) { //remove if implemented similar to existing addoutput_toplevelData
-		builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+}
+
+static void cbor_append_txOutput(tx_hash_builder_t *builder, tx_hash_builder_output const *output)
+{
+	switch (output->format) {
+	case LEGACY:
+		cbor_append_legacy_txOutput(builder, output);
+		break;
+	case POST_ALONZO:
+		cbor_append_post_alonzo_txOutput(builder, output);
+		break;
+	default:
+		ASSERT(false);
 	}
 }
 
@@ -276,54 +338,18 @@ void txHashBuilder_enterOutputs(tx_hash_builder_t* builder)
 
 void txHashBuilder_addOutput_topLevelData(
         tx_hash_builder_t* builder,
-        const uint8_t* addressBuffer, size_t addressSize,
-        uint64_t amount,
-        uint16_t numAssetGroups,
-        bool includeDatumHash
+        tx_hash_builder_output const *output
 )
 {
 	_TRACE("state = %d, remainingOutputs = %u", builder->state, builder->remainingOutputs);
 
-	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(output->addressSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
 	ASSERT(builder->remainingOutputs > 0);
 	builder->remainingOutputs--;
 
-	if (numAssetGroups == 0) {
+	cbor_append_txOutput(builder, output);
 
-		cbor_append_legacy_txOutput(builder, addressBuffer, addressSize, amount, includeDatumHash);
-		if (includeDatumHash) {
-			builder->state = TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH;
-		} else {
-			builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
-		}
-	} else {
-		builder->multiassetData.remainingAssetGroups = numAssetGroups;
-		// Array(2)[
-		//   Bytes[address]
-		//   Array(2)[]
-		//     Unsigned[amount]
-		//     Map(numAssetGroups)[
-		//       // entries added later, { * policy_id => { * asset_name => uint } }
-		//     ]
-		//   ]
-		// ]
-		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + includeDatumHash);
-			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, addressSize);
-				BUILDER_APPEND_DATA(addressBuffer, addressSize);
-			}
-			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
-				{
-					BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, amount);
-					BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numAssetGroups);
-				}
-			}
-		}
-		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP;
-	}
 }
 
 __noinline_due_to_stack__
@@ -335,7 +361,7 @@ static void addTokenGroup(tx_hash_builder_t* builder,
 {
 	_TRACE("state = %d, remainingAssetGroups = %u", builder->state, builder->multiassetData.remainingAssetGroups);
 
-	ASSERT(builder->state == mandatoryState);
+	ASSERT(builder->state == mandatoryState); //has to be previous state TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP or TX_HASH_BUILDER_IN_MINT_TOP_LEVEL_DATA
 	ASSERT(builder->multiassetData.remainingAssetGroups > 0);
 	builder->multiassetData.remainingAssetGroups--;
 
@@ -356,7 +382,7 @@ static void addTokenGroup(tx_hash_builder_t* builder,
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numTokens);
 		}
-		builder->state = nextState;
+		builder->state = nextState; //either TX_HASH_BUILDER_IN_OUTPUTS_TOKEN or TX_HASH_BUILDER_IN_MINT_TOKEN
 	}
 }
 
@@ -371,7 +397,7 @@ static void addToken(tx_hash_builder_t* builder,
 {
 	_TRACE("state = %d, remainingTokens = %u", builder->state, builder->multiassetData.remainingTokens);
 
-	ASSERT(builder->state == mandatoryState);
+	ASSERT(builder->state == mandatoryState); //either TX_HASH_BUILDER_IN_OUTPUTS_TOKEN or TX_HASH_BUILDER_IN_MINT_TOKEN because we have previously that indicated tokens will come
 	ASSERT(builder->multiassetData.remainingTokens > 0);
 	builder->multiassetData.remainingTokens--;
 
@@ -391,13 +417,7 @@ static void addToken(tx_hash_builder_t* builder,
 	}
 
 	if (builder->multiassetData.remainingTokens == 0) {
-		if (builder->multiassetData.remainingAssetGroups == 0)
-			builder->state = leaveState;
-		else
-			builder->state = nextGroupState;
-	} else {
-		// we remain in current state
-		// because we are expecting more token amounts
+		builder->state = leaveState; // means we added all tokens for given group, so state should be either TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP or TX_HASH_BUILDER_IN_MINT_ASSET_GROUP
 	}
 }
 
@@ -409,8 +429,8 @@ void txHashBuilder_addOutput_tokenGroup(
 {
 	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
 
-	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens,
-	              TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP, TX_HASH_BUILDER_IN_OUTPUTS_TOKEN);
+	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens, TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP,
+	              TX_HASH_BUILDER_IN_OUTPUTS_TOKEN);
 }
 
 void txHashBuilder_addOutput_token(
@@ -425,8 +445,24 @@ void txHashBuilder_addOutput_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         TX_HASH_BUILDER_IN_OUTPUTS_TOKEN,
 	         TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP,
-	         includeDatumHash ? TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH : TX_HASH_BUILDER_IN_OUTPUTS,
+	         TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP,
 	         CBOR_TYPE_UNSIGNED);
+}
+
+static void txHashBuilder_assertCanLeaveOutputTopLevelData(tx_hash_builder_t *builder)
+{
+	_TRACE("state = %d, remainingOutputs = %u", builder->state, builder->multiassetData.remainingAssetGroups);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_OUTPUTS_TOP_LEVEL_DATA:
+	case TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP:
+		ASSERT(builder->multiassetData.remainingAssetGroups == 0);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+	ASSERT(builder->remainingOutputs == 0);
 }
 
 void txHashBuilder_addOutput_datumHash(
@@ -435,23 +471,20 @@ void txHashBuilder_addOutput_datumHash(
 )
 {
 	ASSERT(datumHashSize == OUTPUT_DATUM_HASH_LENGTH);
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH);
+	txHashBuilder_assertCanLeaveOutputTopLevelData(builder);
 
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, datumHashSize);
 		BUILDER_APPEND_DATA(datumHashBuffer, datumHashSize);
 	}
-	builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+	builder->state = TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH;
 }
 
-void txHashBuilder_addOutput_datumOption(
-        tx_hash_builder_t* builder,
-        const uint8_t* bytesBuffer, size_t bufferSize, uint8_t datumOption, bool includeScriptref
-)
+void txHashBuilder_addOutput_datumOption(tx_hash_builder_t *builder, datum_option_type_t datumOption, const uint8_t *buffer,
+        size_t bufferSize)
 {
-	ASSERT(bufferSize == OUTPUT_DATUM_HASH_LENGTH); //??
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION);
-
+	ASSERT(datumOption ? bufferSize < BUFFER_SIZE_PARANOIA : bufferSize == OUTPUT_DATUM_HASH_LENGTH); //??
+	txHashBuilder_assertCanLeaveOutputTopLevelData(builder);
 
 	//   datum_option = [ 0, $hash32 // 1, data ]
 	//   Array(2)[
@@ -465,15 +498,24 @@ void txHashBuilder_addOutput_datumOption(
 	}
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
-		BUILDER_APPEND_DATA(bytesBuffer, bufferSize);
+		BUILDER_APPEND_DATA(buffer, bufferSize);
 	}
+	builder->state = TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION;
+}
 
-	if (includeScriptref) {
-		builder->state = TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERANCE;
-	} else {
-		builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
+
+void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t *builder, const uint8_t *scriptBuffer, size_t bufferSize)
+{
+	ASSERT(bufferSize <  BUFFER_SIZE_PARANOIA); //??
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION || builder->state == TX_HASH_BUILDER_IN_OUTPUTS_TOP_LEVEL_DATA);
+
+	//   script_ref = #6.24(bytes .cbor script)
+	//   Bytes[buffer]
+
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
+		BUILDER_APPEND_DATA(scriptBuffer, bufferSize);
 	}
-
 }
 
 
@@ -1277,7 +1319,7 @@ void txHashBuilder_addMint_topLevelData(
 	// ]
 	BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numAssetGroups);
 	ASSERT(numAssetGroups > 0);
-	builder->state = TX_HASH_BUILDER_IN_MINT_ASSET_GROUP;
+	builder->state = TX_HASH_BUILDER_IN_MINT_TOP_LEVEL_DATA;
 }
 
 void txHashBuilder_addMint_tokenGroup(
@@ -1288,8 +1330,8 @@ void txHashBuilder_addMint_tokenGroup(
 {
 	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
 
-	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens,
-	              TX_HASH_BUILDER_IN_MINT_ASSET_GROUP, TX_HASH_BUILDER_IN_MINT_TOKEN);
+	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens, TX_HASH_BUILDER_IN_MINT_TOP_LEVEL_DATA,
+	              TX_HASH_BUILDER_IN_MINT_TOKEN);
 }
 
 void txHashBuilder_addMint_token(
@@ -1303,7 +1345,7 @@ void txHashBuilder_addMint_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         TX_HASH_BUILDER_IN_MINT_TOKEN,
 	         TX_HASH_BUILDER_IN_MINT_ASSET_GROUP,
-	         TX_HASH_BUILDER_IN_MINT,
+	         TX_HASH_BUILDER_IN_MINT_TOKEN,
 	         amount < 0 ? CBOR_TYPE_NEGATIVE : CBOR_TYPE_UNSIGNED);
 }
 
@@ -1547,24 +1589,20 @@ void txHashBuilder_enterCollateralReturn(tx_hash_builder_t *builder)
 	{
 		// Enter collateral output
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERAL_RETURN);
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->includeCollateralReturn);
 	}
 	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_RETURN;
 }
 
 void txHashBuilder_addCollateralReturn(tx_hash_builder_t *builder,
-                                       const uint8_t *addressBuffer, size_t addressSize,
-                                       uint64_t amount)
+                                       tx_hash_builder_output const *output)
 {
 	_TRACE("state = %d", builder->state);
 	ASSERT(builder->includeCollateralReturn);
 
-	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(output->addressSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_RETURN);
 
-	//Append CollRet, we don't allow DatumHash
-	cbor_append_legacy_txOutput(builder, addressBuffer, addressSize, amount, false);
-	//TODO: update this to new txout format
+	cbor_append_txOutput(builder, output);
 }
 
 static void txHashBuilder_assertCanLeaveCollateralReturn(tx_hash_builder_t* builder)
@@ -1652,7 +1690,7 @@ void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder )
 	builder->state = TX_HASH_BUILDER_IN_REFERENCE_INPUTS;
 
 }
-void txHashBuilder_addReferenceInputs(
+void txHashBuilder_addReferenceInput(
         tx_hash_builder_t* builder,
         const uint8_t* utxoHashBuffer, size_t utxoHashSize,
         uint32_t utxoIndex
