@@ -7,8 +7,10 @@
 #include "textUtils.h"
 #include "bufView.h"
 #include "securityPolicy.h"
+#include "tokens.h"
 
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
+static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 
 static output_context_t* accessSubcontext()
 {
@@ -372,6 +374,10 @@ static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t 
 		subctx->numAssetGroups = (uint16_t) numAssetGroups;
 
 		subctx->includeDatumHash = signTx_parseIncluded(parse_u1be(&view));
+		if (subctx->includeDatumHash) {
+			// it's easier to verify all Plutus-related things via txid all at once
+			ctx->shouldDisplayTxid = true;
+		}
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
@@ -499,8 +505,9 @@ static void signTxOutput_handleToken_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_AMOUNT) {
-		ui_displayUint64Screen(
-		        "Token amount",
+		ui_displayTokenAmountOutputScreen(
+		        &subctx->stateData.tokenGroup,
+		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
 		        subctx->stateData.token.amount,
 		        this_fn
 		);

@@ -67,18 +67,10 @@ void ui_displayStakingInfoScreen(
         ui_callback_fn_t callback
 );
 
-size_t deriveAssetFingerprint(
-        uint8_t* policyId,
-        size_t policyIdSize,
-        uint8_t* assetName,
-        size_t assetNameSize,
-        char* fingerprint,
-        size_t fingerprintMaxSize
-);
 __noinline_due_to_stack__
 void ui_displayAssetFingerprintScreen(
-        token_group_t* tokenGroup,
-        uint8_t* assetNameBytes, size_t assetNameSize,
+        const token_group_t* tokenGroup,
+        const uint8_t* assetNameBytes, size_t assetNameSize,
         ui_callback_fn_t callback
 );
 
@@ -86,6 +78,22 @@ __noinline_due_to_stack__
 void ui_displayAdaAmountScreen(
         const char* screenHeader,
         uint64_t amount,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
+void ui_displayTokenAmountOutputScreen(
+        const token_group_t* tokenGroup,
+        const uint8_t* assetNameBytes, size_t assetNameSize,
+        uint64_t tokenAmount,
+        ui_callback_fn_t callback
+);
+
+__noinline_due_to_stack__
+void ui_displayTokenAmountMintScreen(
+        const token_group_t* tokenGroup,
+        const uint8_t* assetNameBytes, size_t assetNameSize,
+        int64_t tokenAmount,
         ui_callback_fn_t callback
 );
 
@@ -142,19 +150,19 @@ void ui_displayPoolRelayScreen(
 
 __noinline_due_to_stack__
 void ui_displayIpv4Screen(
-        ipv4_t* ipv4,
+        const ipv4_t* ipv4,
         ui_callback_fn_t callback
 );
 
 __noinline_due_to_stack__
 void ui_displayIpv6Screen(
-        ipv6_t* ipv6,
+        const ipv6_t* ipv6,
         ui_callback_fn_t callback
 );
 
 __noinline_due_to_stack__
 void ui_displayIpPortScreen(
-        ipport_t* port,
+        const ipport_t* port,
         ui_callback_fn_t callback
 );
 
@@ -164,9 +172,5 @@ void ui_displayInputScreen(
         const sign_tx_transaction_input_t* input,
         ui_callback_fn_t callback
 );
-
-#ifdef DEVEL
-void run_uiScreens_test();
-#endif // DEVEL
 
 #endif // H_CARDANO_APP_UI_SCREENS

@@ -1,3 +1,4 @@
+#include "app_mode.h"
 #include "signTxCatalystRegistration.h"
 #include "state.h"
 #include "uiHelpers.h"
@@ -483,6 +484,8 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
+		// confirming this means the signature being sent out of the device
+		// so we want to show it in non-expert mode too
 		ui_displayPrompt(
 		        "Confirm voting key",
 		        "registration?",
@@ -491,6 +494,9 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_DISPLAY_HASH) {
+		if (!app_mode_expert()) {
+			UI_STEP_JUMP(HANDLE_CONFIRM_STEP_RESPOND);
+		}
 		ui_displayHexBufferScreen(
 		        "Auxiliary data hash",
 		        subctx->auxDataHash,

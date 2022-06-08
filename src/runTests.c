@@ -17,7 +17,7 @@
 #include "textUtils.h"
 #include "ipUtils.h"
 #include "uiHelpers.h"
-#include "uiScreens.h"
+#include "tokens.h"
 #include "deriveNativeScriptHash.h"
 
 
@@ -39,6 +39,7 @@ void handleRunTests(
 		run_crc32_test();
 		run_endian_test();
 		run_textUtils_test();
+		run_tokens_test();
 		run_ipUtils_test();
 		run_hash_test();
 		run_cbor_test();
@@ -47,7 +48,6 @@ void handleRunTests(
 		run_addressUtilsByron_test();
 		run_addressUtilsShelley_test();
 		run_txHashBuilder_test();
-		run_uiScreens_test();
 		run_auxDataHashBuilder_test();
 		run_nativeScriptHashBuilder_test();
 		PRINTF("All tests done\n");

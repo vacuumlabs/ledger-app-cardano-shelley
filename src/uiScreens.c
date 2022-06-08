@@ -6,6 +6,7 @@
 #include "textUtils.h"
 #include "signTx.h"
 #include "signTxPoolRegistration.h"
+#include "tokens.h"
 
 
 #define BECH32_BUFFER_SIZE_MAX 150
@@ -457,42 +458,9 @@ void ui_displayStakingInfoScreen(
 	);
 }
 
-#define ASSET_FINGERPRINT_SIZE 20
-
-size_t deriveAssetFingerprint(
-        uint8_t* policyId,
-        size_t policyIdSize,
-        uint8_t* assetName,
-        size_t assetNameSize,
-        char* fingerprint,
-        size_t fingerprintMaxSize
-)
-{
-	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
-	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
-
-	uint8_t hashInput[MINTING_POLICY_ID_SIZE + ASSET_NAME_SIZE_MAX] = {0};
-	const size_t hashInputSize = policyIdSize + assetNameSize;
-	{
-		write_view_t view = make_write_view(hashInput, hashInput + SIZEOF(hashInput));
-		view_appendBuffer(&view, policyId, policyIdSize);
-		view_appendBuffer(&view, assetName, assetNameSize);
-		ASSERT(view_processedSize(&view) == hashInputSize);
-	}
-
-	uint8_t fingerprintBuffer[ASSET_FINGERPRINT_SIZE] = {0};
-	blake2b_160_hash(hashInput, hashInputSize, fingerprintBuffer, SIZEOF(fingerprintBuffer));
-
-	size_t len = bech32_encode("asset", fingerprintBuffer, SIZEOF(fingerprintBuffer), fingerprint, fingerprintMaxSize);
-	ASSERT(len == strlen(fingerprint));
-	ASSERT(len + 1 < fingerprintMaxSize);
-
-	return len;
-}
-
 void ui_displayAssetFingerprintScreen(
-        token_group_t* tokenGroup,
-        uint8_t* assetNameBytes, size_t assetNameSize,
+        const token_group_t* tokenGroup,
+        const uint8_t* assetNameBytes, size_t assetNameSize,
         ui_callback_fn_t callback
 )
 {
@@ -501,7 +469,7 @@ void ui_displayAssetFingerprintScreen(
 	char fingerprint[200] = {0};
 	explicit_bzero(fingerprint, SIZEOF(fingerprint));
 
-	deriveAssetFingerprint(
+	deriveAssetFingerprintBech32(
 	        tokenGroup->policyId, SIZEOF(tokenGroup->policyId),
 	        assetNameBytes, assetNameSize,
 	        fingerprint, SIZEOF(fingerprint)
@@ -531,6 +499,52 @@ void ui_displayAdaAmountScreen(
 	ui_displayPaginatedText(
 	        firstLine,
 	        adaAmountStr,
+	        callback
+	);
+}
+
+void ui_displayTokenAmountOutputScreen(
+        const token_group_t* tokenGroup,
+        const uint8_t* assetNameBytes, size_t assetNameSize,
+        uint64_t tokenAmount,
+        ui_callback_fn_t callback
+)
+{
+	char tokenAmountStr[70] = {0};
+	explicit_bzero(tokenAmountStr, SIZEOF(tokenAmountStr));
+	str_formatTokenAmountOutput(
+	        tokenGroup,
+	        assetNameBytes, assetNameSize,
+	        tokenAmount,
+	        tokenAmountStr, SIZEOF(tokenAmountStr)
+	);
+
+	ui_displayPaginatedText(
+	        "Token amount",
+	        tokenAmountStr,
+	        callback
+	);
+}
+
+void ui_displayTokenAmountMintScreen(
+        const token_group_t* tokenGroup,
+        const uint8_t* assetNameBytes, size_t assetNameSize,
+        int64_t tokenAmount,
+        ui_callback_fn_t callback
+)
+{
+	char tokenAmountStr[70] = {0};
+	explicit_bzero(tokenAmountStr, SIZEOF(tokenAmountStr));
+	str_formatTokenAmountMint(
+	        tokenGroup,
+	        assetNameBytes, assetNameSize,
+	        tokenAmount,
+	        tokenAmountStr, SIZEOF(tokenAmountStr)
+	);
+
+	ui_displayPaginatedText(
+	        "Token amount",
+	        tokenAmountStr,
 	        callback
 	);
 }
@@ -746,7 +760,7 @@ void ui_displayPoolRelayScreen(
 }
 
 void ui_displayIpv4Screen(
-        ipv4_t* ipv4,
+        const ipv4_t* ipv4,
         ui_callback_fn_t callback
 )
 {
@@ -770,7 +784,7 @@ void ui_displayIpv4Screen(
 }
 
 void ui_displayIpv6Screen(
-        ipv6_t* ipv6,
+        const ipv6_t* ipv6,
         ui_callback_fn_t callback
 )
 {
@@ -794,7 +808,7 @@ void ui_displayIpv6Screen(
 }
 
 void ui_displayIpPortScreen(
-        ipport_t* port,
+        const ipport_t* port,
         ui_callback_fn_t callback
 )
 {
