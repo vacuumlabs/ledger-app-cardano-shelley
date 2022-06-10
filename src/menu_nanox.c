@@ -24,8 +24,8 @@ UX_STEP_NOCB(
         )
         #else
         LINES(
-                "Waiting for",
-                "commands"
+                "Cardano",
+                "is ready"
         )
         #endif
 );
