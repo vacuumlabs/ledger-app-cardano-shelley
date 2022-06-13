@@ -24,6 +24,12 @@ enum {
 	TX_BODY_KEY_REFERENCE_INPUTS = 18, //refInputs
 };
 
+enum {
+	TX_OUTPUT_KEY_ADDRESS = 1,
+	TX_OUTPUT_KEY_VALUE = 2,
+	TX_OUTPUT_KEY_DATUM_OPTION = 3,
+	TX_OUTPUT_KEY_SCRIPT_REF = 4,
+};
 /* The state machine of the tx hash builder is driven by user calls.
  * E.g., when the user calls txHashBuilder_addInput(), the input is only
  * added and the state is not advanced to outputs even if all inputs have been added
@@ -43,7 +49,9 @@ typedef enum {
 	TX_HASH_BUILDER_IN_OUTPUTS_TOKEN = 312,
 	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH = 313,
 	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION = 314,
-	TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERENCE = 315,
+	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION_CHUNKS = 315,
+	TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERENCE = 316,
+	TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERENCE_CHUNKS = 317,
 	TX_HASH_BUILDER_IN_FEE = 400,
 	TX_HASH_BUILDER_IN_TTL = 500,
 	TX_HASH_BUILDER_IN_CERTIFICATES = 600,
@@ -80,6 +88,10 @@ typedef struct {
 	uint16_t remainingCollaterals;
 	uint16_t remainingRequiredSigners;
 	uint16_t remainingReferenceInputs;
+	uint16_t totalDatumSize;
+	uint16_t currentDatumSize;
+	uint16_t totalReferenceScriptSize;
+	uint16_t currentReferenceScriptSize;
 	bool includeTtl;
 	bool includeAuxData;
 	bool includeValidityIntervalStart;
@@ -168,6 +180,8 @@ void txHashBuilder_addOutput_datumHash(
 
 void txHashBuilder_addOutput_datumOption(tx_hash_builder_t *builder, datum_option_type_t datumOption, const uint8_t *buffer,
         size_t bufferSize);
+
+void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t *builder, size_t bufferSize);
 
 void txHashBuilder_addFee(tx_hash_builder_t* builder, uint64_t fee);
 
@@ -279,7 +293,8 @@ void txHashBuilder_addRequiredSigner(
 );
 
 void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId);
-
+void txHashBuilder_addCollateralReturn(tx_hash_builder_t *builder,
+                                       tx_hash_builder_output const *output);
 void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txColl);
 
 void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder);

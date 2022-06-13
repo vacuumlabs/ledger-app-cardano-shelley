@@ -166,12 +166,17 @@ static void addMultiassetOutput(tx_hash_builder_t* builder)
 {
 	uint8_t tmp[70] = {0};
 	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
+	tx_hash_builder_output output;
+	output.format = LEGACY;
+	output.addressSize = tmpSize;
+	output.addressBuffer = tmp;
+	output.amount = outputs[1].amount;
+	output.numAssetGroups = 2;
+	output.includeDatumOption = false;
+	output.includeScriptRef = false;
 	txHashBuilder_addOutput_topLevelData(
 	        builder,
-	        tmp, tmpSize,
-	        outputs[1].amount,
-	        2,
-	        false
+	        &output
 	);
 
 	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &outputTokenHandler);
@@ -186,11 +191,17 @@ static void addOutputs(tx_hash_builder_t* builder)
 	ITERATE(it, outputs) {
 		uint8_t tmp[70] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
+		tx_hash_builder_output output;
+		output.format = LEGACY;
+		output.addressSize = tmpSize;
+		output.addressBuffer = tmp;
+		output.amount = it->amount;
+		output.numAssetGroups = 0;
+		output.includeDatumOption = false;
+		output.includeScriptRef = false;
 		txHashBuilder_addOutput_topLevelData(
 		        builder,
-		        tmp, tmpSize,
-		        it->amount,
-		        0, false
+		        &output
 		);
 	}
 
@@ -376,7 +387,7 @@ void run_txHashBuilder_test()
 	                   0,	// collaterals not tested yet
 	                   0,	// required signers not tested yet
 	                   false, // network id
-	                   true, // collateral return,
+	                   !true, // collateral return,
 	                   true, // total collateral,
 	                   ARRAY_LEN(inputs)	// reference inputs not tested yet
 	                  );
@@ -422,6 +433,8 @@ void run_txHashBuilder_test()
 	txHashBuilder_addValidityIntervalStart(&builder, 33);
 
 	addMint(&builder);
+
+//    txHashBuilder_addCollateralReturn(&builder,&output);
 
 	txHashBuilder_addTotalCollateral(&builder, 10);
 
