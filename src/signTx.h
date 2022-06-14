@@ -55,6 +55,8 @@ enum {
 	SIGN_MAX_WITNESSES = SIGN_MAX_INPUTS + SIGN_MAX_OUTPUTS + SIGN_MAX_CERTIFICATES + SIGN_MAX_REWARD_WITHDRAWALS,
 };
 
+#define UI_INPUT_LABEL_SIZE 20
+
 typedef struct {
 	bool isStored;
 	bool isByron;
@@ -95,6 +97,7 @@ typedef struct {
 typedef struct {
 	uint8_t txHashBuffer[TX_HASH_LENGTH];
 	uint32_t parsedIndex;
+	char label[UI_INPUT_LABEL_SIZE];
 } sign_tx_transaction_input_t;
 
 typedef struct {
@@ -157,7 +160,6 @@ typedef struct {
 		sign_tx_withdrawal_data_t withdrawal;
 		uint64_t validityIntervalStart;
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
-		sign_tx_transaction_input_t collateral;
 		sign_tx_required_signer_t requiredSigner;
 	} stageData; // TODO rename to reflect single-APDU scope
 
@@ -207,6 +209,7 @@ typedef struct {
 	bip44_path_t poolOwnerPath;
 
 	int ui_step;
+	void (*ui_advanceState)();
 } ins_sign_tx_context_t;
 
 ins_sign_tx_aux_data_context_t* accessAuxDataContext();
