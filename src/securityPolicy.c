@@ -574,6 +574,30 @@ security_policy_t policyForSignTxOutputAddressParams(
 	DENY(); // should not be reached
 }
 
+security_policy_t policyForSignTxOutputDatumHash(
+        security_policy_t outputPolicy
+)
+{
+	switch (outputPolicy) {
+	case POLICY_ALLOW_WITHOUT_PROMPT:
+		// output was not shown, showing datum won't make sense
+		ALLOW();
+		break;
+
+	case POLICY_SHOW_BEFORE_RESPONSE:
+	case POLICY_PROMPT_WARN_UNUSUAL:
+		// non-expert users are not supposed to be able to verify datum or its hash even if they saw it
+		SHOW_IF(app_mode_expert());
+		ALLOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
 // For final output confirmation
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t outputPolicy,
