@@ -834,7 +834,6 @@ void ui_displayIpPortScreen(
 }
 
 void ui_displayInputScreen(
-        const char* screenHeader,
         const sign_tx_transaction_input_t* input,
         ui_callback_fn_t callback)
 {
@@ -858,7 +857,7 @@ void ui_displayInputScreen(
 	ASSERT(strlen(inputStr) + 1 < SIZEOF(inputStr));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        input->label,
 	        inputStr,
 	        callback
 	);

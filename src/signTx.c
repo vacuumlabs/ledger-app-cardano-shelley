@@ -779,34 +779,32 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_INPUT_STEP_DISPLAY) {
-		char headerText[20] = {0};
-		explicit_bzero(headerText, SIZEOF(headerText));
-		// indexed from 0 as agreed with IOHK on Slack
-		snprintf(headerText, SIZEOF(headerText), "Input #%u", BODY_CTX->currentInput);
-		// make sure all the information is displayed to the user
-		ASSERT(strlen(headerText) + 1 < SIZEOF(headerText));
-
-		ui_displayInputScreen(headerText, &BODY_CTX->stageData.input, this_fn);
+		ui_displayInputScreen(&BODY_CTX->stageData.input, this_fn);
 	}
 
 	UI_STEP(HANDLE_INPUT_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 
-		// Advance stage to the next input
-		ASSERT(BODY_CTX->currentInput < ctx->numInputs);
-		BODY_CTX->currentInput++;
-
-		if (BODY_CTX->currentInput == ctx->numInputs) {
-			advanceStage();
-		}
+		ASSERT(ctx->ui_advanceState != NULL);
+		ctx->ui_advanceState();
 	}
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
 
-static sign_tx_transaction_input_t extractTransactionInput(const uint8_t* wireDataBuffer, size_t wireDataSize)
+// Advance stage to the next input
+static void ui_advanceState_input()
 {
-	sign_tx_transaction_input_t result;
-	TRACE_BUFFER(wireDataBuffer, wireDataSize);
+	ASSERT(BODY_CTX->currentInput < ctx->numInputs);
+	BODY_CTX->currentInput++;
+
+	if (BODY_CTX->currentInput == ctx->numInputs) {
+		advanceStage();
+	}
+}
+
+static void parseInput(const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	sign_tx_transaction_input_t* input = &BODY_CTX->stageData.input;
 
 	struct {
 		uint8_t txHash[TX_HASH_LENGTH];
@@ -815,10 +813,32 @@ static sign_tx_transaction_input_t extractTransactionInput(const uint8_t* wireDa
 
 	VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
 
-	memmove(result.txHashBuffer, wireUtxo->txHash, SIZEOF(result.txHashBuffer));
-	result.parsedIndex = u4be_read(wireUtxo->index);
+	memmove(input->txHashBuffer, wireUtxo->txHash, SIZEOF(input->txHashBuffer));
+	input->parsedIndex = u4be_read(wireUtxo->index);
+}
 
-	return result;
+static void constructInputLabel(const char* prefix, uint16_t index)
+{
+	char* label = BODY_CTX->stageData.input.label;
+	const size_t labelSize = SIZEOF(BODY_CTX->stageData.input.label);
+	explicit_bzero(label, labelSize);
+	// indexed from 0 as agreed with IOHK on Slack
+	snprintf(label, labelSize, "%s #%u", prefix, index);
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(label) + 1 < labelSize);
+}
+
+static void ui_selectInputStep(security_policy_t policy)
+{
+	// select UI steps
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_INPUT_STEP_DISPLAY);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_INPUT_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
 }
 
 __noinline_due_to_stack__
@@ -834,7 +854,7 @@ static void signTx_handleInputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, si
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	BODY_CTX->stageData.input = extractTransactionInput(wireDataBuffer, wireDataSize);
+	parseInput(wireDataBuffer, wireDataSize);
 
 	security_policy_t policy = policyForSignTxInput(ctx->commonTxData.txSigningMode);
 	TRACE("Policy: %d", (int) policy);
@@ -849,19 +869,14 @@ static void signTx_handleInputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, si
 		        BODY_CTX->stageData.input.parsedIndex
 		);
 	}
-
 	{
-		// select UI steps
-		switch (policy) {
-#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_INPUT_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_INPUT_STEP_RESPOND);
-#undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
+		// not needed if input is not shown, but does not cost much time, so not worth branching
+		constructInputLabel("Input", BODY_CTX->currentInput);
+
+		ctx->ui_advanceState = ui_advanceState_input;
+		ui_selectInputStep(policy);
+		signTx_handleInput_ui_runStep();
 	}
-	signTx_handleInput_ui_runStep();
 }
 
 
@@ -1838,42 +1853,15 @@ static void signTx_handleScriptDataHashAPDU(uint8_t p2, const uint8_t* wireDataB
 
 // ============================== COLLATERAL ==============================
 
-enum {
-	HANDLE_COLLATERAL_STEP_DISPLAY = 1300,
-	HANDLE_COLLATERAL_STEP_RESPOND,
-	HANDLE_COLLATERAL_STEP_INVALID,
-};
-
-static void signTx_handleCollateral_ui_runStep()
+// Advance stage to the next collateral input
+static void ui_advanceState_collateral()
 {
-	TRACE("UI step %d", ctx->ui_step);
-	ui_callback_fn_t* this_fn = signTx_handleCollateral_ui_runStep;
+	ASSERT(BODY_CTX->currentCollateral < ctx->numCollaterals);
+	BODY_CTX->currentCollateral++;
 
-	UI_STEP_BEGIN(ctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_COLLATERAL_STEP_DISPLAY) {
-		char headerText[20] = {0};
-		explicit_bzero(headerText, SIZEOF(headerText));
-		// indexed from 0 as agreed with IOHK on Slack
-		snprintf(headerText, SIZEOF(headerText), "Collateral #%u", BODY_CTX->currentCollateral);
-		// make sure all the information is displayed to the user
-		ASSERT(strlen(headerText) + 1 < SIZEOF(headerText));
-
-		ui_displayInputScreen(headerText, &BODY_CTX->stageData.collateral, this_fn);
+	if (BODY_CTX->currentCollateral == ctx->numCollaterals) {
+		advanceStage();
 	}
-
-	UI_STEP(HANDLE_COLLATERAL_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-
-		// Advance stage to the next input
-		ASSERT(BODY_CTX->currentCollateral < ctx->numCollaterals);
-		BODY_CTX->currentCollateral++;
-
-		if (BODY_CTX->currentCollateral == ctx->numCollaterals) {
-			advanceStage();
-		}
-	}
-	UI_STEP_END(HANDLE_COLLATERAL_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
@@ -1889,7 +1877,7 @@ static void signTx_handleCollateralAPDU(uint8_t p2, const uint8_t* wireDataBuffe
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	BODY_CTX->stageData.collateral = extractTransactionInput(wireDataBuffer, wireDataSize);
+	parseInput(wireDataBuffer, wireDataSize);
 
 	security_policy_t policy = policyForSignTxCollateral(ctx->commonTxData.txSigningMode);
 	TRACE("Policy: %d", (int) policy);
@@ -1900,23 +1888,18 @@ static void signTx_handleCollateralAPDU(uint8_t p2, const uint8_t* wireDataBuffe
 		TRACE("Adding collateral to tx hash");
 		txHashBuilder_addCollateral(
 		        &BODY_CTX->txHashBuilder,
-		        BODY_CTX->stageData.collateral.txHashBuffer, SIZEOF(BODY_CTX->stageData.collateral.txHashBuffer),
-		        BODY_CTX->stageData.collateral.parsedIndex
+		        BODY_CTX->stageData.input.txHashBuffer, SIZEOF(BODY_CTX->stageData.input.txHashBuffer),
+		        BODY_CTX->stageData.input.parsedIndex
 		);
 	}
-
 	{
-		// select UI steps
-		switch (policy) {
-#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_COLLATERAL_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_COLLATERAL_STEP_RESPOND);
-#	undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
+		// not needed if input is not shown, but does not cost much time, so not worth branching
+		constructInputLabel("Collateral", BODY_CTX->currentCollateral);
+
+		ctx->ui_advanceState = ui_advanceState_collateral;
+		ui_selectInputStep(policy);
+		signTx_handleInput_ui_runStep();
 	}
-	signTx_handleCollateral_ui_runStep();
 }
 
 // ========================= REQUIRED SIGNERS ===========================
