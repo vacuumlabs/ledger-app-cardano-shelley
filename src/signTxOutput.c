@@ -187,7 +187,7 @@ static void signTx_handleOutput_addressBytes()
 
 		tx_hash_builder_output txOut;
 
-		txOut.format = LEGACY;
+		txOut.format = ARRAY_LEGACY;
 		txOut.addressSize = subctx->stateData.output.address.size;
 		txOut.addressBuffer = subctx->stateData.output.address.buffer;
 		txOut.amount = subctx->stateData.output.adaAmount;
@@ -240,7 +240,7 @@ static void signTx_handleOutput_postAlonzo_addressBytes()
 
 		tx_hash_builder_output txOut;
 
-		txOut.format = POST_ALONZO;
+		txOut.format = MAP_BABBAGE;
 		txOut.addressBuffer = subctx->stateData.output.address.buffer;
 		txOut.addressSize = subctx->stateData.output.address.size;
 		txOut.amount = subctx->stateData.output.adaAmount;
@@ -358,7 +358,7 @@ static void signTx_handleOutput_addressParams()
 
 		tx_hash_builder_output txOut;
 
-		txOut.format = LEGACY;
+		txOut.format = ARRAY_LEGACY;
 		txOut.addressBuffer = addressBuffer;
 		txOut.addressSize = addressSize;
 		txOut.amount = subctx->stateData.output.adaAmount;
@@ -416,7 +416,7 @@ static void signTx_handleOutput_postAlonzo_addressParams()
 
 		tx_hash_builder_output txOut;
 
-		txOut.format = POST_ALONZO;
+		txOut.format = MAP_BABBAGE;
 		txOut.addressBuffer = addressBuffer;
 		txOut.addressSize = addressSize;
 		txOut.amount = subctx->stateData.output.adaAmount;
