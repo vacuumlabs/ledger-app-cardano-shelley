@@ -721,9 +721,7 @@ static void signTxOutput_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t w
 		txHashBuilder_addOutput_token(
 		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
-		        subctx->stateData.token.amount,
-		        subctx->includeDatumHash
-		);
+		        subctx->stateData.token.amount);
 		TRACE();
 	}
 
@@ -784,7 +782,7 @@ static void signTxOutput_handleDatumHashAPDU(const uint8_t* wireDataBuffer, size
 	{
 		// add to tx
 		TRACE("Adding datum hash to tx hash");
-		txHashBuilder_addOutput_datumHash(&BODY_CTX->txHashBuilder, subctx->stateData.datumHash, SIZEOF(subctx->stateData.datumHash));
+		txHashBuilder_addOutput_datumOption(&BODY_CTX->txHashBuilder, 0, subctx->stateData.datumHash, SIZEOF(subctx->stateData.datumHash));
 	}
 
 	{
