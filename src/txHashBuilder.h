@@ -79,7 +79,7 @@ typedef enum {
 	TX_OUTPUT_SCRIPT_REFERENCE = 30,
 	TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS = 31,
 
-} tx_hash_builder_output_substate_t;
+} tx_hash_builder_output_state_t;
 
 typedef struct {
 	uint16_t remainingInputs;
@@ -114,17 +114,17 @@ typedef struct {
 		} multiassetData;
 	};
 
-    union{
-        tx_hash_builder_output_substate_t outputSubState;
-    };
+	union {
+		tx_hash_builder_output_state_t outputState;
+	};
 
 	tx_hash_builder_state_t state;
 	blake2b_256_context_t txHash;
 } tx_hash_builder_t;
 
 typedef enum  {
-    ARRAY_LEGACY = 0,   // legacy_transaction_output
-    MAP_BABBAGE = 1     // post_alonzo_transaction_output
+	ARRAY_LEGACY = 0,   // legacy_transaction_output
+	MAP_BABBAGE = 1     // post_alonzo_transaction_output
 } tx_hash_builder_txOutput_format;
 
 typedef struct {
