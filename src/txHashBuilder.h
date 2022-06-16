@@ -44,14 +44,6 @@ typedef enum {
 	TX_HASH_BUILDER_INIT = 100,
 	TX_HASH_BUILDER_IN_INPUTS = 200,
 	TX_HASH_BUILDER_IN_OUTPUTS = 300,
-	TX_HASH_BUILDER_IN_OUTPUTS_TOP_LEVEL_DATA = 310,
-	TX_HASH_BUILDER_IN_OUTPUTS_ASSET_GROUP = 311,
-	TX_HASH_BUILDER_IN_OUTPUTS_TOKEN = 312,
-	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_HASH = 313,
-	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION = 314,
-	TX_HASH_BUILDER_IN_OUTPUTS_DATUM_OPTION_CHUNKS = 315,
-	TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERENCE = 316,
-	TX_HASH_BUILDER_IN_OUTPUTS_SCRIPT_REFERENCE_CHUNKS = 317,
 	TX_HASH_BUILDER_IN_FEE = 400,
 	TX_HASH_BUILDER_IN_TTL = 500,
 	TX_HASH_BUILDER_IN_CERTIFICATES = 600,
@@ -67,9 +59,6 @@ typedef enum {
 	TX_HASH_BUILDER_IN_AUX_DATA = 800,
 	TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START = 900,
 	TX_HASH_BUILDER_IN_MINT = 1000,
-	TX_HASH_BUILDER_IN_MINT_TOP_LEVEL_DATA = 1010,
-	TX_HASH_BUILDER_IN_MINT_ASSET_GROUP = 1011,
-	TX_HASH_BUILDER_IN_MINT_TOKEN = 1012,
 	TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH = 1100,
 	TX_HASH_BUILDER_IN_COLLATERALS = 1200,
 	TX_HASH_BUILDER_IN_REQUIRED_SIGNERS = 1300,
@@ -79,6 +68,18 @@ typedef enum {
 	TX_HASH_BUILDER_IN_REFERENCE_INPUTS = 1700,
 	TX_HASH_BUILDER_FINISHED = 1800,
 } tx_hash_builder_state_t;
+
+typedef enum {
+
+	TX_OUTPUT_TOP_LEVEL_DATA = 10,
+	TX_OUTPUT_ASSET_GROUP = 11,
+	TX_OUTPUT_TOKEN = 12,
+	TX_OUTPUT_DATUM_OPTION = 20,
+	TX_OUTPUT_DATUM_OPTION_CHUNKS = 21,
+	TX_OUTPUT_SCRIPT_REFERENCE = 30,
+	TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS = 31,
+
+} tx_hash_builder_output_substate_t;
 
 typedef struct {
 	uint16_t remainingInputs;
@@ -113,13 +114,17 @@ typedef struct {
 		} multiassetData;
 	};
 
+    union{
+        tx_hash_builder_output_substate_t outputSubState;
+    };
+
 	tx_hash_builder_state_t state;
 	blake2b_256_context_t txHash;
 } tx_hash_builder_t;
 
 typedef enum  {
-	LEGACY = 0,
-	POST_ALONZO = 1
+    ARRAY_LEGACY = 0,   // legacy_transaction_output
+    MAP_BABBAGE = 1     // post_alonzo_transaction_output
 } tx_hash_builder_txOutput_format;
 
 typedef struct {
@@ -167,12 +172,9 @@ void txHashBuilder_addOutput_tokenGroup(
         const uint8_t* policyIdBuffer, size_t policyIdSize,
         uint16_t numTokens
 );
-void txHashBuilder_addOutput_token(
-        tx_hash_builder_t* builder,
-        const uint8_t* assetNameBuffer, size_t assetNameSize,
-        uint64_t amount,
-        bool includeDatumHash
-);
+
+void txHashBuilder_addOutput_token(tx_hash_builder_t *builder,
+                                   const uint8_t *assetNameBuffer, size_t assetNameSize, uint64_t amount);
 void txHashBuilder_addOutput_datumHash(
         tx_hash_builder_t* builder,
         const uint8_t* datumHashBuffer, size_t datumHashSize
@@ -293,8 +295,21 @@ void txHashBuilder_addRequiredSigner(
 );
 
 void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId);
+
+// ===================================== COLLRET =====================================
+
 void txHashBuilder_addCollateralReturn(tx_hash_builder_t *builder,
                                        tx_hash_builder_output const *output);
+void txHashBuilder_addCollateralReturn_tokenGroup(
+        tx_hash_builder_t* builder,
+        const uint8_t* policyIdBuffer, size_t policyIdSize,
+        uint16_t numTokens
+);
+void txHashBuilder_addCollateralReturn_token(tx_hash_builder_t *builder, const uint8_t *assetNameBuffer,
+        size_t assetNameSize, uint64_t amount);
+
+// ===================================== TOTAL COLLATERAL =====================================
+
 void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txColl);
 
 void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder);
@@ -311,6 +326,7 @@ void txHashBuilder_finalize(
 
 #ifdef DEVEL
 void run_txHashBuilder_test();
+void run_txHashBuilder_test_post_alonzo();
 #endif // DEVEL
 
 #endif // H_CARDANO_APP_TX_HASH_BUILDER
