@@ -102,8 +102,7 @@ static struct {
 	}
 };
 
-static const char* expectedHex = "1b6acee361e5a3fabeb0a581dae6ca7e71ed9bc87e32ece8e7ef1c5995c20845";
-static const char* expectedHexNew = "54347ced7ba120a912245c93af0d483fac1ae5763d069e202164d28d2107945e";
+static const char* expectedHex = "1afc7a633054317feb3d6a7cc640dc333df474dafd10737204b44ddd34f8e6ef";
 static const char* scriptDataHash = "853cbe68f7fccdeeeb0fd7b711ea147912190c35ac52d9d94080ae82809b2f84";
 
 typedef void(*addTokenGroupFun)(tx_hash_builder_t* builder,
@@ -191,17 +190,18 @@ static void addMultiassetOutput(tx_hash_builder_t* builder, tx_hash_builder_txOu
 	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &outputTokenHandler);
 }
 
-static void addOutputs(tx_hash_builder_t* builder, tx_hash_builder_txOutput_format const* outputFormat)
+static void addOutputs(tx_hash_builder_t* builder)
 {
 	txHashBuilder_enterOutputs(builder);
 
-	addMultiassetOutput(builder, outputFormat);
+	tx_hash_builder_txOutput_format outputFormat = ARRAY_LEGACY;
+	addMultiassetOutput(builder, &outputFormat);
 
 	ITERATE(it, outputs) {
 		uint8_t tmp[70] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
 		tx_hash_builder_output output;
-		output.format = (*outputFormat);
+		output.format = outputFormat;
 		output.addressSize = tmpSize;
 		output.addressBuffer = tmp;
 		output.amount = it->amount;
@@ -215,7 +215,32 @@ static void addOutputs(tx_hash_builder_t* builder, tx_hash_builder_txOutput_form
 	}
 
 	// added for the second time to more thoroughly check the state machine
-	addMultiassetOutput(builder, outputFormat);
+	addMultiassetOutput(builder, &outputFormat);
+
+	//New output format
+	outputFormat = MAP_BABBAGE;
+
+	addMultiassetOutput(builder, &outputFormat);
+
+	ITERATE(it, outputs) {
+		uint8_t tmp[70] = {0};
+		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
+		tx_hash_builder_output output;
+		output.format = outputFormat;
+		output.addressSize = tmpSize;
+		output.addressBuffer = tmp;
+		output.amount = it->amount;
+		output.numAssetGroups = 0;
+		output.includeDatumOption = false;
+		output.includeScriptRef = false;
+		txHashBuilder_addOutput_topLevelData(
+		        builder,
+		        &output
+		);
+	}
+
+	// added for the second time to more thoroughly check the state machine
+	addMultiassetOutput(builder, &outputFormat);
 }
 
 static void collRetTokenHandler(tx_hash_builder_t* builder,
@@ -225,12 +250,12 @@ static void collRetTokenHandler(tx_hash_builder_t* builder,
 	txHashBuilder_addCollateralReturn_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
 }
 //TODO: more generic function to handle similar? or just merge to addCollRet?
-static void addMultiassetCollRet(tx_hash_builder_t* builder, tx_hash_builder_txOutput_format const* outputFormat)
+static void addMultiassetCollRet(tx_hash_builder_t* builder, tx_hash_builder_txOutput_format outputFormat)
 {
 	uint8_t tmp[70] = {0};
 	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
 	tx_hash_builder_output output;
-	output.format = (*outputFormat);
+	output.format = outputFormat;
 	output.addressSize = tmpSize;
 	output.addressBuffer = tmp;
 	output.amount = outputs[1].amount;
@@ -245,9 +270,9 @@ static void addMultiassetCollRet(tx_hash_builder_t* builder, tx_hash_builder_txO
 	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addCollateralReturn_tokenGroup, &collRetTokenHandler);
 }
 
-static void addCollRet(tx_hash_builder_t* builder, tx_hash_builder_txOutput_format const* outputFormat)
+static void addCollRet(tx_hash_builder_t* builder)
 {
-	addMultiassetCollRet(builder, outputFormat);
+	addMultiassetCollRet(builder, MAP_BABBAGE);
 }
 
 static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
@@ -411,7 +436,7 @@ void run_txHashBuilder_test()
 
 	txHashBuilder_init(&builder,
 	                   ARRAY_LEN(inputs),
-	                   ARRAY_LEN(outputs) + 2, // +2 for multiasset outputs
+	                   (ARRAY_LEN(outputs) + 2) * 2, // +2 for multiasset outputs
 	                   true, // ttl
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
@@ -426,8 +451,6 @@ void run_txHashBuilder_test()
 	                   ARRAY_LEN(inputs)	// reference inputs
 	                  );
 
-	tx_hash_builder_txOutput_format outputFormat = ARRAY_LEGACY;
-
 	//  0 : set<transaction_input>    ; inputs
 	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {
@@ -439,7 +462,7 @@ void run_txHashBuilder_test()
 		txHashBuilder_addInput(&builder, &input);
 	}
 	//  1 : [* transaction_output]
-	addOutputs(&builder, &outputFormat);
+	addOutputs(&builder);
 	//  2 : coin    ; fee
 	txHashBuilder_addFee(&builder, 42);
 	//  ? 3 : uint  ; time to live
@@ -492,7 +515,7 @@ void run_txHashBuilder_test()
 	//  ? 15 : network_id
 	txHashBuilder_addNetworkId(&builder, 0);
 	//  ? 16 : transaction_output     ; collateral return
-	addCollRet(&builder, &outputFormat);
+	addCollRet(&builder);
 	//  ? 17 : coin                   ; total collateral
 	txHashBuilder_addTotalCollateral(&builder, 10);
 	//  ? 18 : set<transaction_input> ; reference inputs
@@ -519,95 +542,5 @@ void run_txHashBuilder_test()
 
 	EXPECT_EQ_BYTES(result, expected, 32);
 }
-
-void run_txHashBuilder_test_post_alonzo()
-{
-	PRINTF("txHashBuilder MAP_BABBAGE test\n");
-	tx_hash_builder_t builder;
-
-	/*
-	transaction_body =
-	      { 0 : set<transaction_input>    ; inputs
-	      , 1 : [* transaction_output]
-	      , 2 : coin                      ; fee
-	      , ? 9 : mint
-	      , ? 13 : set<transaction_input> ; collateral inputs
-	      , ? 16 : transaction_output     ; collateral return; New
-	      , ? 17 : coin                   ; total collateral; New
-	      , ? 18 : set<transaction_input> ; reference inputs; New
-	      }
-	*/
-	txHashBuilder_init(&builder,
-	                   1,
-	                   ARRAY_LEN(outputs) + 2, // +2 for multiasset outputs
-	                   false, // ttl
-	                   0, 0,
-	                   false, // metadata
-	                   false, // validity interval start
-	                   true, // mint
-	                   false, // script hash data
-	                   1,    // collaterals
-	                   0,    // required
-	                   false, // network id
-	                   true, // collateral return,
-	                   true, // total collateral,
-	                   ARRAY_LEN(inputs)    // reference inputs
-	                  );
-	tx_hash_builder_txOutput_format outputFormat = MAP_BABBAGE;
-
-	//  0 : set<transaction_input>    ; inputs
-	txHashBuilder_enterInputs(&builder);
-	uint8_t tmp[TX_HASH_LENGTH] = {0};
-	size_t tmpSize = decode_hex(PTR_PIC(inputs[0].txHashHex), tmp, SIZEOF(tmp));
-	txHashBuilder_addInput(
-	        &builder,
-	        tmp, tmpSize,
-	        inputs[0].index
-	);
-
-
-	//  1 : [* transaction_output]
-	addOutputs(&builder, &outputFormat);
-	//  2 : coin    ; fee
-	txHashBuilder_addFee(&builder, 42);
-	//  ? 9 : mint
-	addMint(&builder);
-	//  ? 13 : set<transaction_input> ; collateral inputs
-	{
-		txHashBuilder_enterCollaterals(&builder);
-		uint8_t tmp[TX_HASH_LENGTH] = {0};
-		size_t tmpSize = decode_hex(PTR_PIC(inputs[0].txHashHex), tmp, SIZEOF(tmp));
-		txHashBuilder_addCollateral(&builder, tmp, tmpSize, inputs[0].index);
-	}
-	//  ? 16 : transaction_output     ; collateral return
-	addCollRet(&builder, &outputFormat);
-	//  ? 17 : coin                   ; total collateral
-	txHashBuilder_addTotalCollateral(&builder, 10);
-	//  ? 18 : set<transaction_input> ; reference inputs
-	txHashBuilder_enterReferenceInputs(&builder);
-	{
-		ITERATE(it, inputs) {
-			uint8_t tmp[TX_HASH_LENGTH] = {0};
-			size_t tmpSize = decode_hex(PTR_PIC(it->txHashHex), tmp, SIZEOF(tmp));
-			txHashBuilder_addReferenceInput(
-			        &builder,
-			        tmp, tmpSize,
-			        it->index
-			);
-		}
-	}
-
-	uint8_t result[TX_HASH_LENGTH] = {0};
-	txHashBuilder_finalize(&builder, result, SIZEOF(result));
-
-	uint8_t expected[TX_HASH_LENGTH] = {0};
-	decode_hex(expectedHexNew, expected, SIZEOF(expected));
-
-	PRINTF("result\n");
-	PRINTF("%.*h\n", 32, result);
-
-	EXPECT_EQ_BYTES(result, expected, 32);
-}
-
 
 #endif // DEVEL
