@@ -813,8 +813,9 @@ static void parseInput(const uint8_t* wireDataBuffer, size_t wireDataSize)
 
 	VALIDATE(wireDataSize == SIZEOF(*wireUtxo), ERR_INVALID_DATA);
 
-	memmove(input->txHashBuffer, wireUtxo->txHash, SIZEOF(input->txHashBuffer));
-	input->parsedIndex = u4be_read(wireUtxo->index);
+	tx_input_t* inputData = &input->input_data;
+	memmove(inputData->txHashBuffer, wireUtxo->txHash, SIZEOF(inputData->txHashBuffer));
+	inputData->index = u4be_read(wireUtxo->index);
 }
 
 static void constructInputLabel(const char* prefix, uint16_t index)
@@ -865,8 +866,7 @@ static void signTx_handleInputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, si
 		TRACE("Adding input to tx hash");
 		txHashBuilder_addInput(
 		        &BODY_CTX->txHashBuilder,
-		        BODY_CTX->stageData.input.txHashBuffer, SIZEOF(BODY_CTX->stageData.input.txHashBuffer),
-		        BODY_CTX->stageData.input.parsedIndex
+		        &BODY_CTX->stageData.input.input_data
 		);
 	}
 	{
@@ -1888,8 +1888,7 @@ static void signTx_handleCollateralAPDU(uint8_t p2, const uint8_t* wireDataBuffe
 		TRACE("Adding collateral to tx hash");
 		txHashBuilder_addCollateral(
 		        &BODY_CTX->txHashBuilder,
-		        BODY_CTX->stageData.input.txHashBuffer, SIZEOF(BODY_CTX->stageData.input.txHashBuffer),
-		        BODY_CTX->stageData.input.parsedIndex
+		        &BODY_CTX->stageData.input.input_data
 		);
 	}
 	{

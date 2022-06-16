@@ -76,6 +76,13 @@ void rewardAccountToBuffer(
 );
 
 
+// ==============================  INPUTS  ==============================
+
+typedef struct {
+	uint8_t txHashBuffer[TX_HASH_LENGTH];
+	uint32_t index;
+} tx_input_t;
+
 // ==============================  OUTPUTS  ==============================
 
 typedef struct {

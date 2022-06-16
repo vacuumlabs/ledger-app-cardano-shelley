@@ -95,8 +95,7 @@ typedef struct {
 } sign_tx_certificate_data_t;
 
 typedef struct {
-	uint8_t txHashBuffer[TX_HASH_LENGTH];
-	uint32_t parsedIndex;
+	tx_input_t input_data;
 	char label[UI_INPUT_LABEL_SIZE];
 } sign_tx_transaction_input_t;
 

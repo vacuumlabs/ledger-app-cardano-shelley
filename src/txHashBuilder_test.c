@@ -381,11 +381,10 @@ void run_txHashBuilder_test()
 	ITERATE(it, inputs) {
 		uint8_t tmp[TX_HASH_LENGTH] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->txHashHex), tmp, SIZEOF(tmp));
-		txHashBuilder_addInput(
-		        &builder,
-		        tmp, tmpSize,
-		        it->index
-		);
+		tx_input_t input;
+		memmove(input.txHashBuffer, tmp, tmpSize);
+		input.index = it->index;
+		txHashBuilder_addInput(&builder, &input);
 	}
 
 	addOutputs(&builder);

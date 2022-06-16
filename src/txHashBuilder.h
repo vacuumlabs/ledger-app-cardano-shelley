@@ -112,11 +112,7 @@ void txHashBuilder_init(
 );
 
 void txHashBuilder_enterInputs(tx_hash_builder_t* builder);
-void txHashBuilder_addInput(
-        tx_hash_builder_t* builder,
-        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
-        uint32_t utxoIndex
-);
+void txHashBuilder_addInput(tx_hash_builder_t *builder, const tx_input_t* input);
 
 void txHashBuilder_enterOutputs(tx_hash_builder_t* builder);
 void txHashBuilder_addOutput_topLevelData(
@@ -243,11 +239,7 @@ void txHashBuilder_addScriptDataHash(
 );
 
 void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder);
-void txHashBuilder_addCollateral(
-        tx_hash_builder_t* builder,
-        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
-        uint32_t utxoIndex
-);
+void txHashBuilder_addCollateral(tx_hash_builder_t *builder, const tx_input_t* collInput);
 
 void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder);
 void txHashBuilder_addRequiredSigner(
