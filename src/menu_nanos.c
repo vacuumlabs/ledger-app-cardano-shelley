@@ -68,9 +68,9 @@ void os_sched_exit_ui_callback(unsigned int userid MARK_UNUSED)
 
 const ux_menu_entry_t menu_main[] = {
 	#if defined(DEVEL) || defined(HEADLESS)
-	{NULL, NULL, 0, NULL, "Warning:", "DEVEL version!", 0, 0},
+	{NULL, NULL, 0, &C_icon_app, "Warning:", "DEVEL version!", 0, 0},
 	#else
-	{NULL, NULL, 0, NULL, "Cardano", "is ready", 0, 0},
+	{NULL, NULL, 0, &C_icon_app, "Cardano", "is ready", 0, 0},
 	#endif
 	{NULL, h_expert_toggle, 0, NULL, "Expert mode:", expertModeString, 33, 12},
 	{menu_about, NULL, 0, NULL, "About", NULL, 0, 0},
