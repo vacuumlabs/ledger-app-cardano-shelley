@@ -16,16 +16,18 @@ void h_expert_update();
 
 UX_STEP_NOCB(
         ux_idle_flow_1_step,
-        bn,
+        pbb,
         #if defined(DEVEL) || defined(HEADLESS)
         LINES(
+                &C_icon_app,
                 "Warning:",
                 "DEVEL version!"
         )
         #else
         LINES(
-                "Waiting for",
-                "commands"
+                &C_icon_app,
+                "Cardano",
+                "is ready"
         )
         #endif
 );
