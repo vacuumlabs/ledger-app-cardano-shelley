@@ -2148,6 +2148,13 @@ static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UN
 
 // ============================== WITNESS ==============================
 
+static void _wipeWitnessSignature()
+{
+	// safer not to keep this in memory
+	explicit_bzero(WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature));
+	respond_with_user_reject();
+}
+
 enum {
 	HANDLE_WITNESS_STEP_WARNING = 1100,
 	HANDLE_WITNESS_STEP_DISPLAY,
@@ -2179,7 +2186,7 @@ static void signTx_handleWitness_ui_runStep()
 		        "Sign using",
 		        "this witness?",
 		        this_fn,
-		        respond_with_user_reject
+		        _wipeWitnessSignature
 		);
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_RESPOND) {
