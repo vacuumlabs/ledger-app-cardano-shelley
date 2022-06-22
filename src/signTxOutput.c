@@ -651,7 +651,11 @@ static void signTxOutput_handleDatumHashAPDU(uint8_t* wireDataBuffer, size_t wir
 
 	{
 		// select UI step
-		switch (subctx->outputSecurityPolicy) {
+		security_policy_t policy = policyForSignTxOutputDatumHash(subctx->outputSecurityPolicy);
+		TRACE("Policy: %d", (int) policy);
+		ENSURE_NOT_DENIED(policy);
+
+		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_DATUM_HASH_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_DATUM_HASH_STEP_RESPOND);

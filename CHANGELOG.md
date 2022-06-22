@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [4.1.0](TBD) - [TBD]
+## [4.1.2](TBD) - [TBD]
 
 Expert mode and token decimal places
 
@@ -18,14 +18,6 @@ Expert mode and token decimal places
 ### Changed
 
 - required signers are now allowed in ordinary and multisig transactions
-
-
-## [4.0.1](TBD) - [TBD]
-
-Fix UI messages
-
-### Fixed
-
 - certain messages displayed to users have been changed to better fit on the screen
 
 
