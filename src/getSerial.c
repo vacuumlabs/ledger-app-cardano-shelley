@@ -4,6 +4,10 @@
 #include "getSerial.h"
 #include "uiHelpers.h"
 
+// required by os_serial
+#define SERIAL_LENGTH 7
+
+
 void getSerial_handleAPDU(
         uint8_t p1,
         uint8_t p2,
@@ -19,7 +23,6 @@ void getSerial_handleAPDU(
 	STATIC_ASSERT(sizeof(uint8_t) == sizeof(unsigned char), "bad unsigned char size");
 	STATIC_ASSERT(sizeof(size_t) >= sizeof(unsigned int), "bad unsigned int size");
 
-	const size_t SERIAL_LENGTH = 7; // if too short, exception 2 is thrown by os_serial
 	uint8_t response[SERIAL_LENGTH] = {0};
 	size_t len = os_serial(response, SERIAL_LENGTH);
 	ASSERT(len == SERIAL_LENGTH);
