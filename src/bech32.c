@@ -84,13 +84,13 @@ void bech32_encode_5bit(const char *hrp, const uint8_t *data,
 	APPEND_OUT(0);
 }
 
+// we are not supposed to use more for Cardano Shelley
+// WARNING: increasing this would take more stack space, see data5bit definition below
+#define MAX_BYTES 65
+
 size_t bech32_encode(const char *hrp, const uint8_t *bytes, size_t bytesSize,
                      char *output, size_t maxOutputSize)
 {
-	// we are not supposed to use more for Cardano Shelley
-	// WARNING: increasing this would take more stack space, see data5bit definition below
-	const size_t MAX_BYTES = 65;
-
 	ASSERT(bytesSize <= MAX_BYTES);
 	ASSERT(strlen(hrp) >= 1); // not allowed for bech32
 
