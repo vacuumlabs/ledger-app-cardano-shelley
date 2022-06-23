@@ -48,7 +48,7 @@ static inline void simpleScriptFinished()
 }
 
 // UI
-typedef char* charPtr;
+typedef const char* charPtr;
 const charPtr ui_native_script_header[7] = {"Script - key path", "Script - key", "Script - ALL", "Script - ANY", "Script - N of K", "Script - invalid before", "Script - invalid hereafter"};
 
 #define ASSERT_UI_SCRIPT_TYPE_SANITY() ASSERT(ctx->ui_scriptType >= UI_SCRIPT_PUBKEY_PATH && ctx->ui_scriptType <= UI_SCRIPT_INVALID_HEREAFTER)
@@ -471,7 +471,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 void deriveNativeScriptHash_handleAPDU(
         uint8_t p1,
         uint8_t p2,
-        uint8_t *wireDataBuffer,
+        const uint8_t *wireDataBuffer,
         size_t wireDataSize,
         bool isNewCall
 )

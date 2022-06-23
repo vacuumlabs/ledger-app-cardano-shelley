@@ -70,7 +70,7 @@ typedef struct {
 void signTxOutput_init();
 
 bool signTxOutput_isValidInstruction(uint8_t p2);
-void signTxOutput_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize);
+void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
 bool signTxOutput_isFinished();
 

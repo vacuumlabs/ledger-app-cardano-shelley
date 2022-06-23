@@ -13,7 +13,7 @@ uint8_t G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
 unsigned int app_stack_canary = APP_STACK_CANARY_MAGIC;
 #endif
 
-void signTx_handleAPDU_no_throw(uint8_t p1, uint8_t p2, uint8_t *wireBuffer, size_t wireSize, bool isNewCall) {
+void signTx_handleAPDU_no_throw(uint8_t p1, uint8_t p2, const uint8_t *wireBuffer, size_t wireSize, bool isNewCall) {
       BEGIN_TRY {
         TRY {
             signTx_handleAPDU(p1, p2, wireBuffer, wireSize, isNewCall);
@@ -25,7 +25,7 @@ void signTx_handleAPDU_no_throw(uint8_t p1, uint8_t p2, uint8_t *wireBuffer, siz
     } END_TRY;
 }
 
-void signOpCert_handleAPDU_no_throw(uint8_t p1, uint8_t p2, uint8_t *wireBuffer, size_t wireSize, bool isNewCall) {
+void signOpCert_handleAPDU_no_throw(uint8_t p1, uint8_t p2, const uint8_t *wireBuffer, size_t wireSize, bool isNewCall) {
       BEGIN_TRY {
         TRY {
             signOpCert_handleAPDU(p1, p2, wireBuffer, wireSize, isNewCall);
