@@ -108,7 +108,7 @@ static void signTxMint_handleTopLevelData_ui_runStep()
 	UI_STEP_END(HANDLE_MINT_TOP_LEVEL_DATA_INVALID);
 }
 
-static void signTxMint_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxMint_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// safety checks
@@ -163,7 +163,7 @@ static void signTxMint_handleAssetGroup_ui_runStep()
 	UI_STEP_END(HANDLE_ASSET_GROUP_STEP_INVALID);
 }
 
-static void signTxMint_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxMint_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -262,7 +262,7 @@ static void signTxMint_handleToken_ui_runStep()
 	UI_STEP_END(HANDLE_TOKEN_STEP_INVALID);
 }
 
-static void signTxMint_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxMint_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -356,7 +356,7 @@ static void signTxMint_handleConfirm_ui_runStep()
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
-static void signTxMint_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+static void signTxMint_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	{
 		//sanity checks
@@ -420,7 +420,7 @@ void signTxMint_init()
 	accessSubcontext()->state = STATE_MINT_TOP_LEVEL_DATA;
 }
 
-void signTxMint_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+void signTxMint_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 

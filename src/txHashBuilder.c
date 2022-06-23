@@ -576,7 +576,7 @@ void txHashBuilder_addCertificate_delegation(
 
 void txHashBuilder_addCertificate_poolRetirement(
         tx_hash_builder_t* builder,
-        uint8_t* poolKeyHash, size_t poolKeyHashSize,
+        const uint8_t* poolKeyHash, size_t poolKeyHashSize,
         uint64_t epoch
 )
 {
@@ -637,7 +637,7 @@ void txHashBuilder_poolRegistrationCertificate_enter(
 
 void txHashBuilder_poolRegistrationCertificate_poolKeyHash(
         tx_hash_builder_t* builder,
-        uint8_t* poolKeyHash, size_t poolKeyHashSize
+        const uint8_t* poolKeyHash, size_t poolKeyHashSize
 )
 {
 	_TRACE("state = %d", builder->state);
@@ -657,7 +657,7 @@ void txHashBuilder_poolRegistrationCertificate_poolKeyHash(
 
 void txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
         tx_hash_builder_t* builder,
-        uint8_t* vrfKeyHash, size_t vrfKeyHashSize
+        const uint8_t* vrfKeyHash, size_t vrfKeyHashSize
 )
 {
 	_TRACE("state = %d", builder->state);
@@ -715,7 +715,7 @@ void txHashBuilder_poolRegistrationCertificate_financials(
 
 void txHashBuilder_poolRegistrationCertificate_rewardAccount(
         tx_hash_builder_t* builder,
-        uint8_t* rewardAccount, size_t rewardAccountSize
+        const uint8_t* rewardAccount, size_t rewardAccountSize
 )
 {
 	_TRACE("state = %d", builder->state);
@@ -786,7 +786,7 @@ void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t*
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS;
 }
 
-static void _relay_addPort(tx_hash_builder_t* builder, ipport_t* port)
+static void _relay_addPort(tx_hash_builder_t* builder, const ipport_t* port)
 {
 	_TRACE("state = %d, remainingRelays = %u", builder->state, builder->poolCertificateData.remainingRelays);
 
@@ -800,7 +800,7 @@ static void _relay_addPort(tx_hash_builder_t* builder, ipport_t* port)
 	}
 }
 
-static void _relay_addIpv4(tx_hash_builder_t* builder, ipv4_t* ipv4)
+static void _relay_addIpv4(tx_hash_builder_t* builder, const ipv4_t* ipv4)
 {
 	_TRACE("state = %d, remainingRelays = %u", builder->state, builder->poolCertificateData.remainingRelays);
 
@@ -845,7 +845,7 @@ static void _relay_addIpv6(tx_hash_builder_t* builder, const ipv6_t* ipv6)
 	}
 }
 
-static void _relay_addDnsName(tx_hash_builder_t* builder, pool_relay_t* relay)
+static void _relay_addDnsName(tx_hash_builder_t* builder, const pool_relay_t* relay)
 {
 	_TRACE("state = %d, remainingRelays = %u", builder->state, builder->poolCertificateData.remainingRelays);
 
@@ -862,7 +862,7 @@ static void _relay_addDnsName(tx_hash_builder_t* builder, pool_relay_t* relay)
 
 void txHashBuilder_addPoolRegistrationCertificate_addRelay(
         tx_hash_builder_t* builder,
-        pool_relay_t* relay
+        const pool_relay_t* relay
 )
 {
 	_TRACE("state = %d, remainingRelays = %u", builder->state, builder->poolCertificateData.remainingRelays);

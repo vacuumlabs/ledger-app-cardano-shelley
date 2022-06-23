@@ -24,7 +24,7 @@
 void handleRunTests(
         uint8_t p1 MARK_UNUSED,
         uint8_t p2 MARK_UNUSED,
-        uint8_t *wireBuffer MARK_UNUSED,
+        const uint8_t *wireBuffer MARK_UNUSED,
         size_t wireSize MARK_UNUSED,
         bool isNewCall MARK_UNUSED
 )

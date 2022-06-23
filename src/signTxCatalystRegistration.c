@@ -124,7 +124,7 @@ static void signTxCatalystRegistration_handleVotingKey_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxCatalystRegistration_handleVotingKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCatalystRegistration_handleVotingKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		CHECK_STATE(STATE_CATALYST_REGISTRATION_VOTING_KEY);
@@ -216,7 +216,7 @@ static void signTxCatalystRegistration_handleStakingKey_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxCatalystRegistration_handleStakingKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCatalystRegistration_handleStakingKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -324,7 +324,7 @@ static void signTxCatalystRegistration_handleVotingRewardsAddress_addressParams_
 }
 
 __noinline_due_to_stack__
-static void signTxCatalystRegistration_handleVotingRewardsAddressAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCatalystRegistration_handleVotingRewardsAddressAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// safety checks
@@ -420,7 +420,7 @@ static void signTxCatalystRegistration_handleNonce_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxCatalystRegistration_handleNonceAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCatalystRegistration_handleNonceAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -523,7 +523,7 @@ static void signTxCatalystRegistration_handleConfirm_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxCatalystRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+static void signTxCatalystRegistration_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	{
 		//sanity checks
@@ -603,7 +603,7 @@ bool signTxCatalystRegistration_isValidInstruction(uint8_t p2)
 	}
 }
 
-void signTxCatalystRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+void signTxCatalystRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 

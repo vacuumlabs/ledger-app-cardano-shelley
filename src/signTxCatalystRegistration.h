@@ -44,7 +44,7 @@ typedef struct {
 void signTxCatalystRegistration_init();
 
 bool signTxCatalystRegistration_isValidInstruction(uint8_t p2);
-void signTxCatalystRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize);
+void signTxCatalystRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
 bool signTxCatalystRegistration_isFinished();
 

@@ -11,7 +11,7 @@
 void getSerial_handleAPDU(
         uint8_t p1,
         uint8_t p2,
-        uint8_t *wireDataBuffer MARK_UNUSED,
+        const uint8_t *wireDataBuffer MARK_UNUSED,
         size_t wireDataSize,
         bool isNewCall MARK_UNUSED
 )

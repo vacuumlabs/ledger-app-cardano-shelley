@@ -161,7 +161,7 @@ void txHashBuilder_addCertificate_delegation(
 );
 void txHashBuilder_addCertificate_poolRetirement(
         tx_hash_builder_t* builder,
-        uint8_t* poolKeyHash, size_t poolKeyHashSize,
+        const uint8_t* poolKeyHash, size_t poolKeyHashSize,
         uint64_t epoch
 );
 
@@ -171,11 +171,11 @@ void txHashBuilder_poolRegistrationCertificate_enter(
 );
 void txHashBuilder_poolRegistrationCertificate_poolKeyHash(
         tx_hash_builder_t* builder,
-        uint8_t* poolKeyHash, size_t poolKeyHashSize
+        const uint8_t* poolKeyHash, size_t poolKeyHashSize
 );
 void txHashBuilder_poolRegistrationCertificate_vrfKeyHash(
         tx_hash_builder_t* builder,
-        uint8_t* vrfKeyHash, size_t vrfKeyHashSize
+        const uint8_t* vrfKeyHash, size_t vrfKeyHashSize
 );
 void txHashBuilder_poolRegistrationCertificate_financials(
         tx_hash_builder_t* builder,
@@ -184,7 +184,7 @@ void txHashBuilder_poolRegistrationCertificate_financials(
 );
 void txHashBuilder_poolRegistrationCertificate_rewardAccount(
         tx_hash_builder_t* builder,
-        uint8_t* rewardAccount, size_t rewardAccountSize
+        const uint8_t* rewardAccount, size_t rewardAccountSize
 );
 void txHashBuilder_addPoolRegistrationCertificate_enterOwners(tx_hash_builder_t* builder);
 void txHashBuilder_addPoolRegistrationCertificate_addOwner(
@@ -194,7 +194,7 @@ void txHashBuilder_addPoolRegistrationCertificate_addOwner(
 void txHashBuilder_addPoolRegistrationCertificate_enterRelays(tx_hash_builder_t* builder);
 void txHashBuilder_addPoolRegistrationCertificate_addRelay(
         tx_hash_builder_t* builder,
-        pool_relay_t* relay
+        const pool_relay_t* relay
 );
 void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
         tx_hash_builder_t* builder,
