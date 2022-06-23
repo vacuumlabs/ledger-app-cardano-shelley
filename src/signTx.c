@@ -466,7 +466,7 @@ static void signTx_handleInit_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTx_handleInitAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -679,7 +679,7 @@ static void signTx_handleAuxDataCatalystRegistration_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTx_handleAuxDataAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		TRACE_STACK_USAGE();
@@ -803,7 +803,7 @@ static void signTx_handleInput_ui_runStep()
 	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
 }
 
-static sign_tx_transaction_input_t extractTransactionInput(uint8_t* wireDataBuffer, size_t wireDataSize)
+static sign_tx_transaction_input_t extractTransactionInput(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	sign_tx_transaction_input_t result;
 	TRACE_BUFFER(wireDataBuffer, wireDataSize);
@@ -822,7 +822,7 @@ static sign_tx_transaction_input_t extractTransactionInput(uint8_t* wireDataBuff
 }
 
 __noinline_due_to_stack__
-static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleInputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -867,7 +867,7 @@ static void signTx_handleInputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t w
 
 // ============================== OUTPUTS ==============================
 
-static void signTx_handleOutputAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleOutputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		TRACE("p2 = %d", p2);
@@ -918,7 +918,7 @@ static void signTx_handleFee_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTx_handleFeeAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleFeeAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -993,7 +993,7 @@ static void signTx_handleTtl_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTx_handleTtlAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleTtlAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -1237,7 +1237,7 @@ static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCr
 	}
 }
 
-static void _parseCertificateData(uint8_t* wireDataBuffer, size_t wireDataSize, sign_tx_certificate_data_t* certificateData)
+static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireDataSize, sign_tx_certificate_data_t* certificateData)
 {
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	TRACE_BUFFER(wireDataBuffer, wireDataSize);
@@ -1369,7 +1369,7 @@ static void _addCertificateDataToTx(
 }
 
 __noinline_due_to_stack__
-static void signTx_handleCertificateAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
@@ -1608,7 +1608,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 }
 
 __noinline_due_to_stack__
-static void signTx_handleWithdrawalAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleWithdrawalAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1690,7 +1690,7 @@ static void signTx_handleValidityInterval_ui_runStep()
 	UI_STEP_END(HANDLE_VALIDITY_INTERVAL_START_STEP_INVALID);
 }
 
-static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -1740,7 +1740,7 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, uint8_t* wireData
 
 // ============================== MINT ==============================
 
-static void signTx_handleMintAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		TRACE("p2 = %d", p2);
@@ -1790,7 +1790,7 @@ static void signTx_handleScriptDataHash_ui_runStep()
 	UI_STEP_END(HANDLE_FEE_STEP_INVALID);
 }
 
-static void signTx_handleScriptDataHashAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleScriptDataHashAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -1877,7 +1877,7 @@ static void signTx_handleCollateral_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTx_handleCollateralAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleCollateralAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1970,7 +1970,7 @@ static void signTx_handleRequiredSigner_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTx_handleRequiredSignerAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleRequiredSignerAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -2098,7 +2098,7 @@ static bool _shouldDisplayTxId(sign_tx_signingmode_t signingMode)
 }
 
 __noinline_due_to_stack__
-static void signTx_handleConfirmAPDU(uint8_t p2, uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+static void signTx_handleConfirmAPDU(uint8_t p2, const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -2203,7 +2203,7 @@ static void signTx_handleWitness_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleWitnessAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -2271,7 +2271,7 @@ static void signTx_handleWitnessAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t
 
 // ============================== MAIN HANDLER ==============================
 
-typedef void subhandler_fn_t(uint8_t p2, uint8_t* dataBuffer, size_t dataSize);
+typedef void subhandler_fn_t(uint8_t p2, const uint8_t* dataBuffer, size_t dataSize);
 
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
@@ -2308,7 +2308,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 void signTx_handleAPDU(
         uint8_t p1,
         uint8_t p2,
-        uint8_t* wireDataBuffer,
+        const uint8_t* wireDataBuffer,
         size_t wireDataSize,
         bool isNewCall
 )

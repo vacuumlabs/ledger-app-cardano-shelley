@@ -319,7 +319,7 @@ static void signTx_handleOutput_addressParams()
 	}
 }
 
-static void signTxOutput_handleTopLevelDataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// safety checks
@@ -425,7 +425,7 @@ static void signTxOutput_handleAssetGroup_ui_runStep()
 	UI_STEP_END(HANDLE_ASSET_GROUP_STEP_INVALID);
 }
 
-static void signTxOutput_handleAssetGroupAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxOutput_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -525,7 +525,7 @@ static void signTxOutput_handleToken_ui_runStep()
 	UI_STEP_END(HANDLE_TOKEN_STEP_INVALID);
 }
 
-static void signTxOutput_handleTokenAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxOutput_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -624,7 +624,7 @@ static void signTxOutput_handleDatumHash_ui_runStep()
 	UI_STEP_END(HANDLE_DATUM_HASH_STEP_INVALID);
 }
 
-static void signTxOutput_handleDatumHashAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxOutput_handleDatumHashAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -699,7 +699,7 @@ static void signTxOutput_handleConfirm_ui_runStep()
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
-static void signTxOutput_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+static void signTxOutput_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	{
 		//sanity checks
@@ -762,7 +762,7 @@ bool signTxOutput_isValidInstruction(uint8_t p2)
 	}
 }
 
-void signTxOutput_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 

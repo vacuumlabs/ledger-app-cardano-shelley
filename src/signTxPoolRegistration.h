@@ -79,7 +79,7 @@ typedef struct {
 void signTxPoolRegistration_init();
 
 bool signTxPoolRegistration_isValidInstruction(uint8_t p2);
-void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize);
+void signTxPoolRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
 bool signTxPoolRegistration_isFinished();
 
