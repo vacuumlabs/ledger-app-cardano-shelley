@@ -19,9 +19,9 @@ enum {
 	TX_BODY_KEY_COLLATERALS = 13,
 	TX_BODY_KEY_REQUIRED_SIGNERS = 14,
 	TX_BODY_KEY_NETWORK_ID = 15,
-	TX_BODY_KEY_COLLATERAL_RETURN = 16, //CollRet
-	TX_BODY_KEY_TOTAL_COLLATERAL = 17, //TxColl
-	TX_BODY_KEY_REFERENCE_INPUTS = 18, //refInputs
+	TX_BODY_KEY_COLLATERAL_RETURN = 16,
+	TX_BODY_KEY_TOTAL_COLLATERAL = 17,
+	TX_BODY_KEY_REFERENCE_INPUTS = 18,
 };
 
 enum {
@@ -30,6 +30,7 @@ enum {
 	TX_OUTPUT_KEY_DATUM_OPTION = 3,
 	TX_OUTPUT_KEY_SCRIPT_REF = 4,
 };
+
 /* The state machine of the tx hash builder is driven by user calls.
  * E.g., when the user calls txHashBuilder_addInput(), the input is only
  * added and the state is not advanced to outputs even if all inputs have been added
@@ -70,7 +71,6 @@ typedef enum {
 } tx_hash_builder_state_t;
 
 typedef enum {
-
 	TX_OUTPUT_TOP_LEVEL_DATA = 10,
 	TX_OUTPUT_ASSET_GROUP = 11,
 	TX_OUTPUT_TOKEN = 12,
@@ -78,7 +78,6 @@ typedef enum {
 	TX_OUTPUT_DATUM_OPTION_CHUNKS = 21,
 	TX_OUTPUT_SCRIPT_REFERENCE = 30,
 	TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS = 31,
-
 } tx_hash_builder_output_state_t;
 
 typedef struct {
@@ -89,10 +88,6 @@ typedef struct {
 	uint16_t remainingCollaterals;
 	uint16_t remainingRequiredSigners;
 	uint16_t remainingReferenceInputs;
-	uint16_t totalDatumSize;
-	uint16_t currentDatumSize;
-	uint16_t totalReferenceScriptSize;
-	uint16_t currentReferenceScriptSize;
 	bool includeTtl;
 	bool includeAuxData;
 	bool includeValidityIntervalStart;
@@ -112,6 +107,16 @@ typedef struct {
 			uint16_t remainingAssetGroups;
 			uint16_t remainingTokens;
 		} multiassetData;
+
+		struct {
+			uint16_t totalDatumSize;
+			uint16_t currentDatumSize;
+		} datumData;
+
+		struct {
+			uint16_t totalReferenceScriptSize;
+			uint16_t currentReferenceScriptSize;
+		} referenceScriptData;
 	};
 
 	union {
@@ -137,7 +142,6 @@ typedef struct {
 
 	bool includeDatumOption;
 	bool includeScriptRef;
-
 } tx_hash_builder_output;
 
 void txHashBuilder_init(
@@ -326,7 +330,6 @@ void txHashBuilder_finalize(
 
 #ifdef DEVEL
 void run_txHashBuilder_test();
-void run_txHashBuilder_test_post_alonzo();
 #endif // DEVEL
 
 #endif // H_CARDANO_APP_TX_HASH_BUILDER
