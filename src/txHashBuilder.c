@@ -506,8 +506,8 @@ void txHashBuilder_addOutput_datumOption(tx_hash_builder_t *builder, datum_optio
 			//  Chunks of datum will be added later
 		}
 		// bufferSize is total size of datum
-		builder->totalDatumSize = bufferSize;
-		builder->currentDatumSize = 0;
+		builder->datumData.totalDatumSize = bufferSize;
+		builder->datumData.currentDatumSize = 0;
 
 		builder->outputState = TX_OUTPUT_DATUM_OPTION_CHUNKS;
 	}
@@ -521,9 +521,9 @@ void txHashBuilder_addOutput_datumOption_dataChunk(tx_hash_builder_t *builder, c
 	{
 		BUILDER_APPEND_DATA(buffer, bufferSize);
 	}
-	builder->currentDatumSize += bufferSize;
+	builder->datumData.currentDatumSize += bufferSize;
 
-	if(builder->totalDatumSize == builder->currentDatumSize) {
+	if(builder->datumData.totalDatumSize == builder->datumData.currentDatumSize) {
 		//  transmission of data chunks has finished
 		builder->outputState = TX_OUTPUT_DATUM_OPTION;
 	}
@@ -556,8 +556,8 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t *builder, size_t 
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
 		//Chunks will be added later
 	}
-	builder->totalReferenceScriptSize = bufferSize;
-	builder->currentReferenceScriptSize = 0;
+	builder->referenceScriptData.totalReferenceScriptSize = bufferSize;
+	builder->referenceScriptData.currentReferenceScriptSize = 0;
 	builder->outputState = TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS;
 }
 
@@ -568,9 +568,9 @@ void txHashBuilder_addOutput_referenceScript_dataChunk(tx_hash_builder_t *builde
 	{
 		BUILDER_APPEND_DATA(buffer, bufferSize);
 	}
-	builder->currentReferenceScriptSize += bufferSize;
+	builder->referenceScriptData.currentReferenceScriptSize += bufferSize;
 
-	if(builder->totalReferenceScriptSize == builder->currentReferenceScriptSize) {
+	if(builder->referenceScriptData.totalReferenceScriptSize == builder->referenceScriptData.currentReferenceScriptSize) {
 		//  transmission of data chunks has finished
 		builder->outputState = TX_OUTPUT_SCRIPT_REFERENCE;
 	}
