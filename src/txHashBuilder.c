@@ -155,13 +155,10 @@ void txHashBuilder_enterInputs(tx_hash_builder_t* builder)
 	builder->state = TX_HASH_BUILDER_IN_INPUTS;
 }
 
-void txHashBuilder_addInput(
-        tx_hash_builder_t* builder,
-        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
-        uint32_t utxoIndex
-)
+void txHashBuilder_addInput(tx_hash_builder_t *builder, const tx_input_t* input)
 {
 	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingInputs);
+	const size_t utxoHashSize = SIZEOF(input->txHashBuffer);
 
 	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_INPUTS);
@@ -176,10 +173,10 @@ void txHashBuilder_addInput(
 		{
 			ASSERT(utxoHashSize == TX_HASH_LENGTH);
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
-			BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
+			BUILDER_APPEND_DATA(input->txHashBuffer, utxoHashSize);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, utxoIndex);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, input->index);
 		}
 	}
 }
@@ -1303,13 +1300,10 @@ void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder)
 	builder->state = TX_HASH_BUILDER_IN_COLLATERALS;
 }
 
-void txHashBuilder_addCollateral(
-        tx_hash_builder_t* builder,
-        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
-        uint32_t utxoIndex
-)
+void txHashBuilder_addCollateral(tx_hash_builder_t *builder, const tx_input_t* collInput)
 {
 	_TRACE("state = %d, remainingCollaterals = %u", builder->state, builder->remainingCollaterals);
+	const size_t utxoHashSize = SIZEOF(collInput->txHashBuffer);
 
 	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERALS);
@@ -1324,10 +1318,10 @@ void txHashBuilder_addCollateral(
 		{
 			ASSERT(utxoHashSize == TX_HASH_LENGTH);
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, utxoHashSize);
-			BUILDER_APPEND_DATA(utxoHashBuffer, utxoHashSize);
+			BUILDER_APPEND_DATA(collInput->txHashBuffer, utxoHashSize);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, utxoIndex);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, collInput->index);
 		}
 	}
 }
