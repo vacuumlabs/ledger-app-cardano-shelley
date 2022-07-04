@@ -374,8 +374,8 @@ void run_txHashBuilder_test()
 	                   false, // script hash data
 	                   0,	// collaterals not tested yet
 	                   0,	// required signers not tested yet
-	                   true
-	                  );	// if these tests ever return to actually being used, they should be added
+	                   false // network id
+	                  );
 
 	txHashBuilder_enterInputs(&builder);
 	ITERATE(it, inputs) {

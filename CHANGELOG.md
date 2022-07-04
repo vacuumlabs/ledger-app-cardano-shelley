@@ -5,12 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [4.0.1](TBD) - [TBD]
 
-Fix UI messages
+## [4.1.2](TBD) - [TBD]
 
-### Fixed
+Expert mode and token decimal places
 
+### Added
+
+- a menu option to enable/disable expert mode (until now, we displayed all the transaction details affecting security; from now on, most of those will only be displayed in expert mode; without expert mode turned on, only most important items are shown)
+- displaying tickers and decimal places for a fixed list of popular native tokens (100 at the moment)
+
+### Changed
+
+- required signers are now allowed in ordinary and multisig transactions
 - certain messages displayed to users have been changed to better fit on the screen
 
 

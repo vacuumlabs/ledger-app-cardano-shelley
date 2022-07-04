@@ -1,5 +1,6 @@
 #include "addressUtilsShelley.h"
 #include "addressUtilsByron.h"
+#include "app_mode.h"
 #include "bip44.h"
 #include "cardano.h"
 #include "signTxUtils.h"
@@ -115,6 +116,9 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 
 	case PATH_ORDINARY_ACCOUNT:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+		// in expert mode, do not export keys without permission
+		PROMPT_IF(app_mode_expert());
+
 		// show Byron paths
 		PROMPT_UNLESS(bip44_hasShelleyPrefix(pathSpec));
 		// do not bother the user with confirmation --- required by LedgerLive to improve UX
@@ -224,7 +228,12 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 // Derive address and return it to the host
 security_policy_t policyForReturnDeriveAddress(const addressParams_t* addressParams)
 {
-	return _policyForDeriveAddress(addressParams, POLICY_ALLOW_WITHOUT_PROMPT);
+	// in expert mode, do not export addresses without permission
+	security_policy_t policy = app_mode_expert() ?
+	                           POLICY_PROMPT_BEFORE_RESPONSE :
+	                           POLICY_ALLOW_WITHOUT_PROMPT;
+
+	return _policyForDeriveAddress(addressParams, policy);
 }
 
 // Derive address and show it to the user
@@ -332,9 +341,8 @@ security_policy_t policyForSignTxInit(
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		// collaterals and required signers are allowed only in PLUTUS_TX
+		// collaterals are allowed only in PLUTUS_TX
 		DENY_IF(numCollaterals > 0);
-		DENY_IF(numRequiredSigners > 0);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
@@ -373,7 +381,8 @@ security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		// user should check inputs because they are not interchangeable for Plutus scripts
-		SHOW();
+		SHOW_IF(app_mode_expert());
+		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
@@ -526,7 +535,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 		SHOW_UNLESS(is_standard_base_address(params));
 
 		// outputs (eUTXOs) with datum hash are not interchangeable
-		SHOW_IF(includeDatumHash);
+		SHOW_IF(includeDatumHash); // can't happen for operator
 
 		// it is safe to hide the remaining change outputs
 		ALLOW();
@@ -545,7 +554,8 @@ security_policy_t policyForSignTxOutputAddressParams(
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX: {
 		// the output could affect script validation so it must not be entirely hidden
 		// Note: if we relax this, some of the above restrictions may apply
-		SHOW();
+		SHOW_IF(app_mode_expert());
+		ALLOW();
 		break;
 	}
 
@@ -556,6 +566,30 @@ security_policy_t policyForSignTxOutputAddressParams(
 		DENY();
 		break;
 	}
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
+security_policy_t policyForSignTxOutputDatumHash(
+        security_policy_t outputPolicy
+)
+{
+	switch (outputPolicy) {
+	case POLICY_ALLOW_WITHOUT_PROMPT:
+		// output was not shown, showing datum won't make sense
+		ALLOW();
+		break;
+
+	case POLICY_SHOW_BEFORE_RESPONSE:
+	case POLICY_PROMPT_WARN_UNUSUAL:
+		// non-expert users are not supposed to be able to verify datum or its hash even if they saw it
+		SHOW_IF(app_mode_expert());
+		ALLOW();
+		break;
 
 	default:
 		ASSERT(false);
@@ -626,10 +660,8 @@ security_policy_t policyForSignTxFee(
 // For transaction TTL
 security_policy_t policyForSignTxTtl(uint32_t ttl MARK_UNUSED)
 {
-	// might be changed to POLICY_ALLOW_WITHOUT_PROMPT
-	// to avoid bothering the user with TTL
-	// (Daedalus does not show this)
-	SHOW();
+	SHOW_IF(app_mode_expert());
+	ALLOW();
 }
 
 // a generic policy for all certificates
@@ -962,7 +994,8 @@ security_policy_t policyForSignTxWithdrawal(
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-			SHOW();
+			SHOW_IF(app_mode_expert());
+			ALLOW();
 			break;
 
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
@@ -981,7 +1014,8 @@ security_policy_t policyForSignTxWithdrawal(
 	case STAKE_CREDENTIAL_KEY_HASH:
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-			SHOW();
+			SHOW_IF(app_mode_expert());
+			ALLOW();
 			break;
 
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
@@ -1008,7 +1042,8 @@ security_policy_t policyForSignTxWithdrawal(
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-			SHOW();
+			SHOW_IF(app_mode_expert());
+			ALLOW();
 			break;
 
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
@@ -1034,6 +1069,7 @@ security_policy_t policyForSignTxWithdrawal(
 	DENY(); // should not be reached
 }
 
+// TODO move witness policies in the proper place, at the end of tx
 static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path, bool mintPresent)
 {
 	switch (bip44_classifyPath(path)) {
@@ -1041,6 +1077,7 @@ static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path,
 	case PATH_ORDINARY_STAKING_KEY:
 		DENY_IF(violatesSingleAccountOrStoreIt(path));
 		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW_IF(app_mode_expert());
 		ALLOW();
 		break;
 
@@ -1195,15 +1232,33 @@ security_policy_t policyForSignTxWitness(
 }
 
 // For transaction auxiliary data
-security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType MARK_UNUSED)
+security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType)
 {
-	SHOW();
+	switch (auxDataType) {
+
+	case AUX_DATA_TYPE_ARBITRARY_HASH:
+		SHOW_IF(app_mode_expert());
+		ALLOW();
+
+	case AUX_DATA_TYPE_CATALYST_REGISTRATION:
+		// this is the policy for the initial prompt
+		// details of the registration are governed by separate policies
+		// (see policyForCatalystRegistration...)
+		SHOW();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
 }
 
 // For transaction validity interval start
 security_policy_t policyForSignTxValidityIntervalStart()
 {
-	SHOW();
+	SHOW_IF(app_mode_expert());
+	ALLOW();
 }
 
 // For transaction mint field
@@ -1252,7 +1307,8 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-		SHOW();
+		SHOW_IF(app_mode_expert());
+		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
@@ -1275,8 +1331,9 @@ security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSignin
 
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-		// must be shown because the user loses all collaterals if Plutus execution fails
-		SHOW();
+		// should be shown because the user loses all collaterals if Plutus execution fails
+		SHOW_IF(app_mode_expert());
+		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
@@ -1298,6 +1355,29 @@ static bool required_signers_allowed(const sign_tx_signingmode_t txSigningMode)
 {
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+static bool is_required_signer_allowed(bip44_path_t *path)
+{
+	switch (bip44_classifyPath(path)) {
+	case PATH_ORDINARY_ACCOUNT:
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+		return bip44_hasShelleyPrefix(path);
+
+	case PATH_MULTISIG_ACCOUNT:
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+		return true;
+
+	case PATH_MINT_KEY:
 		return true;
 
 	default:
@@ -1315,15 +1395,14 @@ security_policy_t policyForSignTxRequiredSigner(
 	switch(requiredSigner->type) {
 
 	case REQUIRED_SIGNER_WITH_HASH:
-		SHOW();
+		SHOW_IF(app_mode_expert());
+		ALLOW();
 		break;
 
 	case REQUIRED_SIGNER_WITH_PATH:
-		// must be shown because it affects Plutus script execution result
-		SHOW_IF(bip44_hasShelleyPrefix(&requiredSigner->keyPath));
-		SHOW_IF(bip44_hasMultisigWalletKeyPrefix(&requiredSigner->keyPath));
-		SHOW_IF(bip44_hasMintKeyPrefix(&requiredSigner->keyPath));
-		DENY();
+		DENY_UNLESS(is_required_signer_allowed(&requiredSigner->keyPath));
+		SHOW_IF(app_mode_expert());
+		ALLOW();
 		break;
 
 	default:

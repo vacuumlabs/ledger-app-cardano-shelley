@@ -57,6 +57,9 @@ security_policy_t policyForSignTxOutputAddressParams(
         const uint8_t networkId, const uint32_t protocolMagic,
         bool includeDatumHash
 );
+security_policy_t policyForSignTxOutputDatumHash(
+        security_policy_t outputPolicy
+);
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t addressPolicy,
         uint64_t numAssetGroups

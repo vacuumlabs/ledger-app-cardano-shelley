@@ -10,37 +10,33 @@ on:
   workflow_dispatch:
 
 jobs:
-  nanos-build:
+  nano_build:
+    name: Build application for NanoS, X and S+
+    strategy:
+      matrix:
+        include:
+          - SDK: "$NANOS_SDK"
+            name: nanos
+          - SDK: "$NANOX_SDK"
+            name: nanox
+          - SDK: "$NANOSP_SDK"
+            name: nanosp
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Build app
+      - name: Clone
+        uses: actions/checkout@v2
+      - name: Build
         run: |
           make clean
-          make DEBUG=1
+          make DEBUG=1 BOLOS_SDK=${{ matrix.SDK }}
+          mv bin/app.elf bin/cardano_${{ matrix.name }}.elf
       - name: Upload app binary
         uses: actions/upload-artifact@v2
         with:
-          name: app-debug
-          path: bin
-
-  nanox-build:
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Build app
-        run: |
-          make clean
-          make DEBUG=1 BOLOS_SDK=$NANOX_SDK
-      - name: Upload app binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: app-debug
-          path: bin
+          name: apps
+          path: bin/*.elf
 
   scan-build:
     name: Clang Static Analyzer

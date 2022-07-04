@@ -46,11 +46,12 @@ static const int INS_NONE = -1;
 void ui_idle(void)
 {
 	currentInstruction = INS_NONE;
-	// The first argument is the starting index within menu_main, and the last
-	// argument is a preprocessor; I've never seen an app that uses either
-	// argument.
+
 	#if defined(TARGET_NANOS)
 	nanos_clear_timer();
+	h_expert_update();
+	// The first argument is the starting index within menu_main, and the last
+	// argument is a preprocessor.
 	UX_MENU_DISPLAY(0, menu_main, NULL);
 	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
 	// reserve a display stack slot if none yet

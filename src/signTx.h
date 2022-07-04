@@ -206,6 +206,8 @@ typedef struct {
 	bool poolOwnerByPath;
 	bip44_path_t poolOwnerPath;
 
+	bool shouldDisplayTxid; // long bytestrings (e.g. datums in outputs) are better verified indirectly
+
 	int ui_step;
 } ins_sign_tx_context_t;
 
