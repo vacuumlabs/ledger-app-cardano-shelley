@@ -309,7 +309,7 @@ void txHashBuilder_addInput(tx_hash_builder_t* builder, const tx_input_t* input)
 	ASSERT(builder->remainingInputs > 0);
 	builder->remainingInputs--;
 
-	cbor_append_txInput(builder, utxoHashBuffer, utxoHashSize, utxoIndex);
+	cbor_append_txInput(builder, input->txHashBuffer, utxoHashSize, input->index);
 }
 
 static void txHashBuilder_assertCanLeaveInputs(tx_hash_builder_t* builder)
@@ -1511,7 +1511,7 @@ void txHashBuilder_addCollateral(tx_hash_builder_t* builder, const tx_input_t* c
 	ASSERT(builder->remainingCollaterals > 0);
 	builder->remainingCollaterals--;
 
-	cbor_append_txInput(builder, utxoHashBuffer, utxoHashSize, utxoIndex);
+	cbor_append_txInput(builder, collInput->txHashBuffer, utxoHashSize, collInput->index);
 }
 
 static void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
@@ -1787,18 +1787,18 @@ void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder )
 }
 void txHashBuilder_addReferenceInput(
         tx_hash_builder_t* builder,
-        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
-        uint32_t utxoIndex
+		const tx_input_t* refInput
 )
 {
 	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingReferenceInputs);
+	const size_t utxoHashSize = SIZEOF(refInput->txHashBuffer);
 
 	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_REFERENCE_INPUTS);
 	ASSERT(builder->remainingReferenceInputs > 0);
 	builder->remainingReferenceInputs--;
 
-	cbor_append_txInput(builder, utxoHashBuffer, utxoHashSize, utxoIndex);
+	cbor_append_txInput(builder, refInput->txHashBuffer, utxoHashSize, refInput->index);
 }
 
 

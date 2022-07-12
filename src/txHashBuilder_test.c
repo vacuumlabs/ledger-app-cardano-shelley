@@ -436,7 +436,7 @@ void run_txHashBuilder_test()
 
 	txHashBuilder_init(&builder,
 	                   ARRAY_LEN(inputs),
-	                   (ARRAY_LEN(outputs) + 2) * 2, // +2 for multiasset outputs
+	                   (ARRAY_LEN(outputs) + 2) * 2, // +2 for multiasset outputs *2 for new format
 	                   true, // ttl
 	                   numCertificates, ARRAY_LEN(withdrawals),
 	                   true, // metadata
@@ -504,7 +504,10 @@ void run_txHashBuilder_test()
 		txHashBuilder_enterCollaterals(&builder);
 		uint8_t tmp[TX_HASH_LENGTH] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(inputs[0].txHashHex), tmp, SIZEOF(tmp));
-		txHashBuilder_addCollateral(&builder, tmp, tmpSize, inputs[0].index);
+		tx_input_t input;
+		memmove(input.txHashBuffer, tmp, tmpSize);
+		input.index = inputs[0].index;
+		txHashBuilder_addCollateral(&builder, &input);
 	}
 	//  ? 14 : required_signers
 	{
@@ -524,11 +527,10 @@ void run_txHashBuilder_test()
 	ITERATE(it, inputs) {
 		uint8_t tmp[TX_HASH_LENGTH] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->txHashHex), tmp, SIZEOF(tmp));
-		txHashBuilder_addReferenceInput(
-		        &builder,
-		        tmp, tmpSize,
-		        it->index
-		);
+		tx_input_t input;
+		memmove(input.txHashBuffer, tmp, tmpSize);
+		input.index = it->index;
+		txHashBuilder_addReferenceInput(&builder,&input);
 	}
 
 	uint8_t result[TX_HASH_LENGTH] = {0};

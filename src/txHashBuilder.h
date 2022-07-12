@@ -319,8 +319,7 @@ void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txCol
 void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder);
 void txHashBuilder_addReferenceInput(
         tx_hash_builder_t* builder,
-        const uint8_t* utxoHashBuffer, size_t utxoHashSize,
-        uint32_t utxoIndex
+        const tx_input_t* refInput
 );
 void txHashBuilder_finalize(
         tx_hash_builder_t* builder,
