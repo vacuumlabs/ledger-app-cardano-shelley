@@ -133,7 +133,9 @@ static void signTx_handleOutput_address_ui_runStep()
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleOutput_address_ui_runStep;
 
-	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
+	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES ||
+		   subctx->stateData.output.outputType == OUTPUT_TYPE_POST_ALONZO_ADDRESS_BYTES
+	);
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -167,8 +169,9 @@ static void signTx_handleOutput_address_ui_runStep()
 static void signTx_handleOutput_addressBytes()
 {
 	output_context_t* subctx = accessSubcontext();
-	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
-
+	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES ||
+		   subctx->stateData.output.outputType == OUTPUT_TYPE_POST_ALONZO_ADDRESS_BYTES
+	);
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
 	                                   commonTxData->txSigningMode,
 	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
@@ -288,7 +291,10 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleOutput_addressParams_ui_runStep;
 
-	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS);
+	TRACE("outputType: %d", subctx->stateData.output.outputType);
+
+	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS ||
+	subctx->stateData.output.outputType == OUTPUT_TYPE_POST_ALONZO_ADDRESS_PARAMS);
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -331,8 +337,8 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 static void signTx_handleOutput_addressParams()
 {
 	output_context_t* subctx = accessSubcontext();
-	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS);
-
+	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS ||
+		   subctx->stateData.output.outputType == OUTPUT_TYPE_POST_ALONZO_ADDRESS_PARAMS);
 	security_policy_t policy = policyForSignTxOutputAddressParams(
 	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.output.params,
@@ -782,7 +788,7 @@ static void signTxOutput_handleDatumHashAPDU(const uint8_t* wireDataBuffer, size
 	{
 		// add to tx
 		TRACE("Adding datum hash to tx hash");
-		txHashBuilder_addOutput_datumOption(&BODY_CTX->txHashBuilder, 0, subctx->stateData.datumHash, SIZEOF(subctx->stateData.datumHash));
+		txHashBuilder_addOutput_datumOption(&BODY_CTX->txHashBuilder, ARRAY_LEGACY, 0, subctx->stateData.datumHash, SIZEOF(subctx->stateData.datumHash));
 	}
 
 	{
