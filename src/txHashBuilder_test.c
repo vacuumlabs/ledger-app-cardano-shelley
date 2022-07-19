@@ -530,7 +530,7 @@ void run_txHashBuilder_test()
 		tx_input_t input;
 		memmove(input.txHashBuffer, tmp, tmpSize);
 		input.index = it->index;
-		txHashBuilder_addReferenceInput(&builder,&input);
+		txHashBuilder_addReferenceInput(&builder, &input);
 	}
 
 	uint8_t result[TX_HASH_LENGTH] = {0};

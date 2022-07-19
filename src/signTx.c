@@ -239,19 +239,17 @@ static inline void advanceStage()
 			txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		}
 		ctx->stage = SIGN_STAGE_BODY_TOTAL_COLLATERAL;
-		break;
 
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 		if (ctx->includeTotalCollateral) {
 			txHashBuilder_addTotalCollateral(&BODY_CTX->txHashBuilder, ctx->txColl);
 		}
 		ctx->stage = SIGN_STAGE_BODY_REFERENCE_INPUTS;
-		break;
 
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
-		ASSERT(BODY_CTX->currentReferenceInput == ctx->numReferenceInputs);
+//		ASSERT(BODY_CTX->currentReferenceInput == ctx->numReferenceInputs);
 
-		if (ctx->numReferenceInputs) {
+		if (ctx->numReferenceInputs > 0) {
 			txHashBuilder_enterReferenceInputs(&BODY_CTX->txHashBuilder);
 		}
 		ctx->stage = SIGN_STAGE_CONFIRM;
