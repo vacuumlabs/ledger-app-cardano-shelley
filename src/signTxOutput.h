@@ -12,8 +12,6 @@
 enum {
 	OUTPUT_TYPE_ADDRESS_BYTES = 1,
 	OUTPUT_TYPE_ADDRESS_PARAMS = 2,
-	OUTPUT_TYPE_POST_ALONZO_ADDRESS_BYTES = 3,
-	OUTPUT_TYPE_POST_ALONZO_ADDRESS_PARAMS = 4,
 };
 
 
@@ -30,6 +28,7 @@ typedef enum {
 
 typedef struct {
 	uint8_t outputType;
+	uint8_t format;
 	union {
 		struct {
 			uint8_t buffer[MAX_ADDRESS_SIZE];
@@ -64,7 +63,7 @@ typedef struct {
 			token_group_t tokenGroup;
 			output_token_amount_t token;
 		};
-		struct{
+		struct {
 			uint8_t datumOption;
 			uint8_t datumHash[OUTPUT_DATUM_HASH_LENGTH];
 		};
