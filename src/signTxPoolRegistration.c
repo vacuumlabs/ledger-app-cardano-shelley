@@ -548,12 +548,12 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(const uint8_t* wireD
 
 			ASSERT_TYPE(subctx->stateData.marginNumerator, uint64_t);
 			subctx->stateData.marginNumerator = u8be_read(wireHeader->marginNumerator);
-			TRACE_BUFFER((uint8_t *) &subctx->stateData.marginNumerator, 8);
+			TRACE_BUFFER((uint8_t*) &subctx->stateData.marginNumerator, 8);
 			VALIDATE(subctx->stateData.marginNumerator <= MARGIN_DENOMINATOR_MAX, ERR_INVALID_DATA);
 
 			ASSERT_TYPE(subctx->stateData.marginDenominator, uint64_t);
 			subctx->stateData.marginDenominator = u8be_read(wireHeader->marginDenominator);
-			TRACE_BUFFER((uint8_t *) &subctx->stateData.marginDenominator, 8);
+			TRACE_BUFFER((uint8_t*) &subctx->stateData.marginDenominator, 8);
 			VALIDATE(subctx->stateData.marginDenominator != 0, ERR_INVALID_DATA);
 			VALIDATE(subctx->stateData.marginDenominator <= MARGIN_DENOMINATOR_MAX, ERR_INVALID_DATA);
 			VALIDATE(subctx->stateData.marginNumerator <= subctx->stateData.marginDenominator, ERR_INVALID_DATA);

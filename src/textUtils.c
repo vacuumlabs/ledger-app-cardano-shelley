@@ -63,7 +63,7 @@ size_t str_formatAdaAmount(uint64_t amount, char* out, size_t outSize)
 
 	size_t rawSize = str_formatDecimalAmount(amount, 6, out, outSize);
 
-	const char *suffix = " ADA";
+	const char* suffix = " ADA";
 	const size_t suffixLength = strlen(suffix);
 
 	// make sure all the information is displayed to the user

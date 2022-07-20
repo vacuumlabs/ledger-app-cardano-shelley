@@ -161,7 +161,7 @@ void nativeScriptHashBuilder_startComplexScript_n_of_k(
 
 void nativeScriptHashBuilder_addScript_pubkey(
         native_script_hash_builder_t* builder,
-        const uint8_t *pubKeyHashBuffer, size_t pubKeyHashSize
+        const uint8_t* pubKeyHashBuffer, size_t pubKeyHashSize
 )
 {
 	_TRACE("state = %d", builder->state);
@@ -211,7 +211,7 @@ _DEFINE_SIMPLE_TIMELOCK_SCRIPT(invalidHereafter, NATIVE_SCRIPT_INVALID_HEREAFTER
 
 void nativeScriptHashBuilder_finalize(
         native_script_hash_builder_t* builder,
-        uint8_t *outBuffer, size_t outSize
+        uint8_t* outBuffer, size_t outSize
 )
 {
 	_TRACE("state = %d", builder->state);

@@ -370,7 +370,7 @@ enum {
 	HANDLE_INIT_STEP_INVALID,
 } ;
 
-static const char *_newTxLine1(sign_tx_signingmode_t txSigningMode)
+static const char* _newTxLine1(sign_tx_signingmode_t txSigningMode)
 {
 	switch (txSigningMode) {
 

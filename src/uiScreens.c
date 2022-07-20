@@ -385,7 +385,7 @@ void ui_displayStakingInfoScreen(
         ui_callback_fn_t callback
 )
 {
-	const char *heading = NULL;
+	const char* heading = NULL;
 	char stakingInfo[120] = {0};
 	explicit_bzero(stakingInfo, SIZEOF(stakingInfo));
 
