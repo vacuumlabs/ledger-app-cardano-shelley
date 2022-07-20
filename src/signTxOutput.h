@@ -22,7 +22,7 @@ typedef enum {
 	STATE_OUTPUT_TOP_LEVEL_DATA = 2510,
 	STATE_OUTPUT_ASSET_GROUP = 2511,
 	STATE_OUTPUT_TOKEN = 2512,
-	STATE_OUTPUT_DATUM_HASH = 2513,
+	STATE_OUTPUT_DATUM_OPTION = 2513,
 	STATE_OUTPUT_CONFIRM = 2514,
 	STATE_OUTPUT_FINISHED = 2515
 } sign_tx_output_state_t;
@@ -64,7 +64,10 @@ typedef struct {
 			token_group_t tokenGroup;
 			output_token_amount_t token;
 		};
-		uint8_t datumHash[OUTPUT_DATUM_HASH_LENGTH];
+		struct{
+			uint8_t datumOption;
+			uint8_t datumHash[OUTPUT_DATUM_HASH_LENGTH];
+		};
 	} stateData;
 
 } output_context_t;
