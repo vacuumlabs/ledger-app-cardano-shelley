@@ -409,27 +409,58 @@ security_policy_t policyForSignTxOutputAddressBytes(
 )
 {
 	ASSERT(rawAddressSize < BUFFER_SIZE_PARANOIA);
-
-	// address type and network identification
 	ASSERT(rawAddressSize >= 1);
+
 	const address_type_t addressType = getAddressType(rawAddressBuffer[0]);
-	const uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
+	{
+		// check address type and network identification
+		switch (addressType) {
 
-	switch (addressType) {
+		case BYRON:
+			DENY_IF(extractProtocolMagic(rawAddressBuffer, rawAddressSize) != protocolMagic);
+			break;
 
-	case BYRON:
-		DENY_IF(extractProtocolMagic(rawAddressBuffer, rawAddressSize) != protocolMagic);
-		break;
+		case REWARD_KEY:
+		case REWARD_SCRIPT:
+			// outputs may not contain reward addresses
+			DENY();
+			break;
 
-	case REWARD_KEY:
-	case REWARD_SCRIPT:
-		// outputs may not contain reward addresses
-		DENY();
-		break;
+		default: {
+			// shelley types allowed in output
+			const uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
+			DENY_IF(addressNetworkId != networkId);
+			break;
+		}
+		}
+	}
+	{
+		// check address length
+		switch (addressType) {
 
-	default: // shelley types allowed in output
-		DENY_IF(addressNetworkId != networkId);
-		break;
+		case BASE_PAYMENT_KEY_STAKE_KEY:
+			DENY_IF(rawAddressSize != 1 + ADDRESS_KEY_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
+			break;
+		case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+			DENY_IF(rawAddressSize != 1 + ADDRESS_KEY_HASH_LENGTH + SCRIPT_HASH_LENGTH);
+			break;
+		case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+			DENY_IF(rawAddressSize != 1 + SCRIPT_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
+			break;
+		case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
+			DENY_IF(rawAddressSize != 1 + SCRIPT_HASH_LENGTH + SCRIPT_HASH_LENGTH);
+			break;
+
+		case ENTERPRISE_KEY:
+			DENY_IF(rawAddressSize != 1 + ADDRESS_KEY_HASH_LENGTH);
+			break;
+		case ENTERPRISE_SCRIPT:
+			DENY_IF(rawAddressSize != 1 + SCRIPT_HASH_LENGTH);
+			break;
+
+		default: // not meaningful or complicated to verify address length in the other cases
+			break;
+		}
 	}
 
 	if (includeDatumHash) {
