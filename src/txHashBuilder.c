@@ -648,15 +648,15 @@ static void txHashBuilder_assertCanLeaveTtl(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_TTL:
-		break;
-
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveFee(builder);
-		ASSERT(!builder->includeTtl);
+		// TTL was added, we can move on
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure TTL was not expected
+		ASSERT(!builder->includeTtl);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveFee(builder);
+		break;
 	}
 }
 
@@ -1222,19 +1222,17 @@ static void txHashBuilder_assertCanLeaveCertificates(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_CERTIFICATES:
-		// we are asserting no remainingCertificates below
-		break;
-
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveTtl(builder);
+		// make sure there are not remaining certificates to process
+		ASSERT(builder->remainingCertificates == 0);
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure no certificates are expected
+		ASSERT(builder->remainingCertificates == 0);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveTtl(builder);
+		break;
 	}
-
-	ASSERT(builder->remainingCertificates == 0);
 }
 
 // ============================== WITHDRAWALS ==============================
@@ -1287,20 +1285,17 @@ static void txHashBuilder_assertCanLeaveWithdrawals(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-		// we are asserting no remainingCertificates below
-		break;
-
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveCertificates(builder);
+		// make sure there are no more withdrawals to process
+		ASSERT(builder->remainingWithdrawals == 0);
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure no withdrawals are expected
+		ASSERT(builder->remainingWithdrawals == 0);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveCertificates(builder);
+		break;
 	}
-
-	ASSERT(builder->remainingWithdrawals == 0);
 }
 
 // ============================== AUXILIARY DATA ==============================
@@ -1328,18 +1323,15 @@ static void txHashBuilder_assertCanLeaveAuxData(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_AUX_DATA:
-		break;
-
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveWithdrawals(builder);
-		ASSERT(!builder->includeAuxData);
+		// aux data was added, we can move on
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure aux data was not expected
+		ASSERT(!builder->includeAuxData);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveWithdrawals(builder);
+		break;
 	}
 }
 
@@ -1365,19 +1357,15 @@ static void txHashBuilder_assertCanLeaveValidityIntervalStart(tx_hash_builder_t*
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-		break;
-
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveAuxData(builder);
-		ASSERT(!builder->includeValidityIntervalStart);
+		// validity interval start was added, we can move on
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure validity interval start was not expected
+		ASSERT(!builder->includeValidityIntervalStart);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveAuxData(builder);
+		break;
 	}
 }
 
@@ -1450,18 +1438,12 @@ static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 		ASSERT(builder->multiassetData.remainingTokens == 0);
 		break;
 
-	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveValidityIntervalStart(builder);
-		ASSERT(!builder->includeMint);
-		break;
-
 	default:
-		ASSERT(false);
+		// make sure mint was not expected
+		ASSERT(!builder->includeMint);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveValidityIntervalStart(builder);
+		break;
 	}
 }
 
@@ -1492,21 +1474,15 @@ static void txHashBuilder_assertCanLeaveScriptDataHash(tx_hash_builder_t* builde
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
-		break;
-
-	case TX_HASH_BUILDER_IN_MINT:
-	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveMint(builder);
-		ASSERT(!builder->includeScriptDataHash);
+		// script data hash was added, we can move on
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure script data hash was not expected
+		ASSERT(!builder->includeScriptDataHash);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveMint(builder);
+		break;
 	}
 }
 
@@ -1547,25 +1523,17 @@ static void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_COLLATERALS:
-		// we are asserting no remainingCollaterals below
-		break;
-
-	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
-	case TX_HASH_BUILDER_IN_MINT:
-	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveScriptDataHash(builder);
+		// make sure there are no more collaterals to process
+		ASSERT(builder->remainingCollaterals == 0);
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure no collaterals are expected
+		ASSERT(builder->remainingWithdrawals == 0);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveScriptDataHash(builder);
+		break;
 	}
-
-	ASSERT(builder->remainingCollaterals == 0);
 }
 
 // ========================= REQUIRED SIGNERS ==========================
@@ -1614,26 +1582,17 @@ static void txHashBuilder_assertCanLeaveRequiredSigners(tx_hash_builder_t* build
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
-		// we are asserting no remainingRequiredSigners below
-		break;
-
-	case TX_HASH_BUILDER_IN_COLLATERALS:
-	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
-	case TX_HASH_BUILDER_IN_MINT:
-	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveCollaterals(builder);
+		// make sure there are no more withdrawals to process
+		ASSERT(builder->remainingRequiredSigners == 0);
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure no required signers are expected
+		ASSERT(builder->remainingRequiredSigners == 0);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveCollaterals(builder);
+		break;
 	}
-
-	ASSERT(builder->remainingRequiredSigners == 0);
 }
 
 // ========================= NETWORK ID ==========================
@@ -1658,24 +1617,15 @@ static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_NETWORK_ID:
-		break;
-
-	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
-	case TX_HASH_BUILDER_IN_COLLATERALS:
-	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
-	case TX_HASH_BUILDER_IN_MINT:
-	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveRequiredSigners(builder);
-		ASSERT(!builder->includeNetworkId);
+		// network id was added, we can move on
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure network id was not expected
+		ASSERT(!builder->includeNetworkId);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveRequiredSigners(builder);
+		break;
 	}
 }
 
@@ -1727,27 +1677,16 @@ static void txHashBuilder_assertCanLeaveCollateralReturn(tx_hash_builder_t* buil
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_COLLATERAL_RETURN:
-		break;
-	case TX_HASH_BUILDER_IN_NETWORK_ID:
-	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
-	case TX_HASH_BUILDER_IN_COLLATERALS:
-	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
-	case TX_HASH_BUILDER_IN_MINT:
-	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveNetworkId(builder);
-		ASSERT(!builder->includeCollateralReturn);
+		// collateral return was added, we can move on
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure collateral return was not expected
+		ASSERT(!builder->includeCollateralReturn);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveNetworkId(builder);
+		break;
 	}
-//    ASSERT(builder->co == 0);
-
 }
 
 // ========================= TOTAL COLLATERAL ==========================
@@ -1773,25 +1712,15 @@ static void txHashBuilder_assertCanLeaveTotalCollateral(tx_hash_builder_t* build
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_TOTAL_COLLATERAL:
-		break;
-	case TX_HASH_BUILDER_IN_COLLATERAL_RETURN:
-	case TX_HASH_BUILDER_IN_NETWORK_ID:
-	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
-	case TX_HASH_BUILDER_IN_COLLATERALS:
-	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
-	case TX_HASH_BUILDER_IN_MINT:
-	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveNetworkId(builder);
-		ASSERT(!builder->includeTotalCollateral);
+		// total collateral was added, we can move on
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure total collateral was not expected
+		ASSERT(!builder->includeTotalCollateral);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveCollateralReturn(builder);
+		break;
 	}
 }
 
@@ -1836,27 +1765,17 @@ static void txHashBuilder_assertCanLeaveReferenceInputs(tx_hash_builder_t* build
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_REFERENCE_INPUTS:
-		break;
-	case TX_HASH_BUILDER_IN_TOTAL_COLLATERAL:
-	case TX_HASH_BUILDER_IN_COLLATERAL_RETURN:
-	case TX_HASH_BUILDER_IN_NETWORK_ID:
-	case TX_HASH_BUILDER_IN_REQUIRED_SIGNERS:
-	case TX_HASH_BUILDER_IN_COLLATERALS:
-	case TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH:
-	case TX_HASH_BUILDER_IN_MINT:
-	case TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START:
-	case TX_HASH_BUILDER_IN_AUX_DATA:
-	case TX_HASH_BUILDER_IN_WITHDRAWALS:
-	case TX_HASH_BUILDER_IN_CERTIFICATES:
-	case TX_HASH_BUILDER_IN_TTL:
-	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveTotalCollateral(builder);
+		// make sure there are no more reference inputs to process
+		ASSERT(builder->remainingReferenceInputs == 0);
 		break;
 
 	default:
-		ASSERT(false);
+		// make sure no reference inputs are expected
+		ASSERT(builder->remainingReferenceInputs == 0);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveTotalCollateral(builder);
+		break;
 	}
-	ASSERT(builder->remainingReferenceInputs == 0);
 }
 
 // ========================= FINALIZE ==========================
