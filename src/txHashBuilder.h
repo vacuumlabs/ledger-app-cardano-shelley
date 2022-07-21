@@ -325,8 +325,6 @@ void txHashBuilder_addRequiredSigner(
 
 void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId);
 
-// ===================================== COLLRET =====================================
-
 void txHashBuilder_addCollateralReturn(tx_hash_builder_t* builder,
                                        const tx_hash_builder_output* output);
 
@@ -341,8 +339,6 @@ void txHashBuilder_addCollateralReturn_token(
         const uint8_t* assetNameBuffer, size_t assetNameSize,
         uint64_t amount
 );
-
-// ===================================== TOTAL COLLATERAL =====================================
 
 void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txColl);
 
