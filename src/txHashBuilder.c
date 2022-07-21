@@ -155,7 +155,7 @@ void txHashBuilder_enterInputs(tx_hash_builder_t* builder)
 	builder->state = TX_HASH_BUILDER_IN_INPUTS;
 }
 
-void txHashBuilder_addInput(tx_hash_builder_t *builder, const tx_input_t* input)
+void txHashBuilder_addInput(tx_hash_builder_t* builder, const tx_input_t* input)
 {
 	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingInputs);
 	const size_t utxoHashSize = SIZEOF(input->txHashBuffer);
@@ -1300,7 +1300,7 @@ void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder)
 	builder->state = TX_HASH_BUILDER_IN_COLLATERALS;
 }
 
-void txHashBuilder_addCollateral(tx_hash_builder_t *builder, const tx_input_t* collInput)
+void txHashBuilder_addCollateral(tx_hash_builder_t* builder, const tx_input_t* collInput)
 {
 	_TRACE("state = %d, remainingCollaterals = %u", builder->state, builder->remainingCollaterals);
 	const size_t utxoHashSize = SIZEOF(collInput->txHashBuffer);

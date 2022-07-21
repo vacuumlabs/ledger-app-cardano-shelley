@@ -258,7 +258,7 @@ static void getPublicKeys_handleInitAPDU(const uint8_t* wireDataBuffer, size_t w
 
 
 void getPublicKeys_handleGetNextKeyAPDU(
-        const uint8_t *wireDataBuffer,
+        const uint8_t* wireDataBuffer,
         size_t wireDataSize
 )
 {

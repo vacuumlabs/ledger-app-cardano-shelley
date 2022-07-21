@@ -68,7 +68,7 @@ void deriveRawPublicKey(
 	cx_eddsa_get_public_key(
 	        // cx_eddsa has a special case struct for Cardano's private keys
 	        // but signature is standard
-	        (const struct cx_ecfp_256_private_key_s *) privateKey,
+	        (const struct cx_ecfp_256_private_key_s*) privateKey,
 	        CX_SHA512,
 	        publicKey,
 	        NULL, 0, NULL, 0);

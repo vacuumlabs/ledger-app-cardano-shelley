@@ -37,7 +37,7 @@ void nativeScriptHashBuilder_startComplexScript_n_of_k(
 
 void nativeScriptHashBuilder_addScript_pubkey(
         native_script_hash_builder_t* builder,
-        const uint8_t *pubKeyHashBuffer, size_t pubKeyHashSize
+        const uint8_t* pubKeyHashBuffer, size_t pubKeyHashSize
 );
 
 void nativeScriptHashBuilder_addScript_invalidBefore(
@@ -52,7 +52,7 @@ void nativeScriptHashBuilder_addScript_invalidHereafter(
 
 void nativeScriptHashBuilder_finalize(
         native_script_hash_builder_t* builder,
-        uint8_t *outBuffer, size_t outSize
+        uint8_t* outBuffer, size_t outSize
 );
 
 /* #ifdef DEVEL */

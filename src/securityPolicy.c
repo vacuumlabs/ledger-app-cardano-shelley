@@ -1395,7 +1395,7 @@ static bool required_signers_allowed(const sign_tx_signingmode_t txSigningMode)
 	}
 }
 
-static bool is_required_signer_allowed(bip44_path_t *path)
+static bool is_required_signer_allowed(bip44_path_t* path)
 {
 	switch (bip44_classifyPath(path)) {
 	case PATH_ORDINARY_ACCOUNT:

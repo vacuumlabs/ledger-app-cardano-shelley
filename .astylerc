@@ -4,3 +4,4 @@
 --indent=tab
 --pad-oper
 --indent-preprocessor
+--align-pointer=type

@@ -141,7 +141,7 @@ static const bagl_element_t ui_paginatedText[] = {
 	#endif // HEADLESS
 };
 
-static const bagl_element_t* ui_prepro_paginatedText(const bagl_element_t *element)
+static const bagl_element_t* ui_prepro_paginatedText(const bagl_element_t* element)
 {
 	paginatedTextState_t* ctx = paginatedTextState;
 	assert_uiPaginatedText_magic();
@@ -175,7 +175,7 @@ static const bagl_element_t ui_prompt[] = {
 	#endif // HEADLESS
 };
 
-static const bagl_element_t* ui_prepro_prompt(const bagl_element_t *element)
+static const bagl_element_t* ui_prepro_prompt(const bagl_element_t* element)
 {
 	promptState_t* ctx = promptState;
 

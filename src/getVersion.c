@@ -13,7 +13,7 @@ enum {
 void getVersion_handleAPDU(
         uint8_t p1,
         uint8_t p2,
-        const uint8_t *wireDataBuffer MARK_UNUSED,
+        const uint8_t* wireDataBuffer MARK_UNUSED,
         size_t wireDataSize,
         bool isNewCall MARK_UNUSED
 )
@@ -47,6 +47,6 @@ void getVersion_handleAPDU(
 	response.flags |= FLAG_DEVEL;
 	#endif // DEVEL
 
-	io_send_buf(SUCCESS, (uint8_t *) &response, sizeof(response));
+	io_send_buf(SUCCESS, (uint8_t*) &response, sizeof(response));
 	ui_idle();
 }
