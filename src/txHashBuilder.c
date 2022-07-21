@@ -432,7 +432,6 @@ void txHashBuilder_addOutput_tokenGroup(
 {
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
 	ASSERT(builder->outputState == TX_OUTPUT_ASSET_GROUP);
-	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
 
 	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens, TX_HASH_BUILDER_IN_OUTPUTS);
 }
@@ -1408,7 +1407,6 @@ void txHashBuilder_addMint_tokenGroup(
         uint16_t numTokens
 )
 {
-	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_MINT);
 	ASSERT(builder->outputState == TX_OUTPUT_ASSET_GROUP);
 
