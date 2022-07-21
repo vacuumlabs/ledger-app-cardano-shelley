@@ -20,7 +20,7 @@
 /*
 The following macros and functions have dual purpose:
 1. syntactic sugar for neat recording of hash computations;
-2. tracing of hash computations (allows to reconstruct bytestrings we are hashing via usbtool).
+2. tracing of hash computations (allows to reconstruct bytestrings we are hashing via speculos / usbtool).
 */
 
 #define BUILDER_APPEND_CBOR(type, value) \
@@ -114,10 +114,10 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_hash_b
 	ASSERT(output->format == MAP_BABBAGE);
 
 	// Map(2 + includeDatumOption + includeScriptRef)[
-	//   Unsigned[0] ; entry key
+	//   Unsigned[0] ; map entry key
 	//   Bytes[address]
 	//
-	//   Unsigned[1] ; entry key
+	//   Unsigned[1] ; map entry key
 	//   value = coin / [coin,multiasset<uint>] --- entry added below
 	//
 	//   ? datum_option = [ 0, $hash32 // 1, data ] --- entry added later
@@ -167,6 +167,8 @@ static void cbor_append_txOutput(tx_hash_builder_t* builder, const tx_hash_build
 		ASSERT(false);
 	}
 }
+
+// ============================== TX HASH BUILDER STATE INITIALIZATION ==============================
 
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
@@ -270,6 +272,8 @@ static void txHashBuilder_assertCanLeaveInit(tx_hash_builder_t* builder)
 
 	ASSERT(builder->state == TX_HASH_BUILDER_INIT);
 }
+
+// ============================== INPUTS ==============================
 
 void txHashBuilder_enterInputs(tx_hash_builder_t* builder)
 {
@@ -622,6 +626,8 @@ static void txHashBuilder_assertCanLeaveFee(tx_hash_builder_t* builder)
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_FEE);
 }
+
+// ============================== TTL ==============================
 
 void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl)
 {
@@ -1297,6 +1303,8 @@ static void txHashBuilder_assertCanLeaveWithdrawals(tx_hash_builder_t* builder)
 	ASSERT(builder->remainingWithdrawals == 0);
 }
 
+// ============================== AUXILIARY DATA ==============================
+
 void txHashBuilder_addAuxData(tx_hash_builder_t* builder, const uint8_t* auxDataHashBuffer, size_t auxDataHashBufferSize)
 {
 	_TRACE("state = %d, remainingWithdrawals = %u", builder->state, builder->remainingWithdrawals);
@@ -1334,6 +1342,8 @@ static void txHashBuilder_assertCanLeaveAuxData(tx_hash_builder_t* builder)
 		ASSERT(false);
 	}
 }
+
+// ============================== VALIDITY INTERVAL START ==============================
 
 void txHashBuilder_addValidityIntervalStart(tx_hash_builder_t* builder, uint64_t validityIntervalStart)
 {
@@ -1785,7 +1795,7 @@ static void txHashBuilder_assertCanLeaveTotalCollateral(tx_hash_builder_t* build
 	}
 }
 
-// ========================= REFERENCE INPUT ==========================
+// ========================= REFERENCE INPUTS ==========================
 
 void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder)
 {
