@@ -70,15 +70,25 @@ typedef enum {
 	TX_HASH_BUILDER_FINISHED = 1800,
 } tx_hash_builder_state_t;
 
+// typedef enum {
+// 	TX_OUTPUT_INIT = 10,    //  tx_hash_builder_state in TX_HASH_BUILDER_IN_OUTPUTS. Adding an output is STARTED
+// 	TX_OUTPUT_TOP_LEVEL_DATA = 11,  //  Address and value COMPLETED
+// 	TX_OUTPUT_ASSET_GROUP = 12,     //  Part of top level data, adding a group of tokens STARTED or COMPLETED, but there are remaining asset groups
+// 	TX_OUTPUT_TOKEN = 13,   //  Adding tokens is STARTED. Valid for mint and collateral return as well
+// 	TX_OUTPUT_DATUM_OPTION_HASH = 20,    //  Datum option COMPLETED
+// 	TX_OUTPUT_DATUM_OPTION_CHUNKS = 21, //  Inline datum is being added, and NOT COMPLETED
+// 	TX_OUTPUT_SCRIPT_REFERENCE = 30,    //  Script reference COMPLETED
+// 	TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS = 31, // Script reference is being added and NOT COMPLETED
+// } tx_hash_builder_output_state_t;
+
 typedef enum {
-	TX_OUTPUT_INIT = 10,    //  tx_hash_builder_state in TX_HASH_BUILDER_IN_OUTPUTS. Adding an output is STARTED
-	TX_OUTPUT_TOP_LEVEL_DATA = 11,  //  Address and value COMPLETED
-	TX_OUTPUT_ASSET_GROUP = 12,     //  Part of top level data, adding a group of tokens STARTED or COMPLETED, but there are remaining asset groups
-	TX_OUTPUT_TOKEN = 13,   //  Adding tokens is STARTED. Valid for mint and collateral return as well
-	TX_OUTPUT_DATUM_OPTION = 20,    //  Datum option COMPLETED
-	TX_OUTPUT_DATUM_OPTION_CHUNKS = 21, //  Inline datum is being added, and NOT COMPLETED
-	TX_OUTPUT_SCRIPT_REFERENCE = 30,    //  Script reference COMPLETED
-	TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS = 31, // Script reference is being added and NOT COMPLETED
+	TX_OUTPUT_INIT = 10,    //  tx_hash_builder_state moved to TX_HASH_BUILDER_IN_OUTPUTS
+	TX_OUTPUT_TOP_LEVEL_DATA = 11,  // output address and value is being added
+	TX_OUTPUT_MULTIASSET = 12, // multiasset map is being added
+	TX_OUTPUT_ASSET_GROUP = 13,     // asset group map is being added
+	TX_OUTPUT_DATUM_OPTION_HASH = 20,    //  Datum hash added
+	TX_OUTPUT_DATUM_OPTION_CHUNKS = 21, //  Inline datum is being added
+	TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS = 31, // Script reference is being added
 } tx_hash_builder_output_state_t;
 
 typedef struct {
@@ -105,24 +115,29 @@ typedef struct {
 		} poolCertificateData;
 
 		struct {
-			uint16_t remainingAssetGroups;
-			uint16_t remainingTokens;
-		} multiassetData;
+			bool includeDatumOption;
+			bool includeScriptRef;
 
-		struct {
-			uint16_t totalDatumSize;
-			uint16_t currentDatumSize;
-		} datumData;
+			union {
+				// this is also used for mint, but needs to coexist with output data
+				// so we want don't want to move it up one level in the unions
+				struct {
+					uint16_t remainingAssetGroups;
+					uint16_t remainingTokens;
+				} multiassetData;
 
-		struct {
-			uint16_t totalReferenceScriptSize;
-			uint16_t currentReferenceScriptSize;
-		} referenceScriptData;
+				struct {
+					size_t remainingBytes;
+				} datumData;
+
+				struct {
+					size_t remainingBytes;
+				} referenceScriptData;
+			};
+		} outputData; // TODO rename to output?
 	};
+	tx_hash_builder_output_state_t outputState; // TODO move to outputData above
 
-	union {
-		tx_hash_builder_output_state_t outputState;
-	};
 
 	tx_hash_builder_state_t state;
 	blake2b_256_context_t txHash;
@@ -141,9 +156,9 @@ typedef struct {
 	uint64_t amount;
 	uint16_t numAssetGroups;
 
-	bool includeDatumOption;
+	bool includeDatumOption; // TODO rename to "includeDatum"? or something else
 	bool includeScriptRef;
-} tx_hash_builder_output;
+} tx_hash_builder_output; // TODO rename to "tx_hash_builder_output_init_data" or something like that?
 
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
