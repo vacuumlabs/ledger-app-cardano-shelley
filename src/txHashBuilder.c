@@ -353,14 +353,14 @@ void txHashBuilder_addOutput_topLevelData(
 }
 
 __noinline_due_to_stack__
-static void addTokenGroup(tx_hash_builder_t* builder,
-                          const uint8_t* policyIdBuffer, size_t policyIdSize,
-                          uint16_t numTokens,
-                          tx_hash_builder_state_t mandatoryState)
+static void addTokenGroup(
+	tx_hash_builder_t* builder,
+	const uint8_t* policyIdBuffer, size_t policyIdSize,
+	uint16_t numTokens
+)
 {
 	_TRACE("state = %d, remainingAssetGroups = %u", builder->state, builder->multiassetData.remainingAssetGroups);
 
-	ASSERT(builder->state == mandatoryState); //TX_HASH_BUILDER_IN_OUTPUTS | TX_HASH_BUILDER_IN_MINT | TX_HASH_BUILDER_IN_COLLATERAL_RETURN
 	ASSERT(builder->outputState == TX_OUTPUT_ASSET_GROUP);
 	ASSERT(builder->multiassetData.remainingAssetGroups > 0);
 	builder->multiassetData.remainingAssetGroups--;
@@ -382,20 +382,21 @@ static void addTokenGroup(tx_hash_builder_t* builder,
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numTokens);
 		}
-		builder->outputState = TX_OUTPUT_TOKEN;
 	}
+
+	builder->outputState = TX_OUTPUT_TOKEN;
 }
 
 __noinline_due_to_stack__
-static void addToken(tx_hash_builder_t* builder,
-                     const uint8_t* assetNameBuffer, size_t assetNameSize,
-                     uint64_t amount,
-                     tx_hash_builder_state_t mandatoryState,
-                     cbor_type_tag_t typeTag)
+static void addToken(
+		tx_hash_builder_t* builder,
+		const uint8_t* assetNameBuffer, size_t assetNameSize,
+		uint64_t amount,
+		cbor_type_tag_t typeTag
+)
 {
 	_TRACE("state = %d, remainingTokens = %u", builder->state, builder->multiassetData.remainingTokens);
 
-	ASSERT(builder->state == mandatoryState); //TX_HASH_BUILDER_IN_OUTPUTS | TX_HASH_BUILDER_IN_MINT | TX_HASH_BUILDER_IN_COLLATERAL_RETURN
 	ASSERT(builder->outputState == TX_OUTPUT_TOKEN);
 	ASSERT(builder->multiassetData.remainingTokens > 0);
 	builder->multiassetData.remainingTokens--;
@@ -421,7 +422,6 @@ static void addToken(tx_hash_builder_t* builder,
 			builder->outputState = TX_OUTPUT_TOP_LEVEL_DATA; // means we added all tokens for all groups, so state should be TX_OUTPUT_TOP_LEVEL_DATA as asset groups are part of top level data and now it is completely finished
 		}
 	}
-
 }
 
 void txHashBuilder_addOutput_tokenGroup(
@@ -433,7 +433,7 @@ void txHashBuilder_addOutput_tokenGroup(
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
 	ASSERT(builder->outputState == TX_OUTPUT_ASSET_GROUP);
 
-	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens, TX_HASH_BUILDER_IN_OUTPUTS);
+	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens);
 }
 
 void txHashBuilder_addOutput_token(
@@ -445,7 +445,7 @@ void txHashBuilder_addOutput_token(
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 
-	addToken(builder, assetNameBuffer, assetNameSize, amount, TX_HASH_BUILDER_IN_OUTPUTS, CBOR_TYPE_UNSIGNED);
+	addToken(builder, assetNameBuffer, assetNameSize, amount, CBOR_TYPE_UNSIGNED);
 }
 
 static void txHashBuilder_assertCanLeaveOutputTopLevelData(tx_hash_builder_t* builder)
@@ -1410,7 +1410,7 @@ void txHashBuilder_addMint_tokenGroup(
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_MINT);
 	ASSERT(builder->outputState == TX_OUTPUT_ASSET_GROUP);
 
-	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens, TX_HASH_BUILDER_IN_MINT);
+	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens);
 }
 
 void txHashBuilder_addMint_token(
@@ -1419,9 +1419,11 @@ void txHashBuilder_addMint_token(
         int64_t amount
 )
 {
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_MINT);
+
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 
-	addToken(builder, assetNameBuffer, assetNameSize, amount, TX_HASH_BUILDER_IN_MINT,
+	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         amount < 0 ? CBOR_TYPE_NEGATIVE : CBOR_TYPE_UNSIGNED);
 }
 
@@ -1660,7 +1662,7 @@ void txHashBuilder_addCollateralReturn_tokenGroup(
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_RETURN);
 	ASSERT(builder->outputState == TX_OUTPUT_ASSET_GROUP);
 
-	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens, TX_HASH_BUILDER_IN_COLLATERAL_RETURN);
+	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens);
 }
 
 void txHashBuilder_addCollateralReturn_token(
@@ -1669,9 +1671,11 @@ void txHashBuilder_addCollateralReturn_token(
         uint64_t amount
 )
 {
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_RETURN);
+
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 
-	addToken(builder, assetNameBuffer, assetNameSize, amount, TX_HASH_BUILDER_IN_COLLATERAL_RETURN, CBOR_TYPE_UNSIGNED);
+	addToken(builder, assetNameBuffer, assetNameSize, amount, CBOR_TYPE_UNSIGNED);
 }
 
 static void txHashBuilder_assertCanLeaveCollateralReturn(tx_hash_builder_t* builder)
