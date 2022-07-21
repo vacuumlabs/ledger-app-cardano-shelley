@@ -291,13 +291,13 @@ void txHashBuilder_enterInputs(tx_hash_builder_t* builder)
 void txHashBuilder_addInput(tx_hash_builder_t* builder, const tx_input_t* input)
 {
 	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingInputs);
-	const size_t utxoHashSize = SIZEOF(input->txHashBuffer);
 
-	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_INPUTS);
 	ASSERT(builder->remainingInputs > 0);
 	builder->remainingInputs--;
 
+	const size_t utxoHashSize = SIZEOF(input->txHashBuffer);
+	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	cbor_append_txInput(builder, input->txHashBuffer, utxoHashSize, input->index);
 }
 
@@ -1177,12 +1177,13 @@ void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
 )
 {
 	_TRACE("state = %d", builder->state);
-	ASSERT(metadataHashSize == POOL_METADATA_HASH_LENGTH);
 
 	// we allow this to be called immediately after pool params have been added
 	// if there are no owners or relays in the tx
 	addPoolMetadata_updateState(builder);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_METADATA);
+
+	ASSERT(metadataHashSize == POOL_METADATA_HASH_LENGTH);
 
 	// Array(2)[
 	//   Tstr[url]
@@ -1304,11 +1305,10 @@ void txHashBuilder_addAuxData(tx_hash_builder_t* builder, const uint8_t* auxData
 {
 	_TRACE("state = %d, remainingWithdrawals = %u", builder->state, builder->remainingWithdrawals);
 
-	ASSERT(auxDataHashBufferSize == AUX_DATA_HASH_LENGTH);
-
 	txHashBuilder_assertCanLeaveWithdrawals(builder);
 	ASSERT(builder->includeAuxData);
 
+	ASSERT(auxDataHashBufferSize == AUX_DATA_HASH_LENGTH);
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_AUX_DATA);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, auxDataHashBufferSize);
@@ -1456,10 +1456,10 @@ void txHashBuilder_addScriptDataHash(
 {
 	_TRACE("state = %d", builder->state);
 
-	ASSERT(scriptHashDataSize == SCRIPT_DATA_HASH_LENGTH);
 	txHashBuilder_assertCanLeaveMint(builder);
 	ASSERT(builder->includeScriptDataHash);
 
+	ASSERT(scriptHashDataSize == SCRIPT_DATA_HASH_LENGTH);
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_SCRIPT_HASH_DATA);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, scriptHashDataSize);
@@ -1507,13 +1507,13 @@ void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder)
 void txHashBuilder_addCollateral(tx_hash_builder_t* builder, const tx_input_t* collInput)
 {
 	_TRACE("state = %d, remainingCollaterals = %u", builder->state, builder->remainingCollaterals);
-	const size_t utxoHashSize = SIZEOF(collInput->txHashBuffer);
 
-	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERALS);
 	ASSERT(builder->remainingCollaterals > 0);
 	builder->remainingCollaterals--;
 
+	const size_t utxoHashSize = SIZEOF(collInput->txHashBuffer);
+	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	cbor_append_txInput(builder, collInput->txHashBuffer, utxoHashSize, collInput->index);
 }
 
@@ -1561,10 +1561,12 @@ void txHashBuilder_addRequiredSigner(
 {
 	_TRACE("state = %d, remainingRequiredSigners = %u", builder->state, builder->remainingRequiredSigners);
 
-	ASSERT(vkeySize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_REQUIRED_SIGNERS);
 	ASSERT(builder->remainingRequiredSigners > 0);
 	builder->remainingRequiredSigners--;
+
+	ASSERT(vkeySize < BUFFER_SIZE_PARANOIA);
+
 	// Array(2)[
 	//    Bytes[hash],
 	//    Unsigned[index]
@@ -1637,9 +1639,10 @@ void txHashBuilder_addCollateralReturn(
 )
 {
 	_TRACE("state = %d", builder->state);
-	ASSERT(builder->includeCollateralReturn);
 
 	txHashBuilder_assertCanLeaveNetworkId(builder);
+	ASSERT(builder->includeCollateralReturn);
+
 	{
 		// Enter collateral output
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERAL_RETURN);
@@ -1656,15 +1659,17 @@ void txHashBuilder_addCollateralReturn_tokenGroup(
         uint16_t numTokens
 )
 {
-	ASSERT(policyIdSize == MINTING_POLICY_ID_SIZE); //TODO: MINTING? even in case of output it is mining policy, Why?
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_RETURN);
 	ASSERT(builder->outputState == TX_OUTPUT_ASSET_GROUP);
 
 	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens, TX_HASH_BUILDER_IN_COLLATERAL_RETURN);
 }
 
-void txHashBuilder_addCollateralReturn_token(tx_hash_builder_t* builder, const uint8_t* assetNameBuffer,
-        size_t assetNameSize, uint64_t amount)
+void txHashBuilder_addCollateralReturn_token(
+        tx_hash_builder_t* builder,
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
+        uint64_t amount
+)
 {
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 
@@ -1697,7 +1702,6 @@ void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txCol
 
 	txHashBuilder_assertCanLeaveCollateralReturn(builder);
 	ASSERT(builder->includeTotalCollateral);
-
 
 	// add TotalCollateral item into the main tx body map
 	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_TOTAL_COLLATERAL);
@@ -1733,6 +1737,7 @@ void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder)
 	txHashBuilder_assertCanLeaveTotalCollateral(builder);
 	// we don't allow an empty list for an optional item
 	ASSERT(builder->remainingReferenceInputs > 0);
+
 	{
 		// Enter reference inputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_REFERENCE_INPUTS);
@@ -1748,13 +1753,13 @@ void txHashBuilder_addReferenceInput(
 )
 {
 	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingReferenceInputs);
-	const size_t utxoHashSize = SIZEOF(refInput->txHashBuffer);
 
-	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_REFERENCE_INPUTS);
 	ASSERT(builder->remainingReferenceInputs > 0);
 	builder->remainingReferenceInputs--;
 
+	const size_t utxoHashSize = SIZEOF(refInput->txHashBuffer);
+	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	cbor_append_txInput(builder, refInput->txHashBuffer, utxoHashSize, refInput->index);
 }
 
