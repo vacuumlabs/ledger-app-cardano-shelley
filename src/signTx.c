@@ -34,6 +34,7 @@ static inline void initTxBodyCtx()
 		BODY_CTX->ttlReceived = false;
 		BODY_CTX->validityIntervalStartReceived = false;
 		BODY_CTX->mintReceived = false;
+		BODY_CTX->totalCollateralReceived = false;
 	}
 }
 
@@ -239,10 +240,13 @@ static inline void advanceStage()
 			txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		}
 		ctx->stage = SIGN_STAGE_BODY_TOTAL_COLLATERAL;
+		if (ctx->includeTotalCollateral) {
+			break;
+		}
 
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 		if (ctx->includeTotalCollateral) {
-			txHashBuilder_addTotalCollateral(&BODY_CTX->txHashBuilder, ctx->txColl);
+			ASSERT(BODY_CTX->totalCollateralReceived);
 		}
 		ctx->stage = SIGN_STAGE_BODY_REFERENCE_INPUTS;
 
@@ -509,6 +513,7 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 			uint8_t includeMint;
 			uint8_t includeScriptDataHash;
 			uint8_t includeNetworkId;
+			uint8_t includeTotalCollateral;
 			uint8_t txSigningMode;
 
 			uint8_t numInputs[4];
@@ -548,6 +553,9 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 
 		ctx->includeNetworkId = signTx_parseIncluded(wireHeader->includeNetworkId);
 		TRACE("Include network id %d", ctx->includeNetworkId);
+
+		ctx->includeTotalCollateral = signTx_parseIncluded(wireHeader->includeTotalCollateral);
+		TRACE("Include total collateral %d", ctx->includeTotalCollateral);
 
 		ctx->commonTxData.txSigningMode = wireHeader->txSigningMode;
 		TRACE("Signing mode %d", (int) ctx->commonTxData.txSigningMode);
@@ -614,7 +622,8 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 	                                   ctx->numCollaterals,
 	                                   ctx->numRequiredSigners,
 	                                   ctx->includeScriptDataHash,
-	                                   ctx->includeNetworkId
+	                                   ctx->includeNetworkId,
+	                                   ctx->includeTotalCollateral
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -671,6 +680,7 @@ enum {
 	HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_RESPOND,
 	HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_INVALID,
 };
+
 static void signTx_handleAuxDataCatalystRegistration_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
@@ -2037,6 +2047,80 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, const uint8_t* wireDataB
 	signTx_handleRequiredSigner_ui_runStep();
 }
 
+// ========================= TOTAL COLLATERAL ===========================
+
+enum {
+	HANDLE_TOTAL_COLLATERAL_STEP_DISPLAY = 400,
+	HANDLE_TOTAL_COLLATERAL_STEP_RESPOND,
+	HANDLE_TOTAL_COLLATERAL_STEP_INVALID,
+};
+
+static void signTx_handleTotalCollateral_ui_runStep()
+{
+	TRACE("UI step %d", ctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleTotalCollateral_ui_runStep;
+
+	TRACE_ADA_AMOUNT("total collateral ", BODY_CTX->stageData.totalCollateral);
+
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_TOTAL_COLLATERAL_STEP_DISPLAY) {
+		ui_displayAdaAmountScreen("Total collateral", BODY_CTX->stageData.totalCollateral, this_fn);
+	}
+	UI_STEP(HANDLE_TOTAL_COLLATERAL_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+		advanceStage();
+	}
+	UI_STEP_END(HANDLE_TOTAL_COLLATERAL_STEP_INVALID);
+}
+
+__noinline_due_to_stack__
+static void signTx_handleTotalCollateralAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_BODY_TOTAL_COLLATERAL);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
+
+		BODY_CTX->stageData.totalCollateral = u8be_read(wireDataBuffer);
+		BODY_CTX->totalCollateralReceived = true;
+		TRACE("totalCollateral:");
+		TRACE_UINT64(BODY_CTX->stageData.totalCollateral);
+	}
+
+	security_policy_t policy = policyForSignTxTotalCollateral();
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// add to tx
+		TRACE("Adding total collateral to tx hash");
+		txHashBuilder_addTotalCollateral(&BODY_CTX->txHashBuilder, BODY_CTX->stageData.totalCollateral);
+	}
+
+	{
+		// select UI steps
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_FEE_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_FEE_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
+	signTx_handleTotalCollateral_ui_runStep();
+}
+
 // ============================== CONFIRM ==============================
 
 enum {
@@ -2256,7 +2340,7 @@ static void signTx_handleWitnessAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 		// choose UI steps
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_WARN_UNUSUAL,  HANDLE_WITNESS_STEP_WARNING);
+			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_WITNESS_STEP_WARNING);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_WITNESS_STEP_DISPLAY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_WITNESS_STEP_RESPOND);
 #undef   CASE
@@ -2296,6 +2380,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x0c, signTx_handleScriptDataHashAPDU);
 		CASE(0x0d, signTx_handleCollateralAPDU);
 		CASE(0x0e, signTx_handleRequiredSignerAPDU);
+		CASE(0x10, signTx_handleTotalCollateralAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
 		CASE(0x0f, signTx_handleWitnessAPDU);
 		DEFAULT(NULL)
@@ -2337,7 +2422,8 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERALS:
-	case SIGN_STAGE_BODY_REQUIRED_SIGNERS: {
+	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
+	case SIGN_STAGE_BODY_TOTAL_COLLATERAL: {
 		explicit_bzero(&BODY_CTX->stageData, SIZEOF(BODY_CTX->stageData));
 		break;
 	}
@@ -2384,6 +2470,7 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERALS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
+	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 	case SIGN_STAGE_CONFIRM:
 		return &(ctx->txPartCtx.body_ctx);
 
