@@ -1840,7 +1840,7 @@ static void txHashBuilder_assertCanLeaveReferenceInputs(tx_hash_builder_t* build
 	case TX_HASH_BUILDER_IN_CERTIFICATES:
 	case TX_HASH_BUILDER_IN_TTL:
 	case TX_HASH_BUILDER_IN_FEE:
-		txHashBuilder_assertCanLeaveNetworkId(builder);
+		txHashBuilder_assertCanLeaveTotalCollateral(builder);
 		break;
 
 	default:

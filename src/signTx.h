@@ -149,6 +149,7 @@ typedef struct {
 	bool validityIntervalStartReceived;
 	bool mintReceived;
 	bool scriptDataHashReceived;
+	bool totalCollateralReceived;
 
 	// TODO move these to commonTxData?
 	tx_hash_builder_t txHashBuilder;
@@ -163,6 +164,7 @@ typedef struct {
 		uint64_t validityIntervalStart;
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
 		sign_tx_required_signer_t requiredSigner;
+		uint64_t totalCollateral;
 	} stageData; // TODO rename to reflect single-APDU scope
 
 	union {
@@ -199,7 +201,7 @@ typedef struct {
 	uint16_t numWitnesses;
 	bool includeCollateralReturn;
 	bool includeTotalCollateral;
-	uint64_t txColl;
+	uint64_t totalCollateral;
 	uint16_t numReferenceInputs;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
