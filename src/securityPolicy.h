@@ -40,7 +40,8 @@ security_policy_t policyForSignTxInit(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeScriptDataHash,
-        bool includeNetworkId
+        bool includeNetworkId,
+        bool includeTotalCollateral
 );
 
 security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);
@@ -140,6 +141,8 @@ security_policy_t policyForSignTxWitness(
         bool mintPresent,
         const bip44_path_t* poolOwnerPath
 );
+
+security_policy_t policyForSignTxTotalCollateral();
 
 security_policy_t policyForSignTxConfirm();
 

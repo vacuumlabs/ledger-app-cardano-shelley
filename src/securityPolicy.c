@@ -308,7 +308,8 @@ security_policy_t policyForSignTxInit(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeScriptDataHash,
-        bool includeNetworkId
+        bool includeNetworkId,
+        bool includeTotalCollateral
 )
 {
 	DENY_UNLESS(isValidNetworkId(networkId));
@@ -1441,6 +1442,12 @@ security_policy_t policyForSignTxRequiredSigner(
 	}
 
 	DENY(); // should not be reached
+}
+
+security_policy_t policyForSignTxTotalCollateral()
+{
+	SHOW_IF(app_mode_expert());
+	ALLOW();
 }
 
 security_policy_t policyForSignTxConfirm()
