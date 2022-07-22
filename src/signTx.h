@@ -198,11 +198,12 @@ typedef struct {
 	uint16_t numCollaterals;
 	uint16_t numRequiredSigners;
 	bool includeNetworkId;
-	uint16_t numWitnesses;
 	bool includeCollateralReturn;
 	bool includeTotalCollateral;
 	uint64_t totalCollateral;
 	uint16_t numReferenceInputs;
+
+	uint16_t numWitnesses;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
 	uint8_t txHash[TX_HASH_LENGTH];
