@@ -254,6 +254,8 @@ static inline void advanceStage()
 			break;
 		}
 
+	// intentional fallthrough
+
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
 		ASSERT(BODY_CTX->currentReferenceInput == ctx->numReferenceInputs);
 		ctx->stage = SIGN_STAGE_CONFIRM;
@@ -520,10 +522,11 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 			uint8_t numOutputs[4];
 			uint8_t numCertificates[4];
 			uint8_t numWithdrawals[4];
-			uint8_t numReferenceInputs[4];
-			uint8_t numWitnesses[4];
 			uint8_t numCollaterals[4];
 			uint8_t numRequiredSigners[4];
+			uint8_t numReferenceInputs[4];
+
+			uint8_t numWitnesses[4];
 		}* wireHeader = (void*) wireDataBuffer;
 
 		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
@@ -577,31 +580,32 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		ASSERT_TYPE(ctx->numOutputs, uint16_t);
 		ASSERT_TYPE(ctx->numCertificates, uint16_t);
 		ASSERT_TYPE(ctx->numWithdrawals, uint16_t);
-		ASSERT_TYPE(ctx->numReferenceInputs, uint16_t);
-		ASSERT_TYPE(ctx->numWitnesses, uint16_t);
 		ASSERT_TYPE(ctx->numCollaterals, uint16_t);
 		ASSERT_TYPE(ctx->numRequiredSigners, uint16_t);
+		ASSERT_TYPE(ctx->numReferenceInputs, uint16_t);
+		ASSERT_TYPE(ctx->numWitnesses, uint16_t);
+
 		ctx->numInputs            = (uint16_t) u4be_read(wireHeader->numInputs);
 		ctx->numOutputs           = (uint16_t) u4be_read(wireHeader->numOutputs);
 		ctx->numCertificates      = (uint16_t) u4be_read(wireHeader->numCertificates);
 		ctx->numWithdrawals       = (uint16_t) u4be_read(wireHeader->numWithdrawals);
-		ctx->numReferenceInputs   = (uint16_t) u4be_read(wireHeader->numReferenceInputs);
-		ctx->numWitnesses         = (uint16_t) u4be_read(wireHeader->numWitnesses);
 		ctx->numCollaterals       = (uint16_t) u4be_read(wireHeader->numCollaterals);
 		ctx->numRequiredSigners	  = (uint16_t) u4be_read(wireHeader->numRequiredSigners);
+		ctx->numReferenceInputs   = (uint16_t) u4be_read(wireHeader->numReferenceInputs);
+		ctx->numWitnesses         = (uint16_t) u4be_read(wireHeader->numWitnesses);
 
 		TRACE(
-		        "num inputs, outputs, certificates, withdrawals, reference inputs, witnesses, collaterals, required signers: %d %d %d %d %d %d %d %d",
-		        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals, ctx->numReferenceInputs,
-		        ctx->numWitnesses, ctx->numCollaterals, ctx->numRequiredSigners
+		        "num inputs, outputs, certificates, withdrawals, collaterals, required signers, reference inputs, witnesses: %d %d %d %d %d %d %d %d",
+		        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals,
+		        ctx->numCollaterals, ctx->numRequiredSigners, ctx->numReferenceInputs, ctx->numWitnesses
 		);
 		VALIDATE(ctx->numInputs <= SIGN_MAX_INPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numOutputs <= SIGN_MAX_OUTPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numCertificates <= SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
 		VALIDATE(ctx->numWithdrawals <= SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
-		VALIDATE(ctx->numReferenceInputs <= SIGN_MAX_REFERENCE_INPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numCollaterals <= SIGN_MAX_COLLATERALS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numRequiredSigners <= SIGN_MAX_REQUIRED_SIGNERS, ERR_INVALID_DATA);
+		VALIDATE(ctx->numReferenceInputs <= SIGN_MAX_REFERENCE_INPUTS, ERR_INVALID_DATA);
 
 		// Current code design assumes at least one input.
 		// If this is to be relaxed, stage switching logic needs to be re-visited.
@@ -2127,12 +2131,6 @@ static void signTx_handleTotalCollateralAPDU(uint8_t p2, const uint8_t* wireData
 }
 
 // ============================== REFERENCE INPUTS ==============================
-
-enum {
-	HANDLE_REFERENCE_INPUT_STEP_DISPLAY = 1500,
-	HANDLE_REFERENCE_INPUT_STEP_RESPOND,
-	HANDLE_REFERENCE_INPUT_STEP_INVALID,
-};
 
 // Advance stage to the next input
 static void ui_advanceState_ReferenceInput()
