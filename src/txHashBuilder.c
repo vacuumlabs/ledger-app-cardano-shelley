@@ -502,7 +502,7 @@ void txHashBuilder_addOutput_token(
 
 void txHashBuilder_addOutput_datumOption(
         tx_hash_builder_t* builder,
-        tx_hash_builder_txOutput_format_t outputFormat,
+        tx_output_serialization_format_t outputFormat,
         datum_option_type_t datumOption,
         const uint8_t* buffer, size_t bufferSize
 )

@@ -146,10 +146,10 @@ typedef struct {
 typedef enum {
 	ARRAY_LEGACY = 0,   // legacy_transaction_output
 	MAP_BABBAGE = 1     // post_alonzo_transaction_output
-} tx_hash_builder_txOutput_format_t;
+} tx_output_serialization_format_t;
 
 typedef struct {
-	tx_hash_builder_txOutput_format_t format;
+	tx_output_serialization_format_t format;
 	size_t addressSize;
 	const uint8_t* addressBuffer;
 
@@ -204,7 +204,7 @@ void txHashBuilder_addOutput_datumHash(
         const uint8_t* datumHashBuffer, size_t datumHashSize
 );
 
-void txHashBuilder_addOutput_datumOption(tx_hash_builder_t* builder, tx_hash_builder_txOutput_format_t outputFormat,
+void txHashBuilder_addOutput_datumOption(tx_hash_builder_t* builder, tx_output_serialization_format_t outputFormat,
         datum_option_type_t datumOption, const uint8_t* buffer,
         size_t bufferSize);
 
