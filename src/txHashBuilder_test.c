@@ -170,7 +170,7 @@ static void outputTokenHandler(
 }
 
 
-static void addMultiassetOutput(tx_hash_builder_t* builder, tx_hash_builder_txOutput_format_t const* outputFormat)
+static void addMultiassetOutput(tx_hash_builder_t* builder, tx_output_serialization_format_t const* outputFormat)
 {
 	uint8_t tmp[70] = {0};
 	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
@@ -194,7 +194,7 @@ static void addOutputs(tx_hash_builder_t* builder)
 {
 	txHashBuilder_enterOutputs(builder);
 
-	tx_hash_builder_txOutput_format_t outputFormat = ARRAY_LEGACY;
+	tx_output_serialization_format_t outputFormat = ARRAY_LEGACY;
 	addMultiassetOutput(builder, &outputFormat);
 
 	ITERATE(it, outputs) {
@@ -250,7 +250,7 @@ static void collRetTokenHandler(tx_hash_builder_t* builder,
 	txHashBuilder_addCollateralReturn_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
 }
 //TODO: more generic function to handle similar? or just merge to addCollRet?
-static void addMultiassetCollRet(tx_hash_builder_t* builder, tx_hash_builder_txOutput_format_t outputFormat)
+static void addMultiassetCollRet(tx_hash_builder_t* builder, tx_output_serialization_format_t outputFormat)
 {
 	uint8_t tmp[70] = {0};
 	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
