@@ -144,6 +144,8 @@ security_policy_t policyForSignTxWitness(
 
 security_policy_t policyForSignTxTotalCollateral();
 
+security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSigningMode);
+
 security_policy_t policyForSignTxConfirm();
 
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec);

@@ -354,9 +354,9 @@ void txHashBuilder_addOutput_topLevelData(
 
 __noinline_due_to_stack__
 static void addTokenGroup(
-	tx_hash_builder_t* builder,
-	const uint8_t* policyIdBuffer, size_t policyIdSize,
-	uint16_t numTokens
+        tx_hash_builder_t* builder,
+        const uint8_t* policyIdBuffer, size_t policyIdSize,
+        uint16_t numTokens
 )
 {
 	_TRACE("state = %d, remainingAssetGroups = %u", builder->state, builder->multiassetData.remainingAssetGroups);
@@ -389,10 +389,10 @@ static void addTokenGroup(
 
 __noinline_due_to_stack__
 static void addToken(
-		tx_hash_builder_t* builder,
-		const uint8_t* assetNameBuffer, size_t assetNameSize,
-		uint64_t amount,
-		cbor_type_tag_t typeTag
+        tx_hash_builder_t* builder,
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
+        uint64_t amount,
+        cbor_type_tag_t typeTag
 )
 {
 	_TRACE("state = %d, remainingTokens = %u", builder->state, builder->multiassetData.remainingTokens);
@@ -1754,7 +1754,7 @@ void txHashBuilder_addReferenceInput(
         const tx_input_t* refInput
 )
 {
-	_TRACE("state = %d, remainingInputs = %u", builder->state, builder->remainingReferenceInputs);
+	_TRACE("state = %d, remainingReferenceInputs = %u", builder->state, builder->remainingReferenceInputs);
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_REFERENCE_INPUTS);
 	ASSERT(builder->remainingReferenceInputs > 0);

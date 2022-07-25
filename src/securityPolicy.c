@@ -1450,6 +1450,28 @@ security_policy_t policyForSignTxTotalCollateral()
 	ALLOW();
 }
 
+security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSigningMode)
+{
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		// should be shown because the user loses all collaterals if Plutus execution fails
+		SHOW_IF(app_mode_expert());
+		ALLOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		DENY();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+	DENY();
+}
+
 security_policy_t policyForSignTxConfirm()
 {
 	PROMPT();

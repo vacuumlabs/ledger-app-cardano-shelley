@@ -249,13 +249,13 @@ static inline void advanceStage()
 			ASSERT(BODY_CTX->totalCollateralReceived);
 		}
 		ctx->stage = SIGN_STAGE_BODY_REFERENCE_INPUTS;
-
-	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
-//		ASSERT(BODY_CTX->currentReferenceInput == ctx->numReferenceInputs);
-
 		if (ctx->numReferenceInputs > 0) {
 			txHashBuilder_enterReferenceInputs(&BODY_CTX->txHashBuilder);
+			break;
 		}
+
+	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
+		ASSERT(BODY_CTX->currentReferenceInput == ctx->numReferenceInputs);
 		ctx->stage = SIGN_STAGE_CONFIRM;
 		break;
 
@@ -520,6 +520,7 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 			uint8_t numOutputs[4];
 			uint8_t numCertificates[4];
 			uint8_t numWithdrawals[4];
+			uint8_t numReferenceInputs[4];
 			uint8_t numWitnesses[4];
 			uint8_t numCollaterals[4];
 			uint8_t numRequiredSigners[4];
@@ -576,6 +577,7 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		ASSERT_TYPE(ctx->numOutputs, uint16_t);
 		ASSERT_TYPE(ctx->numCertificates, uint16_t);
 		ASSERT_TYPE(ctx->numWithdrawals, uint16_t);
+		ASSERT_TYPE(ctx->numReferenceInputs, uint16_t);
 		ASSERT_TYPE(ctx->numWitnesses, uint16_t);
 		ASSERT_TYPE(ctx->numCollaterals, uint16_t);
 		ASSERT_TYPE(ctx->numRequiredSigners, uint16_t);
@@ -583,18 +585,21 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		ctx->numOutputs           = (uint16_t) u4be_read(wireHeader->numOutputs);
 		ctx->numCertificates      = (uint16_t) u4be_read(wireHeader->numCertificates);
 		ctx->numWithdrawals       = (uint16_t) u4be_read(wireHeader->numWithdrawals);
+		ctx->numReferenceInputs   = (uint16_t) u4be_read(wireHeader->numReferenceInputs);
 		ctx->numWitnesses         = (uint16_t) u4be_read(wireHeader->numWitnesses);
 		ctx->numCollaterals       = (uint16_t) u4be_read(wireHeader->numCollaterals);
 		ctx->numRequiredSigners	  = (uint16_t) u4be_read(wireHeader->numRequiredSigners);
 
 		TRACE(
-		        "num inputs, outputs, certificates, withdrawals, witnesses, collaterals, required signers: %d %d %d %d %d %d %d",
-		        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals, ctx->numWitnesses, ctx->numCollaterals, ctx->numRequiredSigners
+		        "num inputs, outputs, certificates, withdrawals, reference inputs, witnesses, collaterals, required signers: %d %d %d %d %d %d %d %d",
+		        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals, ctx->numReferenceInputs,
+		        ctx->numWitnesses, ctx->numCollaterals, ctx->numRequiredSigners
 		);
 		VALIDATE(ctx->numInputs <= SIGN_MAX_INPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numOutputs <= SIGN_MAX_OUTPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numCertificates <= SIGN_MAX_CERTIFICATES, ERR_INVALID_DATA);
 		VALIDATE(ctx->numWithdrawals <= SIGN_MAX_REWARD_WITHDRAWALS, ERR_INVALID_DATA);
+		VALIDATE(ctx->numReferenceInputs <= SIGN_MAX_REFERENCE_INPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numCollaterals <= SIGN_MAX_COLLATERALS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numRequiredSigners <= SIGN_MAX_REQUIRED_SIGNERS, ERR_INVALID_DATA);
 
@@ -2121,6 +2126,62 @@ static void signTx_handleTotalCollateralAPDU(uint8_t p2, const uint8_t* wireData
 	signTx_handleTotalCollateral_ui_runStep();
 }
 
+// ============================== REFERENCE INPUTS ==============================
+
+enum {
+	HANDLE_REFERENCE_INPUT_STEP_DISPLAY = 1500,
+	HANDLE_REFERENCE_INPUT_STEP_RESPOND,
+	HANDLE_REFERENCE_INPUT_STEP_INVALID,
+};
+
+// Advance stage to the next input
+static void ui_advanceState_ReferenceInput()
+{
+	ASSERT(BODY_CTX->currentReferenceInput < ctx->numReferenceInputs);
+	BODY_CTX->currentReferenceInput++;
+
+	if (BODY_CTX->currentReferenceInput == ctx->numReferenceInputs) {
+		advanceStage();
+	}
+}
+
+__noinline_due_to_stack__
+static void signTx_handleReferenceInputsAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	TRACE_STACK_USAGE();
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_BODY_REFERENCE_INPUTS);
+		ASSERT(BODY_CTX->currentReferenceInput < ctx->numReferenceInputs);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	// Parsed in same way as the inputs
+	parseInput(wireDataBuffer, wireDataSize);
+
+	security_policy_t policy = policyForSignTxReferenceInput(ctx->commonTxData.txSigningMode);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// add to tx
+		TRACE("Adding reference input to tx hash");
+		txHashBuilder_addReferenceInput(
+		        &BODY_CTX->txHashBuilder,
+		        &BODY_CTX->stageData.input.input_data
+		);
+	}
+	{
+		// not needed if input is not shown, but does not cost much time, so not worth branching
+		constructInputLabel("Reference input", BODY_CTX->currentReferenceInput);
+
+		ctx->ui_advanceState = ui_advanceState_ReferenceInput;
+		ui_selectInputStep(policy);
+		signTx_handleInput_ui_runStep();
+	}
+}
+
 // ============================== CONFIRM ==============================
 
 enum {
@@ -2381,6 +2442,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x0d, signTx_handleCollateralAPDU);
 		CASE(0x0e, signTx_handleRequiredSignerAPDU);
 		CASE(0x10, signTx_handleTotalCollateralAPDU);
+		CASE(0x11, signTx_handleReferenceInputsAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
 		CASE(0x0f, signTx_handleWitnessAPDU);
 		DEFAULT(NULL)
@@ -2423,7 +2485,8 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERALS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
-	case SIGN_STAGE_BODY_TOTAL_COLLATERAL: {
+	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
+	case SIGN_STAGE_BODY_REFERENCE_INPUTS: {
 		explicit_bzero(&BODY_CTX->stageData, SIZEOF(BODY_CTX->stageData));
 		break;
 	}
@@ -2471,6 +2534,7 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_COLLATERALS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
+	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
 	case SIGN_STAGE_CONFIRM:
 		return &(ctx->txPartCtx.body_ctx);
 
