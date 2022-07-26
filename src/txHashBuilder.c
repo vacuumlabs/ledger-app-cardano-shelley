@@ -1733,7 +1733,7 @@ static void txHashBuilder_assertCanLeaveCollateralReturn(tx_hash_builder_t* buil
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_COLLATERAL_RETURN:
-		assertCanLeaveOutput(builder);
+		assertCanLeaveCurrentOutput(builder);
 		// collateral return was added, we can move on
 		break;
 
