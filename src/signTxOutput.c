@@ -61,10 +61,10 @@ static inline void advanceState()
 
 	case STATE_OUTPUT_TOP_LEVEL_DATA:
 		if (subctx->numAssetGroups > 0) {
-			ASSERT(subctx->currentAssetGroup == 0);
+			ASSERT(subctx->stateData.currentAssetGroup == 0);
 			subctx->state = STATE_OUTPUT_ASSET_GROUP;
 		} else {
-			if (subctx->includeDatumHash) {
+			if (subctx->includeDatum) {
 				subctx->state = STATE_OUTPUT_DATUM_OPTION;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
@@ -73,25 +73,25 @@ static inline void advanceState()
 		break;
 
 	case STATE_OUTPUT_ASSET_GROUP:
-		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
+		ASSERT(subctx->stateData.currentAssetGroup < subctx->numAssetGroups);
 
 		// we are going to receive token amounts for this group
-		ASSERT(subctx->numTokens > 0);
-		ASSERT(subctx->currentToken == 0);
+		ASSERT(subctx->stateData.numTokens > 0);
+		ASSERT(subctx->stateData.currentToken == 0);
 
 		subctx->state = STATE_OUTPUT_TOKEN;
 		break;
 
 	case STATE_OUTPUT_TOKEN:
 		// we are done with the current token group
-		ASSERT(subctx->currentToken == subctx->numTokens);
-		subctx->currentToken = 0;
-		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
-		subctx->currentAssetGroup++;
+		ASSERT(subctx->stateData.currentToken == subctx->stateData.numTokens);
+		subctx->stateData.currentToken = 0;
+		ASSERT(subctx->stateData.currentAssetGroup < subctx->numAssetGroups);
+		subctx->stateData.currentAssetGroup++;
 
-		if (subctx->currentAssetGroup == subctx->numAssetGroups) {
+		if (subctx->stateData.currentAssetGroup == subctx->numAssetGroups) {
 			// the whole token bundle has been received
-			if (subctx->includeDatumHash) {
+			if (subctx->includeDatum) {
 				subctx->state = STATE_OUTPUT_DATUM_OPTION;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
@@ -133,7 +133,7 @@ static void signTx_handleOutput_address_ui_runStep()
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleOutput_address_ui_runStep;
 
-	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
+	ASSERT(subctx->stateData.destinationType == DESTINATION_THIRD_PARTY);
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -145,16 +145,16 @@ static void signTx_handleOutput_address_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
-		ASSERT(subctx->stateData.output.address.size <= SIZEOF(subctx->stateData.output.address.buffer));
+		ASSERT(subctx->stateData.destination.address.size <= SIZEOF(subctx->stateData.destination.address.buffer));
 		ui_displayAddressScreen(
 		        "Send to address",
-		        subctx->stateData.output.address.buffer,
-		        subctx->stateData.output.address.size,
+		        subctx->stateData.destination.address.buffer,
+		        subctx->stateData.destination.address.size,
 		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT) {
-		ui_displayAdaAmountScreen("Send", subctx->stateData.output.adaAmount, this_fn);
+		ui_displayAdaAmountScreen("Send", subctx->stateData.adaAmount, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -164,15 +164,15 @@ static void signTx_handleOutput_address_ui_runStep()
 	UI_STEP_END(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_INVALID);
 }
 
-static void signTx_handleOutput_addressBytes()
+static void handleOutput_addressBytes()
 {
 	output_context_t* subctx = accessSubcontext();
-	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_BYTES);
+	ASSERT(subctx->stateData.destinationType == DESTINATION_THIRD_PARTY);
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
 	                                   commonTxData->txSigningMode,
-	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
+	                                   subctx->stateData.destination.address.buffer, subctx->stateData.destination.address.size,
 	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatumHash, subctx->includeScriptRef
+	                                   subctx->includeDatum, subctx->includeScriptRef
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -181,18 +181,16 @@ static void signTx_handleOutput_addressBytes()
 
 	{
 		// add to tx
-		ASSERT(subctx->stateData.output.address.size > 0);
-		ASSERT(subctx->stateData.output.address.size <= MAX_ADDRESS_SIZE);
-
-		tx_hash_builder_output txOut;
-
-		txOut.format = subctx->stateData.output.format;
-		txOut.addressSize = subctx->stateData.output.address.size;
-		txOut.addressBuffer = subctx->stateData.output.address.buffer;
-		txOut.amount = subctx->stateData.output.adaAmount;
-		txOut.numAssetGroups = subctx->numAssetGroups;
-		txOut.includeDatumOption = subctx->includeDatumHash;
-		txOut.includeScriptRef = false;//TODO: What happens with that?
+		tx_hash_builder_output txOut = {
+			.format = subctx->serializationFormat,
+			.addressBuffer = subctx->stateData.destination.address.buffer,
+			.addressSize = subctx->stateData.destination.address.size,
+			.amount = subctx->stateData.adaAmount,
+			.numAssetGroups = subctx->numAssetGroups,
+			.includeDatumOption = subctx->includeDatum,
+			.includeScriptRef = subctx->includeScriptRef,
+		};
+		// TODO rename to tx_output_descriptor_t and use also as argument for security policies?
 
 		txHashBuilder_addOutput_topLevelData(
 		        &BODY_CTX->txHashBuilder,
@@ -234,9 +232,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleOutput_addressParams_ui_runStep;
 
-	TRACE("outputType: %d", subctx->stateData.output.outputType);
-
-	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS);
+	ASSERT(subctx->stateData.destinationType == DESTINATION_DEVICE_OWNED);
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -244,18 +240,18 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 		ui_displayPaginatedText("Change", "output", this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
-		if (determineSpendingChoice(subctx->stateData.output.params.type) == SPENDING_NONE) {
+		if (determineSpendingChoice(subctx->stateData.destination.params.type) == SPENDING_NONE) {
 			// reward address
 			UI_STEP_JUMP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO);
 		}
-		ui_displaySpendingInfoScreen(&subctx->stateData.output.params, this_fn);
+		ui_displaySpendingInfoScreen(&subctx->stateData.destination.params, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO) {
-		ui_displayStakingInfoScreen(&subctx->stateData.output.params, this_fn);
+		ui_displayStakingInfoScreen(&subctx->stateData.destination.params, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
 		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
-		size_t addressSize = deriveAddress(&subctx->stateData.output.params, addressBuffer, SIZEOF(addressBuffer));
+		size_t addressSize = deriveAddress(&subctx->stateData.destination.params, addressBuffer, SIZEOF(addressBuffer));
 		ASSERT(addressSize > 0);
 		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
 
@@ -266,7 +262,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT) {
-		ui_displayAdaAmountScreen("Send", subctx->stateData.output.adaAmount, this_fn);
+		ui_displayAdaAmountScreen("Send", subctx->stateData.adaAmount, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -276,15 +272,15 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	UI_STEP_END(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_INVALID);
 }
 
-static void signTx_handleOutput_addressParams()
+static void handleOutput_addressParams()
 {
 	output_context_t* subctx = accessSubcontext();
-	ASSERT(subctx->stateData.output.outputType == OUTPUT_TYPE_ADDRESS_PARAMS);
+	ASSERT(subctx->stateData.destinationType == DESTINATION_DEVICE_OWNED);
 	security_policy_t policy = policyForSignTxOutputAddressParams(
 	                                   commonTxData->txSigningMode,
-	                                   &subctx->stateData.output.params,
+	                                   &subctx->stateData.destination.params,
 	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatumHash, subctx->includeScriptRef
+	                                   subctx->includeDatum, subctx->includeScriptRef
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -295,7 +291,7 @@ static void signTx_handleOutput_addressParams()
 		// add to tx
 		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
 		size_t addressSize = deriveAddress(
-		                             &subctx->stateData.output.params,
+		                             &subctx->stateData.destination.params,
 		                             addressBuffer,
 		                             SIZEOF(addressBuffer)
 		                     );
@@ -305,13 +301,13 @@ static void signTx_handleOutput_addressParams()
 
 		tx_hash_builder_output txOut;
 
-		txOut.format = subctx->stateData.output.format;
+		txOut.format = subctx->serializationFormat;
 		txOut.addressBuffer = addressBuffer;
 		txOut.addressSize = addressSize;
-		txOut.amount = subctx->stateData.output.adaAmount;
+		txOut.amount = subctx->stateData.adaAmount;
 		txOut.numAssetGroups = subctx->numAssetGroups;
-		txOut.includeDatumOption = subctx->includeDatumHash;
-		txOut.includeScriptRef = false;//TODO: What happens with that?
+		txOut.includeDatumOption = subctx->includeDatum;
+		txOut.includeScriptRef = subctx->includeScriptRef;
 
 		txHashBuilder_addOutput_topLevelData(
 		        &BODY_CTX->txHashBuilder,
@@ -348,30 +344,30 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 		// parse all APDU data
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
-		top_level_output_data_t* output = &subctx->stateData.output;
-
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		output->format = parse_u1be(&view);
-		TRACE("Output format %d", (int) subctx->stateData.output.format);
+		subctx->serializationFormat = parse_u1be(&view);
+		TRACE("Output serialization format %d", (int) subctx->serializationFormat);
+		// TODO validation
 
-		output->outputType = parse_u1be(&view);
-		TRACE("Output type %d", (int) subctx->stateData.output.outputType);
+		subctx->stateData.destinationType = parse_u1be(&view);
+		TRACE("Output destination type %d", (int) subctx->stateData.destinationType);
+		// TODO validation
 
-		switch (output->outputType) {
-		case OUTPUT_TYPE_ADDRESS_BYTES: {
-			STATIC_ASSERT(sizeof(output->address.size) >= 4, "wrong address size type");
-			output->address.size = parse_u4be(&view);
-			TRACE("Address length %u", output->address.size);
-			VALIDATE(output->address.size <= MAX_ADDRESS_SIZE, ERR_INVALID_DATA);
+		switch (subctx->stateData.destinationType) {
+		case DESTINATION_THIRD_PARTY: {
+			STATIC_ASSERT(sizeof(subctx->stateData.destination.address.size) >= 4, "wrong address size type");
+			subctx->stateData.destination.address.size = parse_u4be(&view);
+			TRACE("Address length %u", subctx->stateData.destination.address.size);
+			VALIDATE(subctx->stateData.destination.address.size <= MAX_ADDRESS_SIZE, ERR_INVALID_DATA);
 
-			STATIC_ASSERT(SIZEOF(output->address.buffer) >= MAX_ADDRESS_SIZE, "wrong address buffer size");
-			view_parseBuffer(output->address.buffer, &view, output->address.size);
-			TRACE_BUFFER(output->address.buffer, output->address.size);
+			STATIC_ASSERT(SIZEOF(subctx->stateData.destination.address.buffer) >= MAX_ADDRESS_SIZE, "wrong address buffer size");
+			view_parseBuffer(subctx->stateData.destination.address.buffer, &view, subctx->stateData.destination.address.size);
+			TRACE_BUFFER(subctx->stateData.destination.address.buffer, subctx->stateData.destination.address.size);
 			break;
 		}
-		case OUTPUT_TYPE_ADDRESS_PARAMS: {
-			view_parseAddressParams(&view, &output->params);
+		case DESTINATION_DEVICE_OWNED: {
+			view_parseAddressParams(&view, &subctx->stateData.destination.params);
 			break;
 		}
 
@@ -380,7 +376,7 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 		};
 
 		uint64_t adaAmount = parse_u8be(&view);
-		output->adaAmount = adaAmount;
+		subctx->stateData.adaAmount = adaAmount;
 		TRACE("Amount: %u.%06u", (unsigned) (adaAmount / 1000000), (unsigned)(adaAmount % 1000000));
 		VALIDATE(adaAmount < LOVELACE_MAX_SUPPLY, ERR_INVALID_DATA);
 
@@ -392,8 +388,10 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 		ASSERT_TYPE(subctx->numAssetGroups, uint16_t);
 		subctx->numAssetGroups = (uint16_t) numAssetGroups;
 
-		subctx->includeDatumHash = signTx_parseIncluded(parse_u1be(&view));
-		if (subctx->includeDatumHash) {
+		subctx->includeDatum = signTx_parseIncluded(parse_u1be(&view));
+		subctx->includeScriptRef = signTx_parseIncluded(parse_u1be(&view));
+
+		if (subctx->includeDatum || subctx->includeScriptRef) {
 			// it's easier to verify all Plutus-related things via txid all at once
 			ctx->shouldDisplayTxid = true;
 		}
@@ -404,14 +402,14 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 		// call the appropriate handler depending on output type
 		// the handlers serialize data into the tx hash
 		// and take care of user interactions
-		switch (subctx->stateData.output.outputType) {
+		switch (subctx->stateData.destinationType) {
 
-		case OUTPUT_TYPE_ADDRESS_BYTES:
-			signTx_handleOutput_addressBytes();
+		case DESTINATION_THIRD_PARTY:
+			handleOutput_addressBytes();
 			break;
 
-		case OUTPUT_TYPE_ADDRESS_PARAMS:
-			signTx_handleOutput_addressParams();
+		case DESTINATION_DEVICE_OWNED:
+			handleOutput_addressParams();
 			break;
 
 		default:
@@ -463,7 +461,7 @@ static void signTxOutput_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, siz
 		uint8_t candidatePolicyId[MINTING_POLICY_ID_SIZE] = {0};
 		view_parseBuffer(candidatePolicyId, &view, MINTING_POLICY_ID_SIZE);
 
-		if (subctx->currentAssetGroup > 0) {
+		if (subctx->stateData.currentAssetGroup > 0) {
 			// compare with previous value before overwriting it
 			VALIDATE(cbor_mapKeyFulfillsCanonicalOrdering(
 			                 tokenGroup->policyId, MINTING_POLICY_ID_SIZE,
@@ -478,8 +476,8 @@ static void signTxOutput_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, siz
 		VALIDATE(numTokens <= OUTPUT_TOKENS_IN_GROUP_MAX, ERR_INVALID_DATA);
 		VALIDATE(numTokens > 0, ERR_INVALID_DATA);
 		STATIC_ASSERT(OUTPUT_TOKENS_IN_GROUP_MAX <= UINT16_MAX, "wrong max token amounts in a group");
-		ASSERT_TYPE(subctx->numTokens, uint16_t);
-		subctx->numTokens = (uint16_t) numTokens;
+		ASSERT_TYPE(subctx->stateData.numTokens, uint16_t);
+		subctx->stateData.numTokens = (uint16_t) numTokens;
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
@@ -490,7 +488,7 @@ static void signTxOutput_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, siz
 		txHashBuilder_addOutput_tokenGroup(
 		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.tokenGroup.policyId, MINTING_POLICY_ID_SIZE,
-		        subctx->numTokens
+		        subctx->stateData.numTokens
 		);
 		TRACE();
 	}
@@ -534,10 +532,10 @@ static void signTxOutput_handleToken_ui_runStep()
 	UI_STEP(HANDLE_TOKEN_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 
-		ASSERT(subctx->currentToken < subctx->numTokens);
-		subctx->currentToken++;
+		ASSERT(subctx->stateData.currentToken < subctx->stateData.numTokens);
+		subctx->stateData.currentToken++;
 
-		if (subctx->currentToken == subctx->numTokens) {
+		if (subctx->stateData.currentToken == subctx->stateData.numTokens) {
 			advanceState();
 		}
 	}
@@ -565,7 +563,7 @@ static void signTxOutput_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t w
 		uint8_t candidateAssetNameBytes[ASSET_NAME_SIZE_MAX] = {0};
 		view_parseBuffer(candidateAssetNameBytes, &view, candidateAssetNameSize);
 
-		if (subctx->currentToken > 0) {
+		if (subctx->stateData.currentToken > 0) {
 			// compare with previous value before overwriting it
 			VALIDATE(cbor_mapKeyFulfillsCanonicalOrdering(
 			                 token->assetNameBytes, token->assetNameSize,
