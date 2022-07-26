@@ -96,9 +96,9 @@ typedef struct {
 } output_token_amount_t;
 
 typedef enum {
-	DATUM_OPTION_HASH = 0,
-	DATUM_OPTION_DATA = 1, // TODO rename to INLINE_DATUM
-} datum_option_type_t;
+	DATUM_HASH = 0,
+	DATUM_INLINE = 1,
+} datum_option_type_t; // TODO perhaps rename to datum_type_t
 
 // ==============================  CERTIFICATES  ==============================
 
