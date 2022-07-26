@@ -399,7 +399,10 @@ static void addTokenGroup(
         uint16_t numTokens
 )
 {
-	_TRACE("state = %d, remainingAssetGroups = %u", builder->state, builder->multiassetData.remainingAssetGroups);
+	_TRACE(
+		"state = %d, outputState = %d, remainingAssetGroups = %u",
+		builder->state, builder->outputState, builder->outputData.multiassetData.remainingAssetGroups
+	);
 
 	switch (builder->outputState) {
 		case TX_OUTPUT_ASSET_GROUP:
@@ -448,7 +451,10 @@ static void addToken(
         cbor_type_tag_t typeTag
 )
 {
-	_TRACE("state = %d, remainingTokens = %u", builder->state, builder->multiassetData.remainingTokens);
+	_TRACE(
+		"state = %d, outputState = %d, remainingTokens = %u",
+		builder->state, builder->outputState, builder->outputData.multiassetData.remainingTokens
+	);
 
 	switch (builder->outputState) {
 		case TX_OUTPUT_MULTIASSET:
@@ -457,7 +463,6 @@ static void addToken(
 
 		case TX_OUTPUT_ASSET_GROUP:
 			// we have been adding tokens into an asset group
-			ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
 			break;
 
 		default:
@@ -480,6 +485,8 @@ static void addToken(
 			BUILDER_APPEND_CBOR(typeTag, amount);
 		}
 	}
+
+	builder->outputState = TX_OUTPUT_ASSET_GROUP;
 }
 
 void txHashBuilder_addOutput_tokenGroup(
@@ -1484,7 +1491,7 @@ void txHashBuilder_addMint_token(
 static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %u, remainingMintAssetGroups = %u, remainingMintTokens = %u",
-	       builder->state, builder->multiassetData.remainingAssetGroups, builder->multiassetData.remainingTokens);
+	       builder->state, builder->outputData.multiassetData.remainingAssetGroups, builder->outputData.multiassetData.remainingTokens);
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_MINT:
