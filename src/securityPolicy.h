@@ -51,13 +51,13 @@ security_policy_t policyForSignTxOutputAddressBytes(
         sign_tx_signingmode_t txSigningMode,
         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
         const uint8_t networkId, const uint32_t protocolMagic,
-        bool includeDatumHash
+        bool includeDatumHash, bool includeScriptRef
 );
 security_policy_t policyForSignTxOutputAddressParams(
         sign_tx_signingmode_t txSigningMode,
         const addressParams_t* params,
         const uint8_t networkId, const uint32_t protocolMagic,
-        bool includeDatumHash
+        bool includeDatumHash, bool includeScriptRef
 );
 security_policy_t policyForSignTxOutputDatumHash(
         security_policy_t outputPolicy

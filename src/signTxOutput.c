@@ -172,7 +172,7 @@ static void signTx_handleOutput_addressBytes()
 	                                   commonTxData->txSigningMode,
 	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
 	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatumHash
+	                                   subctx->includeDatumHash, subctx->includeScriptRef
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -284,7 +284,7 @@ static void signTx_handleOutput_addressParams()
 	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.output.params,
 	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatumHash
+	                                   subctx->includeDatumHash, subctx->includeScriptRef
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
