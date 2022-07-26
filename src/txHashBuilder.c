@@ -1708,6 +1708,10 @@ void txHashBuilder_addCollateralReturn(
 	txHashBuilder_assertCanLeaveNetworkId(builder);
 	ASSERT(builder->includeCollateralReturn);
 
+	builder->outputData.serializationFormat = output->format;
+	ASSERT(builder->outputData.includeDatumOption == false);
+	ASSERT(builder->outputData.includeScriptRef == false);
+
 	{
 		// Enter collateral output
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERAL_RETURN);
