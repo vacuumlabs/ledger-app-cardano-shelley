@@ -29,7 +29,7 @@ bool signTxOutput_isFinished()
 	case STATE_OUTPUT_TOP_LEVEL_DATA:
 	case STATE_OUTPUT_ASSET_GROUP:
 	case STATE_OUTPUT_TOKEN:
-	case STATE_OUTPUT_DATUM_OPTION:
+	case STATE_OUTPUT_DATUM:
 	case STATE_OUTPUT_CONFIRM:
 		return false;
 
@@ -65,7 +65,7 @@ static inline void advanceState()
 			subctx->state = STATE_OUTPUT_ASSET_GROUP;
 		} else {
 			if (subctx->includeDatum) {
-				subctx->state = STATE_OUTPUT_DATUM_OPTION;
+				subctx->state = STATE_OUTPUT_DATUM;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
 			}
@@ -92,7 +92,7 @@ static inline void advanceState()
 		if (subctx->stateData.currentAssetGroup == subctx->numAssetGroups) {
 			// the whole token bundle has been received
 			if (subctx->includeDatum) {
-				subctx->state = STATE_OUTPUT_DATUM_OPTION;
+				subctx->state = STATE_OUTPUT_DATUM;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
 			}
@@ -101,7 +101,7 @@ static inline void advanceState()
 		}
 		break;
 
-	case STATE_OUTPUT_DATUM_OPTION:
+	case STATE_OUTPUT_DATUM:
 		ASSERT(subctx->datumHashReceived);
 		subctx->state = STATE_OUTPUT_CONFIRM;
 		break;
@@ -643,7 +643,7 @@ static void signTxOutput_handleDatumHashAPDU(const uint8_t* wireDataBuffer, size
 {
 	{
 		// sanity checks
-		CHECK_STATE(STATE_OUTPUT_DATUM_OPTION);
+		CHECK_STATE(STATE_OUTPUT_DATUM);
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
@@ -715,7 +715,7 @@ static void signTxOutput_handleDatumOptionAPDU(const uint8_t* wireDataBuffer, si
 {
 	{
 		// sanity checks
-		CHECK_STATE(STATE_OUTPUT_DATUM_OPTION);
+		CHECK_STATE(STATE_OUTPUT_DATUM);
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
