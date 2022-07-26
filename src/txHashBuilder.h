@@ -4,6 +4,11 @@
 #include "cardano.h"
 #include "hash.h"
 
+typedef enum {
+	ARRAY_LEGACY = 0,   // legacy_transaction_output
+	MAP_BABBAGE = 1     // post_alonzo_transaction_output
+} tx_output_serialization_format_t;
+
 enum {
 	TX_BODY_KEY_INPUTS = 0,
 	TX_BODY_KEY_OUTPUTS = 1,
@@ -70,17 +75,6 @@ typedef enum {
 	TX_HASH_BUILDER_FINISHED = 1800,
 } tx_hash_builder_state_t;
 
-// typedef enum {
-// 	TX_OUTPUT_INIT = 10,    //  tx_hash_builder_state in TX_HASH_BUILDER_IN_OUTPUTS. Adding an output is STARTED
-// 	TX_OUTPUT_TOP_LEVEL_DATA = 11,  //  Address and value COMPLETED
-// 	TX_OUTPUT_ASSET_GROUP = 12,     //  Part of top level data, adding a group of tokens STARTED or COMPLETED, but there are remaining asset groups
-// 	TX_OUTPUT_TOKEN = 13,   //  Adding tokens is STARTED. Valid for mint and collateral return as well
-// 	TX_OUTPUT_DATUM_OPTION_HASH = 20,    //  Datum option COMPLETED
-// 	TX_OUTPUT_DATUM_OPTION_CHUNKS = 21, //  Inline datum is being added, and NOT COMPLETED
-// 	TX_OUTPUT_SCRIPT_REFERENCE = 30,    //  Script reference COMPLETED
-// 	TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS = 31, // Script reference is being added and NOT COMPLETED
-// } tx_hash_builder_output_state_t;
-
 typedef enum {
 	TX_OUTPUT_INIT = 10,    //  tx_hash_builder_state moved to TX_HASH_BUILDER_IN_OUTPUTS
 	TX_OUTPUT_TOP_LEVEL_DATA = 11,  // output address and value is being added
@@ -115,6 +109,7 @@ typedef struct {
 		} poolCertificateData;
 
 		struct {
+			tx_output_serialization_format_t serializationFormat;
 			bool includeDatumOption;
 			bool includeScriptRef;
 
@@ -142,11 +137,6 @@ typedef struct {
 	tx_hash_builder_state_t state;
 	blake2b_256_context_t txHash;
 } tx_hash_builder_t;
-
-typedef enum {
-	ARRAY_LEGACY = 0,   // legacy_transaction_output
-	MAP_BABBAGE = 1     // post_alonzo_transaction_output
-} tx_output_serialization_format_t;
 
 typedef struct {
 	tx_output_serialization_format_t format;
@@ -196,17 +186,22 @@ void txHashBuilder_addOutput_tokenGroup(
         uint16_t numTokens
 );
 
-void txHashBuilder_addOutput_token(tx_hash_builder_t* builder,
-                                   const uint8_t* assetNameBuffer, size_t assetNameSize, uint64_t amount);
+void txHashBuilder_addOutput_token(
+        tx_hash_builder_t* builder,
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
+        uint64_t amount
+);
 
 void txHashBuilder_addOutput_datumHash(
         tx_hash_builder_t* builder,
         const uint8_t* datumHashBuffer, size_t datumHashSize
 );
 
-void txHashBuilder_addOutput_datumOption(tx_hash_builder_t* builder, tx_output_serialization_format_t outputFormat,
-        datum_option_type_t datumOption, const uint8_t* buffer,
-        size_t bufferSize);
+void txHashBuilder_addOutput_datumOption(
+        tx_hash_builder_t* builder,
+        datum_option_type_t datumOption,
+        const uint8_t* buffer, size_t bufferSize
+);
 
 void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t bufferSize);
 

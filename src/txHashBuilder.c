@@ -381,6 +381,8 @@ void txHashBuilder_addOutput_topLevelData(
 
 	assertCanLeaveCurrentOutput(builder);
 
+	builder->outputData.serializationFormat = output->format;
+
 	//  For single-asset outputs, the code below will append complete top level data, however for multi-asset data,
 	//  entries for multi-asset map has to be filled by another call, therefore leaving the top level data incomplete.
 	cbor_append_txOutput(builder, output);
@@ -502,7 +504,6 @@ void txHashBuilder_addOutput_token(
 
 void txHashBuilder_addOutput_datumOption(
         tx_hash_builder_t* builder,
-        tx_output_serialization_format_t outputFormat,
         datum_option_type_t datumOption,
         const uint8_t* buffer, size_t bufferSize
 )
@@ -528,7 +529,7 @@ void txHashBuilder_addOutput_datumOption(
 	//TODO: MAX_DATUM_SIZE??
 
 	// the babbage output format serializes some preliminary stuff
-	if (outputFormat == MAP_BABBAGE) {
+	if (builder->outputData.serializationFormat == MAP_BABBAGE) {
 		//   datum_option = [ 0, $hash32 // 1, data ]
 
 		//   Unsigned[2] ; map entry key
@@ -558,6 +559,8 @@ void txHashBuilder_addOutput_datumOption(
 		break;
 
 	case DATUM_OPTION_DATA:
+		// inline datum only supported since Babbage
+		ASSERT(builder->outputData.serializationFormat == MAP_BABBAGE);
 		ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
