@@ -558,7 +558,7 @@ void txHashBuilder_addOutput_datumOption(
 
 	switch (datumOption) {
 
-	case DATUM_OPTION_HASH:
+	case DATUM_HASH:
 		ASSERT(bufferSize == OUTPUT_DATUM_HASH_LENGTH);
 		builder->outputData.datumData.remainingBytes = bufferSize;
 		{
@@ -569,7 +569,7 @@ void txHashBuilder_addOutput_datumOption(
 		builder->outputState = TX_OUTPUT_DATUM_OPTION_HASH;
 		break;
 
-	case DATUM_OPTION_DATA:
+	case DATUM_INLINE:
 		// inline datum only supported since Babbage
 		ASSERT(builder->outputData.serializationFormat == MAP_BABBAGE);
 		ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);

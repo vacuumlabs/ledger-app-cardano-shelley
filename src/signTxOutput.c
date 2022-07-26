@@ -109,7 +109,7 @@ static inline void advanceState()
 
 	case STATE_OUTPUT_DATUM:
 		ASSERT(subctx->includeDatum);
-		if (subctx->stateData.datumOption == DATUM_OPTION_HASH) {
+		if (subctx->stateData.datumOption == DATUM_HASH) {
 			ASSERT(subctx->datumHashReceived);
 			// if (subctx->includeScriptRef) {
 			// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
@@ -646,7 +646,7 @@ static void signTxOutput_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t w
 	signTxOutput_handleToken_ui_runStep();
 }
 
-// ========================== DATUM HASH =============================
+// ========================== DATUM =============================
 
 enum {
 	HANDLE_DATUM_HASH_STEP_DISPLAY = 3500,
@@ -678,31 +678,24 @@ static void signTxOutput_handleDatumHash_ui_runStep()
 	UI_STEP_END(HANDLE_DATUM_HASH_STEP_INVALID);
 }
 
-static void signTxOutput_handleDatumHashAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void handleDatumHash(read_view_t* view)
 {
-	{
-		// sanity checks
-		CHECK_STATE(STATE_OUTPUT_DATUM);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	}
 	output_context_t* subctx = accessSubcontext();
 	{
 		// parse data
-		TRACE_BUFFER(wireDataBuffer, wireDataSize);
-
-		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 		STATIC_ASSERT(SIZEOF(subctx->stateData.datumHash) == OUTPUT_DATUM_HASH_LENGTH, "wrong datum hash length");
-		view_parseBuffer(subctx->stateData.datumHash, &view, OUTPUT_DATUM_HASH_LENGTH);
-		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
-
-		subctx->datumHashReceived = true;
+		view_parseBuffer(subctx->stateData.datumHash, view, OUTPUT_DATUM_HASH_LENGTH);
+		VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	}
 	{
 		// add to tx
 		TRACE("Adding datum hash to tx hash");
-		txHashBuilder_addOutput_datumOption(&BODY_CTX->txHashBuilder, 0, subctx->stateData.datumHash, SIZEOF(subctx->stateData.datumHash));
+		txHashBuilder_addOutput_datumOption(
+		        &BODY_CTX->txHashBuilder,
+		        subctx->stateData.datumOption,
+		        subctx->stateData.datumHash, SIZEOF(subctx->stateData.datumHash));
 	}
-
+	subctx->datumHashReceived = true;
 	{
 		// select UI step
 		security_policy_t policy = policyForSignTxOutputDatumHash(subctx->outputSecurityPolicy);
@@ -722,22 +715,19 @@ static void signTxOutput_handleDatumHashAPDU(const uint8_t* wireDataBuffer, size
 	signTxOutput_handleDatumHash_ui_runStep();
 }
 
-// ========================== DATUM OPTION =============================
-
-
-
-static void signTxOutput_handleDatumOption_ui_runStep()
+// TODO
+static void signTxOutput_handleDatumInline_ui_runStep()
 {
 	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxOutput_handleDatumHash_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxOutput_handleDatumInline_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_DATUM_HASH_STEP_DISPLAY) {
 		ui_displayBech32Screen(
-		        "Datum hash",
-		        "datum",
+		        "TODO",
+		        "TODO",
 		        subctx->stateData.datumHash, OUTPUT_DATUM_HASH_LENGTH,
 		        this_fn
 		);
@@ -750,37 +740,38 @@ static void signTxOutput_handleDatumOption_ui_runStep()
 	UI_STEP_END(HANDLE_DATUM_HASH_STEP_INVALID);
 }
 
-static void signTxOutput_handleDatumOptionAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void handleDatumInline(read_view_t* view)
 {
-	{
-		// sanity checks
-		CHECK_STATE(STATE_OUTPUT_DATUM);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	}
 	output_context_t* subctx = accessSubcontext();
 	{
 		// parse data
-		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+		subctx->stateData.datumRemainingBytes = parse_u4be(view);
+		VALIDATE(subctx->stateData.datumRemainingBytes > 0, ERR_INVALID_DATA);
+		// TODO some other validation?
 
-		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
-		STATIC_ASSERT(SIZEOF(subctx->stateData.datumHash) == OUTPUT_DATUM_HASH_LENGTH, "wrong datum hash length");
-		subctx->stateData.datumOption = parse_u1be(&view);
-		TRACE("datumOption: %d", subctx->stateData.datumOption);
-		view_parseBuffer(subctx->stateData.datumHash, &view, OUTPUT_DATUM_HASH_LENGTH);
-		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+		subctx->stateData.datumChunkSize = parse_u4be(view);
+		VALIDATE(subctx->stateData.datumChunkSize > 0, ERR_INVALID_DATA);
+		VALIDATE(subctx->stateData.datumChunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 
-		subctx->datumHashReceived = true;
+		view_parseBuffer(subctx->stateData.datumChunk, view, subctx->stateData.datumChunkSize);
+		VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 	}
 	{
 		// add to tx
-		TRACE("Adding datum hash to tx hash");
+		TRACE("Adding inline datum to tx hash");
 		txHashBuilder_addOutput_datumOption(
 		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.datumOption,
-		        subctx->stateData.datumHash, SIZEOF(subctx->stateData.datumHash));
+		        NULL, subctx->stateData.datumRemainingBytes
+		);
+		txHashBuilder_addOutput_datumOption_dataChunk(
+		        &BODY_CTX->txHashBuilder,
+		        subctx->stateData.datumChunk, subctx->stateData.datumChunkSize
+		);
 	}
-
 	{
+		// TODO all of this
+
 		// select UI step
 		security_policy_t policy = policyForSignTxOutputDatumHash(subctx->outputSecurityPolicy);
 		TRACE("Policy: %d", (int) policy);
@@ -794,9 +785,72 @@ static void signTxOutput_handleDatumOptionAPDU(const uint8_t* wireDataBuffer, si
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
-	}
 
-	signTxOutput_handleDatumHash_ui_runStep(); //TODO: change this
+	}
+	signTxOutput_handleDatumInline_ui_runStep();
+}
+
+static void signTxOutput_handleDatumAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STATE(STATE_OUTPUT_DATUM);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	output_context_t* subctx = accessSubcontext();
+	{
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+
+		subctx->stateData.datumOption = parse_u1be(&view);
+		TRACE("datumOption = %d", subctx->stateData.datumOption);
+
+		switch (subctx->stateData.datumOption) {
+
+		case DATUM_HASH:
+			handleDatumHash(&view);
+			break;
+
+		case DATUM_INLINE:
+			handleDatumInline(&view);
+			break;
+
+		default:
+			THROW(ERR_INVALID_DATA);
+		}
+	}
+}
+
+static void signTxOutput_handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STATE(STATE_OUTPUT_DATUM_OPTION_CHUNKS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	output_context_t* subctx = accessSubcontext();
+	{
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+
+		subctx->stateData.datumChunkSize = parse_u4be(&view);
+		VALIDATE(subctx->stateData.datumChunkSize > 0, ERR_INVALID_DATA);
+		VALIDATE(subctx->stateData.datumChunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+
+		view_parseBuffer(subctx->stateData.datumChunk, &view, subctx->stateData.datumChunkSize);
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+	}
+	{
+		// add to tx
+		TRACE("Adding inline datum chunk to tx hash");
+		txHashBuilder_addOutput_datumOption_dataChunk(
+		        &BODY_CTX->txHashBuilder,
+		        subctx->stateData.datumChunk, subctx->stateData.datumChunkSize
+		);
+	}
+	respondSuccessEmptyMsg();
 }
 
 // ============================== CONFIRM ==============================
@@ -874,8 +928,8 @@ enum {
 	APDU_INSTRUCTION_TOP_LEVEL_DATA = 0x30,
 	APDU_INSTRUCTION_ASSET_GROUP = 0x31,
 	APDU_INSTRUCTION_TOKEN = 0x32,
-	APDU_INSTRUCTION_SCRIPT_DATUM_HASH = 0x34,
-	APDU_INSTRUCTION_SCRIPT_DATUM_OPTION = 0x35,
+	APDU_INSTRUCTION_DATUM = 0x34,
+	APDU_INSTRUCTION_DATUM_CHUNK = 0x35,
 	APDU_INSTRUCTION_CONFIRM = 0x33,
 };
 
@@ -885,8 +939,8 @@ bool signTxOutput_isValidInstruction(uint8_t p2)
 	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
 	case APDU_INSTRUCTION_ASSET_GROUP:
 	case APDU_INSTRUCTION_TOKEN:
-	case APDU_INSTRUCTION_SCRIPT_DATUM_HASH:
-	case APDU_INSTRUCTION_SCRIPT_DATUM_OPTION:
+	case APDU_INSTRUCTION_DATUM:
+	case APDU_INSTRUCTION_DATUM_CHUNK:
 	case APDU_INSTRUCTION_CONFIRM:
 		return true;
 
@@ -912,12 +966,12 @@ void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t w
 		signTxOutput_handleTokenAPDU(wireDataBuffer, wireDataSize);
 		break;
 
-	case APDU_INSTRUCTION_SCRIPT_DATUM_HASH:
-		signTxOutput_handleDatumHashAPDU(wireDataBuffer, wireDataSize);
+	case APDU_INSTRUCTION_DATUM:
+		signTxOutput_handleDatumAPDU(wireDataBuffer, wireDataSize);
 		break;
 
-	case APDU_INSTRUCTION_SCRIPT_DATUM_OPTION:
-		signTxOutput_handleDatumOptionAPDU(wireDataBuffer, wireDataSize);
+	case APDU_INSTRUCTION_DATUM_CHUNK:
+		signTxOutput_handleDatumChunkAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_CONFIRM:
