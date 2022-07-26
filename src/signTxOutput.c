@@ -30,6 +30,9 @@ bool signTxOutput_isFinished()
 	case STATE_OUTPUT_ASSET_GROUP:
 	case STATE_OUTPUT_TOKEN:
 	case STATE_OUTPUT_DATUM:
+	case STATE_OUTPUT_DATUM_OPTION_CHUNKS:
+	// case STATE_OUTPUT_REFERENCE_SCRIPT:
+	// case STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS:
 	case STATE_OUTPUT_CONFIRM:
 		return false;
 
@@ -64,12 +67,12 @@ static inline void advanceState()
 		if (subctx->numAssetGroups > 0) {
 			ASSERT(subctx->stateData.currentAssetGroup == 0);
 			subctx->state = STATE_OUTPUT_ASSET_GROUP;
+		} else if (subctx->includeDatum) {
+			subctx->state = STATE_OUTPUT_DATUM;
+		// } else if (subctx->includeScriptRef) {
+		// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
 		} else {
-			if (subctx->includeDatum) {
-				subctx->state = STATE_OUTPUT_DATUM;
-			} else {
-				subctx->state = STATE_OUTPUT_CONFIRM;
-			}
+			subctx->state = STATE_OUTPUT_CONFIRM;
 		}
 		break;
 
@@ -94,6 +97,8 @@ static inline void advanceState()
 			// the whole token bundle has been received
 			if (subctx->includeDatum) {
 				subctx->state = STATE_OUTPUT_DATUM;
+			// } else if (subctx->includeScriptRef) {
+			// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
 			}
@@ -103,9 +108,42 @@ static inline void advanceState()
 		break;
 
 	case STATE_OUTPUT_DATUM:
-		ASSERT(subctx->datumHashReceived);
-		subctx->state = STATE_OUTPUT_CONFIRM;
+		ASSERT(subctx->includeDatum);
+		if (subctx->stateData.datumOption == DATUM_OPTION_HASH) {
+			ASSERT(subctx->datumHashReceived);
+			// if (subctx->includeScriptRef) {
+			// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
+			// } else {
+				subctx->state = STATE_OUTPUT_CONFIRM;
+			// }
+		} else {
+			ASSERT(subctx->stateData.datumRemainingBytes > 0);
+			subctx->state = STATE_OUTPUT_DATUM_OPTION_CHUNKS;
+		}
 		break;
+
+	case STATE_OUTPUT_DATUM_OPTION_CHUNKS:
+		ASSERT(subctx->includeDatum);
+		// should be called when all chunks have been received
+		ASSERT(subctx->stateData.datumRemainingBytes == 0);
+		// if (subctx->includeScriptRef) {
+		// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
+		// } else {
+			subctx->state = STATE_OUTPUT_CONFIRM;
+		// }
+		break;
+
+	// case STATE_OUTPUT_REFERENCE_SCRIPT:
+	// 	ASSERT(subctx->includeScriptRef);
+	// 	ASSERT(subctx->stateData.scriptRefRemainingBytes > 0);
+	// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS;
+	// 	break;
+
+	// case STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS:
+	// 	// should be called when all chunks have been received
+	// 	ASSERT(subctx->stateData.scriptRefRemainingBytes == 0);
+	// 	subctx->state = STATE_OUTPUT_CONFIRM;
+	// 	break;
 
 	case STATE_OUTPUT_CONFIRM:
 		subctx->state = STATE_OUTPUT_FINISHED;
