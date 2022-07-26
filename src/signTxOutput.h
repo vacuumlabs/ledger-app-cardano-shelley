@@ -5,14 +5,19 @@
 #include "cardano.h"
 #include "addressUtilsShelley.h"
 #include "securityPolicyType.h"
+#include "txHashBuilder.h"
 
 #define OUTPUT_ASSET_GROUPS_MAX UINT16_MAX
 #define OUTPUT_TOKENS_IN_GROUP_MAX UINT16_MAX
 
-enum {
-	OUTPUT_TYPE_ADDRESS_BYTES = 1,
-	OUTPUT_TYPE_ADDRESS_PARAMS = 2,
-};
+ // TODO
+#define MAX_CHUNK_SIZE 150
+
+
+typedef enum {
+	DESTINATION_THIRD_PARTY = 1,
+	DESTINATION_DEVICE_OWNED = 2,
+} tx_output_destination_type_t;
 
 
 // SIGN_STAGE_BODY_OUTPUTS = 25
@@ -27,45 +32,60 @@ typedef enum {
 
 
 typedef struct {
-	uint8_t outputType;
-	uint8_t format;
-	union {
-		struct {
-			uint8_t buffer[MAX_ADDRESS_SIZE];
-			size_t size;
-		} address;
-		addressParams_t params;
-	};
-
-	uint64_t adaAmount;
-} top_level_output_data_t;
-
-
-typedef struct {
 	sign_tx_output_state_t state;
-
 	int ui_step;
 
-	uint16_t numAssetGroups;
-	uint16_t currentAssetGroup;
-	uint16_t numTokens;
-	uint16_t currentToken;
-	bool includeDatumHash;
-	bool datumHashReceived;
-	bool includeScriptRef;
+	tx_output_serialization_format_t serializationFormat;
+	uint16_t numAssetGroups; // positive if there are tokens
+	bool includeDatum;
+	bool datumHashReceived; // is this needed?
+	bool includeScriptRef; // TODO rename to refScript?
 
 	// this affects whether amounts and tokens are shown
 	security_policy_t outputSecurityPolicy;
 
 	union {
-		top_level_output_data_t output;
 		struct {
-			token_group_t tokenGroup;
-			output_token_amount_t token;
+			// top level data
+			tx_output_destination_type_t destinationType;
+			union {
+				struct {
+					uint8_t buffer[MAX_ADDRESS_SIZE];
+					size_t size;
+				} address;
+				addressParams_t params;
+			} destination;
+
+			uint64_t adaAmount;
 		};
 		struct {
-			uint8_t datumOption;
-			uint8_t datumHash[OUTPUT_DATUM_HASH_LENGTH];
+			// data for processing a multiasset map
+			token_group_t tokenGroup;
+			output_token_amount_t token;
+			uint16_t currentAssetGroup;
+			uint16_t currentToken;
+			uint16_t numTokens;
+		};
+		struct {
+			// data for processing datum
+			datum_option_type_t datumOption;
+			union {
+				struct {
+					// datum hash
+					uint8_t datumHash[OUTPUT_DATUM_HASH_LENGTH];
+				};
+				struct {
+					// inline datum
+					size_t datumRemainingBytes;
+					size_t datumChunkSize;
+					uint8_t datumChunk[MAX_CHUNK_SIZE];
+				};
+			};
+		};
+		struct {
+			size_t scriptRefRemainingBytes;
+			size_t scriptRefChunkSize;
+			uint8_t scriptChunk[MAX_CHUNK_SIZE];
 		};
 	} stateData;
 
