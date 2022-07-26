@@ -191,14 +191,14 @@ void txHashBuilder_addOutput_token(
         uint64_t amount
 );
 
-void txHashBuilder_addOutput_datumHash(
-        tx_hash_builder_t* builder,
-        const uint8_t* datumHashBuffer, size_t datumHashSize
-);
-
 void txHashBuilder_addOutput_datumOption(
         tx_hash_builder_t* builder,
         datum_option_type_t datumOption,
+        const uint8_t* buffer, size_t bufferSize
+);
+
+void txHashBuilder_addOutput_datumOption_dataChunk(
+        tx_hash_builder_t* builder,
         const uint8_t* buffer, size_t bufferSize
 );
 
