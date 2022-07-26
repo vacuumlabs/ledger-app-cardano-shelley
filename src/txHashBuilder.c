@@ -173,12 +173,13 @@ static void assertCanLeaveCurrentOutput(tx_hash_builder_t* builder)
 	switch (builder->outputState) {
 	case TX_OUTPUT_INIT:
 	case TX_OUTPUT_TOP_LEVEL_DATA:
-		// TODO what else?
+		// no tokens
+		ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
 		// no datum or script reference
 		ASSERT(!builder->outputData.includeDatumOption);
 		ASSERT(!builder->outputData.includeScriptRef);
+		break;
 
-	case TX_OUTPUT_MULTIASSET:
 	case TX_OUTPUT_ASSET_GROUP:
 		// no remaining minting policies or tokens
 		ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
@@ -372,8 +373,10 @@ void txHashBuilder_addOutput_topLevelData(
         const tx_hash_builder_output* output
 )
 {
-	_TRACE("state = %d, outputState = %d, remainingOutputs = %u", builder->state, builder->outputState,
-	       builder->remainingOutputs);
+	_TRACE(
+		"state = %d, outputState = %d, remainingOutputs = %u",
+		builder->state, builder->outputState, builder->remainingOutputs
+	);
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
 	ASSERT(builder->remainingOutputs > 0);
@@ -406,7 +409,7 @@ static void addTokenGroup(
 
 	switch (builder->outputState) {
 		case TX_OUTPUT_ASSET_GROUP:
-			// we have been adding tokens into an asset group
+			// we have been adding tokens into the previous asset group
 			ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
 			break;
 
@@ -440,7 +443,7 @@ static void addTokenGroup(
 		}
 	}
 
-	builder->outputState = TX_OUTPUT_MULTIASSET;
+	builder->outputState = TX_OUTPUT_ASSET_GROUP;
 }
 
 __noinline_due_to_stack__
@@ -457,10 +460,6 @@ static void addToken(
 	);
 
 	switch (builder->outputState) {
-		case TX_OUTPUT_MULTIASSET:
-			// nothing to check, minting policy has been just started
-			break;
-
 		case TX_OUTPUT_ASSET_GROUP:
 			// we have been adding tokens into an asset group
 			break;
@@ -519,9 +518,13 @@ void txHashBuilder_addOutput_datumOption(
 {
 	ASSERT(builder->outputData.includeDatumOption);
 
+	TRACE("%d", builder->outputState);
+
 	switch (builder->outputState) {
 		case TX_OUTPUT_TOP_LEVEL_DATA:
-			// nothing to check, top level data has been added instantaneously
+			// top level data has been added instantaneously
+			// so we only check there are no asset groups left out
+			ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
 			break;
 
 		case TX_OUTPUT_ASSET_GROUP:
@@ -531,7 +534,6 @@ void txHashBuilder_addOutput_datumOption(
 			break;
 
 		default:
-			// TX_OUTPUT_MULTIASSET is not allowed because empty asset groups are forbidden by CIP-21
 			ASSERT(false);
 	}
 
@@ -607,7 +609,9 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 
 	switch (builder->outputState) {
 		case TX_OUTPUT_TOP_LEVEL_DATA:
-			// nothing to check, top level data has been added instantaneously
+			// top level data has been added instantaneously
+			// so we only check there are no asset groups left out
+			ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
 			break;
 
 		case TX_OUTPUT_ASSET_GROUP:
@@ -625,7 +629,6 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 			break;
 
 		default:
-			// TX_OUTPUT_MULTIASSET is not allowed because empty asset groups are forbidden by CIP-21
 			ASSERT(false);
 	}
 
@@ -1462,7 +1465,7 @@ void txHashBuilder_addMint_topLevelData(
 	// ]
 	BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numAssetGroups);
 
-	builder->outputState = TX_OUTPUT_MULTIASSET;
+	builder->outputState = TX_OUTPUT_TOP_LEVEL_DATA;
 }
 
 void txHashBuilder_addMint_tokenGroup(
@@ -1711,9 +1714,7 @@ void txHashBuilder_addCollateralReturn(
 	}
 	cbor_append_txOutput(builder, output);
 
-	builder->outputState = (output->numAssetGroups == 0) ?
-			TX_OUTPUT_TOP_LEVEL_DATA :
-	        TX_OUTPUT_MULTIASSET;
+	builder->outputState = TX_OUTPUT_TOP_LEVEL_DATA;
 	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_RETURN;
 }
 

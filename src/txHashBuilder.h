@@ -77,8 +77,7 @@ typedef enum {
 
 typedef enum {
 	TX_OUTPUT_INIT = 10,    //  tx_hash_builder_state moved to TX_HASH_BUILDER_IN_OUTPUTS
-	TX_OUTPUT_TOP_LEVEL_DATA = 11,  // output address and value is being added
-	TX_OUTPUT_MULTIASSET = 12, // multiasset map is being added
+	TX_OUTPUT_TOP_LEVEL_DATA = 11,  // output address was added, coin was added, multiasset map is being added (if included)
 	TX_OUTPUT_ASSET_GROUP = 13,     // asset group map is being added
 	TX_OUTPUT_DATUM_OPTION_HASH = 20,    //  Datum hash added
 	TX_OUTPUT_DATUM_OPTION_CHUNKS = 21, //  Inline datum is being added
