@@ -41,7 +41,8 @@ security_policy_t policyForSignTxInit(
         uint16_t numRequiredSigners,
         bool includeScriptDataHash,
         bool includeNetworkId,
-        bool includeTotalCollateral
+        bool includeTotalCollateral,
+        uint16_t numReferenceInputs
 );
 
 security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);
@@ -143,6 +144,8 @@ security_policy_t policyForSignTxWitness(
 );
 
 security_policy_t policyForSignTxTotalCollateral();
+
+security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSigningMode);
 
 security_policy_t policyForSignTxConfirm();
 

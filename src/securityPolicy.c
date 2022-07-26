@@ -309,7 +309,8 @@ security_policy_t policyForSignTxInit(
         uint16_t numRequiredSigners,
         bool includeScriptDataHash,
         bool includeNetworkId,
-        bool includeTotalCollateral
+        bool includeTotalCollateral,
+        uint16_t numReferenceInputs
 )
 {
 	DENY_UNLESS(isValidNetworkId(networkId));
@@ -338,12 +339,14 @@ security_policy_t policyForSignTxInit(
 		DENY_IF(includeScriptDataHash);
 		DENY_IF(numCollaterals > 0);
 		DENY_IF(numRequiredSigners > 0);
+		DENY_IF(numReferenceInputs > 0);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		// collaterals are allowed only in PLUTUS_TX
 		DENY_IF(numCollaterals > 0);
+		DENY_IF(numReferenceInputs > 0);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
@@ -1448,6 +1451,28 @@ security_policy_t policyForSignTxTotalCollateral()
 {
 	SHOW_IF(app_mode_expert());
 	ALLOW();
+}
+
+security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSigningMode)
+{
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		// should be shown because the user loses all collaterals if Plutus execution fails
+		SHOW_IF(app_mode_expert());
+		ALLOW();
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+		DENY();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+	DENY();
 }
 
 security_policy_t policyForSignTxConfirm()
