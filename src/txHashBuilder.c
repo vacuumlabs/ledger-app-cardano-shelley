@@ -79,7 +79,7 @@ static void cbor_append_txOutput_array(tx_hash_builder_t* builder, const tx_hash
 {
 	ASSERT(output->format == ARRAY_LEGACY);
 
-	// Array(2 + includeDatumHash)[
+	// Array(2 + includeDatumOption)[
 	//   Bytes[address]
 	//   // value = coin / [coin,multiasset<uint>] --- added below
 	//   // ? datum_hash = $hash32 --- added later
@@ -156,6 +156,8 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_hash_b
 
 static void cbor_append_txOutput(tx_hash_builder_t* builder, const tx_hash_builder_output* output)
 {
+	TRACE("Output format: %d", output->format);
+
 	switch (output->format) {
 	case ARRAY_LEGACY:
 		cbor_append_txOutput_array(builder, output);

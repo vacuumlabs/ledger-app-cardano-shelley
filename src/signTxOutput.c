@@ -64,7 +64,7 @@ static inline void advanceState()
 			ASSERT(subctx->currentAssetGroup == 0);
 			subctx->state = STATE_OUTPUT_ASSET_GROUP;
 		} else {
-			if (subctx->includeDatumHash) {
+			if (subctx->includeDatumOption) {
 				subctx->state = STATE_OUTPUT_DATUM_OPTION;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
@@ -91,7 +91,7 @@ static inline void advanceState()
 
 		if (subctx->currentAssetGroup == subctx->numAssetGroups) {
 			// the whole token bundle has been received
-			if (subctx->includeDatumHash) {
+			if (subctx->includeDatumOption) {
 				subctx->state = STATE_OUTPUT_DATUM_OPTION;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
@@ -172,10 +172,10 @@ static void signTx_handleOutput_addressBytes()
 	                                   commonTxData->txSigningMode,
 	                                   subctx->stateData.output.address.buffer, subctx->stateData.output.address.size,
 	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatumHash
+	                                   subctx->includeDatumOption
 	                           );
 	TRACE("Policy: %d", (int) policy);
-	ENSURE_NOT_DENIED(policy);
+//	ENSURE_NOT_DENIED(policy);
 
 	subctx->outputSecurityPolicy = policy;
 
@@ -191,7 +191,7 @@ static void signTx_handleOutput_addressBytes()
 		txOut.addressBuffer = subctx->stateData.output.address.buffer;
 		txOut.amount = subctx->stateData.output.adaAmount;
 		txOut.numAssetGroups = subctx->numAssetGroups;
-		txOut.includeDatumOption = subctx->includeDatumHash;
+		txOut.includeDatumOption = subctx->includeDatumOption;
 		txOut.includeScriptRef = false;//TODO: What happens with that?
 
 		txHashBuilder_addOutput_topLevelData(
@@ -284,7 +284,7 @@ static void signTx_handleOutput_addressParams()
 	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.output.params,
 	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatumHash
+	                                   subctx->includeDatumOption
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -310,7 +310,7 @@ static void signTx_handleOutput_addressParams()
 		txOut.addressSize = addressSize;
 		txOut.amount = subctx->stateData.output.adaAmount;
 		txOut.numAssetGroups = subctx->numAssetGroups;
-		txOut.includeDatumOption = subctx->includeDatumHash;
+		txOut.includeDatumOption = subctx->includeDatumOption;
 		txOut.includeScriptRef = false;//TODO: What happens with that?
 
 		txHashBuilder_addOutput_topLevelData(
@@ -392,8 +392,10 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 		ASSERT_TYPE(subctx->numAssetGroups, uint16_t);
 		subctx->numAssetGroups = (uint16_t) numAssetGroups;
 
-		subctx->includeDatumHash = signTx_parseIncluded(parse_u1be(&view));
-		if (subctx->includeDatumHash) {
+		subctx->includeDatumOption = signTx_parseIncluded(parse_u1be(&view));
+		TRACE("datum option included: %d", (int) subctx->includeDatumOption);
+
+		if (subctx->includeDatumOption) {
 			// it's easier to verify all Plutus-related things via txid all at once
 			ctx->shouldDisplayTxid = true;
 		}

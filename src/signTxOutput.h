@@ -50,7 +50,7 @@ typedef struct {
 	uint16_t currentAssetGroup;
 	uint16_t numTokens;
 	uint16_t currentToken;
-	bool includeDatumHash;
+	bool includeDatumOption;
 	bool datumHashReceived;
 	bool includeScriptRef;
 
