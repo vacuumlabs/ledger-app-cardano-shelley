@@ -382,6 +382,8 @@ void txHashBuilder_addOutput_topLevelData(
 	assertCanLeaveCurrentOutput(builder);
 
 	builder->outputData.serializationFormat = output->format;
+	builder->outputData.includeDatumOption = output->includeDatumOption;
+	builder->outputData.includeScriptRef = output->includeScriptRef;
 
 	//  For single-asset outputs, the code below will append complete top level data, however for multi-asset data,
 	//  entries for multi-asset map has to be filled by another call, therefore leaving the top level data incomplete.
