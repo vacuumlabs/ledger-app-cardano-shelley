@@ -632,7 +632,8 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 	                                   ctx->numRequiredSigners,
 	                                   ctx->includeScriptDataHash,
 	                                   ctx->includeNetworkId,
-	                                   ctx->includeTotalCollateral
+	                                   ctx->includeTotalCollateral,
+	                                   ctx->numReferenceInputs
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
