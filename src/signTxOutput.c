@@ -843,6 +843,10 @@ static void signTxOutput_handleDatumChunkAPDU(const uint8_t* wireDataBuffer, siz
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 	{
+		VALIDATE(subctx->stateData.datumChunkSize <= subctx->stateData.datumRemainingBytes, ERR_INVALID_DATA);
+		subctx->stateData.datumRemainingBytes -= subctx->stateData.datumChunkSize;
+	}
+	{
 		// add to tx
 		TRACE("Adding inline datum chunk to tx hash");
 		txHashBuilder_addOutput_datumOption_dataChunk(
