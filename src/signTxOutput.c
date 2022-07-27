@@ -428,7 +428,7 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 		subctx->numAssetGroups = (uint16_t) numAssetGroups;
 
 		subctx->includeDatum = signTx_parseIncluded(parse_u1be(&view));
-		// TODO subctx->includeRefScript = signTx_parseIncluded(parse_u1be(&view));
+		subctx->includeRefScript = signTx_parseIncluded(parse_u1be(&view));
 
 		if (subctx->includeDatum || subctx->includeRefScript) {
 			// it's easier to verify all Plutus-related things via txid all at once
