@@ -835,16 +835,17 @@ static void signTxOutput_handleDatumChunkAPDU(const uint8_t* wireDataBuffer, siz
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		subctx->stateData.datumChunkSize = parse_u4be(&view);
-		VALIDATE(subctx->stateData.datumChunkSize > 0, ERR_INVALID_DATA);
-		VALIDATE(subctx->stateData.datumChunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+		const size_t chunkSize = parse_u4be(&view);
+		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
+		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 
-		view_parseBuffer(subctx->stateData.datumChunk, &view, subctx->stateData.datumChunkSize);
+		VALIDATE(chunkSize <= subctx->stateData.datumRemainingBytes, ERR_INVALID_DATA);
+		subctx->stateData.datumRemainingBytes -= chunkSize;
+
+		view_parseBuffer(subctx->stateData.datumChunk, &view, chunkSize);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
-	}
-	{
-		VALIDATE(subctx->stateData.datumChunkSize <= subctx->stateData.datumRemainingBytes, ERR_INVALID_DATA);
-		subctx->stateData.datumRemainingBytes -= subctx->stateData.datumChunkSize;
+
+		subctx->stateData.datumChunkSize = chunkSize;
 	}
 	{
 		// add to tx
