@@ -204,6 +204,11 @@ void txHashBuilder_addOutput_datumOption_dataChunk(
 
 void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t bufferSize);
 
+void txHashBuilder_addOutput_referenceScript_dataChunk(
+	tx_hash_builder_t* builder,
+	const uint8_t* buffer, size_t bufferSize
+);
+
 void txHashBuilder_addFee(tx_hash_builder_t* builder, uint64_t fee);
 
 void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl);
