@@ -69,7 +69,7 @@ static inline void advanceState()
 			subctx->state = STATE_OUTPUT_ASSET_GROUP;
 		} else if (subctx->includeDatum) {
 			subctx->state = STATE_OUTPUT_DATUM;
-		} else if (subctx->includeScriptRef) {
+		} else if (subctx->includeRefScript) {
 			subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
 		} else {
 			subctx->state = STATE_OUTPUT_CONFIRM;
@@ -97,7 +97,7 @@ static inline void advanceState()
 			// the whole token bundle has been received
 			if (subctx->includeDatum) {
 				subctx->state = STATE_OUTPUT_DATUM;
-			} else if (subctx->includeScriptRef) {
+			} else if (subctx->includeRefScript) {
 				subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
@@ -111,7 +111,7 @@ static inline void advanceState()
 		ASSERT(subctx->includeDatum);
 		if (subctx->stateData.datumType == DATUM_HASH) {
 			ASSERT(subctx->datumHashReceived);
-			if (subctx->includeScriptRef) {
+			if (subctx->includeRefScript) {
 				subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
@@ -126,7 +126,7 @@ static inline void advanceState()
 		ASSERT(subctx->includeDatum);
 		// should be called when all chunks have been received
 		ASSERT(subctx->stateData.datumRemainingBytes == 0);
-		if (subctx->includeScriptRef) {
+		if (subctx->includeRefScript) {
 			subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
 		} else {
 			subctx->state = STATE_OUTPUT_CONFIRM;
@@ -134,14 +134,14 @@ static inline void advanceState()
 		break;
 
 	case STATE_OUTPUT_REFERENCE_SCRIPT:
-		ASSERT(subctx->includeScriptRef);
-		ASSERT(subctx->stateData.scriptRefRemainingBytes > 0);
+		ASSERT(subctx->includeRefScript);
+		ASSERT(subctx->stateData.refScriptRemainingBytes > 0);
 		subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS;
 		break;
 
 	case STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS:
 		// should be called when all chunks have been received
-		ASSERT(subctx->stateData.scriptRefRemainingBytes == 0);
+		ASSERT(subctx->stateData.refScriptRemainingBytes == 0);
 		subctx->state = STATE_OUTPUT_CONFIRM;
 		break;
 
@@ -211,7 +211,7 @@ static void handleOutput_addressBytes()
 	                                   commonTxData->txSigningMode,
 	                                   subctx->stateData.destination.address.buffer, subctx->stateData.destination.address.size,
 	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatum, subctx->includeScriptRef
+	                                   subctx->includeDatum, subctx->includeRefScript
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -227,7 +227,7 @@ static void handleOutput_addressBytes()
 			.amount = subctx->stateData.adaAmount,
 			.numAssetGroups = subctx->numAssetGroups,
 			.includeDatum = subctx->includeDatum,
-			.includeScriptRef = subctx->includeScriptRef,
+			.includeRefScript = subctx->includeRefScript,
 		};
 		// TODO rename to tx_output_descriptor_t and use also as argument for security policies?
 
@@ -319,7 +319,7 @@ static void handleOutput_addressParams()
 	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.destination.params,
 	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatum, subctx->includeScriptRef
+	                                   subctx->includeDatum, subctx->includeRefScript
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -346,7 +346,7 @@ static void handleOutput_addressParams()
 		txOut.amount = subctx->stateData.adaAmount;
 		txOut.numAssetGroups = subctx->numAssetGroups;
 		txOut.includeDatum = subctx->includeDatum;
-		txOut.includeScriptRef = subctx->includeScriptRef;
+		txOut.includeRefScript = subctx->includeRefScript;
 
 		txHashBuilder_addOutput_topLevelData(
 		        &BODY_CTX->txHashBuilder,
@@ -428,9 +428,9 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 		subctx->numAssetGroups = (uint16_t) numAssetGroups;
 
 		subctx->includeDatum = signTx_parseIncluded(parse_u1be(&view));
-		// TODO subctx->includeScriptRef = signTx_parseIncluded(parse_u1be(&view));
+		// TODO subctx->includeRefScript = signTx_parseIncluded(parse_u1be(&view));
 
-		if (subctx->includeDatum || subctx->includeScriptRef) {
+		if (subctx->includeDatum || subctx->includeRefScript) {
 			// it's easier to verify all Plutus-related things via txid all at once
 			ctx->shouldDisplayTxid = true;
 		}
@@ -874,15 +874,15 @@ static void signTxOutput_handleRefScriptAPDU(const uint8_t* wireDataBuffer, size
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		// parse data
-		subctx->stateData.scriptRefRemainingBytes = parse_u4be(&view);
-		VALIDATE(subctx->stateData.scriptRefRemainingBytes > 0, ERR_INVALID_DATA);
+		subctx->stateData.refScriptRemainingBytes = parse_u4be(&view);
+		VALIDATE(subctx->stateData.refScriptRemainingBytes > 0, ERR_INVALID_DATA);
 		// TODO some other validation?
 
-		subctx->stateData.scriptRefChunkSize = parse_u4be(&view);
-		VALIDATE(subctx->stateData.scriptRefChunkSize > 0, ERR_INVALID_DATA);
-		VALIDATE(subctx->stateData.scriptRefChunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+		subctx->stateData.refScriptChunkSize = parse_u4be(&view);
+		VALIDATE(subctx->stateData.refScriptChunkSize > 0, ERR_INVALID_DATA);
+		VALIDATE(subctx->stateData.refScriptChunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 
-		view_parseBuffer(subctx->stateData.datumChunk, &view, subctx->stateData.scriptRefChunkSize);
+		view_parseBuffer(subctx->stateData.datumChunk, &view, subctx->stateData.refScriptChunkSize);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 	{
@@ -894,7 +894,7 @@ static void signTxOutput_handleRefScriptAPDU(const uint8_t* wireDataBuffer, size
 		);
 		txHashBuilder_addOutput_referenceScript_dataChunk(
 		        &BODY_CTX->txHashBuilder,
-		        subctx->stateData.scriptChunk, subctx->stateData.scriptRefChunkSize
+		        subctx->stateData.scriptChunk, subctx->stateData.refScriptChunkSize
 		);
 	}
 	{
@@ -942,14 +942,14 @@ static void signTxOutput_handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer,
 		view_parseBuffer(subctx->stateData.scriptChunk, &view, chunkSize);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
-		subctx->stateData.scriptRefChunkSize = chunkSize;
+		subctx->stateData.refScriptChunkSize = chunkSize;
 	}
 	{
 		// add to tx
 		TRACE("Adding inline datum chunk to tx hash");
 		txHashBuilder_addOutput_referenceScript_dataChunk(
 		        &BODY_CTX->txHashBuilder,
-		        subctx->stateData.scriptChunk, subctx->stateData.scriptRefChunkSize
+		        subctx->stateData.scriptChunk, subctx->stateData.refScriptChunkSize
 		);
 	}
 	respondSuccessEmptyMsg();

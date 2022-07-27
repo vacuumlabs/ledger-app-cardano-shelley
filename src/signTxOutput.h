@@ -42,7 +42,7 @@ typedef struct {
 	uint16_t numAssetGroups; // positive if there are tokens
 	bool includeDatum;
 	bool datumHashReceived; // is this needed?
-	bool includeScriptRef; // TODO rename to refScript?
+	bool includeRefScript;
 
 	// this affects whether amounts and tokens are shown
 	security_policy_t outputSecurityPolicy;
@@ -86,8 +86,8 @@ typedef struct {
 			};
 		};
 		struct {
-			size_t scriptRefRemainingBytes;
-			size_t scriptRefChunkSize;
+			size_t refScriptRemainingBytes;
+			size_t refScriptChunkSize;
 			uint8_t scriptChunk[MAX_CHUNK_SIZE];
 		};
 	} stateData;

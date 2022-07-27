@@ -110,7 +110,7 @@ typedef struct {
 		struct {
 			tx_output_serialization_format_t serializationFormat;
 			bool includeDatum;
-			bool includeScriptRef;
+			bool includeRefScript;
 
 			union {
 				// this is also used for mint, but needs to coexist with output data
@@ -146,7 +146,7 @@ typedef struct {
 	uint16_t numAssetGroups;
 
 	bool includeDatum;
-	bool includeScriptRef;
+	bool includeRefScript;
 } tx_hash_builder_output; // TODO rename to "tx_hash_builder_output_init_data" or something like that?
 
 void txHashBuilder_init(
