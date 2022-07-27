@@ -749,12 +749,15 @@ static void handleDatumInline(read_view_t* view)
 		VALIDATE(subctx->stateData.datumRemainingBytes > 0, ERR_INVALID_DATA);
 		// TODO some other validation?
 
-		subctx->stateData.datumChunkSize = parse_u4be(view);
-		VALIDATE(subctx->stateData.datumChunkSize > 0, ERR_INVALID_DATA);
-		VALIDATE(subctx->stateData.datumChunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+		size_t chunkSize = parse_u4be(view);
+		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
+		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+		subctx->stateData.datumRemainingBytes -= chunkSize;
 
-		view_parseBuffer(subctx->stateData.datumChunk, view, subctx->stateData.datumChunkSize);
+		view_parseBuffer(subctx->stateData.datumChunk, view, chunkSize);
 		VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
+
+		subctx->stateData.datumChunkSize = chunkSize;
 	}
 	{
 		// add to tx
@@ -878,12 +881,16 @@ static void signTxOutput_handleRefScriptAPDU(const uint8_t* wireDataBuffer, size
 		VALIDATE(subctx->stateData.refScriptRemainingBytes > 0, ERR_INVALID_DATA);
 		// TODO some other validation?
 
-		subctx->stateData.refScriptChunkSize = parse_u4be(&view);
-		VALIDATE(subctx->stateData.refScriptChunkSize > 0, ERR_INVALID_DATA);
-		VALIDATE(subctx->stateData.refScriptChunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 
-		view_parseBuffer(subctx->stateData.datumChunk, &view, subctx->stateData.refScriptChunkSize);
+		size_t chunkSize = parse_u4be(&view);
+		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
+		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+		subctx->stateData.datumRemainingBytes -= chunkSize;
+
+		view_parseBuffer(subctx->stateData.scriptChunk, &view, chunkSize);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+
+		subctx->stateData.refScriptChunkSize = chunkSize;
 	}
 	{
 		// add to tx
