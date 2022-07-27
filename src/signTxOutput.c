@@ -446,7 +446,11 @@ static void parseTopLevelData(const uint8_t* wireDataBuffer, size_t wireDataSize
 		subctx->numAssetGroups = (uint16_t) numAssetGroups;
 
 		subctx->includeDatum = signTx_parseIncluded(parse_u1be(&view));
-		subctx->includeRefScript = signTx_parseIncluded(parse_u1be(&view));
+		TRACE("includeDatum = %d", (int) subctx->includeDatum);
+
+		// TODO should be allowed
+		// subctx->includeRefScript = signTx_parseIncluded(parse_u1be(&view));
+		// TRACE("includeRefScript = %d", (int) subctx->includeRefScript);
 
 		if (subctx->includeDatum || subctx->includeRefScript) {
 			// it's easier to verify all Plutus-related things via txid all at once
@@ -1013,10 +1017,12 @@ static void handleDatumInline(read_view_t* view)
 	{
 		// parse data
 		subctx->stateData.datumRemainingBytes = parse_u4be(view);
+		TRACE("datumRemainingBytes = %u", subctx->stateData.datumRemainingBytes);
 		VALIDATE(subctx->stateData.datumRemainingBytes > 0, ERR_INVALID_DATA);
 		// TODO some other validation?
 
 		size_t chunkSize = parse_u4be(view);
+		TRACE("chunkSize = %u", chunkSize);
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= subctx->stateData.datumRemainingBytes, ERR_INVALID_DATA);
@@ -1113,6 +1119,7 @@ static void handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		const size_t chunkSize = parse_u4be(&view);
+		TRACE("chunkSize = %u", chunkSize);
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 
@@ -1155,10 +1162,12 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 
 		// parse data
 		subctx->stateData.refScriptRemainingBytes = parse_u4be(&view);
+		TRACE("refScriptRemainingBytes = %u", subctx->stateData.datumRemainingBytes);
 		VALIDATE(subctx->stateData.refScriptRemainingBytes > 0, ERR_INVALID_DATA);
 		// TODO some other validation?
 
 		size_t chunkSize = parse_u4be(&view);
+		TRACE("chunkSize = %u", chunkSize);
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= subctx->stateData.refScriptRemainingBytes, ERR_INVALID_DATA);
@@ -1222,6 +1231,7 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 		const size_t chunkSize = parse_u4be(&view);
+		TRACE("chunkSize = %u", chunkSize);
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 
