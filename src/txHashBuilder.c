@@ -75,7 +75,7 @@ static void cbor_append_txInput(
 	}
 }
 
-static void cbor_append_txOutput_array(tx_hash_builder_t* builder, const tx_hash_builder_output* output)
+static void cbor_append_txOutput_array(tx_hash_builder_t* builder, const tx_output_description_t* output)
 {
 	ASSERT(output->format == ARRAY_LEGACY);
 
@@ -86,8 +86,10 @@ static void cbor_append_txOutput_array(tx_hash_builder_t* builder, const tx_hash
 	// ]
 	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + output->includeDatum);
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, output->addressSize);
-		BUILDER_APPEND_DATA(output->addressBuffer, output->addressSize);
+		ASSERT(output->destination.type == DESTINATION_THIRD_PARTY);
+		ASSERT(output->destination.address.size < BUFFER_SIZE_PARANOIA);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, output->destination.address.size);
+		BUILDER_APPEND_DATA(output->destination.address.buffer, output->destination.address.size);
 	}
 
 	if (output->numAssetGroups == 0) {
@@ -109,7 +111,7 @@ static void cbor_append_txOutput_array(tx_hash_builder_t* builder, const tx_hash
 	}
 }
 
-static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_hash_builder_output* output)
+static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_output_description_t* output)
 {
 	ASSERT(output->format == MAP_BABBAGE);
 
@@ -128,9 +130,10 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_hash_b
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_OUTPUT_KEY_ADDRESS);
 
-		ASSERT(output->addressSize < BUFFER_SIZE_PARANOIA);
-		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, output->addressSize);
-		BUILDER_APPEND_DATA(output->addressBuffer, output->addressSize);
+		ASSERT(output->destination.type == DESTINATION_THIRD_PARTY);
+		ASSERT(output->destination.address.size < BUFFER_SIZE_PARANOIA);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, output->destination.address.size);
+		BUILDER_APPEND_DATA(output->destination.address.buffer, output->destination.address.size);
 	}
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_OUTPUT_KEY_VALUE);
@@ -154,7 +157,7 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_hash_b
 	}
 }
 
-static void cbor_append_txOutput(tx_hash_builder_t* builder, const tx_hash_builder_output* output)
+static void cbor_append_txOutput(tx_hash_builder_t* builder, const tx_output_description_t* output)
 {
 	switch (output->format) {
 	case ARRAY_LEGACY:
@@ -370,7 +373,7 @@ void txHashBuilder_enterOutputs(tx_hash_builder_t* builder)
 
 void txHashBuilder_addOutput_topLevelData(
         tx_hash_builder_t* builder,
-        const tx_hash_builder_output* output
+        const tx_output_description_t* output
 )
 {
 	_TRACE(
@@ -1703,7 +1706,7 @@ static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
 
 void txHashBuilder_addCollateralReturn(
         tx_hash_builder_t* builder,
-        const tx_hash_builder_output* output
+        const tx_output_description_t* output
 )
 {
 	_TRACE("state = %d", builder->state);

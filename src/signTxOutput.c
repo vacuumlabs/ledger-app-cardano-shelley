@@ -207,36 +207,34 @@ static void handleOutput_addressBytes()
 {
 	output_context_t* subctx = accessSubcontext();
 	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
+
+	tx_output_description_t output = {
+		.format = subctx->serializationFormat,
+		.destination = {
+			.type = DESTINATION_THIRD_PARTY,
+			.address = {
+				.buffer = subctx->stateData.destination.address.buffer,
+				.size = subctx->stateData.destination.address.size
+			}
+		},
+		.amount = subctx->stateData.adaAmount,
+		.numAssetGroups = subctx->numAssetGroups,
+		.includeDatum = subctx->includeDatum,
+		.includeRefScript = subctx->includeRefScript,
+	};
+
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
+									   &output,
 	                                   commonTxData->txSigningMode,
-	                                   subctx->stateData.destination.address.buffer, subctx->stateData.destination.address.size,
-	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatum, subctx->includeRefScript
+	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
-
 	subctx->outputSecurityPolicy = policy;
-
 	{
 		// add to tx
-		tx_hash_builder_output txOut = {
-			.format = subctx->serializationFormat,
-			.addressBuffer = subctx->stateData.destination.address.buffer,
-			.addressSize = subctx->stateData.destination.address.size,
-			.amount = subctx->stateData.adaAmount,
-			.numAssetGroups = subctx->numAssetGroups,
-			.includeDatum = subctx->includeDatum,
-			.includeRefScript = subctx->includeRefScript,
-		};
-		// TODO rename to tx_output_descriptor_t and use also as argument for security policies?
-
-		txHashBuilder_addOutput_topLevelData(
-		        &BODY_CTX->txHashBuilder,
-		        &txOut
-		);
+		txHashBuilder_addOutput_topLevelData(&BODY_CTX->txHashBuilder, &output);
 	}
-
 	{
 		// select UI steps
 		switch (policy) {
@@ -315,15 +313,26 @@ static void handleOutput_addressParams()
 {
 	output_context_t* subctx = accessSubcontext();
 	ASSERT(subctx->stateData.destination.type == DESTINATION_DEVICE_OWNED);
+
+	tx_output_description_t output = {
+		.format = subctx->serializationFormat,
+		.destination = {
+			.type = DESTINATION_DEVICE_OWNED,
+			.params = &subctx->stateData.destination.params
+		},
+		.amount = subctx->stateData.adaAmount,
+		.numAssetGroups = subctx->numAssetGroups,
+		.includeDatum = subctx->includeDatum,
+		.includeRefScript = subctx->includeRefScript,
+	};
+
 	security_policy_t policy = policyForSignTxOutputAddressParams(
+	                                   &output,
 	                                   commonTxData->txSigningMode,
-	                                   &subctx->stateData.destination.params,
-	                                   commonTxData->networkId, commonTxData->protocolMagic,
-	                                   subctx->includeDatum, subctx->includeRefScript
+	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
-
 	subctx->outputSecurityPolicy = policy;
 
 	{
@@ -337,21 +346,12 @@ static void handleOutput_addressParams()
 		ASSERT(addressSize > 0);
 		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
 
+		// pass the derived address to tx hash builder
+		output.destination.type = DESTINATION_THIRD_PARTY;
+		output.destination.address.buffer = addressBuffer;
+		output.destination.address.size = addressSize;
 
-		tx_hash_builder_output txOut;
-
-		txOut.format = subctx->serializationFormat;
-		txOut.addressBuffer = addressBuffer;
-		txOut.addressSize = addressSize;
-		txOut.amount = subctx->stateData.adaAmount;
-		txOut.numAssetGroups = subctx->numAssetGroups;
-		txOut.includeDatum = subctx->includeDatum;
-		txOut.includeRefScript = subctx->includeRefScript;
-
-		txHashBuilder_addOutput_topLevelData(
-		        &BODY_CTX->txHashBuilder,
-		        &txOut
-		);
+		txHashBuilder_addOutput_topLevelData(&BODY_CTX->txHashBuilder, &output);
 	}
 
 	{

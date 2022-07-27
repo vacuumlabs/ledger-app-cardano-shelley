@@ -174,18 +174,21 @@ static void addMultiassetOutput(tx_hash_builder_t* builder, tx_output_serializat
 {
 	uint8_t tmp[70] = {0};
 	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
-	tx_hash_builder_output output;
-	output.format = (*outputFormat);
-	output.addressSize = tmpSize;
-	output.addressBuffer = tmp;
-	output.amount = outputs[1].amount;
-	output.numAssetGroups = 2;
-	output.includeDatum = false;
-	output.includeRefScript = false;
-	txHashBuilder_addOutput_topLevelData(
-	        builder,
-	        &output
-	);
+	tx_output_description_t output = {
+		.format = (*outputFormat),
+		.destination = {
+			.type = DESTINATION_THIRD_PARTY,
+			.address = {
+				.buffer = tmp,
+				.size = tmpSize,
+			},
+		},
+		.amount = outputs[1].amount,
+		.numAssetGroups = 2,
+		.includeDatum = false,
+		.includeRefScript = false
+	};
+	txHashBuilder_addOutput_topLevelData(builder, &output);
 
 	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addOutput_tokenGroup, &outputTokenHandler);
 }
@@ -200,14 +203,20 @@ static void addOutputs(tx_hash_builder_t* builder)
 	ITERATE(it, outputs) {
 		uint8_t tmp[70] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
-		tx_hash_builder_output output;
-		output.format = outputFormat;
-		output.addressSize = tmpSize;
-		output.addressBuffer = tmp;
-		output.amount = it->amount;
-		output.numAssetGroups = 0;
-		output.includeDatum = false;
-		output.includeRefScript = false;
+		tx_output_description_t output = {
+			.format = outputFormat,
+			.destination = {
+				.type = DESTINATION_THIRD_PARTY,
+				.address = {
+					.size = tmpSize,
+					.buffer = tmp,
+				}
+			},
+			.amount = it->amount,
+			.numAssetGroups = 0,
+			.includeDatum = false,
+			.includeRefScript = false
+		};
 		txHashBuilder_addOutput_topLevelData(
 		        builder,
 		        &output
@@ -225,18 +234,22 @@ static void addOutputs(tx_hash_builder_t* builder)
 	ITERATE(it, outputs) {
 		uint8_t tmp[70] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(it->rawAddressHex), tmp, SIZEOF(tmp));
-		tx_hash_builder_output output;
-		output.format = outputFormat;
-		output.addressSize = tmpSize;
-		output.addressBuffer = tmp;
-		output.amount = it->amount;
-		output.numAssetGroups = 0;
-		output.includeDatum = false;
-		output.includeRefScript = false;
-		txHashBuilder_addOutput_topLevelData(
-		        builder,
-		        &output
-		);
+
+		tx_output_description_t output = {
+			.format = outputFormat,
+			.destination = {
+				.type = DESTINATION_THIRD_PARTY,
+				.address = {
+					.buffer = tmp,
+					.size = tmpSize,
+				},
+			},
+			.amount = it->amount,
+			.numAssetGroups = 0,
+			.includeDatum = false,
+			.includeRefScript = false
+		};
+		txHashBuilder_addOutput_topLevelData(builder, &output);
 	}
 
 	// added for the second time to more thoroughly check the state machine
@@ -254,18 +267,21 @@ static void addMultiassetCollRet(tx_hash_builder_t* builder, tx_output_serializa
 {
 	uint8_t tmp[70] = {0};
 	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
-	tx_hash_builder_output output;
-	output.format = outputFormat;
-	output.addressSize = tmpSize;
-	output.addressBuffer = tmp;
-	output.amount = outputs[1].amount;
-	output.numAssetGroups = 2;
-	output.includeDatum = false;
-	output.includeRefScript = false;
-	txHashBuilder_addCollateralReturn(
-	        builder,
-	        &output
-	);
+	tx_output_description_t output = {
+		.format = outputFormat,
+		.destination = {
+			.type = DESTINATION_THIRD_PARTY,
+			.address = {
+				.buffer = tmp,
+				.size = tmpSize,
+			},
+		},
+		.amount = outputs[1].amount,
+		.numAssetGroups = 2,
+		.includeDatum = false,
+		.includeRefScript = false
+	};
+	txHashBuilder_addCollateralReturn(builder, &output);
 
 	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addCollateralReturn_tokenGroup, &collRetTokenHandler);
 }
