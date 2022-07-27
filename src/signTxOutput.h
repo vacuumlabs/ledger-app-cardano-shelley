@@ -37,6 +37,9 @@ typedef enum {
 typedef struct {
 	sign_tx_output_state_t state;
 	int ui_step;
+//	void (*ui_advanceState)();
+	const char* ui_firstLineText;
+	const char* ui_secondLineText;
 
 	tx_output_serialization_format_t serializationFormat;
 	uint16_t numAssetGroups; // positive if there are tokens
@@ -95,11 +98,13 @@ typedef struct {
 } output_context_t;
 
 
-void signTxOutput_init();
+void initializeOutputSubmachine();
+bool isCurrentOutputFinished();
 
 bool signTxOutput_isValidInstruction(uint8_t p2);
 void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
-bool signTxOutput_isFinished();
+bool signTxCollRetOutput_isValidInstruction(uint8_t p2);
+void signTxCollRetOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
 #endif // H_CARDANO_APP_SIGN_TX_OUTPUT

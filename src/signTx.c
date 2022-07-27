@@ -34,6 +34,8 @@ static inline void initTxBodyCtx()
 		BODY_CTX->ttlReceived = false;
 		BODY_CTX->validityIntervalStartReceived = false;
 		BODY_CTX->mintReceived = false;
+		BODY_CTX->scriptDataHashReceived = false;
+		BODY_CTX->collateralReturnOutputReceived = false;
 		BODY_CTX->totalCollateralReceived = false;
 	}
 }
@@ -98,7 +100,7 @@ static inline void advanceStage()
 			        ctx->numCollaterals,
 			        ctx->numRequiredSigners,
 			        ctx->includeNetworkId,
-			        ctx->includeCollateralReturn,
+			        ctx->includeCollateralReturnOutput,
 			        ctx->includeTotalCollateral,
 			        ctx->numReferenceInputs
 			);
@@ -110,7 +112,7 @@ static inline void advanceStage()
 		// we should have received all inputs
 		ASSERT(BODY_CTX->currentInput == ctx->numInputs);
 		txHashBuilder_enterOutputs(&BODY_CTX->txHashBuilder);
-		signTxOutput_init();
+		initializeOutputSubmachine();
 		ctx->stage = SIGN_STAGE_BODY_OUTPUTS;
 
 		if (ctx->numOutputs > 0) {
@@ -223,7 +225,7 @@ static inline void advanceStage()
 
 	// intentional fallthrough
 
-	case SIGN_STAGE_BODY_COLLATERALS:
+	case SIGN_STAGE_BODY_COLLATERALS: // TODO rename to COLLATERAL INPUTS, elsewhere too perhaps
 		ASSERT(BODY_CTX->currentCollateral == ctx->numCollaterals);
 		ctx->stage = SIGN_STAGE_BODY_REQUIRED_SIGNERS;
 		if (ctx->numRequiredSigners > 0) {
@@ -239,10 +241,23 @@ static inline void advanceStage()
 			// we are not waiting for any APDU here, network id is already known from the init APDU
 			txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		}
+		ctx->stage = SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT;
+		if (ctx->includeCollateralReturnOutput) {
+			break;
+		}
+
+	// intentional fallthrough
+
+	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT:
+		if (ctx->includeCollateralReturnOutput) {
+			ASSERT(BODY_CTX->collateralReturnOutputReceived);
+		}
 		ctx->stage = SIGN_STAGE_BODY_TOTAL_COLLATERAL;
 		if (ctx->includeTotalCollateral) {
 			break;
 		}
+
+	// intentional fallthrough
 
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 		if (ctx->includeTotalCollateral) {
@@ -328,7 +343,7 @@ static inline void checkForFinishedSubmachines()
 
 	switch (ctx->stage) {
 	case SIGN_STAGE_BODY_OUTPUTS_SUBMACHINE:
-		if (signTxOutput_isFinished()) {
+		if (isCurrentOutputFinished()) {
 			TRACE();
 			ASSERT(BODY_CTX->currentOutput < ctx->numOutputs);
 			ctx->stage = SIGN_STAGE_BODY_OUTPUTS;
@@ -371,6 +386,16 @@ static inline void checkForFinishedSubmachines()
 			BODY_CTX->mintReceived = true;
 			advanceStage();
 		}
+
+	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE:
+		if (isCurrentOutputFinished()) {
+			TRACE();
+			ctx->stage = SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT;
+			BODY_CTX->collateralReturnOutputReceived = true;
+			advanceStage();
+		}
+		break;
+
 	default:
 		break; // nothing to do otherwise
 	}
@@ -930,7 +955,7 @@ static void signTx_handleOutputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, s
 	if (ctx->stage == SIGN_STAGE_BODY_OUTPUTS) {
 		// new output
 		VALIDATE(BODY_CTX->currentOutput < ctx->numOutputs, ERR_INVALID_STATE);
-		signTxOutput_init();
+		initializeOutputSubmachine();
 		ctx->stage = SIGN_STAGE_BODY_OUTPUTS_SUBMACHINE;
 	}
 
@@ -1888,7 +1913,7 @@ static void signTx_handleScriptDataHashAPDU(uint8_t p2, const uint8_t* wireDataB
 	signTx_handleScriptDataHash_ui_runStep();
 }
 
-// ============================== COLLATERAL ==============================
+// ============================== COLLATERAL INPUTS ==============================
 
 // Advance stage to the next collateral input
 static void ui_advanceState_collateral()
@@ -2055,6 +2080,28 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, const uint8_t* wireDataB
 		}
 	}
 	signTx_handleRequiredSigner_ui_runStep();
+}
+// ========================= COLLATERAL RETURN OUTPUT ===========================
+
+static void signTx_handleCollateralReturnOutputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		TRACE("p2 = %d", p2);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+	}
+
+	if (ctx->stage == SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT) {
+		// first APDU for collateral return output
+		initializeOutputSubmachine();
+		ctx->stage = SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE;
+	}
+
+	CHECK_STAGE(SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE);
+
+	// all output handling is delegated to a state sub-machine
+	VALIDATE(signTxCollRetOutput_isValidInstruction(p2), ERR_INVALID_DATA);
+	signTxCollRetOutput_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
 
 // ========================= TOTAL COLLATERAL ===========================
@@ -2440,6 +2487,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x0c, signTx_handleScriptDataHashAPDU);
 		CASE(0x0d, signTx_handleCollateralAPDU);
 		CASE(0x0e, signTx_handleRequiredSignerAPDU);
+		CASE(0x12, signTx_handleCollateralReturnOutputAPDU); // TODO perhaps change the numbers for the newly added items?
 		CASE(0x10, signTx_handleTotalCollateralAPDU);
 		CASE(0x11, signTx_handleReferenceInputsAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
@@ -2484,6 +2532,7 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERALS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
+	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT:
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS: {
 		explicit_bzero(&BODY_CTX->stageData, SIZEOF(BODY_CTX->stageData));
@@ -2532,6 +2581,7 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERALS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
+	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT:
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
 	case SIGN_STAGE_CONFIRM:

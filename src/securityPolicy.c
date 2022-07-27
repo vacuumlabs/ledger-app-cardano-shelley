@@ -664,6 +664,38 @@ security_policy_t policyForSignTxOutputConfirm(
 	DENY(); // should not be reached
 }
 
+// TODO
+// For final collateral return output output confirmation
+security_policy_t policyForSignTxCollRetOutputConfirm(
+        security_policy_t outputPolicy,
+        uint64_t numAssetGroups
+)
+{
+	switch (outputPolicy) {
+	case POLICY_ALLOW_WITHOUT_PROMPT:
+		// output was not shown, no confirmation is needed
+		ALLOW();
+		break;
+
+	case POLICY_SHOW_BEFORE_RESPONSE:
+		// output was shown and it contained (possibly many) tokens
+		// show a confirmation prompt, so that the user may abort the transaction sooner
+		PROMPT_IF(numAssetGroups > 0);
+		// however, if there were no tokens, no separate confirmation is needed
+		ALLOW();
+		break;
+
+	case POLICY_PROMPT_WARN_UNUSUAL:
+		PROMPT();
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	DENY(); // should not be reached
+}
+
 // For transaction fee
 security_policy_t policyForSignTxFee(
         sign_tx_signingmode_t txSigningMode,

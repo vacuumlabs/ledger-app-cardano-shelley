@@ -227,7 +227,7 @@ void txHashBuilder_init(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
-        bool includeCollateralReturn,
+        bool includeCollateralReturnOutput,
         bool includeTotalCollateral,
         uint16_t numReferenceInputs
 )
@@ -244,7 +244,7 @@ void txHashBuilder_init(
 	TRACE("numCollaterals = %u", numCollaterals);
 	TRACE("numRequiredSigners = %u", numRequiredSigners);
 	TRACE("includeNetworkId = %u", includeNetworkId);
-	TRACE("includeCollateralReturn = %u", includeCollateralReturn);
+	TRACE("includeCollateralReturnOutput = %u", includeCollateralReturnOutput);
 	TRACE("includeTotalCollateral = %u", includeTotalCollateral);
 	TRACE("numReferenceInputs = %u", numReferenceInputs);
 
@@ -292,8 +292,8 @@ void txHashBuilder_init(
 		builder->includeNetworkId = includeNetworkId;
 		if (includeNetworkId) numItems++;
 
-		builder->includeCollateralReturn = includeCollateralReturn;
-		if (includeCollateralReturn) numItems++;
+		builder->includeCollateralReturnOutput = includeCollateralReturnOutput;
+		if (includeCollateralReturnOutput) numItems++;
 
 		builder->includeTotalCollateral = includeTotalCollateral;
 		if (includeTotalCollateral) numItems++;
@@ -1709,7 +1709,7 @@ void txHashBuilder_addCollateralReturn(
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveNetworkId(builder);
-	ASSERT(builder->includeCollateralReturn);
+	ASSERT(builder->includeCollateralReturnOutput);
 
 	builder->outputData.serializationFormat = output->format;
 	ASSERT(builder->outputData.includeDatum == false);
@@ -1759,7 +1759,7 @@ static void txHashBuilder_assertCanLeaveCollateralReturn(tx_hash_builder_t* buil
 
 	default:
 		// make sure collateral return was not expected
-		ASSERT(!builder->includeCollateralReturn);
+		ASSERT(!builder->includeCollateralReturnOutput);
 		// assert we can leave the previous state
 		txHashBuilder_assertCanLeaveNetworkId(builder);
 		break;
