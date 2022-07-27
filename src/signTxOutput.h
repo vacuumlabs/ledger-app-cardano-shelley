@@ -26,7 +26,7 @@ typedef enum {
 	STATE_OUTPUT_ASSET_GROUP = 2511,
 	STATE_OUTPUT_TOKEN = 2512,
 	STATE_OUTPUT_DATUM = 2513,
-	STATE_OUTPUT_DATUM_OPTION_CHUNKS = 2514,
+	STATE_OUTPUT_DATUM_INLINE_CHUNKS = 2514,
 	STATE_OUTPUT_REFERENCE_SCRIPT = 2515,
 	STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS = 2516,
 	STATE_OUTPUT_CONFIRM = 2520,
@@ -71,7 +71,7 @@ typedef struct {
 		};
 		struct {
 			// data for processing datum
-			datum_option_type_t datumOption;
+			datum_type_t datumType;
 			union {
 				struct {
 					// datum hash

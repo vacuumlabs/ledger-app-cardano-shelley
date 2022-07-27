@@ -79,8 +79,8 @@ typedef enum {
 	TX_OUTPUT_INIT = 10,    //  tx_hash_builder_state moved to TX_HASH_BUILDER_IN_OUTPUTS
 	TX_OUTPUT_TOP_LEVEL_DATA = 11,  // output address was added, coin was added, multiasset map is being added (if included)
 	TX_OUTPUT_ASSET_GROUP = 13,     // asset group map is being added
-	TX_OUTPUT_DATUM_OPTION_HASH = 20,    //  Datum hash added
-	TX_OUTPUT_DATUM_OPTION_CHUNKS = 21, //  Inline datum is being added
+	TX_OUTPUT_DATUM_HASH = 20,    //  Datum hash added
+	TX_OUTPUT_DATUM_INLINE = 21, //  Inline datum is being added in chunks
 	TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS = 31, // Script reference is being added
 } tx_hash_builder_output_state_t;
 
@@ -109,7 +109,7 @@ typedef struct {
 
 		struct {
 			tx_output_serialization_format_t serializationFormat;
-			bool includeDatumOption;
+			bool includeDatum;
 			bool includeScriptRef;
 
 			union {
@@ -145,7 +145,7 @@ typedef struct {
 	uint64_t amount;
 	uint16_t numAssetGroups;
 
-	bool includeDatumOption; // TODO rename to "includeDatum"? or something else
+	bool includeDatum;
 	bool includeScriptRef;
 } tx_hash_builder_output; // TODO rename to "tx_hash_builder_output_init_data" or something like that?
 
@@ -191,13 +191,13 @@ void txHashBuilder_addOutput_token(
         uint64_t amount
 );
 
-void txHashBuilder_addOutput_datumOption(
+void txHashBuilder_addOutput_datum(
         tx_hash_builder_t* builder,
-        datum_option_type_t datumOption,
+        datum_type_t datumType,
         const uint8_t* buffer, size_t bufferSize
 );
 
-void txHashBuilder_addOutput_datumOption_dataChunk(
+void txHashBuilder_addOutput_datum_inline_chunk(
         tx_hash_builder_t* builder,
         const uint8_t* buffer, size_t bufferSize
 );

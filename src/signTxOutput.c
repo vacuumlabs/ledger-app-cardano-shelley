@@ -30,7 +30,7 @@ bool signTxOutput_isFinished()
 	case STATE_OUTPUT_ASSET_GROUP:
 	case STATE_OUTPUT_TOKEN:
 	case STATE_OUTPUT_DATUM:
-	case STATE_OUTPUT_DATUM_OPTION_CHUNKS:
+	case STATE_OUTPUT_DATUM_INLINE_CHUNKS:
 	case STATE_OUTPUT_REFERENCE_SCRIPT:
 	case STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS:
 	case STATE_OUTPUT_CONFIRM:
@@ -109,7 +109,7 @@ static inline void advanceState()
 
 	case STATE_OUTPUT_DATUM:
 		ASSERT(subctx->includeDatum);
-		if (subctx->stateData.datumOption == DATUM_HASH) {
+		if (subctx->stateData.datumType == DATUM_HASH) {
 			ASSERT(subctx->datumHashReceived);
 			if (subctx->includeScriptRef) {
 				subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
@@ -118,11 +118,11 @@ static inline void advanceState()
 			}
 		} else {
 			ASSERT(subctx->stateData.datumRemainingBytes > 0);
-			subctx->state = STATE_OUTPUT_DATUM_OPTION_CHUNKS;
+			subctx->state = STATE_OUTPUT_DATUM_INLINE_CHUNKS;
 		}
 		break;
 
-	case STATE_OUTPUT_DATUM_OPTION_CHUNKS:
+	case STATE_OUTPUT_DATUM_INLINE_CHUNKS:
 		ASSERT(subctx->includeDatum);
 		// should be called when all chunks have been received
 		ASSERT(subctx->stateData.datumRemainingBytes == 0);
@@ -226,7 +226,7 @@ static void handleOutput_addressBytes()
 			.addressSize = subctx->stateData.destination.address.size,
 			.amount = subctx->stateData.adaAmount,
 			.numAssetGroups = subctx->numAssetGroups,
-			.includeDatumOption = subctx->includeDatum,
+			.includeDatum = subctx->includeDatum,
 			.includeScriptRef = subctx->includeScriptRef,
 		};
 		// TODO rename to tx_output_descriptor_t and use also as argument for security policies?
@@ -345,7 +345,7 @@ static void handleOutput_addressParams()
 		txOut.addressSize = addressSize;
 		txOut.amount = subctx->stateData.adaAmount;
 		txOut.numAssetGroups = subctx->numAssetGroups;
-		txOut.includeDatumOption = subctx->includeDatum;
+		txOut.includeDatum = subctx->includeDatum;
 		txOut.includeScriptRef = subctx->includeScriptRef;
 
 		txHashBuilder_addOutput_topLevelData(
@@ -690,9 +690,9 @@ static void handleDatumHash(read_view_t* view)
 	{
 		// add to tx
 		TRACE("Adding datum hash to tx hash");
-		txHashBuilder_addOutput_datumOption(
+		txHashBuilder_addOutput_datum(
 		        &BODY_CTX->txHashBuilder,
-		        subctx->stateData.datumOption,
+		        subctx->stateData.datumType,
 		        subctx->stateData.datumHash, SIZEOF(subctx->stateData.datumHash));
 	}
 	subctx->datumHashReceived = true;
@@ -759,12 +759,12 @@ static void handleDatumInline(read_view_t* view)
 	{
 		// add to tx
 		TRACE("Adding inline datum to tx hash");
-		txHashBuilder_addOutput_datumOption(
+		txHashBuilder_addOutput_datum(
 		        &BODY_CTX->txHashBuilder,
-		        subctx->stateData.datumOption,
+		        subctx->stateData.datumType,
 		        NULL, subctx->stateData.datumRemainingBytes
 		);
-		txHashBuilder_addOutput_datumOption_dataChunk(
+		txHashBuilder_addOutput_datum_inline_chunk(
 		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.datumChunk, subctx->stateData.datumChunkSize
 		);
@@ -803,10 +803,10 @@ static void signTxOutput_handleDatumAPDU(const uint8_t* wireDataBuffer, size_t w
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		subctx->stateData.datumOption = parse_u1be(&view);
-		TRACE("datumOption = %d", subctx->stateData.datumOption);
+		subctx->stateData.datumType = parse_u1be(&view);
+		TRACE("datumType = %d", subctx->stateData.datumType);
 
-		switch (subctx->stateData.datumOption) {
+		switch (subctx->stateData.datumType) {
 
 		case DATUM_HASH:
 			handleDatumHash(&view);
@@ -826,7 +826,7 @@ static void signTxOutput_handleDatumChunkAPDU(const uint8_t* wireDataBuffer, siz
 {
 	{
 		// sanity checks
-		CHECK_STATE(STATE_OUTPUT_DATUM_OPTION_CHUNKS);
+		CHECK_STATE(STATE_OUTPUT_DATUM_INLINE_CHUNKS);
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
@@ -850,7 +850,7 @@ static void signTxOutput_handleDatumChunkAPDU(const uint8_t* wireDataBuffer, siz
 	{
 		// add to tx
 		TRACE("Adding inline datum chunk to tx hash");
-		txHashBuilder_addOutput_datumOption_dataChunk(
+		txHashBuilder_addOutput_datum_inline_chunk(
 		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.datumChunk, subctx->stateData.datumChunkSize
 		);
