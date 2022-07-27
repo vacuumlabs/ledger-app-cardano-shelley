@@ -172,7 +172,7 @@ static void signTx_handleOutput_address_ui_runStep()
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleOutput_address_ui_runStep;
 
-	ASSERT(subctx->stateData.destinationType == DESTINATION_THIRD_PARTY);
+	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -206,7 +206,7 @@ static void signTx_handleOutput_address_ui_runStep()
 static void handleOutput_addressBytes()
 {
 	output_context_t* subctx = accessSubcontext();
-	ASSERT(subctx->stateData.destinationType == DESTINATION_THIRD_PARTY);
+	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
 	                                   commonTxData->txSigningMode,
 	                                   subctx->stateData.destination.address.buffer, subctx->stateData.destination.address.size,
@@ -271,7 +271,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	TRACE("UI step %d", subctx->ui_step);
 	ui_callback_fn_t* this_fn = signTx_handleOutput_addressParams_ui_runStep;
 
-	ASSERT(subctx->stateData.destinationType == DESTINATION_DEVICE_OWNED);
+	ASSERT(subctx->stateData.destination.type == DESTINATION_DEVICE_OWNED);
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -314,7 +314,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 static void handleOutput_addressParams()
 {
 	output_context_t* subctx = accessSubcontext();
-	ASSERT(subctx->stateData.destinationType == DESTINATION_DEVICE_OWNED);
+	ASSERT(subctx->stateData.destination.type == DESTINATION_DEVICE_OWNED);
 	security_policy_t policy = policyForSignTxOutputAddressParams(
 	                                   commonTxData->txSigningMode,
 	                                   &subctx->stateData.destination.params,
@@ -389,11 +389,11 @@ static void parseTopLevelData(const uint8_t* wireDataBuffer, size_t wireDataSize
 		TRACE("Output serialization format %d", (int) subctx->serializationFormat);
 		// TODO validation
 
-		subctx->stateData.destinationType = parse_u1be(&view);
-		TRACE("Output destination type %d", (int) subctx->stateData.destinationType);
+		subctx->stateData.destination.type = parse_u1be(&view);
+		TRACE("Output destination type %d", (int) subctx->stateData.destination.type);
 		// TODO validation
 
-		switch (subctx->stateData.destinationType) {
+		switch (subctx->stateData.destination.type) {
 		case DESTINATION_THIRD_PARTY: {
 			STATIC_ASSERT(sizeof(subctx->stateData.destination.address.size) >= 4, "wrong address size type");
 			subctx->stateData.destination.address.size = parse_u4be(&view);
@@ -450,7 +450,7 @@ static void handleTopLevelDataAPDU_output(const uint8_t* wireDataBuffer, size_t 
 	// call the appropriate handler depending on output type
 	// the handlers serialize data into the tx hash
 	// and take care of user interactions
-	switch (subctx->stateData.destinationType) {
+	switch (subctx->stateData.destination.type) {
 
 	case DESTINATION_THIRD_PARTY:
 		handleOutput_addressBytes();
@@ -476,7 +476,7 @@ static void handleTopLevelDataAPDU_collRetOutput(const uint8_t* wireDataBuffer, 
 	// call the appropriate handler depending on output type
 	// the handlers serialize data into the tx hash
 	// and take care of user interactions
-	switch (subctx->stateData.destinationType) {
+	switch (subctx->stateData.destination.type) {
 
 	// TODO
 
