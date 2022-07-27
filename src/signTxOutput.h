@@ -32,8 +32,10 @@ typedef struct {
 	sign_tx_output_state_t state;
 	int ui_step;
 //	void (*ui_advanceState)();
-	const char* ui_firstLineText;
-	const char* ui_secondLineText;
+	const char* ui_text1;
+	const char* ui_text2;
+	const char* ui_text3;
+	const char* ui_text4;
 
 	tx_output_serialization_format_t serializationFormat;
 	uint16_t numAssetGroups; // positive if there are tokens
