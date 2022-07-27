@@ -166,17 +166,18 @@ enum {
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
 };
 
-static void signTx_handleOutput_address_ui_runStep()
+static void signTx_handleOutput_address_bytes_ui_runStep()
 {
 	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTx_handleOutput_address_ui_runStep;
+	ui_callback_fn_t* this_fn = signTx_handleOutput_address_bytes_ui_runStep;
 
 	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM) {
+		// TODO why is this warning not shown for address params? can't address params address be script address, I guess?
 		ui_displayPaginatedText(
 		        "WARNING: output",
 		        "could be unspendable due to missing datum",
@@ -247,7 +248,7 @@ static void handleOutput_addressBytes()
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		signTx_handleOutput_address_ui_runStep();
+		signTx_handleOutput_address_bytes_ui_runStep();
 	}
 }
 
@@ -274,11 +275,12 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN) {
-		ui_displayPaginatedText("Change", "output", this_fn);
+		ui_displayPaginatedText(subctx->ui_text1, subctx->ui_text2, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
 		if (determineSpendingChoice(subctx->stateData.destination.params.type) == SPENDING_NONE) {
 			// reward address
+			// TODO reward address is not allowed in outputs, why is this here?
 			UI_STEP_JUMP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO);
 		}
 		ui_displaySpendingInfoScreen(&subctx->stateData.destination.params, this_fn);
@@ -293,13 +295,13 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
 
 		ui_displayAddressScreen(
-		        "Address",
+		    	subctx->ui_text3,
 		        addressBuffer, addressSize,
 		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT) {
-		ui_displayAdaAmountScreen("Send", subctx->stateData.adaAmount, this_fn);
+		ui_displayAdaAmountScreen(subctx->ui_text4, subctx->stateData.adaAmount, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -364,6 +366,11 @@ static void handleOutput_addressParams()
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
+
+		subctx->ui_text1 = "Change";
+		subctx->ui_text2 = "output";
+		subctx->ui_text3 = "Address";
+		subctx->ui_text4 = "Send";
 
 		signTx_handleOutput_addressParams_ui_runStep();
 	}
@@ -465,6 +472,222 @@ static void handleTopLevelDataAPDU_output(const uint8_t* wireDataBuffer, size_t 
 	};
 }
 
+enum {
+	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO = 3100,
+	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS,
+	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT,
+	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_RESPOND,
+	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
+};
+
+static void signTx_handleCollRetOutput_addressBytes_ui_runStep()
+{
+	output_context_t* subctx = accessSubcontext();
+	TRACE("UI step %d", subctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleOutput_address_bytes_ui_runStep;
+
+	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
+
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO) {
+		ui_displayPaginatedText(
+			"Collateral",
+			"return output",
+			this_fn
+		);
+	}
+	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
+		ASSERT(subctx->stateData.destination.address.size <= SIZEOF(subctx->stateData.destination.address.buffer));
+		ui_displayAddressScreen(
+		        "Address",
+		        subctx->stateData.destination.address.buffer,
+		        subctx->stateData.destination.address.size,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT) {
+		ui_displayAdaAmountScreen("Amount", subctx->stateData.adaAmount, this_fn);
+	}
+	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		advanceState();
+	}
+	UI_STEP_END(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_INVALID);
+}
+
+static void handleCollRetOutput_addressBytes()
+{
+	output_context_t* subctx = accessSubcontext();
+	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
+
+	tx_output_description_t output = {
+		.format = subctx->serializationFormat,
+		.destination = {
+			.type = DESTINATION_THIRD_PARTY,
+			.address = {
+				.buffer = subctx->stateData.destination.address.buffer,
+				.size = subctx->stateData.destination.address.size
+			}
+		},
+		.amount = subctx->stateData.adaAmount,
+		.numAssetGroups = subctx->numAssetGroups,
+		.includeDatum = subctx->includeDatum,
+		.includeRefScript = subctx->includeRefScript,
+	};
+
+	// TODO maybe restric to specific address types? we don't support datum in coll ret outputs
+	security_policy_t policy = policyForSignTxCollRetOutputAddressBytes(
+									   &output,
+	                                   commonTxData->txSigningMode,
+	                                   commonTxData->networkId, commonTxData->protocolMagic
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+	subctx->outputSecurityPolicy = policy;
+	{
+		// add to tx
+		txHashBuilder_addCollateralReturn(&BODY_CTX->txHashBuilder, &output);
+	}
+	{
+		// select UI steps
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+
+		signTx_handleCollRetOutput_addressBytes_ui_runStep();
+	}
+}
+
+// enum {
+// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN = 3200,
+// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH,
+// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO,
+// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS,
+// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT,
+// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND,
+// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_INVALID,
+// };
+
+// __noinline_due_to_stack__
+// static void signTx_handleCollRetOutput_addressParams_ui_runStep()
+// {
+// 	output_context_t* subctx = accessSubcontext();
+// 	TRACE("UI step %d", subctx->ui_step);
+// 	ui_callback_fn_t* this_fn = signTx_handleCollRetOutput_addressParams_ui_runStep;
+
+// 	ASSERT(subctx->stateData.destination.type == DESTINATION_DEVICE_OWNED);
+
+// 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
+
+// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN) {
+// 		ui_displayPaginatedText("Collateral", "return output", this_fn);
+// 	}
+// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
+// 		if (determineSpendingChoice(subctx->stateData.destination.params.type) == SPENDING_NONE) {
+// 			// reward address
+// 			// TODO reward address is not allowed in outputs, why is this here?
+// 			UI_STEP_JUMP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO);
+// 		}
+// 		ui_displaySpendingInfoScreen(&subctx->stateData.destination.params, this_fn);
+// 	}
+// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO) {
+// 		ui_displayStakingInfoScreen(&subctx->stateData.destination.params, this_fn);
+// 	}
+// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
+// 		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
+// 		size_t addressSize = deriveAddress(&subctx->stateData.destination.params, addressBuffer, SIZEOF(addressBuffer));
+// 		ASSERT(addressSize > 0);
+// 		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
+
+// 		ui_displayAddressScreen(
+// 		        "Address",
+// 		        addressBuffer, addressSize,
+// 		        this_fn
+// 		);
+// 	}
+// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT) {
+// 		ui_displayAdaAmountScreen("Amount", subctx->stateData.adaAmount, this_fn);
+// 	}
+// 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND) {
+// 		respondSuccessEmptyMsg();
+
+// 		advanceState();
+// 	}
+// 	UI_STEP_END(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_INVALID);
+// }
+
+static void handleCollRetOutput_addressParams()
+{
+	output_context_t* subctx = accessSubcontext();
+	ASSERT(subctx->stateData.destination.type == DESTINATION_DEVICE_OWNED);
+
+	tx_output_description_t output = {
+		.format = subctx->serializationFormat,
+		.destination = {
+			.type = DESTINATION_DEVICE_OWNED,
+			.params = &subctx->stateData.destination.params
+		},
+		.amount = subctx->stateData.adaAmount,
+		.numAssetGroups = subctx->numAssetGroups,
+		.includeDatum = subctx->includeDatum,
+		.includeRefScript = subctx->includeRefScript,
+	};
+
+	security_policy_t policy = policyForSignTxCollRetOutputAddressParams(
+	                                   &output,
+	                                   commonTxData->txSigningMode,
+	                                   commonTxData->networkId, commonTxData->protocolMagic
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+	subctx->outputSecurityPolicy = policy;
+
+	{
+		// add to tx
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
+		size_t addressSize = deriveAddress(
+		                             &subctx->stateData.destination.params,
+		                             addressBuffer,
+		                             SIZEOF(addressBuffer)
+		                     );
+		ASSERT(addressSize > 0);
+		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
+
+		// pass the derived address to tx hash builder
+		output.destination.type = DESTINATION_THIRD_PARTY;
+		output.destination.address.buffer = addressBuffer;
+		output.destination.address.size = addressSize;
+
+		txHashBuilder_addOutput_topLevelData(&BODY_CTX->txHashBuilder, &output);
+	}
+
+	{
+		// select UI steps
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+
+		subctx->ui_text1 = "Collateral";
+		subctx->ui_text2 = "return output";
+		subctx->ui_text3 = "Address";
+		subctx->ui_text4 = "Amount";
+
+		signTx_handleOutput_addressParams_ui_runStep();
+	}
+}
+
 static void handleTopLevelDataAPDU_collRetOutput(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	CHECK_STATE(STATE_OUTPUT_TOP_LEVEL_DATA);
@@ -478,14 +701,12 @@ static void handleTopLevelDataAPDU_collRetOutput(const uint8_t* wireDataBuffer, 
 	// and take care of user interactions
 	switch (subctx->stateData.destination.type) {
 
-	// TODO
-
 	case DESTINATION_THIRD_PARTY:
-		handleOutput_addressBytes();
+		handleCollRetOutput_addressBytes();
 		break;
 
 	case DESTINATION_DEVICE_OWNED:
-		handleOutput_addressParams();
+		handleCollRetOutput_addressParams();
 		break;
 
 	default:
@@ -1015,8 +1236,8 @@ static void signTxOutput_handleConfirm_ui_runStep()
 
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(
-				subctx->ui_firstLineText,
-				subctx->ui_secondLineText,
+				subctx->ui_text1,
+				subctx->ui_text2,
 		        this_fn,
 		        respond_with_user_reject
 		);
@@ -1055,8 +1276,8 @@ static void handleConfirmAPDU_output(const uint8_t* wireDataBuffer MARK_UNUSED, 
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		subctx->ui_firstLineText = "Confirm";
-		subctx->ui_secondLineText = "output?";
+		subctx->ui_text1 = "Confirm";
+		subctx->ui_text2 = "output?";
 	}
 
 	signTxOutput_handleConfirm_ui_runStep();
@@ -1089,8 +1310,8 @@ static void handleConfirmAPDU_collRetOutput(const uint8_t* wireDataBuffer MARK_U
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		subctx->ui_firstLineText = "Confirm collateral";
-		subctx->ui_secondLineText = "return output?";
+		subctx->ui_text1 = "Confirm collateral";
+		subctx->ui_text2 = "return output?";
 	}
 
 	signTxOutput_handleConfirm_ui_runStep();

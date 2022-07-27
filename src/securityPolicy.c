@@ -669,6 +669,26 @@ security_policy_t policyForSignTxOutputConfirm(
 	DENY(); // should not be reached
 }
 
+security_policy_t policyForSignTxCollRetOutputAddressBytes(
+        const tx_output_description_t* output,
+        sign_tx_signingmode_t txSigningMode,
+        const uint8_t networkId, const uint32_t protocolMagic
+)
+{
+	// TODO
+	SHOW();
+}
+
+security_policy_t policyForSignTxCollRetOutputAddressParams(
+        const tx_output_description_t* output,
+        sign_tx_signingmode_t txSigningMode,
+        const uint8_t networkId, const uint32_t protocolMagic
+)
+{
+	// TODO
+	SHOW();
+}
+
 // TODO
 // For final collateral return output output confirmation
 security_policy_t policyForSignTxCollRetOutputConfirm(
