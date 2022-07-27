@@ -3,11 +3,33 @@
 
 #include "cardano.h"
 #include "hash.h"
+#include "addressUtilsShelley.h"
 
 typedef enum {
 	ARRAY_LEGACY = 0,   // legacy_transaction_output
 	MAP_BABBAGE = 1     // post_alonzo_transaction_output
 } tx_output_serialization_format_t;
+
+typedef enum {
+	DATUM_HASH = 0,
+	DATUM_INLINE = 1,
+} datum_type_t;
+
+typedef enum {
+	DESTINATION_THIRD_PARTY = 1,
+	DESTINATION_DEVICE_OWNED = 2,
+} tx_output_destination_type_t;
+
+typedef struct {
+	tx_output_destination_type_t type;
+	union {
+		struct {
+			uint8_t buffer[MAX_ADDRESS_SIZE];
+			size_t size;
+		} address;
+		addressParams_t params;
+	};
+} tx_output_destination_t;
 
 enum {
 	TX_BODY_KEY_INPUTS = 0,

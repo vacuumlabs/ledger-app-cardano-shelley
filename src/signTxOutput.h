@@ -14,12 +14,6 @@
 #define MAX_CHUNK_SIZE 150
 
 
-typedef enum {
-	DESTINATION_THIRD_PARTY = 1,
-	DESTINATION_DEVICE_OWNED = 2,
-} tx_output_destination_type_t;
-
-
 // SIGN_STAGE_BODY_OUTPUTS = 25
 typedef enum {
 	STATE_OUTPUT_TOP_LEVEL_DATA = 2510,
@@ -53,14 +47,7 @@ typedef struct {
 	union {
 		struct {
 			// top level data
-			tx_output_destination_type_t destinationType;
-			union {
-				struct {
-					uint8_t buffer[MAX_ADDRESS_SIZE];
-					size_t size;
-				} address;
-				addressParams_t params;
-			} destination;
+			tx_output_destination_t destination;
 
 			uint64_t adaAmount;
 		};

@@ -95,11 +95,6 @@ typedef struct {
 	uint64_t amount;
 } output_token_amount_t;
 
-typedef enum {
-	DATUM_HASH = 0,
-	DATUM_INLINE = 1,
-} datum_type_t;
-
 // ==============================  CERTIFICATES  ==============================
 
 #define POOL_METADATA_URL_LENGTH_MAX 64
