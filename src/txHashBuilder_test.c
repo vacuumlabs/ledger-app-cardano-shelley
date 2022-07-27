@@ -181,7 +181,7 @@ static void addMultiassetOutput(tx_hash_builder_t* builder, tx_output_serializat
 	output.amount = outputs[1].amount;
 	output.numAssetGroups = 2;
 	output.includeDatum = false;
-	output.includeScriptRef = false;
+	output.includeRefScript = false;
 	txHashBuilder_addOutput_topLevelData(
 	        builder,
 	        &output
@@ -207,7 +207,7 @@ static void addOutputs(tx_hash_builder_t* builder)
 		output.amount = it->amount;
 		output.numAssetGroups = 0;
 		output.includeDatum = false;
-		output.includeScriptRef = false;
+		output.includeRefScript = false;
 		txHashBuilder_addOutput_topLevelData(
 		        builder,
 		        &output
@@ -232,7 +232,7 @@ static void addOutputs(tx_hash_builder_t* builder)
 		output.amount = it->amount;
 		output.numAssetGroups = 0;
 		output.includeDatum = false;
-		output.includeScriptRef = false;
+		output.includeRefScript = false;
 		txHashBuilder_addOutput_topLevelData(
 		        builder,
 		        &output
@@ -261,7 +261,7 @@ static void addMultiassetCollRet(tx_hash_builder_t* builder, tx_output_serializa
 	output.amount = outputs[1].amount;
 	output.numAssetGroups = 2;
 	output.includeDatum = false;
-	output.includeScriptRef = false;
+	output.includeRefScript = false;
 	txHashBuilder_addCollateralReturn(
 	        builder,
 	        &output

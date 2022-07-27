@@ -113,7 +113,7 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_hash_b
 {
 	ASSERT(output->format == MAP_BABBAGE);
 
-	// Map(2 + includeDatum + includeScriptRef)[
+	// Map(2 + includeDatum + includeRefScript)[
 	//   Unsigned[0] ; map entry key
 	//   Bytes[address]
 	//
@@ -124,7 +124,7 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_hash_b
 	//
 	//   ? script_ref = #6.24(bytes .cbor script) --- entry added later
 	// ]
-	BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 2 + output->includeDatum + output->includeScriptRef);
+	BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 2 + output->includeDatum + output->includeRefScript);
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_OUTPUT_KEY_ADDRESS);
 
@@ -177,7 +177,7 @@ static void assertCanLeaveCurrentOutput(tx_hash_builder_t* builder)
 		ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
 		// no datum or script reference
 		ASSERT(!builder->outputData.includeDatum);
-		ASSERT(!builder->outputData.includeScriptRef);
+		ASSERT(!builder->outputData.includeRefScript);
 		break;
 
 	case TX_OUTPUT_ASSET_GROUP:
@@ -187,18 +187,18 @@ static void assertCanLeaveCurrentOutput(tx_hash_builder_t* builder)
 
 		// no datum or script reference
 		ASSERT(!builder->outputData.includeDatum);
-		ASSERT(!builder->outputData.includeScriptRef);
+		ASSERT(!builder->outputData.includeRefScript);
 		break;
 
 	case TX_OUTPUT_DATUM_HASH:
 		// if no reference script, we are done
-		ASSERT(!builder->outputData.includeScriptRef);
+		ASSERT(!builder->outputData.includeRefScript);
 		break;
 
 	case TX_OUTPUT_DATUM_INLINE:
 		// if all chunks were received and no reference script follows, we are done
 		ASSERT(builder->outputData.datumData.remainingBytes == 0);
-		ASSERT(!builder->outputData.includeScriptRef);
+		ASSERT(!builder->outputData.includeRefScript);
 		break;
 
 	case TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS:
@@ -386,7 +386,7 @@ void txHashBuilder_addOutput_topLevelData(
 
 	builder->outputData.serializationFormat = output->format;
 	builder->outputData.includeDatum = output->includeDatum;
-	builder->outputData.includeScriptRef = output->includeScriptRef;
+	builder->outputData.includeRefScript = output->includeRefScript;
 
 	//  For single-asset outputs, the code below will append complete top level data, however for multi-asset data,
 	//  entries for multi-asset map has to be filled by another call, therefore leaving the top level data incomplete.
@@ -605,7 +605,7 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 {
 	// TODO: MAX_SCRIPT_SIZE?? maybe we don't need to limit it
 
-	ASSERT(builder->outputData.includeScriptRef);
+	ASSERT(builder->outputData.includeRefScript);
 
 	switch (builder->outputState) {
 		case TX_OUTPUT_TOP_LEVEL_DATA:
@@ -1713,7 +1713,7 @@ void txHashBuilder_addCollateralReturn(
 
 	builder->outputData.serializationFormat = output->format;
 	ASSERT(builder->outputData.includeDatum == false);
-	ASSERT(builder->outputData.includeScriptRef == false);
+	ASSERT(builder->outputData.includeRefScript == false);
 
 	{
 		// Enter collateral output
