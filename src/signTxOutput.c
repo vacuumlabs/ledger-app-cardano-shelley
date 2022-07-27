@@ -31,8 +31,8 @@ bool signTxOutput_isFinished()
 	case STATE_OUTPUT_TOKEN:
 	case STATE_OUTPUT_DATUM:
 	case STATE_OUTPUT_DATUM_OPTION_CHUNKS:
-	// case STATE_OUTPUT_REFERENCE_SCRIPT:
-	// case STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS:
+	case STATE_OUTPUT_REFERENCE_SCRIPT:
+	case STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS:
 	case STATE_OUTPUT_CONFIRM:
 		return false;
 
@@ -69,8 +69,8 @@ static inline void advanceState()
 			subctx->state = STATE_OUTPUT_ASSET_GROUP;
 		} else if (subctx->includeDatum) {
 			subctx->state = STATE_OUTPUT_DATUM;
-		// } else if (subctx->includeScriptRef) {
-		// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
+		} else if (subctx->includeScriptRef) {
+			subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
 		} else {
 			subctx->state = STATE_OUTPUT_CONFIRM;
 		}
@@ -97,8 +97,8 @@ static inline void advanceState()
 			// the whole token bundle has been received
 			if (subctx->includeDatum) {
 				subctx->state = STATE_OUTPUT_DATUM;
-			// } else if (subctx->includeScriptRef) {
-			// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
+			} else if (subctx->includeScriptRef) {
+				subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
 			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
 			}
@@ -111,11 +111,11 @@ static inline void advanceState()
 		ASSERT(subctx->includeDatum);
 		if (subctx->stateData.datumOption == DATUM_HASH) {
 			ASSERT(subctx->datumHashReceived);
-			// if (subctx->includeScriptRef) {
-			// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
-			// } else {
+			if (subctx->includeScriptRef) {
+				subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
+			} else {
 				subctx->state = STATE_OUTPUT_CONFIRM;
-			// }
+			}
 		} else {
 			ASSERT(subctx->stateData.datumRemainingBytes > 0);
 			subctx->state = STATE_OUTPUT_DATUM_OPTION_CHUNKS;
@@ -126,24 +126,24 @@ static inline void advanceState()
 		ASSERT(subctx->includeDatum);
 		// should be called when all chunks have been received
 		ASSERT(subctx->stateData.datumRemainingBytes == 0);
-		// if (subctx->includeScriptRef) {
-		// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
-		// } else {
+		if (subctx->includeScriptRef) {
+			subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
+		} else {
 			subctx->state = STATE_OUTPUT_CONFIRM;
-		// }
+		}
 		break;
 
-	// case STATE_OUTPUT_REFERENCE_SCRIPT:
-	// 	ASSERT(subctx->includeScriptRef);
-	// 	ASSERT(subctx->stateData.scriptRefRemainingBytes > 0);
-	// 	subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS;
-	// 	break;
+	case STATE_OUTPUT_REFERENCE_SCRIPT:
+		ASSERT(subctx->includeScriptRef);
+		ASSERT(subctx->stateData.scriptRefRemainingBytes > 0);
+		subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS;
+		break;
 
-	// case STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS:
-	// 	// should be called when all chunks have been received
-	// 	ASSERT(subctx->stateData.scriptRefRemainingBytes == 0);
-	// 	subctx->state = STATE_OUTPUT_CONFIRM;
-	// 	break;
+	case STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS:
+		// should be called when all chunks have been received
+		ASSERT(subctx->stateData.scriptRefRemainingBytes == 0);
+		subctx->state = STATE_OUTPUT_CONFIRM;
+		break;
 
 	case STATE_OUTPUT_CONFIRM:
 		subctx->state = STATE_OUTPUT_FINISHED;
@@ -858,6 +858,103 @@ static void signTxOutput_handleDatumChunkAPDU(const uint8_t* wireDataBuffer, siz
 	respondSuccessEmptyMsg();
 }
 
+// ========================== REFERENCE SCRIPT =============================
+
+static void signTxOutput_handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STATE(STATE_OUTPUT_REFERENCE_SCRIPT);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	output_context_t* subctx = accessSubcontext();
+	{
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+
+		// parse data
+		subctx->stateData.scriptRefRemainingBytes = parse_u4be(&view);
+		VALIDATE(subctx->stateData.scriptRefRemainingBytes > 0, ERR_INVALID_DATA);
+		// TODO some other validation?
+
+		subctx->stateData.scriptRefChunkSize = parse_u4be(&view);
+		VALIDATE(subctx->stateData.scriptRefChunkSize > 0, ERR_INVALID_DATA);
+		VALIDATE(subctx->stateData.scriptRefChunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+
+		view_parseBuffer(subctx->stateData.datumChunk, &view, subctx->stateData.scriptRefChunkSize);
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+	}
+	{
+		// add to tx
+		TRACE("Adding reference script to tx hash");
+		txHashBuilder_addOutput_referenceScript(
+		        &BODY_CTX->txHashBuilder,
+		        subctx->stateData.datumRemainingBytes
+		);
+		txHashBuilder_addOutput_referenceScript_dataChunk(
+		        &BODY_CTX->txHashBuilder,
+		        subctx->stateData.scriptChunk, subctx->stateData.scriptRefChunkSize
+		);
+	}
+	{
+		// TODO all of this
+
+		// select UI step
+		security_policy_t policy = policyForSignTxOutputDatumHash(subctx->outputSecurityPolicy);
+		TRACE("Policy: %d", (int) policy);
+		ENSURE_NOT_DENIED(policy);
+
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_DATUM_HASH_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_DATUM_HASH_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+
+	}
+	respondSuccessEmptyMsg(); // TODO
+	//signTxOutput_handleDatumInline_ui_runStep();
+}
+
+static void signTxOutput_handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STATE(STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS);
+		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	}
+	output_context_t* subctx = accessSubcontext();
+	{
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+
+		const size_t chunkSize = parse_u4be(&view);
+		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
+		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+
+		VALIDATE(chunkSize <= subctx->stateData.datumRemainingBytes, ERR_INVALID_DATA);
+		subctx->stateData.datumRemainingBytes -= chunkSize;
+
+		view_parseBuffer(subctx->stateData.scriptChunk, &view, chunkSize);
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+
+		subctx->stateData.scriptRefChunkSize = chunkSize;
+	}
+	{
+		// add to tx
+		TRACE("Adding inline datum chunk to tx hash");
+		txHashBuilder_addOutput_referenceScript_dataChunk(
+		        &BODY_CTX->txHashBuilder,
+		        subctx->stateData.scriptChunk, subctx->stateData.scriptRefChunkSize
+		);
+	}
+	respondSuccessEmptyMsg();
+}
+
 // ============================== CONFIRM ==============================
 
 enum {
@@ -935,6 +1032,8 @@ enum {
 	APDU_INSTRUCTION_TOKEN = 0x32,
 	APDU_INSTRUCTION_DATUM = 0x34,
 	APDU_INSTRUCTION_DATUM_CHUNK = 0x35,
+	APDU_INSTRUCTION_REF_SCRIPT = 0x36,
+	APDU_INSTRUCTION_REF_SCRIPT_CHUNK = 0x37,
 	APDU_INSTRUCTION_CONFIRM = 0x33,
 };
 
@@ -946,6 +1045,8 @@ bool signTxOutput_isValidInstruction(uint8_t p2)
 	case APDU_INSTRUCTION_TOKEN:
 	case APDU_INSTRUCTION_DATUM:
 	case APDU_INSTRUCTION_DATUM_CHUNK:
+	case APDU_INSTRUCTION_REF_SCRIPT:
+	case APDU_INSTRUCTION_REF_SCRIPT_CHUNK:
 	case APDU_INSTRUCTION_CONFIRM:
 		return true;
 
@@ -977,6 +1078,14 @@ void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t w
 
 	case APDU_INSTRUCTION_DATUM_CHUNK:
 		signTxOutput_handleDatumChunkAPDU(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_REF_SCRIPT:
+		signTxOutput_handleRefScriptAPDU(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_REF_SCRIPT_CHUNK:
+		signTxOutput_handleRefScriptChunkAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_CONFIRM:

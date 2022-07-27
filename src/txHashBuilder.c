@@ -601,7 +601,7 @@ void txHashBuilder_addOutput_datumOption_dataChunk(
 	}
 }
 
-void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t bufferSize)
+void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t scriptSize)
 {
 	// TODO: MAX_SCRIPT_SIZE?? maybe we don't need to limit it
 
@@ -632,23 +632,26 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 			ASSERT(false);
 	}
 
+	// TODO check where the tag is added
 	//   script_ref = #6.24(bytes .cbor script)
 
-	//   Unsigned[3] ; entry key
+	//   Unsigned[3] ; map entry key
 	//   Bytes[buffer]
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_OUTPUT_KEY_SCRIPT_REF);
 	}
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, scriptSize);
 		//Chunks will be added later
 	}
-	builder->outputData.referenceScriptData.remainingBytes = bufferSize;
+	builder->outputData.referenceScriptData.remainingBytes = scriptSize;
 	builder->outputState = TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS;
 }
 
-void txHashBuilder_addOutput_referenceScript_dataChunk(tx_hash_builder_t* builder, const uint8_t* buffer,
-        size_t bufferSize)
+void txHashBuilder_addOutput_referenceScript_dataChunk(
+	tx_hash_builder_t* builder,
+	const uint8_t* buffer, size_t bufferSize
+)
 {
 	ASSERT(builder->outputState == TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS);
 	{
