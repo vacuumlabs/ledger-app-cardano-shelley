@@ -67,6 +67,11 @@ security_policy_t policyForSignTxOutputConfirm(
         uint64_t numAssetGroups
 );
 
+security_policy_t policyForSignTxCollRetOutputConfirm(
+        security_policy_t outputPolicy,
+        uint64_t numAssetGroups
+);
+
 security_policy_t policyForSignTxFee(sign_tx_signingmode_t txSigningMode, uint64_t fee);
 
 security_policy_t policyForSignTxTtl(uint32_t ttl);

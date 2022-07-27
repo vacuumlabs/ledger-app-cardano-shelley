@@ -41,10 +41,12 @@ typedef enum {
 	SIGN_STAGE_BODY_SCRIPT_DATA_HASH = 37,
 	SIGN_STAGE_BODY_COLLATERALS = 38,
 	SIGN_STAGE_BODY_REQUIRED_SIGNERS = 39,
-	SIGN_STAGE_BODY_TOTAL_COLLATERAL = 40,
-	SIGN_STAGE_BODY_REFERENCE_INPUTS = 41,
-	SIGN_STAGE_CONFIRM = 42,
-	SIGN_STAGE_WITNESSES = 43,
+	SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT = 40,
+	SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE = 40, //TODO shorten the name
+	SIGN_STAGE_BODY_TOTAL_COLLATERAL = 41,
+	SIGN_STAGE_BODY_REFERENCE_INPUTS = 42,
+	SIGN_STAGE_CONFIRM = 43,
+	SIGN_STAGE_WITNESSES = 44,
 } sign_tx_stage_t;
 
 enum {
@@ -150,6 +152,7 @@ typedef struct {
 	bool validityIntervalStartReceived;
 	bool mintReceived;
 	bool scriptDataHashReceived;
+	bool collateralReturnOutputReceived;
 	bool totalCollateralReceived;
 
 	// TODO move these to commonTxData?
@@ -199,7 +202,7 @@ typedef struct {
 	uint16_t numCollaterals;
 	uint16_t numRequiredSigners;
 	bool includeNetworkId;
-	bool includeCollateralReturn;
+	bool includeCollateralReturnOutput;
 	bool includeTotalCollateral;
 	uint64_t totalCollateral;
 	uint16_t numReferenceInputs;

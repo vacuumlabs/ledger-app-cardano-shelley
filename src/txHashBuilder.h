@@ -98,7 +98,7 @@ typedef struct {
 	bool includeMint;
 	bool includeScriptDataHash;
 	bool includeNetworkId;
-	bool includeCollateralReturn;
+	bool includeCollateralReturnOutput;
 	bool includeTotalCollateral;
 
 	union {
@@ -163,7 +163,7 @@ void txHashBuilder_init(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
-        bool includeCollateralReturn,
+        bool includeCollateralReturnOutput,
         bool includeTotalCollateral,
         uint16_t numReferenceInputs
 );

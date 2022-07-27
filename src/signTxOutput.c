@@ -17,7 +17,7 @@ static output_context_t* accessSubcontext()
 	return &BODY_CTX->stageContext.output_subctx;
 }
 
-bool signTxOutput_isFinished()
+bool isCurrentOutputFinished()
 {
 	output_context_t* subctx = accessSubcontext();
 	TRACE("Output submachine state: %d", subctx->state);
@@ -42,7 +42,7 @@ bool signTxOutput_isFinished()
 	}
 }
 
-void signTxOutput_init()
+void initializeOutputSubmachine()
 {
 	explicit_bzero(&BODY_CTX->stageContext, SIZEOF(BODY_CTX->stageContext));
 
@@ -369,7 +369,7 @@ static void handleOutput_addressParams()
 	}
 }
 
-static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void parseTopLevelData(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// safety checks
@@ -437,26 +437,61 @@ static void signTxOutput_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, s
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
-	{
-		// call the appropriate handler depending on output type
-		// the handlers serialize data into the tx hash
-		// and take care of user interactions
-		switch (subctx->stateData.destinationType) {
-
-		case DESTINATION_THIRD_PARTY:
-			handleOutput_addressBytes();
-			break;
-
-		case DESTINATION_DEVICE_OWNED:
-			handleOutput_addressParams();
-			break;
-
-		default:
-			ASSERT(false);
-		};
-	}
 }
 
+static void handleTopLevelDataAPDU_output(const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	CHECK_STATE(STATE_OUTPUT_TOP_LEVEL_DATA);
+
+	parseTopLevelData(wireDataBuffer, wireDataSize);
+
+	output_context_t* subctx = accessSubcontext();
+
+	// call the appropriate handler depending on output type
+	// the handlers serialize data into the tx hash
+	// and take care of user interactions
+	switch (subctx->stateData.destinationType) {
+
+	case DESTINATION_THIRD_PARTY:
+		handleOutput_addressBytes();
+		break;
+
+	case DESTINATION_DEVICE_OWNED:
+		handleOutput_addressParams();
+		break;
+
+	default:
+		ASSERT(false);
+	};
+}
+
+static void handleTopLevelDataAPDU_collRetOutput(const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	CHECK_STATE(STATE_OUTPUT_TOP_LEVEL_DATA);
+
+	parseTopLevelData(wireDataBuffer, wireDataSize);
+
+	output_context_t* subctx = accessSubcontext();
+
+	// call the appropriate handler depending on output type
+	// the handlers serialize data into the tx hash
+	// and take care of user interactions
+	switch (subctx->stateData.destinationType) {
+
+	// TODO
+
+	case DESTINATION_THIRD_PARTY:
+		handleOutput_addressBytes();
+		break;
+
+	case DESTINATION_DEVICE_OWNED:
+		handleOutput_addressParams();
+		break;
+
+	default:
+		ASSERT(false);
+	};
+}
 // ============================== ASSET GROUP ==============================
 
 enum {
@@ -465,11 +500,11 @@ enum {
 	HANDLE_ASSET_GROUP_STEP_INVALID,
 };
 
-static void signTxOutput_handleAssetGroup_ui_runStep()
+static void handleAssetGroup_ui_runStep()
 {
 	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxOutput_handleAssetGroup_ui_runStep;
+	ui_callback_fn_t* this_fn = handleAssetGroup_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -481,7 +516,7 @@ static void signTxOutput_handleAssetGroup_ui_runStep()
 	UI_STEP_END(HANDLE_ASSET_GROUP_STEP_INVALID);
 }
 
-static void signTxOutput_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -533,7 +568,7 @@ static void signTxOutput_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, siz
 	}
 
 	subctx->ui_step = HANDLE_ASSET_GROUP_STEP_RESPOND;
-	signTxOutput_handleAssetGroup_ui_runStep();
+	handleAssetGroup_ui_runStep();
 }
 
 // ============================== TOKEN ==============================
@@ -545,11 +580,11 @@ enum {
 	HANDLE_TOKEN_STEP_INVALID,
 };
 
-static void signTxOutput_handleToken_ui_runStep()
+static void handleToken_ui_runStep()
 {
 	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxOutput_handleToken_ui_runStep;
+	ui_callback_fn_t* this_fn = handleToken_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -581,7 +616,7 @@ static void signTxOutput_handleToken_ui_runStep()
 	UI_STEP_END(HANDLE_TOKEN_STEP_INVALID);
 }
 
-static void signTxOutput_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -643,7 +678,7 @@ static void signTxOutput_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t w
 		TRACE();
 	}
 
-	signTxOutput_handleToken_ui_runStep();
+	handleToken_ui_runStep();
 }
 
 // ========================== DATUM =============================
@@ -793,7 +828,7 @@ static void handleDatumInline(read_view_t* view)
 	signTxOutput_handleDatumInline_ui_runStep();
 }
 
-static void signTxOutput_handleDatumAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void handleDatumAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -825,7 +860,7 @@ static void signTxOutput_handleDatumAPDU(const uint8_t* wireDataBuffer, size_t w
 	}
 }
 
-static void signTxOutput_handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -863,7 +898,7 @@ static void signTxOutput_handleDatumChunkAPDU(const uint8_t* wireDataBuffer, siz
 
 // ========================== REFERENCE SCRIPT =============================
 
-static void signTxOutput_handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -926,7 +961,7 @@ static void signTxOutput_handleRefScriptAPDU(const uint8_t* wireDataBuffer, size
 	//signTxOutput_handleDatumInline_ui_runStep();
 }
 
-static void signTxOutput_handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
@@ -980,8 +1015,8 @@ static void signTxOutput_handleConfirm_ui_runStep()
 
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(
-		        "Confirm",
-		        "output?",
+				subctx->ui_firstLineText,
+				subctx->ui_secondLineText,
 		        this_fn,
 		        respond_with_user_reject
 		);
@@ -993,17 +1028,11 @@ static void signTxOutput_handleConfirm_ui_runStep()
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
-static void signTxOutput_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+static void handleConfirmAPDU_output(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	{
-		//sanity checks
 		CHECK_STATE(STATE_OUTPUT_CONFIRM);
 
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	}
-
-	{
-		// no data to receive
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
@@ -1025,11 +1054,47 @@ static void signTxOutput_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UN
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
+
+		subctx->ui_firstLineText = "Confirm";
+		subctx->ui_secondLineText = "output?";
 	}
 
 	signTxOutput_handleConfirm_ui_runStep();
 }
 
+static void handleConfirmAPDU_collRetOutput(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+{
+	{
+		CHECK_STATE(STATE_OUTPUT_CONFIRM);
+
+		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
+	}
+
+	output_context_t* subctx = accessSubcontext();
+	security_policy_t policy = policyForSignTxCollRetOutputConfirm(
+	                                   subctx->outputSecurityPolicy,
+	                                   subctx->numAssetGroups
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// select UI step
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CONFIRM_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+
+		subctx->ui_firstLineText = "Confirm collateral";
+		subctx->ui_secondLineText = "return output?";
+	}
+
+	signTxOutput_handleConfirm_ui_runStep();
+}
 
 // ============================== main APDU handler ==============================
 
@@ -1068,35 +1133,89 @@ void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t w
 
 	switch (p2) {
 	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
-		signTxOutput_handleTopLevelDataAPDU(wireDataBuffer, wireDataSize);
+		handleTopLevelDataAPDU_output(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_ASSET_GROUP:
-		signTxOutput_handleAssetGroupAPDU(wireDataBuffer, wireDataSize);
+		handleAssetGroupAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_TOKEN:
-		signTxOutput_handleTokenAPDU(wireDataBuffer, wireDataSize);
+		handleTokenAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_DATUM:
-		signTxOutput_handleDatumAPDU(wireDataBuffer, wireDataSize);
+		handleDatumAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_DATUM_CHUNK:
-		signTxOutput_handleDatumChunkAPDU(wireDataBuffer, wireDataSize);
+		handleDatumChunkAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_REF_SCRIPT:
-		signTxOutput_handleRefScriptAPDU(wireDataBuffer, wireDataSize);
+		handleRefScriptAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_REF_SCRIPT_CHUNK:
-		signTxOutput_handleRefScriptChunkAPDU(wireDataBuffer, wireDataSize);
+		handleRefScriptChunkAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_CONFIRM:
-		signTxOutput_handleConfirmAPDU(wireDataBuffer, wireDataSize);
+		handleConfirmAPDU_output(wireDataBuffer, wireDataSize);
+		break;
+
+	default:
+		// this is not supposed to be called with invalid p2
+		ASSERT(false);
+	}
+}
+
+bool signTxCollRetOutput_isValidInstruction(uint8_t p2)
+{
+	switch (p2) {
+	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
+	case APDU_INSTRUCTION_ASSET_GROUP:
+	case APDU_INSTRUCTION_TOKEN:
+	case APDU_INSTRUCTION_DATUM:
+	case APDU_INSTRUCTION_DATUM_CHUNK:
+	case APDU_INSTRUCTION_REF_SCRIPT:
+	case APDU_INSTRUCTION_REF_SCRIPT_CHUNK:
+	case APDU_INSTRUCTION_CONFIRM:
+		return true;
+
+	default:
+		return false;
+	}
+}
+
+void signTxCollRetOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+
+	switch (p2) {
+	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
+		handleTopLevelDataAPDU_collRetOutput(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_ASSET_GROUP:
+		handleAssetGroupAPDU(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_TOKEN:
+		handleTokenAPDU(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_CONFIRM:
+		handleConfirmAPDU_collRetOutput(wireDataBuffer, wireDataSize);
+		break;
+
+	case APDU_INSTRUCTION_DATUM:
+	case APDU_INSTRUCTION_DATUM_CHUNK:
+	case APDU_INSTRUCTION_REF_SCRIPT:
+	case APDU_INSTRUCTION_REF_SCRIPT_CHUNK:
+		// we don't allow such items because there is no use case for them
+		// if they were ever needed, APDU handling code needs to be added
+		THROW(ERR_REJECTED_BY_POLICY);
 		break;
 
 	default:
