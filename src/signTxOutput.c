@@ -117,8 +117,14 @@ static inline void advanceState()
 				subctx->state = STATE_OUTPUT_CONFIRM;
 			}
 		} else {
-			ASSERT(subctx->stateData.datumRemainingBytes > 0);
-			subctx->state = STATE_OUTPUT_DATUM_INLINE_CHUNKS;
+			if (subctx->stateData.datumRemainingBytes > 0) {
+				// there are more chunks to receive
+				subctx->state = STATE_OUTPUT_DATUM_INLINE_CHUNKS;
+			} else if (subctx->includeRefScript) {
+				subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT;
+			} else {
+				subctx->state = STATE_OUTPUT_CONFIRM;
+			}
 		}
 		break;
 
@@ -135,8 +141,13 @@ static inline void advanceState()
 
 	case STATE_OUTPUT_REFERENCE_SCRIPT:
 		ASSERT(subctx->includeRefScript);
-		ASSERT(subctx->stateData.refScriptRemainingBytes > 0);
-		subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS;
+		if (subctx->stateData.refScriptRemainingBytes > 0) {
+			// there are more chunks to receive
+			subctx->state = STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS;
+		} else {
+			// the first chunk was enough, no more are coming
+			subctx->state = STATE_OUTPUT_CONFIRM;
+		}
 		break;
 
 	case STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS:
@@ -1008,7 +1019,7 @@ static void handleDatumInline(read_view_t* view)
 		size_t chunkSize = parse_u4be(view);
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
-		subctx->stateData.datumRemainingBytes -= chunkSize;
+		VALIDATE(chunkSize <= subctx->stateData.datumRemainingBytes, ERR_INVALID_DATA);
 
 		view_parseBuffer(subctx->stateData.datumChunk, view, chunkSize);
 		VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
@@ -1029,6 +1040,10 @@ static void handleDatumInline(read_view_t* view)
 		);
 	}
 	{
+		// we can't do this sooner because tx hash builder has to receive proper total size
+		subctx->stateData.datumRemainingBytes -= subctx->stateData.datumChunkSize;
+	}
+	{
 		// TODO all of this
 
 		// select UI step
@@ -1045,8 +1060,11 @@ static void handleDatumInline(read_view_t* view)
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
+		// TODO
+		respondSuccessEmptyMsg();
+		advanceState();
+		//signTxOutput_handleDatumInline_ui_runStep();
 	}
-	signTxOutput_handleDatumInline_ui_runStep();
 }
 
 static void handleDatumAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -1115,6 +1133,9 @@ static void handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 		);
 	}
 	respondSuccessEmptyMsg();
+	if (subctx->stateData.datumRemainingBytes == 0) {
+		advanceState();
+	}
 }
 
 // ========================== REFERENCE SCRIPT =============================
@@ -1137,11 +1158,10 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 		VALIDATE(subctx->stateData.refScriptRemainingBytes > 0, ERR_INVALID_DATA);
 		// TODO some other validation?
 
-
 		size_t chunkSize = parse_u4be(&view);
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
-		subctx->stateData.datumRemainingBytes -= chunkSize;
+		VALIDATE(chunkSize <= subctx->stateData.refScriptRemainingBytes, ERR_INVALID_DATA);
 
 		view_parseBuffer(subctx->stateData.scriptChunk, &view, chunkSize);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
@@ -1161,6 +1181,10 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 		);
 	}
 	{
+		// we can't do this sooner because tx hash builder has to receive proper total size
+		subctx->stateData.refScriptRemainingBytes -= subctx->stateData.refScriptChunkSize;
+	}
+	{
 		// TODO all of this
 
 		// select UI step
@@ -1177,9 +1201,11 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
+		// TODO
+		respondSuccessEmptyMsg();
+		advanceState();
+		//signTxOutput_handleDatumInline_ui_runStep();
 	}
-	respondSuccessEmptyMsg(); // TODO
-	//signTxOutput_handleDatumInline_ui_runStep();
 }
 
 static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -1199,8 +1225,8 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 
-		VALIDATE(chunkSize <= subctx->stateData.datumRemainingBytes, ERR_INVALID_DATA);
-		subctx->stateData.datumRemainingBytes -= chunkSize;
+		VALIDATE(chunkSize <= subctx->stateData.refScriptRemainingBytes, ERR_INVALID_DATA);
+		subctx->stateData.refScriptRemainingBytes -= chunkSize;
 
 		view_parseBuffer(subctx->stateData.scriptChunk, &view, chunkSize);
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
@@ -1216,6 +1242,9 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 		);
 	}
 	respondSuccessEmptyMsg();
+	if (subctx->stateData.refScriptRemainingBytes == 0) {
+		advanceState();
+	}
 }
 
 // ============================== CONFIRM ==============================
