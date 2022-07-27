@@ -84,7 +84,7 @@ static void cbor_append_txOutput_array(tx_hash_builder_t* builder, const tx_hash
 	//   // value = coin / [coin,multiasset<uint>] --- added below
 	//   // ? datum_hash = $hash32 --- added later
 	// ]
-	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + output->includeDatumOption);
+	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2 + output->includeDatum);
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, output->addressSize);
 		BUILDER_APPEND_DATA(output->addressBuffer, output->addressSize);
@@ -113,7 +113,7 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_hash_b
 {
 	ASSERT(output->format == MAP_BABBAGE);
 
-	// Map(2 + includeDatumOption + includeScriptRef)[
+	// Map(2 + includeDatum + includeScriptRef)[
 	//   Unsigned[0] ; map entry key
 	//   Bytes[address]
 	//
@@ -124,7 +124,7 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_hash_b
 	//
 	//   ? script_ref = #6.24(bytes .cbor script) --- entry added later
 	// ]
-	BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 2 + output->includeDatumOption + output->includeScriptRef);
+	BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 2 + output->includeDatum + output->includeScriptRef);
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_OUTPUT_KEY_ADDRESS);
 
@@ -176,7 +176,7 @@ static void assertCanLeaveCurrentOutput(tx_hash_builder_t* builder)
 		// no tokens
 		ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
 		// no datum or script reference
-		ASSERT(!builder->outputData.includeDatumOption);
+		ASSERT(!builder->outputData.includeDatum);
 		ASSERT(!builder->outputData.includeScriptRef);
 		break;
 
@@ -186,16 +186,16 @@ static void assertCanLeaveCurrentOutput(tx_hash_builder_t* builder)
 		ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
 
 		// no datum or script reference
-		ASSERT(!builder->outputData.includeDatumOption);
+		ASSERT(!builder->outputData.includeDatum);
 		ASSERT(!builder->outputData.includeScriptRef);
 		break;
 
-	case TX_OUTPUT_DATUM_OPTION_HASH:
+	case TX_OUTPUT_DATUM_HASH:
 		// if no reference script, we are done
 		ASSERT(!builder->outputData.includeScriptRef);
 		break;
 
-	case TX_OUTPUT_DATUM_OPTION_CHUNKS:
+	case TX_OUTPUT_DATUM_INLINE:
 		// if all chunks were received and no reference script follows, we are done
 		ASSERT(builder->outputData.datumData.remainingBytes == 0);
 		ASSERT(!builder->outputData.includeScriptRef);
@@ -385,7 +385,7 @@ void txHashBuilder_addOutput_topLevelData(
 	assertCanLeaveCurrentOutput(builder);
 
 	builder->outputData.serializationFormat = output->format;
-	builder->outputData.includeDatumOption = output->includeDatumOption;
+	builder->outputData.includeDatum = output->includeDatum;
 	builder->outputData.includeScriptRef = output->includeScriptRef;
 
 	//  For single-asset outputs, the code below will append complete top level data, however for multi-asset data,
@@ -510,13 +510,13 @@ void txHashBuilder_addOutput_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount, CBOR_TYPE_UNSIGNED);
 }
 
-void txHashBuilder_addOutput_datumOption(
+void txHashBuilder_addOutput_datum(
         tx_hash_builder_t* builder,
-        datum_option_type_t datumOption,
+        datum_type_t datumType,
         const uint8_t* buffer, size_t bufferSize
 )
 {
-	ASSERT(builder->outputData.includeDatumOption);
+	ASSERT(builder->outputData.includeDatum);
 
 	TRACE("%d", builder->outputState);
 
@@ -545,18 +545,18 @@ void txHashBuilder_addOutput_datumOption(
 
 		//   Unsigned[2] ; map entry key
 		//   Array(2)[
-		//     Unsigned[datumOption]
+		//     Unsigned[datumType]
 		//     Bytes[buffer]
 		//   ]
 
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_OUTPUT_KEY_DATUM_OPTION);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, datumOption);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, datumType);
 		}
 	}
 
-	switch (datumOption) {
+	switch (datumType) {
 
 	case DATUM_HASH:
 		ASSERT(bufferSize == OUTPUT_DATUM_HASH_LENGTH);
@@ -565,8 +565,8 @@ void txHashBuilder_addOutput_datumOption(
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
 			BUILDER_APPEND_DATA(buffer, bufferSize);
 		}
-		//  Hash is transmitted in one chunk, and datumOption stage is finished
-		builder->outputState = TX_OUTPUT_DATUM_OPTION_HASH;
+		//  Hash is transmitted in one chunk, and datumType stage is finished
+		builder->outputState = TX_OUTPUT_DATUM_HASH;
 		break;
 
 	case DATUM_INLINE:
@@ -580,7 +580,7 @@ void txHashBuilder_addOutput_datumOption(
 		// bufferSize is total size of datum
 		builder->outputData.datumData.remainingBytes = bufferSize;
 		//	Datum is yet finished, but the size of inline datum is appended
-		builder->outputState = TX_OUTPUT_DATUM_OPTION_CHUNKS;
+		builder->outputState = TX_OUTPUT_DATUM_INLINE;
 		break;
 
 	default:
@@ -588,12 +588,12 @@ void txHashBuilder_addOutput_datumOption(
 	}
 }
 
-void txHashBuilder_addOutput_datumOption_dataChunk(
+void txHashBuilder_addOutput_datum_inline_chunk(
         tx_hash_builder_t* builder,
         const uint8_t* buffer, size_t bufferSize
 )
 {
-	ASSERT(builder->outputState == TX_OUTPUT_DATUM_OPTION_CHUNKS);
+	ASSERT(builder->outputState == TX_OUTPUT_DATUM_INLINE);
 	ASSERT(bufferSize <= builder->outputData.datumData.remainingBytes);
 	builder->outputData.datumData.remainingBytes -= bufferSize;
 	{
@@ -620,11 +620,11 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 			ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
 			break;
 
-		case TX_OUTPUT_DATUM_OPTION_HASH:
+		case TX_OUTPUT_DATUM_HASH:
 			// nothing to check, datum hash is added instantaneously
 			break;
 
-		case TX_OUTPUT_DATUM_OPTION_CHUNKS:
+		case TX_OUTPUT_DATUM_INLINE:
 			ASSERT(builder->outputData.datumData.remainingBytes == 0);
 			break;
 
@@ -1712,7 +1712,7 @@ void txHashBuilder_addCollateralReturn(
 	ASSERT(builder->includeCollateralReturn);
 
 	builder->outputData.serializationFormat = output->format;
-	ASSERT(builder->outputData.includeDatumOption == false);
+	ASSERT(builder->outputData.includeDatum == false);
 	ASSERT(builder->outputData.includeScriptRef == false);
 
 	{
