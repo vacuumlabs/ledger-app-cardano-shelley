@@ -309,7 +309,7 @@ security_policy_t policyForSignTxInit(
         uint16_t numRequiredSigners,
         bool includeScriptDataHash,
         bool includeNetworkId,
-        bool includeTotalCollateral,
+        bool includeTotalCollateral, // TODO add other babbage elements too and update the policy
         uint16_t numReferenceInputs
 )
 {
@@ -404,24 +404,27 @@ security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 	DENY(); // should not be reached
 }
 
-// For each transaction (third-party) address output
+// For each transaction output with third-party address
 security_policy_t policyForSignTxOutputAddressBytes(
+        const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
-        const uint8_t* rawAddressBuffer, size_t rawAddressSize,
-        const uint8_t networkId, const uint32_t protocolMagic,
-        bool includeDatumHash, bool includeRefScript
+        const uint8_t networkId, const uint32_t protocolMagic
 )
 {
-	ASSERT(rawAddressSize < BUFFER_SIZE_PARANOIA);
-	ASSERT(rawAddressSize >= 1);
+	ASSERT(output->destination.type == DESTINATION_THIRD_PARTY);
+	const uint8_t* addressBuffer = output->destination.address.buffer;
+	const size_t addressSize = output->destination.address.size;
 
-	const address_type_t addressType = getAddressType(rawAddressBuffer[0]);
+	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(addressSize >= 1);
+
+	const address_type_t addressType = getAddressType(addressBuffer[0]);
 	{
 		// check address type and network identification
 		switch (addressType) {
 
 		case BYRON:
-			DENY_IF(extractProtocolMagic(rawAddressBuffer, rawAddressSize) != protocolMagic);
+			DENY_IF(extractProtocolMagic(addressBuffer, addressSize) != protocolMagic);
 			break;
 
 		case REWARD_KEY:
@@ -432,7 +435,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 
 		default: {
 			// shelley types allowed in output
-			const uint8_t addressNetworkId = getNetworkId(rawAddressBuffer[0]);
+			const uint8_t addressNetworkId = getNetworkId(addressBuffer[0]);
 			DENY_IF(addressNetworkId != networkId);
 			break;
 		}
@@ -443,23 +446,23 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		switch (addressType) {
 
 		case BASE_PAYMENT_KEY_STAKE_KEY:
-			DENY_IF(rawAddressSize != 1 + ADDRESS_KEY_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
+			DENY_IF(addressSize != 1 + ADDRESS_KEY_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
 			break;
 		case BASE_PAYMENT_KEY_STAKE_SCRIPT:
-			DENY_IF(rawAddressSize != 1 + ADDRESS_KEY_HASH_LENGTH + SCRIPT_HASH_LENGTH);
+			DENY_IF(addressSize != 1 + ADDRESS_KEY_HASH_LENGTH + SCRIPT_HASH_LENGTH);
 			break;
 		case BASE_PAYMENT_SCRIPT_STAKE_KEY:
-			DENY_IF(rawAddressSize != 1 + SCRIPT_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
+			DENY_IF(addressSize != 1 + SCRIPT_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
 			break;
 		case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
-			DENY_IF(rawAddressSize != 1 + SCRIPT_HASH_LENGTH + SCRIPT_HASH_LENGTH);
+			DENY_IF(addressSize != 1 + SCRIPT_HASH_LENGTH + SCRIPT_HASH_LENGTH);
 			break;
 
 		case ENTERPRISE_KEY:
-			DENY_IF(rawAddressSize != 1 + ADDRESS_KEY_HASH_LENGTH);
+			DENY_IF(addressSize != 1 + ADDRESS_KEY_HASH_LENGTH);
 			break;
 		case ENTERPRISE_SCRIPT:
-			DENY_IF(rawAddressSize != 1 + SCRIPT_HASH_LENGTH);
+			DENY_IF(addressSize != 1 + SCRIPT_HASH_LENGTH);
 			break;
 
 		default: // not meaningful or complicated to verify address length in the other cases
@@ -467,7 +470,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 		}
 	}
 
-	if (includeDatumHash) {
+	if (output->includeDatum) {
 		// together with the above requirement on SPENDING_PATH,
 		// this forbids datum in change outputs entirely
 		DENY_UNLESS(allows_datum_hash(addressType));
@@ -494,7 +497,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		// utxo on a Plutus script address without datum hash is unspendable
 		// but we can't DENY because it is valid for native scripts
-		WARN_IF(allows_datum_hash(addressType) && !includeDatumHash);
+		WARN_IF(allows_datum_hash(addressType) && !output->includeDatum);
 		// we always show third-party output addresses
 		SHOW();
 		break;
@@ -508,12 +511,14 @@ security_policy_t policyForSignTxOutputAddressBytes(
 
 // For each output given by payment derivation path
 security_policy_t policyForSignTxOutputAddressParams(
+        const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
-        const addressParams_t* params,
-        const uint8_t networkId, const uint32_t protocolMagic,
-        bool includeDatumHash, bool includeRefScript
+        const uint8_t networkId, const uint32_t protocolMagic
 )
 {
+	ASSERT(output->destination.type == DESTINATION_DEVICE_OWNED);
+	const addressParams_t* params = output->destination.params;
+
 	DENY_UNLESS(isValidAddressParams(params));
 
 	// only allow valid address types
@@ -549,7 +554,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 		DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
 	}
 
-	if (includeDatumHash) {
+	if (output->includeDatum) {
 		// together with the above requirement on SPENDING_PATH,
 		// this forbids datum in change outputs entirely
 		DENY_UNLESS(allows_datum_hash(params->type));
@@ -570,7 +575,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 		SHOW_UNLESS(is_standard_base_address(params));
 
 		// outputs (eUTXOs) with datum hash are not interchangeable
-		SHOW_IF(includeDatumHash); // can't happen for operator
+		SHOW_IF(output->includeDatum); // can't happen for operator
 
 		// it is safe to hide the remaining change outputs
 		ALLOW();

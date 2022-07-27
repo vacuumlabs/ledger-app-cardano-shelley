@@ -161,15 +161,27 @@ typedef struct {
 
 typedef struct {
 	tx_output_serialization_format_t format;
-	size_t addressSize;
-	const uint8_t* addressBuffer;
+
+	// consistent with tx_output_destination_t
+	// but only contains address buffer pointer instead of the actual buffer
+	// or address params pointer instead of actual params
+	struct {
+		tx_output_destination_type_t type;
+		union {
+			struct {
+				uint8_t* buffer;
+				size_t size;
+			} address;
+			addressParams_t* params;
+		};
+	} destination;
 
 	uint64_t amount;
 	uint16_t numAssetGroups;
 
 	bool includeDatum;
 	bool includeRefScript;
-} tx_hash_builder_output; // TODO rename to "tx_hash_builder_output_init_data" or something like that?
+} tx_output_description_t;
 
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
@@ -198,7 +210,7 @@ void txHashBuilder_enterOutputs(tx_hash_builder_t* builder);
 
 void txHashBuilder_addOutput_topLevelData(
         tx_hash_builder_t* builder,
-        const tx_hash_builder_output* output
+        const tx_output_description_t* output
 );
 
 void txHashBuilder_addOutput_tokenGroup(
@@ -361,8 +373,10 @@ void txHashBuilder_addRequiredSigner(
 
 void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId);
 
-void txHashBuilder_addCollateralReturn(tx_hash_builder_t* builder,
-                                       const tx_hash_builder_output* output);
+void txHashBuilder_addCollateralReturn(
+        tx_hash_builder_t* builder,
+        const tx_output_description_t* output
+);
 
 void txHashBuilder_addCollateralReturn_tokenGroup(
         tx_hash_builder_t* builder,
