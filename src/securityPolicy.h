@@ -37,10 +37,11 @@ security_policy_t policyForSignTxInit(
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint,
+        bool includeScriptDataHash,
         uint16_t numCollateralInputs,
         uint16_t numRequiredSigners,
-        bool includeScriptDataHash,
         bool includeNetworkId,
+        bool includeCollateralOutput,
         bool includeTotalCollateral,
         uint16_t numReferenceInputs
 );

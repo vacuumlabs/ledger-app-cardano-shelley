@@ -305,11 +305,12 @@ security_policy_t policyForSignTxInit(
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint,
+        bool includeScriptDataHash,
         uint16_t numCollateralInputs,
         uint16_t numRequiredSigners,
-        bool includeScriptDataHash,
         bool includeNetworkId,
-        bool includeTotalCollateral, // TODO add other babbage elements too and update the policy
+        bool includeCollateralOutput,
+        bool includeTotalCollateral,
         uint16_t numReferenceInputs
 )
 {
@@ -339,6 +340,8 @@ security_policy_t policyForSignTxInit(
 		DENY_IF(includeScriptDataHash);
 		DENY_IF(numCollateralInputs > 0);
 		DENY_IF(numRequiredSigners > 0);
+		DENY_IF(includeCollateralOutput);
+		DENY_IF(includeTotalCollateral);
 		DENY_IF(numReferenceInputs > 0);
 		break;
 
@@ -346,6 +349,8 @@ security_policy_t policyForSignTxInit(
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		// collateral inputs are allowed only in PLUTUS_TX
 		DENY_IF(numCollateralInputs > 0);
+		DENY_IF(includeCollateralOutput);
+		DENY_IF(includeTotalCollateral);
 		DENY_IF(numReferenceInputs > 0);
 		break;
 
