@@ -462,7 +462,7 @@ void run_txHashBuilder_test()
 	                   1,	// collateral inputs
 	                   1,	// required
 	                   true, // network id
-	                   true, // collateral return,
+	                   true, // collateral return output,
 	                   true, // total collateral,
 	                   ARRAY_LEN(inputs)	// reference inputs
 	                  );

@@ -241,14 +241,14 @@ static inline void advanceStage()
 			// we are not waiting for any APDU here, network id is already known from the init APDU
 			txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		}
-		ctx->stage = SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT;
+		ctx->stage = SIGN_STAGE_BODY_COLLATERAL_OUTPUT;
 		if (ctx->includeCollateralOutput) {
 			break;
 		}
 
 	// intentional fallthrough
 
-	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT:
+	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT:
 		if (ctx->includeCollateralOutput) {
 			ASSERT(BODY_CTX->collateralOutputReceived);
 		}
@@ -387,10 +387,10 @@ static inline void checkForFinishedSubmachines()
 			advanceStage();
 		}
 
-	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE:
+	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
 		if (isCurrentOutputFinished()) {
 			TRACE();
-			ctx->stage = SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT;
+			ctx->stage = SIGN_STAGE_BODY_COLLATERAL_OUTPUT;
 			BODY_CTX->collateralOutputReceived = true;
 			advanceStage();
 		}
@@ -2095,13 +2095,13 @@ static void signTx_handleCollateralOutputAPDU(uint8_t p2, const uint8_t* wireDat
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 	}
 
-	if (ctx->stage == SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT) {
+	if (ctx->stage == SIGN_STAGE_BODY_COLLATERAL_OUTPUT) {
 		// first APDU for collateral return output
 		initializeOutputSubmachine();
-		ctx->stage = SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE;
+		ctx->stage = SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE;
 	}
 
-	CHECK_STAGE(SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE);
+	CHECK_STAGE(SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE);
 
 	// all output handling is delegated to a state sub-machine
 	VALIDATE(signTxCollateralOutput_isValidInstruction(p2), ERR_INVALID_DATA);
@@ -2536,8 +2536,8 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
-	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT:
-	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE:
+	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT:
+	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS: {
 		explicit_bzero(&BODY_CTX->stageData, SIZEOF(BODY_CTX->stageData));
@@ -2586,8 +2586,8 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
-	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT:
-	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE:
+	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT:
+	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
 	case SIGN_STAGE_CONFIRM:
