@@ -409,6 +409,71 @@ security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 	DENY(); // should not be reached
 }
 
+static bool is_addressBytes_suitable_for_tx_output(
+	const uint8_t* addressBuffer, size_t addressSize,
+	const uint8_t networkId, const uint32_t protocolMagic
+)
+{
+	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(addressSize >= 1);
+
+#define CHECK(cond) if (!(cond)) return false
+
+	const address_type_t addressType = getAddressType(addressBuffer[0]);
+	{
+		// check address type and network identification
+		switch (addressType) {
+
+		case BYRON:
+			CHECK(extractProtocolMagic(addressBuffer, addressSize) == protocolMagic);
+			break;
+
+		case REWARD_KEY:
+		case REWARD_SCRIPT:
+			// outputs may not contain reward addresses
+			return false;
+			break;
+
+		default: {
+			// shelley types allowed in output
+			const uint8_t addressNetworkId = getNetworkId(addressBuffer[0]);
+			CHECK(addressNetworkId == networkId);
+			break;
+		}
+		}
+	}
+	{
+		// check address length
+		switch (addressType) {
+
+		case BASE_PAYMENT_KEY_STAKE_KEY:
+			CHECK(addressSize == 1 + ADDRESS_KEY_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
+			break;
+		case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+			CHECK(addressSize == 1 + ADDRESS_KEY_HASH_LENGTH + SCRIPT_HASH_LENGTH);
+			break;
+		case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+			CHECK(addressSize == 1 + SCRIPT_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
+			break;
+		case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
+			CHECK(addressSize == 1 + SCRIPT_HASH_LENGTH + SCRIPT_HASH_LENGTH);
+			break;
+
+		case ENTERPRISE_KEY:
+			CHECK(addressSize == 1 + ADDRESS_KEY_HASH_LENGTH);
+			break;
+		case ENTERPRISE_SCRIPT:
+			CHECK(addressSize == 1 + SCRIPT_HASH_LENGTH);
+			break;
+
+		default: // not meaningful or complicated to verify address length in the other cases
+			break;
+		}
+	}
+	return true;
+#undef CHECK
+}
+
 // For each transaction output with third-party address
 security_policy_t policyForSignTxOutputAddressBytes(
         const tx_output_description_t* output,
@@ -419,61 +484,9 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	ASSERT(output->destination.type == DESTINATION_THIRD_PARTY);
 	const uint8_t* addressBuffer = output->destination.address.buffer;
 	const size_t addressSize = output->destination.address.size;
-
-	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
-	ASSERT(addressSize >= 1);
-
 	const address_type_t addressType = getAddressType(addressBuffer[0]);
-	{
-		// check address type and network identification
-		switch (addressType) {
 
-		case BYRON:
-			DENY_IF(extractProtocolMagic(addressBuffer, addressSize) != protocolMagic);
-			break;
-
-		case REWARD_KEY:
-		case REWARD_SCRIPT:
-			// outputs may not contain reward addresses
-			DENY();
-			break;
-
-		default: {
-			// shelley types allowed in output
-			const uint8_t addressNetworkId = getNetworkId(addressBuffer[0]);
-			DENY_IF(addressNetworkId != networkId);
-			break;
-		}
-		}
-	}
-	{
-		// check address length
-		switch (addressType) {
-
-		case BASE_PAYMENT_KEY_STAKE_KEY:
-			DENY_IF(addressSize != 1 + ADDRESS_KEY_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
-			break;
-		case BASE_PAYMENT_KEY_STAKE_SCRIPT:
-			DENY_IF(addressSize != 1 + ADDRESS_KEY_HASH_LENGTH + SCRIPT_HASH_LENGTH);
-			break;
-		case BASE_PAYMENT_SCRIPT_STAKE_KEY:
-			DENY_IF(addressSize != 1 + SCRIPT_HASH_LENGTH + ADDRESS_KEY_HASH_LENGTH);
-			break;
-		case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
-			DENY_IF(addressSize != 1 + SCRIPT_HASH_LENGTH + SCRIPT_HASH_LENGTH);
-			break;
-
-		case ENTERPRISE_KEY:
-			DENY_IF(addressSize != 1 + ADDRESS_KEY_HASH_LENGTH);
-			break;
-		case ENTERPRISE_SCRIPT:
-			DENY_IF(addressSize != 1 + SCRIPT_HASH_LENGTH);
-			break;
-
-		default: // not meaningful or complicated to verify address length in the other cases
-			break;
-		}
-	}
+	DENY_UNLESS(is_addressBytes_suitable_for_tx_output(addressBuffer, addressSize, networkId, protocolMagic));
 
 	if (output->includeDatum) {
 		// together with the above requirement on SPENDING_PATH,
