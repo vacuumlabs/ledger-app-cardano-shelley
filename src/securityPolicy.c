@@ -527,6 +527,51 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	DENY(); // should not be reached
 }
 
+static bool is_addressParams_suitable_for_tx_output(
+	const addressParams_t* params,
+	const uint8_t networkId, const uint32_t protocolMagic
+)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(isValidAddressParams(params));
+
+	// only allow valid address types
+	// and check network identification as appropriate
+	switch (params->type) {
+
+	case BYRON:
+		CHECK(params->protocolMagic == protocolMagic);
+		break;
+
+	case REWARD_KEY:
+	case REWARD_SCRIPT:
+		// outputs must not contain reward addresses (true not only for HW wallets)
+		return false;
+		break;
+
+	default: // all Shelley types allowed in output
+		CHECK(params->networkId == networkId);
+		break;
+	}
+
+	{
+		// outputs to a different account within this HW wallet,
+		// or to a different wallet, should be given as raw address bytes
+
+		// this captures the essence of a change output: money stays
+		// on an address where payment is fully controlled by this device
+		CHECK(determineSpendingChoice(params->type) == SPENDING_PATH);
+		// Note: if we allowed script hash in spending part, we must add a warning
+		// for missing datum (see policyForSignTxOutputAddressBytes)
+
+		ASSERT(determineSpendingChoice(params->type) == SPENDING_PATH);
+		CHECK(!violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
+	}
+
+	return true;
+#undef CHECK
+}
+
 // For each output given by payment derivation path
 security_policy_t policyForSignTxOutputAddressParams(
         const tx_output_description_t* output,
@@ -537,40 +582,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 	ASSERT(output->destination.type == DESTINATION_DEVICE_OWNED);
 	const addressParams_t* params = output->destination.params;
 
-	DENY_UNLESS(isValidAddressParams(params));
-
-	// only allow valid address types
-	// and check network identification as appropriate
-	switch (params->type) {
-
-	case BYRON:
-		DENY_IF(params->protocolMagic != protocolMagic);
-		break;
-
-	case REWARD_KEY:
-	case REWARD_SCRIPT:
-		// outputs must not contain reward addresses (true not only for HW wallets)
-		DENY();
-		break;
-
-	default: // all Shelley types allowed in output
-		DENY_IF(params->networkId != networkId);
-		break;
-	}
-
-	{
-		// outputs to a different account within this HW wallet,
-		// or to a different wallet, should be given as raw address bytes
-
-		// this captures the essence of a change output: money stays
-		// on an address where payment is fully controlled by this device
-		DENY_UNLESS(determineSpendingChoice(params->type) == SPENDING_PATH);
-		// Note: if we allowed script hash in spending part, we must add a warning
-		// for missing datum (see policyForSignTxOutputAddressBytes)
-
-		ASSERT(determineSpendingChoice(params->type) == SPENDING_PATH);
-		DENY_IF(violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
-	}
+	DENY_UNLESS(is_addressParams_suitable_for_tx_output(params, networkId, protocolMagic));
 
 	if (output->includeDatum) {
 		// together with the above requirement on SPENDING_PATH,
@@ -693,7 +705,19 @@ security_policy_t policyForSignTxCollateralOutputAddressBytes(
         const uint8_t networkId, const uint32_t protocolMagic
 )
 {
-	// TODO
+	ASSERT(output->destination.type == DESTINATION_THIRD_PARTY);
+	const uint8_t* addressBuffer = output->destination.address.buffer;
+	const size_t addressSize = output->destination.address.size;
+
+	DENY_UNLESS(is_addressBytes_suitable_for_tx_output(addressBuffer, addressSize, networkId, protocolMagic));
+
+	DENY_IF(output->includeDatum);
+	DENY_IF(output->includeRefScript);
+
+	DENY_IF(txSigningMode != SIGN_TX_SIGNINGMODE_PLUTUS_TX);
+
+	// TODO address must be shown, but tokens and some other elements might be hidden
+	// TODO depends on the presence of total collateral
 	SHOW();
 }
 
@@ -703,8 +727,37 @@ security_policy_t policyForSignTxCollateralOutputAddressParams(
         const uint8_t networkId, const uint32_t protocolMagic
 )
 {
-	// TODO
-	SHOW();
+	ASSERT(output->destination.type == DESTINATION_DEVICE_OWNED);
+	const addressParams_t* params = output->destination.params;
+
+	DENY_UNLESS(is_addressParams_suitable_for_tx_output(params, networkId, protocolMagic));
+
+	DENY_IF(output->includeDatum);
+	DENY_IF(output->includeRefScript);
+
+	switch (txSigningMode) {
+
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER: {
+		DENY();
+		break;
+	}
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX: {
+		// TODO this depends on the presence of total collateral
+		SHOW();
+		break;
+	}
+
+	default: {
+		ASSERT(false);
+		break;
+	}
+	}
+
+	DENY(); // should not be reached
 }
 
 // TODO
