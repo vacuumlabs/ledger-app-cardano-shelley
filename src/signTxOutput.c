@@ -237,7 +237,7 @@ static void handleOutput_addressBytes()
 	};
 
 	security_policy_t policy = policyForSignTxOutputAddressBytes(
-									   &output,
+	                                   &output,
 	                                   commonTxData->txSigningMode,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );
@@ -307,7 +307,7 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
 
 		ui_displayAddressScreen(
-		    	subctx->ui_text3,
+		        subctx->ui_text3,
 		        addressBuffer, addressSize,
 		        this_fn
 		);
@@ -508,9 +508,9 @@ static void signTx_handleCollateralOutput_addressBytes_ui_runStep()
 
 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO) {
 		ui_displayPaginatedText(
-			"Collateral",
-			"return output",
-			this_fn
+		        "Collateral",
+		        "return output",
+		        this_fn
 		);
 	}
 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
@@ -555,7 +555,7 @@ static void handleCollateralOutput_addressBytes()
 
 	// TODO maybe restric to specific address types? we don't support datum in coll ret outputs
 	security_policy_t policy = policyForSignTxCollateralOutputAddressBytes(
-									   &output,
+	                                   &output,
 	                                   commonTxData->txSigningMode,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
 	                           );
@@ -1288,8 +1288,8 @@ static void signTxOutput_handleConfirm_ui_runStep()
 
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		ui_displayPrompt(
-				subctx->ui_text1,
-				subctx->ui_text2,
+		        subctx->ui_text1,
+		        subctx->ui_text2,
 		        this_fn,
 		        respond_with_user_reject
 		);
