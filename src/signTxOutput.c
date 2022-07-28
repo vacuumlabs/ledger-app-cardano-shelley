@@ -8,6 +8,7 @@
 #include "bufView.h"
 #include "securityPolicy.h"
 #include "tokens.h"
+#include "hexUtils.h"
 
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
@@ -981,12 +982,18 @@ static void handleDatumHash(read_view_t* view)
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
-	}
 
-	signTxOutput_handleDatumHash_ui_runStep();
+		signTxOutput_handleDatumHash_ui_runStep();
+	}
 }
 
-// TODO
+enum {
+	HANDLE_DATUM_INLINE_STEP_DISPLAY = 3550,
+	HANDLE_DATUM_INLINE_STEP_RESPOND,
+	HANDLE_DATUM_INLINE_STEP_INVALID,
+};
+
+__noinline_due_to_stack__
 static void signTxOutput_handleDatumInline_ui_runStep()
 {
 	output_context_t* subctx = accessSubcontext();
@@ -995,20 +1002,31 @@ static void signTxOutput_handleDatumInline_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_DATUM_HASH_STEP_DISPLAY) {
-		ui_displayBech32Screen(
-		        "TODO",
-		        "TODO",
-		        subctx->stateData.datumHash, OUTPUT_DATUM_HASH_LENGTH,
+	UI_STEP(HANDLE_DATUM_INLINE_STEP_DISPLAY) {
+		char l1[30];
+		size_t datumSize = subctx->stateData.datumRemainingBytes + subctx->stateData.datumChunkSize;
+		// datumSize with 6 digits fits on the screen, less than max tx size
+		// if more is needed, "bytes" can be replaced by "B" for those larger numbers
+		snprintf(l1, SIZEOF(l1), "Datum %u bytes", datumSize);
+		ASSERT(strlen(l1) + 1 < SIZEOF(l1));
+
+		char l2[20];
+		size_t prefixLength = MIN(subctx->stateData.datumChunkSize, 6);
+		size_t len = encode_hex(subctx->stateData.datumChunk, prefixLength, l2, SIZEOF(l2));
+		snprintf(l2 + len, SIZEOF(l2) - len, "...");
+		ASSERT(strlen(l2) + 1 < SIZEOF(l2));
+
+		ui_displayPaginatedText(
+		        l1,
+		        l2,
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_DATUM_HASH_STEP_RESPOND) {
+	UI_STEP(HANDLE_DATUM_INLINE_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceState();
 	}
-	UI_STEP_END(HANDLE_DATUM_HASH_STEP_INVALID);
+	UI_STEP_END(HANDLE_DATUM_INLINE_STEP_INVALID);
 }
 
 static void handleDatumInline(read_view_t* view)
@@ -1050,8 +1068,6 @@ static void handleDatumInline(read_view_t* view)
 		subctx->stateData.datumRemainingBytes -= subctx->stateData.datumChunkSize;
 	}
 	{
-		// TODO all of this
-
 		// select UI step
 		security_policy_t policy = policyForSignTxOutputDatumHash(subctx->outputSecurityPolicy);
 		TRACE("Policy: %d", (int) policy);
@@ -1059,17 +1075,14 @@ static void handleDatumInline(read_view_t* view)
 
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_DATUM_HASH_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_DATUM_HASH_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_DATUM_INLINE_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_DATUM_INLINE_STEP_RESPOND);
 #	undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		// TODO
-		respondSuccessEmptyMsg();
-		advanceState();
-		//signTxOutput_handleDatumInline_ui_runStep();
+		signTxOutput_handleDatumInline_ui_runStep();
 	}
 }
 
