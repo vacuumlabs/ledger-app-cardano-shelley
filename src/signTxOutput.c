@@ -680,7 +680,7 @@ static void handleCollateralOutput_addressParams()
 		output.destination.address.buffer = addressBuffer;
 		output.destination.address.size = addressSize;
 
-		txHashBuilder_addOutput_topLevelData(&BODY_CTX->txHashBuilder, &output);
+		txHashBuilder_addCollateralOutput(&BODY_CTX->txHashBuilder, &output);
 	}
 
 	{
