@@ -495,7 +495,7 @@ enum {
 	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
 };
 
-static void signTx_handleCollRetOutput_addressBytes_ui_runStep()
+static void signTx_handleCollateralOutput_addressBytes_ui_runStep()
 {
 	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
@@ -532,7 +532,7 @@ static void signTx_handleCollRetOutput_addressBytes_ui_runStep()
 	UI_STEP_END(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_INVALID);
 }
 
-static void handleCollRetOutput_addressBytes()
+static void handleCollateralOutput_addressBytes()
 {
 	output_context_t* subctx = accessSubcontext();
 	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
@@ -553,7 +553,7 @@ static void handleCollRetOutput_addressBytes()
 	};
 
 	// TODO maybe restric to specific address types? we don't support datum in coll ret outputs
-	security_policy_t policy = policyForSignTxCollRetOutputAddressBytes(
+	security_policy_t policy = policyForSignTxCollateralOutputAddressBytes(
 									   &output,
 	                                   commonTxData->txSigningMode,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
@@ -563,7 +563,7 @@ static void handleCollRetOutput_addressBytes()
 	subctx->outputSecurityPolicy = policy;
 	{
 		// add to tx
-		txHashBuilder_addCollateralReturn(&BODY_CTX->txHashBuilder, &output);
+		txHashBuilder_addCollateralOutput(&BODY_CTX->txHashBuilder, &output);
 	}
 	{
 		// select UI steps
@@ -576,7 +576,7 @@ static void handleCollRetOutput_addressBytes()
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		signTx_handleCollRetOutput_addressBytes_ui_runStep();
+		signTx_handleCollateralOutput_addressBytes_ui_runStep();
 	}
 }
 
@@ -591,11 +591,11 @@ static void handleCollRetOutput_addressBytes()
 // };
 
 // __noinline_due_to_stack__
-// static void signTx_handleCollRetOutput_addressParams_ui_runStep()
+// static void signTx_handleCollateralOutput_addressParams_ui_runStep()
 // {
 // 	output_context_t* subctx = accessSubcontext();
 // 	TRACE("UI step %d", subctx->ui_step);
-// 	ui_callback_fn_t* this_fn = signTx_handleCollRetOutput_addressParams_ui_runStep;
+// 	ui_callback_fn_t* this_fn = signTx_handleCollateralOutput_addressParams_ui_runStep;
 
 // 	ASSERT(subctx->stateData.destination.type == DESTINATION_DEVICE_OWNED);
 
@@ -638,7 +638,7 @@ static void handleCollRetOutput_addressBytes()
 // 	UI_STEP_END(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_INVALID);
 // }
 
-static void handleCollRetOutput_addressParams()
+static void handleCollateralOutput_addressParams()
 {
 	output_context_t* subctx = accessSubcontext();
 	ASSERT(subctx->stateData.destination.type == DESTINATION_DEVICE_OWNED);
@@ -655,7 +655,7 @@ static void handleCollRetOutput_addressParams()
 		.includeRefScript = subctx->includeRefScript,
 	};
 
-	security_policy_t policy = policyForSignTxCollRetOutputAddressParams(
+	security_policy_t policy = policyForSignTxCollateralOutputAddressParams(
 	                                   &output,
 	                                   commonTxData->txSigningMode,
 	                                   commonTxData->networkId, commonTxData->protocolMagic
@@ -703,7 +703,7 @@ static void handleCollRetOutput_addressParams()
 	}
 }
 
-static void handleTopLevelDataAPDU_collRetOutput(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void handleTopLevelDataAPDU_collateralOutput(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	CHECK_STATE(STATE_OUTPUT_TOP_LEVEL_DATA);
 
@@ -717,11 +717,11 @@ static void handleTopLevelDataAPDU_collRetOutput(const uint8_t* wireDataBuffer, 
 	switch (subctx->stateData.destination.type) {
 
 	case DESTINATION_THIRD_PARTY:
-		handleCollRetOutput_addressBytes();
+		handleCollateralOutput_addressBytes();
 		break;
 
 	case DESTINATION_DEVICE_OWNED:
-		handleCollRetOutput_addressParams();
+		handleCollateralOutput_addressParams();
 		break;
 
 	default:
@@ -1322,7 +1322,7 @@ static void handleConfirmAPDU_output(const uint8_t* wireDataBuffer MARK_UNUSED, 
 	signTxOutput_handleConfirm_ui_runStep();
 }
 
-static void handleConfirmAPDU_collRetOutput(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+static void handleConfirmAPDU_collateralOutput(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	{
 		CHECK_STATE(STATE_OUTPUT_CONFIRM);
@@ -1331,7 +1331,7 @@ static void handleConfirmAPDU_collRetOutput(const uint8_t* wireDataBuffer MARK_U
 	}
 
 	output_context_t* subctx = accessSubcontext();
-	security_policy_t policy = policyForSignTxCollRetOutputConfirm(
+	security_policy_t policy = policyForSignTxCollateralOutputConfirm(
 	                                   subctx->outputSecurityPolicy,
 	                                   subctx->numAssetGroups
 	                           );
@@ -1430,7 +1430,7 @@ void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t w
 	}
 }
 
-bool signTxCollRetOutput_isValidInstruction(uint8_t p2)
+bool signTxCollateralOutput_isValidInstruction(uint8_t p2)
 {
 	switch (p2) {
 	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
@@ -1448,13 +1448,13 @@ bool signTxCollRetOutput_isValidInstruction(uint8_t p2)
 	}
 }
 
-void signTxCollRetOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+void signTxCollateralOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	switch (p2) {
 	case APDU_INSTRUCTION_TOP_LEVEL_DATA:
-		handleTopLevelDataAPDU_collRetOutput(wireDataBuffer, wireDataSize);
+		handleTopLevelDataAPDU_collateralOutput(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_ASSET_GROUP:
@@ -1466,7 +1466,7 @@ void signTxCollRetOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, s
 		break;
 
 	case APDU_INSTRUCTION_CONFIRM:
-		handleConfirmAPDU_collRetOutput(wireDataBuffer, wireDataSize);
+		handleConfirmAPDU_collateralOutput(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_DATUM:

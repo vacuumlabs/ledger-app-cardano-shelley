@@ -120,7 +120,7 @@ typedef struct {
 	bool includeMint;
 	bool includeScriptDataHash;
 	bool includeNetworkId;
-	bool includeCollateralReturnOutput;
+	bool includeCollateralOutput;
 	bool includeTotalCollateral;
 
 	union {
@@ -197,7 +197,7 @@ void txHashBuilder_init(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
-        bool includeCollateralReturnOutput,
+        bool includeCollateralOutput,
         bool includeTotalCollateral,
         uint16_t numReferenceInputs
 );
@@ -373,18 +373,18 @@ void txHashBuilder_addRequiredSigner(
 
 void txHashBuilder_addNetworkId(tx_hash_builder_t* builder, uint8_t networkId);
 
-void txHashBuilder_addCollateralReturn(
+void txHashBuilder_addCollateralOutput(
         tx_hash_builder_t* builder,
         const tx_output_description_t* output
 );
 
-void txHashBuilder_addCollateralReturn_tokenGroup(
+void txHashBuilder_addCollateralOutput_tokenGroup(
         tx_hash_builder_t* builder,
         const uint8_t* policyIdBuffer, size_t policyIdSize,
         uint16_t numTokens
 );
 
-void txHashBuilder_addCollateralReturn_token(
+void txHashBuilder_addCollateralOutput_token(
         tx_hash_builder_t* builder,
         const uint8_t* assetNameBuffer, size_t assetNameSize,
         uint64_t amount

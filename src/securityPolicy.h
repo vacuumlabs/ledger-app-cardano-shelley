@@ -65,17 +65,17 @@ security_policy_t policyForSignTxOutputConfirm(
         uint64_t numAssetGroups
 );
 
-security_policy_t policyForSignTxCollRetOutputAddressBytes(
+security_policy_t policyForSignTxCollateralOutputAddressBytes(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
         const uint8_t networkId, const uint32_t protocolMagic
 );
-security_policy_t policyForSignTxCollRetOutputAddressParams(
+security_policy_t policyForSignTxCollateralOutputAddressParams(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
         const uint8_t networkId, const uint32_t protocolMagic
 );
-security_policy_t policyForSignTxCollRetOutputConfirm(
+security_policy_t policyForSignTxCollateralOutputConfirm(
         security_policy_t outputPolicy,
         uint64_t numAssetGroups
 );
