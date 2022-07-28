@@ -1720,12 +1720,12 @@ void txHashBuilder_addCollateralOutput(
 
 	{
 		// Enter collateral output
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERAL_RETURN);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERAL_OUTPUT);
 	}
 	cbor_append_txOutput(builder, output);
 
 	builder->outputState = TX_OUTPUT_TOP_LEVEL_DATA;
-	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_RETURN;
+	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_OUTPUT;
 }
 
 void txHashBuilder_addCollateralOutput_tokenGroup(
@@ -1734,7 +1734,7 @@ void txHashBuilder_addCollateralOutput_tokenGroup(
         uint16_t numTokens
 )
 {
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_RETURN);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_OUTPUT);
 
 	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens);
 }
@@ -1745,7 +1745,7 @@ void txHashBuilder_addCollateralOutput_token(
         uint64_t amount
 )
 {
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_RETURN);
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_OUTPUT);
 
 	addToken(builder, assetNameBuffer, assetNameSize, amount, CBOR_TYPE_UNSIGNED);
 }
@@ -1755,9 +1755,9 @@ static void txHashBuilder_assertCanLeaveCollateralOutput(tx_hash_builder_t* buil
 	_TRACE("state = %d", builder->state);
 
 	switch (builder->state) {
-	case TX_HASH_BUILDER_IN_COLLATERAL_RETURN:
+	case TX_HASH_BUILDER_IN_COLLATERAL_OUTPUT:
 		assertCanLeaveCurrentOutput(builder);
-		// collateral return was added, we can move on
+		// collateral return output was added, we can move on
 		break;
 
 	default:

@@ -690,7 +690,7 @@ security_policy_t policyForSignTxCollateralOutputAddressParams(
 }
 
 // TODO
-// For final collateral return output output confirmation
+// For final collateral return output confirmation
 security_policy_t policyForSignTxCollateralOutputConfirm(
         security_policy_t outputPolicy,
         uint64_t numAssetGroups
