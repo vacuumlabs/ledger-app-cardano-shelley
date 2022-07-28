@@ -227,7 +227,7 @@ void txHashBuilder_init(
         bool includeValidityIntervalStart,
         bool includeMint,
         bool includeScriptDataHash,
-        uint16_t numCollaterals,
+        uint16_t numCollateralInputs,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
         bool includeCollateralOutput,
@@ -244,7 +244,7 @@ void txHashBuilder_init(
 	TRACE("includeValidityIntervalStart = %u", includeValidityIntervalStart);
 	TRACE("includeMint = %u", includeMint);
 	TRACE("includeScriptDataHash = %u", includeScriptDataHash);
-	TRACE("numCollaterals = %u", numCollaterals);
+	TRACE("numCollateralInputs = %u", numCollateralInputs);
 	TRACE("numRequiredSigners = %u", numRequiredSigners);
 	TRACE("includeNetworkId = %u", includeNetworkId);
 	TRACE("includeCollateralOutput = %u", includeCollateralOutput);
@@ -286,8 +286,8 @@ void txHashBuilder_init(
 		builder->includeScriptDataHash = includeScriptDataHash;
 		if (includeScriptDataHash) numItems++;
 
-		builder->remainingCollaterals = numCollaterals;
-		if (numCollaterals > 0) numItems++;
+		builder->remainingCollateralInputs = numCollateralInputs;
+		if (numCollateralInputs > 0) numItems++;
 
 		builder->remainingRequiredSigners = numRequiredSigners;
 		if (numRequiredSigners > 0) numItems++;
@@ -1559,48 +1559,48 @@ static void txHashBuilder_assertCanLeaveScriptDataHash(tx_hash_builder_t* builde
 
 // ========================= COLLATERAL INPUTS ==========================
 
-void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder)
+void txHashBuilder_enterCollateralInputs(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveScriptDataHash(builder);
 	// we don't allow an empty list for an optional item
-	ASSERT(builder->remainingCollaterals > 0);
+	ASSERT(builder->remainingCollateralInputs > 0);
 
 	{
 		// Enter collateral inputs
-		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERALS);
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingCollaterals);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERAL_INPUTS);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingCollateralInputs);
 	}
-	builder->state = TX_HASH_BUILDER_IN_COLLATERALS;
+	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_INPUTS;
 }
 
-void txHashBuilder_addCollateral(tx_hash_builder_t* builder, const tx_input_t* collInput)
+void txHashBuilder_addCollateralInput(tx_hash_builder_t* builder, const tx_input_t* collInput)
 {
-	_TRACE("state = %d, remainingCollaterals = %u", builder->state, builder->remainingCollaterals);
+	_TRACE("state = %d, remainingCollateralInputs = %u", builder->state, builder->remainingCollateralInputs);
 
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERALS);
-	ASSERT(builder->remainingCollaterals > 0);
-	builder->remainingCollaterals--;
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_COLLATERAL_INPUTS);
+	ASSERT(builder->remainingCollateralInputs > 0);
+	builder->remainingCollateralInputs--;
 
 	const size_t utxoHashSize = SIZEOF(collInput->txHashBuffer);
 	ASSERT(utxoHashSize < BUFFER_SIZE_PARANOIA);
 	cbor_append_txInput(builder, collInput->txHashBuffer, utxoHashSize, collInput->index);
 }
 
-static void txHashBuilder_assertCanLeaveCollaterals(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveCollateralInputs(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %u", builder->state);
 
 	switch (builder->state) {
-	case TX_HASH_BUILDER_IN_COLLATERALS:
-		// make sure there are no more collaterals to process
-		ASSERT(builder->remainingCollaterals == 0);
+	case TX_HASH_BUILDER_IN_COLLATERAL_INPUTS:
+		// make sure there are no more collateral inputs to process
+		ASSERT(builder->remainingCollateralInputs == 0);
 		break;
 
 	default:
-		// make sure no collaterals are expected
-		ASSERT(builder->remainingWithdrawals == 0);
+		// make sure no collateral inputs are expected
+		ASSERT(builder->remainingCollateralInputs == 0);
 		// assert we can leave the previous state
 		txHashBuilder_assertCanLeaveScriptDataHash(builder);
 		break;
@@ -1613,7 +1613,7 @@ void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d", builder->state);
 
-	txHashBuilder_assertCanLeaveCollaterals(builder);
+	txHashBuilder_assertCanLeaveCollateralInputs(builder);
 	// we don't allow an empty list for an optional item
 	ASSERT(builder->remainingRequiredSigners > 0);
 
@@ -1663,7 +1663,7 @@ static void txHashBuilder_assertCanLeaveRequiredSigners(tx_hash_builder_t* build
 		// make sure no required signers are expected
 		ASSERT(builder->remainingRequiredSigners == 0);
 		// assert we can leave the previous state
-		txHashBuilder_assertCanLeaveCollaterals(builder);
+		txHashBuilder_assertCanLeaveCollateralInputs(builder);
 		break;
 	}
 }

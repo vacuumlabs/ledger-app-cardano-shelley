@@ -25,8 +25,8 @@ bool isTxNetworkIdVerifiable(
         uint32_t numWithdrawals,
         sign_tx_signingmode_t txSigningMode
 );
-bool needsRunningScriptWarning(int32_t numCollaterals);
-bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollaterals);
+bool needsRunningScriptWarning(int32_t numCollateralInputs);
+bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollateralInputs);
 bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash);
 
 security_policy_t policyForSignTxInit(
@@ -37,7 +37,7 @@ security_policy_t policyForSignTxInit(
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint,
-        uint16_t numCollaterals,
+        uint16_t numCollateralInputs,
         uint16_t numRequiredSigners,
         bool includeScriptDataHash,
         bool includeNetworkId,
@@ -142,7 +142,7 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy);
 
 security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSigningMode);
 
-security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSigningMode);
+security_policy_t policyForSignTxCollateralInput(const sign_tx_signingmode_t txSigningMode);
 
 security_policy_t policyForSignTxRequiredSigner(
         const sign_tx_signingmode_t txSigningMode,

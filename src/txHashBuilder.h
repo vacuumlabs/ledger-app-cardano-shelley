@@ -43,7 +43,7 @@ enum {
 	TX_BODY_KEY_VALIDITY_INTERVAL_START = 8,
 	TX_BODY_KEY_MINT = 9,
 	TX_BODY_KEY_SCRIPT_HASH_DATA = 11,
-	TX_BODY_KEY_COLLATERALS = 13,
+	TX_BODY_KEY_COLLATERAL_INPUTS = 13,
 	TX_BODY_KEY_REQUIRED_SIGNERS = 14,
 	TX_BODY_KEY_NETWORK_ID = 15,
 	TX_BODY_KEY_COLLATERAL_RETURN = 16,
@@ -88,7 +88,7 @@ typedef enum {
 	TX_HASH_BUILDER_IN_VALIDITY_INTERVAL_START = 900,
 	TX_HASH_BUILDER_IN_MINT = 1000,
 	TX_HASH_BUILDER_IN_SCRIPT_DATA_HASH = 1100,
-	TX_HASH_BUILDER_IN_COLLATERALS = 1200,
+	TX_HASH_BUILDER_IN_COLLATERAL_INPUTS = 1200,
 	TX_HASH_BUILDER_IN_REQUIRED_SIGNERS = 1300,
 	TX_HASH_BUILDER_IN_NETWORK_ID = 1400,
 	TX_HASH_BUILDER_IN_COLLATERAL_RETURN = 1500,
@@ -111,7 +111,7 @@ typedef struct {
 	uint16_t remainingOutputs;
 	uint16_t remainingWithdrawals;
 	uint16_t remainingCertificates;
-	uint16_t remainingCollaterals;
+	uint16_t remainingCollateralInputs;
 	uint16_t remainingRequiredSigners;
 	uint16_t remainingReferenceInputs;
 	bool includeTtl;
@@ -194,7 +194,7 @@ void txHashBuilder_init(
         bool includeValidityIntervalStart,
         bool includeMint,
         bool includeScriptDataHash,
-        uint16_t numCollaterals,
+        uint16_t numCollateralInputs,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
         bool includeCollateralOutput,
@@ -360,9 +360,9 @@ void txHashBuilder_addScriptDataHash(
         const uint8_t* scriptHashData, size_t scriptHashDataSize
 );
 
-void txHashBuilder_enterCollaterals(tx_hash_builder_t* builder);
+void txHashBuilder_enterCollateralInputs(tx_hash_builder_t* builder);
 
-void txHashBuilder_addCollateral(tx_hash_builder_t* builder, const tx_input_t* collInput);
+void txHashBuilder_addCollateralInput(tx_hash_builder_t* builder, const tx_input_t* collInput);
 
 void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder);
 

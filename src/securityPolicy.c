@@ -279,15 +279,15 @@ bool isTxNetworkIdVerifiable(
 	}
 }
 
-bool needsRunningScriptWarning(int32_t numCollaterals)
+bool needsRunningScriptWarning(int32_t numCollateralInputs)
 {
-	return numCollaterals > 0;
+	return numCollateralInputs > 0;
 }
 
-bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollaterals)
+bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollateralInputs)
 {
 	const bool collateralExpected = (signingMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX);
-	return collateralExpected && (numCollaterals == 0);
+	return collateralExpected && (numCollateralInputs == 0);
 }
 
 bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash)
@@ -305,7 +305,7 @@ security_policy_t policyForSignTxInit(
         uint16_t numCertificates,
         uint16_t numWithdrawals,
         bool includeMint,
-        uint16_t numCollaterals,
+        uint16_t numCollateralInputs,
         uint16_t numRequiredSigners,
         bool includeScriptDataHash,
         bool includeNetworkId,
@@ -337,21 +337,21 @@ security_policy_t policyForSignTxInit(
 
 		// no Plutus elements for pool registrations
 		DENY_IF(includeScriptDataHash);
-		DENY_IF(numCollaterals > 0);
+		DENY_IF(numCollateralInputs > 0);
 		DENY_IF(numRequiredSigners > 0);
 		DENY_IF(numReferenceInputs > 0);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		// collaterals are allowed only in PLUTUS_TX
-		DENY_IF(numCollaterals > 0);
+		// collateral inputs are allowed only in PLUTUS_TX
+		DENY_IF(numCollateralInputs > 0);
 		DENY_IF(numReferenceInputs > 0);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-		// Plutus script cannot be executed without collaterals
-		WARN_IF(numCollaterals == 0);
+		// Plutus script cannot be executed without collateral inputs
+		WARN_IF(numCollateralInputs == 0);
 
 		// Plutus script cannot be executed without script data hash
 		WARN_UNLESS(includeScriptDataHash);
@@ -370,8 +370,8 @@ security_policy_t policyForSignTxInit(
 	WARN_UNLESS(isTxNetworkIdVerifiable(includeNetworkId, numOutputs, numWithdrawals, txSigningMode));
 	WARN_UNLESS(isNetworkUsual(networkId, protocolMagic));
 
-	WARN_IF(needsRunningScriptWarning(numCollaterals));
-	WARN_IF(needsMissingCollateralWarning(txSigningMode, numCollaterals));
+	WARN_IF(needsRunningScriptWarning(numCollateralInputs));
+	WARN_IF(needsMissingCollateralWarning(txSigningMode, numCollateralInputs));
 	WARN_IF(needsMissingScriptDataHashWarning(txSigningMode, includeScriptDataHash));
 
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
@@ -1416,14 +1416,14 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 }
 
 // For each transaction collateral input
-security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSigningMode)
+security_policy_t policyForSignTxCollateralInput(const sign_tx_signingmode_t txSigningMode)
 {
 	// we do not impose restrictions on individual collateral inputs
 	// because a HW wallet cannot verify anything about the input
 
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-		// should be shown because the user loses all collaterals if Plutus execution fails
+		// should be shown because the user loses all collateral inputs if Plutus execution fails
 		SHOW_IF(app_mode_expert());
 		ALLOW();
 		break;
@@ -1432,7 +1432,7 @@ security_policy_t policyForSignTxCollateral(const sign_tx_signingmode_t txSignin
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-		// collaterals allowed only if Plutus script is to be executed
+		// collateral inputs allowed only if Plutus script is to be executed
 		DENY();
 		break;
 
@@ -1514,7 +1514,7 @@ security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSi
 {
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-		// should be shown because the user loses all collaterals if Plutus execution fails
+		// should be shown because the user loses all collateral if Plutus execution fails
 		SHOW_IF(app_mode_expert());
 		ALLOW();
 		break;
