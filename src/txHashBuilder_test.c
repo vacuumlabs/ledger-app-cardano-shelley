@@ -459,7 +459,7 @@ void run_txHashBuilder_test()
 	                   true, // validity interval start
 	                   true, // mint
 	                   true, // script hash data
-	                   1,	// collaterals
+	                   1,	// collateral inputs
 	                   1,	// required
 	                   true, // network id
 	                   true, // collateral return,
@@ -517,13 +517,13 @@ void run_txHashBuilder_test()
 	}
 	//  ? 13 : set<transaction_input> ; collateral inputs
 	{
-		txHashBuilder_enterCollaterals(&builder);
+		txHashBuilder_enterCollateralInputs(&builder);
 		uint8_t tmp[TX_HASH_LENGTH] = {0};
 		size_t tmpSize = decode_hex(PTR_PIC(inputs[0].txHashHex), tmp, SIZEOF(tmp));
 		tx_input_t input;
 		memmove(input.txHashBuffer, tmp, tmpSize);
 		input.index = inputs[0].index;
-		txHashBuilder_addCollateral(&builder, &input);
+		txHashBuilder_addCollateralInput(&builder, &input);
 	}
 	//  ? 14 : required_signers
 	{
