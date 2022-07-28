@@ -10,7 +10,9 @@
 #define OUTPUT_ASSET_GROUPS_MAX UINT16_MAX
 #define OUTPUT_TOKENS_IN_GROUP_MAX UINT16_MAX
 
- // TODO
+// TODO the first chunk needs to be a couple of bytes (4?) smaller than maximum
+// but we want chunks as big as possible to minimize the number of APDUs
+// to optimize for speed of data exchange
 #define MAX_CHUNK_SIZE 150
 
 

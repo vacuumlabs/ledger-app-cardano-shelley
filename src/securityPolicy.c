@@ -410,8 +410,8 @@ security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 }
 
 static bool is_addressBytes_suitable_for_tx_output(
-	const uint8_t* addressBuffer, size_t addressSize,
-	const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t* addressBuffer, size_t addressSize,
+        const uint8_t networkId, const uint32_t protocolMagic
 )
 {
 	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
@@ -528,8 +528,8 @@ security_policy_t policyForSignTxOutputAddressBytes(
 }
 
 static bool is_addressParams_suitable_for_tx_output(
-	const addressParams_t* params,
-	const uint8_t networkId, const uint32_t protocolMagic
+        const addressParams_t* params,
+        const uint8_t networkId, const uint32_t protocolMagic
 )
 {
 #define CHECK(cond) if (!(cond)) return false

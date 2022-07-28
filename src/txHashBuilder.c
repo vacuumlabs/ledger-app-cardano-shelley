@@ -377,8 +377,8 @@ void txHashBuilder_addOutput_topLevelData(
 )
 {
 	_TRACE(
-		"state = %d, outputState = %d, remainingOutputs = %u",
-		builder->state, builder->outputState, builder->remainingOutputs
+	        "state = %d, outputState = %d, remainingOutputs = %u",
+	        builder->state, builder->outputState, builder->remainingOutputs
 	);
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
@@ -406,22 +406,22 @@ static void addTokenGroup(
 )
 {
 	_TRACE(
-		"state = %d, outputState = %d, remainingAssetGroups = %u",
-		builder->state, builder->outputState, builder->outputData.multiassetData.remainingAssetGroups
+	        "state = %d, outputState = %d, remainingAssetGroups = %u",
+	        builder->state, builder->outputState, builder->outputData.multiassetData.remainingAssetGroups
 	);
 
 	switch (builder->outputState) {
-		case TX_OUTPUT_ASSET_GROUP:
-			// we have been adding tokens into the previous asset group
-			ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
-			break;
+	case TX_OUTPUT_ASSET_GROUP:
+		// we have been adding tokens into the previous asset group
+		ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
+		break;
 
-		case TX_OUTPUT_TOP_LEVEL_DATA:
-			// nothing to check, top level data has been added instantaneously
-			break;
+	case TX_OUTPUT_TOP_LEVEL_DATA:
+		// nothing to check, top level data has been added instantaneously
+		break;
 
-		default:
-			ASSERT(false);
+	default:
+		ASSERT(false);
 	}
 
 	ASSERT(builder->outputData.multiassetData.remainingAssetGroups > 0);
@@ -458,17 +458,17 @@ static void addToken(
 )
 {
 	_TRACE(
-		"state = %d, outputState = %d, remainingTokens = %u",
-		builder->state, builder->outputState, builder->outputData.multiassetData.remainingTokens
+	        "state = %d, outputState = %d, remainingTokens = %u",
+	        builder->state, builder->outputState, builder->outputData.multiassetData.remainingTokens
 	);
 
 	switch (builder->outputState) {
-		case TX_OUTPUT_ASSET_GROUP:
-			// we have been adding tokens into an asset group
-			break;
+	case TX_OUTPUT_ASSET_GROUP:
+		// we have been adding tokens into an asset group
+		break;
 
-		default:
-			ASSERT(false);
+	default:
+		ASSERT(false);
 	}
 
 	ASSERT(builder->outputData.multiassetData.remainingTokens > 0);
@@ -524,20 +524,20 @@ void txHashBuilder_addOutput_datum(
 	TRACE("%d", builder->outputState);
 
 	switch (builder->outputState) {
-		case TX_OUTPUT_TOP_LEVEL_DATA:
-			// top level data has been added instantaneously
-			// so we only check there are no asset groups left out
-			ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
-			break;
+	case TX_OUTPUT_TOP_LEVEL_DATA:
+		// top level data has been added instantaneously
+		// so we only check there are no asset groups left out
+		ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
+		break;
 
-		case TX_OUTPUT_ASSET_GROUP:
-			// we have been adding tokens into an asset group
-			ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
-			ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
-			break;
+	case TX_OUTPUT_ASSET_GROUP:
+		// we have been adding tokens into an asset group
+		ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
+		ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
+		break;
 
-		default:
-			ASSERT(false);
+	default:
+		ASSERT(false);
 	}
 
 	//TODO: MAX_DATUM_SIZE??
@@ -611,28 +611,28 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 	ASSERT(builder->outputData.includeRefScript);
 
 	switch (builder->outputState) {
-		case TX_OUTPUT_TOP_LEVEL_DATA:
-			// top level data has been added instantaneously
-			// so we only check there are no asset groups left out
-			ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
-			break;
+	case TX_OUTPUT_TOP_LEVEL_DATA:
+		// top level data has been added instantaneously
+		// so we only check there are no asset groups left out
+		ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
+		break;
 
-		case TX_OUTPUT_ASSET_GROUP:
-			// we have been adding tokens into an asset group
-			ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
-			ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
-			break;
+	case TX_OUTPUT_ASSET_GROUP:
+		// we have been adding tokens into an asset group
+		ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
+		ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
+		break;
 
-		case TX_OUTPUT_DATUM_HASH:
-			// nothing to check, datum hash is added instantaneously
-			break;
+	case TX_OUTPUT_DATUM_HASH:
+		// nothing to check, datum hash is added instantaneously
+		break;
 
-		case TX_OUTPUT_DATUM_INLINE:
-			ASSERT(builder->outputData.datumData.remainingBytes == 0);
-			break;
+	case TX_OUTPUT_DATUM_INLINE:
+		ASSERT(builder->outputData.datumData.remainingBytes == 0);
+		break;
 
-		default:
-			ASSERT(false);
+	default:
+		ASSERT(false);
 	}
 
 	// TODO check where the tag is added
@@ -652,8 +652,8 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 }
 
 void txHashBuilder_addOutput_referenceScript_dataChunk(
-	tx_hash_builder_t* builder,
-	const uint8_t* buffer, size_t bufferSize
+        tx_hash_builder_t* builder,
+        const uint8_t* buffer, size_t bufferSize
 )
 {
 	ASSERT(builder->outputState == TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS);

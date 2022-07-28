@@ -257,8 +257,8 @@ static void addOutputs(tx_hash_builder_t* builder)
 }
 
 static void collateralOutputTokenHandler(tx_hash_builder_t* builder,
-                                const uint8_t* assetNameBuffer, size_t assetNameSize,
-                                uint64_t amount)
+        const uint8_t* assetNameBuffer, size_t assetNameSize,
+        uint64_t amount)
 {
 	txHashBuilder_addCollateralOutput_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
 }
