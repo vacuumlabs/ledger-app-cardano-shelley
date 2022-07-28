@@ -657,10 +657,11 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 	                                   ctx->numCertificates,
 	                                   ctx->numWithdrawals,
 	                                   ctx->includeMint,
+	                                   ctx->includeScriptDataHash,
 	                                   ctx->numCollateralInputs,
 	                                   ctx->numRequiredSigners,
-	                                   ctx->includeScriptDataHash,
 	                                   ctx->includeNetworkId,
+	                                   ctx->includeCollateralOutput,
 	                                   ctx->includeTotalCollateral,
 	                                   ctx->numReferenceInputs
 	                           );
