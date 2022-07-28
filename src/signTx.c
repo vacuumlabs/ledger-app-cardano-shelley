@@ -35,7 +35,7 @@ static inline void initTxBodyCtx()
 		BODY_CTX->validityIntervalStartReceived = false;
 		BODY_CTX->mintReceived = false;
 		BODY_CTX->scriptDataHashReceived = false;
-		BODY_CTX->collateralReturnOutputReceived = false;
+		BODY_CTX->collateralOutputReceived = false;
 		BODY_CTX->totalCollateralReceived = false;
 	}
 }
@@ -100,7 +100,7 @@ static inline void advanceStage()
 			        ctx->numCollaterals,
 			        ctx->numRequiredSigners,
 			        ctx->includeNetworkId,
-			        ctx->includeCollateralReturnOutput,
+			        ctx->includeCollateralOutput,
 			        ctx->includeTotalCollateral,
 			        ctx->numReferenceInputs
 			);
@@ -242,15 +242,15 @@ static inline void advanceStage()
 			txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		}
 		ctx->stage = SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT;
-		if (ctx->includeCollateralReturnOutput) {
+		if (ctx->includeCollateralOutput) {
 			break;
 		}
 
 	// intentional fallthrough
 
 	case SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT:
-		if (ctx->includeCollateralReturnOutput) {
-			ASSERT(BODY_CTX->collateralReturnOutputReceived);
+		if (ctx->includeCollateralOutput) {
+			ASSERT(BODY_CTX->collateralOutputReceived);
 		}
 		ctx->stage = SIGN_STAGE_BODY_TOTAL_COLLATERAL;
 		if (ctx->includeTotalCollateral) {
@@ -391,7 +391,7 @@ static inline void checkForFinishedSubmachines()
 		if (isCurrentOutputFinished()) {
 			TRACE();
 			ctx->stage = SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT;
-			BODY_CTX->collateralReturnOutputReceived = true;
+			BODY_CTX->collateralOutputReceived = true;
 			advanceStage();
 		}
 		break;
@@ -540,6 +540,7 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 			uint8_t includeMint;
 			uint8_t includeScriptDataHash;
 			uint8_t includeNetworkId;
+			uint8_t includeCollateralOutput;
 			uint8_t includeTotalCollateral;
 			uint8_t txSigningMode;
 
@@ -582,6 +583,9 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 
 		ctx->includeNetworkId = signTx_parseIncluded(wireHeader->includeNetworkId);
 		TRACE("Include network id %d", ctx->includeNetworkId);
+
+		ctx->includeCollateralOutput = signTx_parseIncluded(wireHeader->includeCollateralOutput);
+		TRACE("Include collateral output %d", ctx->includeCollateralOutput);
 
 		ctx->includeTotalCollateral = signTx_parseIncluded(wireHeader->includeTotalCollateral);
 		TRACE("Include total collateral %d", ctx->includeTotalCollateral);
@@ -2083,7 +2087,7 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, const uint8_t* wireDataB
 }
 // ========================= COLLATERAL RETURN OUTPUT ===========================
 
-static void signTx_handleCollateralReturnOutputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleCollateralOutputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		TRACE("p2 = %d", p2);
@@ -2100,8 +2104,8 @@ static void signTx_handleCollateralReturnOutputAPDU(uint8_t p2, const uint8_t* w
 	CHECK_STAGE(SIGN_STAGE_BODY_COLLATERAL_RETURN_OUTPUT_SUBMACHINE);
 
 	// all output handling is delegated to a state sub-machine
-	VALIDATE(signTxCollRetOutput_isValidInstruction(p2), ERR_INVALID_DATA);
-	signTxCollRetOutput_handleAPDU(p2, wireDataBuffer, wireDataSize);
+	VALIDATE(signTxCollateralOutput_isValidInstruction(p2), ERR_INVALID_DATA);
+	signTxCollateralOutput_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
 
 // ========================= TOTAL COLLATERAL ===========================
@@ -2487,7 +2491,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x0c, signTx_handleScriptDataHashAPDU);
 		CASE(0x0d, signTx_handleCollateralAPDU);
 		CASE(0x0e, signTx_handleRequiredSignerAPDU);
-		CASE(0x12, signTx_handleCollateralReturnOutputAPDU); // TODO perhaps change the numbers for the newly added items?
+		CASE(0x12, signTx_handleCollateralOutputAPDU); // TODO perhaps change the numbers for the newly added items?
 		CASE(0x10, signTx_handleTotalCollateralAPDU);
 		CASE(0x11, signTx_handleReferenceInputsAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);

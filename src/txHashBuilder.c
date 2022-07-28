@@ -230,7 +230,7 @@ void txHashBuilder_init(
         uint16_t numCollaterals,
         uint16_t numRequiredSigners,
         bool includeNetworkId,
-        bool includeCollateralReturnOutput,
+        bool includeCollateralOutput,
         bool includeTotalCollateral,
         uint16_t numReferenceInputs
 )
@@ -247,7 +247,7 @@ void txHashBuilder_init(
 	TRACE("numCollaterals = %u", numCollaterals);
 	TRACE("numRequiredSigners = %u", numRequiredSigners);
 	TRACE("includeNetworkId = %u", includeNetworkId);
-	TRACE("includeCollateralReturnOutput = %u", includeCollateralReturnOutput);
+	TRACE("includeCollateralOutput = %u", includeCollateralOutput);
 	TRACE("includeTotalCollateral = %u", includeTotalCollateral);
 	TRACE("numReferenceInputs = %u", numReferenceInputs);
 
@@ -295,8 +295,8 @@ void txHashBuilder_init(
 		builder->includeNetworkId = includeNetworkId;
 		if (includeNetworkId) numItems++;
 
-		builder->includeCollateralReturnOutput = includeCollateralReturnOutput;
-		if (includeCollateralReturnOutput) numItems++;
+		builder->includeCollateralOutput = includeCollateralOutput;
+		if (includeCollateralOutput) numItems++;
 
 		builder->includeTotalCollateral = includeTotalCollateral;
 		if (includeTotalCollateral) numItems++;
@@ -1704,7 +1704,7 @@ static void txHashBuilder_assertCanLeaveNetworkId(tx_hash_builder_t* builder)
 
 // ========================= COLLATERAL RETURN OUTPUT ==========================
 
-void txHashBuilder_addCollateralReturn(
+void txHashBuilder_addCollateralOutput(
         tx_hash_builder_t* builder,
         const tx_output_description_t* output
 )
@@ -1712,7 +1712,7 @@ void txHashBuilder_addCollateralReturn(
 	_TRACE("state = %d", builder->state);
 
 	txHashBuilder_assertCanLeaveNetworkId(builder);
-	ASSERT(builder->includeCollateralReturnOutput);
+	ASSERT(builder->includeCollateralOutput);
 
 	builder->outputData.serializationFormat = output->format;
 	ASSERT(builder->outputData.includeDatum == false);
@@ -1728,7 +1728,7 @@ void txHashBuilder_addCollateralReturn(
 	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_RETURN;
 }
 
-void txHashBuilder_addCollateralReturn_tokenGroup(
+void txHashBuilder_addCollateralOutput_tokenGroup(
         tx_hash_builder_t* builder,
         const uint8_t* policyIdBuffer, size_t policyIdSize,
         uint16_t numTokens
@@ -1739,7 +1739,7 @@ void txHashBuilder_addCollateralReturn_tokenGroup(
 	addTokenGroup(builder, policyIdBuffer, policyIdSize, numTokens);
 }
 
-void txHashBuilder_addCollateralReturn_token(
+void txHashBuilder_addCollateralOutput_token(
         tx_hash_builder_t* builder,
         const uint8_t* assetNameBuffer, size_t assetNameSize,
         uint64_t amount
@@ -1750,7 +1750,7 @@ void txHashBuilder_addCollateralReturn_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount, CBOR_TYPE_UNSIGNED);
 }
 
-static void txHashBuilder_assertCanLeaveCollateralReturn(tx_hash_builder_t* builder)
+static void txHashBuilder_assertCanLeaveCollateralOutput(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d", builder->state);
 
@@ -1762,7 +1762,7 @@ static void txHashBuilder_assertCanLeaveCollateralReturn(tx_hash_builder_t* buil
 
 	default:
 		// make sure collateral return was not expected
-		ASSERT(!builder->includeCollateralReturnOutput);
+		ASSERT(!builder->includeCollateralOutput);
 		// assert we can leave the previous state
 		txHashBuilder_assertCanLeaveNetworkId(builder);
 		break;
@@ -1775,7 +1775,7 @@ void txHashBuilder_addTotalCollateral(tx_hash_builder_t* builder, uint64_t txCol
 {
 	_TRACE("state = %d", builder->state);
 
-	txHashBuilder_assertCanLeaveCollateralReturn(builder);
+	txHashBuilder_assertCanLeaveCollateralOutput(builder);
 	ASSERT(builder->includeTotalCollateral);
 
 	// add TotalCollateral item into the main tx body map
@@ -1798,7 +1798,7 @@ static void txHashBuilder_assertCanLeaveTotalCollateral(tx_hash_builder_t* build
 		// make sure total collateral was not expected
 		ASSERT(!builder->includeTotalCollateral);
 		// assert we can leave the previous state
-		txHashBuilder_assertCanLeaveCollateralReturn(builder);
+		txHashBuilder_assertCanLeaveCollateralOutput(builder);
 		break;
 	}
 }

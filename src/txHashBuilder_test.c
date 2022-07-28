@@ -256,14 +256,14 @@ static void addOutputs(tx_hash_builder_t* builder)
 	addMultiassetOutput(builder, &outputFormat);
 }
 
-static void collRetTokenHandler(tx_hash_builder_t* builder,
+static void collateralOutputTokenHandler(tx_hash_builder_t* builder,
                                 const uint8_t* assetNameBuffer, size_t assetNameSize,
                                 uint64_t amount)
 {
-	txHashBuilder_addCollateralReturn_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
+	txHashBuilder_addCollateralOutput_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
 }
 //TODO: more generic function to handle similar? or just merge to addCollRet?
-static void addMultiassetCollRet(tx_hash_builder_t* builder, tx_output_serialization_format_t outputFormat)
+static void addMultiassetCollateralOutput(tx_hash_builder_t* builder, tx_output_serialization_format_t outputFormat)
 {
 	uint8_t tmp[70] = {0};
 	size_t tmpSize = decode_hex(PTR_PIC(outputs[1].rawAddressHex), tmp, SIZEOF(tmp));
@@ -281,14 +281,14 @@ static void addMultiassetCollRet(tx_hash_builder_t* builder, tx_output_serializa
 		.includeDatum = false,
 		.includeRefScript = false
 	};
-	txHashBuilder_addCollateralReturn(builder, &output);
+	txHashBuilder_addCollateralOutput(builder, &output);
 
-	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addCollateralReturn_tokenGroup, &collRetTokenHandler);
+	addTwoMultiassetTokenGroups(builder, &txHashBuilder_addCollateralOutput_tokenGroup, &collateralOutputTokenHandler);
 }
 
-static void addCollRet(tx_hash_builder_t* builder)
+static void addCollateralOutput(tx_hash_builder_t* builder)
 {
-	addMultiassetCollRet(builder, MAP_BABBAGE);
+	addMultiassetCollateralOutput(builder, MAP_BABBAGE);
 }
 
 static void addPoolRegistrationCertificate(tx_hash_builder_t* builder)
@@ -534,7 +534,7 @@ void run_txHashBuilder_test()
 	//  ? 15 : network_id
 	txHashBuilder_addNetworkId(&builder, 0);
 	//  ? 16 : transaction_output     ; collateral return
-	addCollRet(&builder);
+	addCollateralOutput(&builder);
 	//  ? 17 : coin                   ; total collateral
 	txHashBuilder_addTotalCollateral(&builder, 10);
 	//  ? 18 : set<transaction_input> ; reference inputs

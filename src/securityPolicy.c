@@ -669,7 +669,7 @@ security_policy_t policyForSignTxOutputConfirm(
 	DENY(); // should not be reached
 }
 
-security_policy_t policyForSignTxCollRetOutputAddressBytes(
+security_policy_t policyForSignTxCollateralOutputAddressBytes(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
         const uint8_t networkId, const uint32_t protocolMagic
@@ -679,7 +679,7 @@ security_policy_t policyForSignTxCollRetOutputAddressBytes(
 	SHOW();
 }
 
-security_policy_t policyForSignTxCollRetOutputAddressParams(
+security_policy_t policyForSignTxCollateralOutputAddressParams(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
         const uint8_t networkId, const uint32_t protocolMagic
@@ -691,7 +691,7 @@ security_policy_t policyForSignTxCollRetOutputAddressParams(
 
 // TODO
 // For final collateral return output output confirmation
-security_policy_t policyForSignTxCollRetOutputConfirm(
+security_policy_t policyForSignTxCollateralOutputConfirm(
         security_policy_t outputPolicy,
         uint64_t numAssetGroups
 )

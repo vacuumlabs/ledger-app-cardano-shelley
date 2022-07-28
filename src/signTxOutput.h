@@ -93,7 +93,7 @@ bool isCurrentOutputFinished();
 bool signTxOutput_isValidInstruction(uint8_t p2);
 void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
-bool signTxCollRetOutput_isValidInstruction(uint8_t p2);
-void signTxCollRetOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
+bool signTxCollateralOutput_isValidInstruction(uint8_t p2);
+void signTxCollateralOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
 #endif // H_CARDANO_APP_SIGN_TX_OUTPUT

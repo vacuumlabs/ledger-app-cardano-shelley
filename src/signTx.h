@@ -152,7 +152,7 @@ typedef struct {
 	bool validityIntervalStartReceived;
 	bool mintReceived;
 	bool scriptDataHashReceived;
-	bool collateralReturnOutputReceived;
+	bool collateralOutputReceived;
 	bool totalCollateralReceived;
 
 	// TODO move these to commonTxData?
@@ -202,7 +202,7 @@ typedef struct {
 	uint16_t numCollaterals;
 	uint16_t numRequiredSigners;
 	bool includeNetworkId;
-	bool includeCollateralReturnOutput;
+	bool includeCollateralOutput;
 	bool includeTotalCollateral;
 	uint64_t totalCollateral;
 	uint16_t numReferenceInputs;
