@@ -450,8 +450,8 @@ static void parseTopLevelData(const uint8_t* wireDataBuffer, size_t wireDataSize
 		TRACE("includeDatum = %d", (int) subctx->includeDatum);
 
 		// TODO should be allowed
-		// subctx->includeRefScript = signTx_parseIncluded(parse_u1be(&view));
-		// TRACE("includeRefScript = %d", (int) subctx->includeRefScript);
+		 subctx->includeRefScript = signTx_parseIncluded(parse_u1be(&view));
+		 TRACE("includeRefScript = %d", (int) subctx->includeRefScript);
 
 		if (subctx->includeDatum || subctx->includeRefScript) {
 			// it's easier to verify all Plutus-related things via txid all at once
@@ -1195,7 +1195,7 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 		TRACE("Adding reference script to tx hash");
 		txHashBuilder_addOutput_referenceScript(
 		        &BODY_CTX->txHashBuilder,
-		        subctx->stateData.datumRemainingBytes
+		        subctx->stateData.refScriptRemainingBytes
 		);
 		txHashBuilder_addOutput_referenceScript_dataChunk(
 		        &BODY_CTX->txHashBuilder,
