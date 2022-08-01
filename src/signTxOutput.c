@@ -388,6 +388,30 @@ static void handleOutput_addressParams()
 	}
 }
 
+static bool _isValidOutputSerializationFormat(tx_output_serialization_format_t format)
+{
+	switch (format) {
+		case ARRAY_LEGACY:
+		case MAP_BABBAGE:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
+static bool _isValidDestinationType(tx_output_destination_type_t type)
+{
+	switch (type) {
+		case DESTINATION_THIRD_PARTY:
+		case DESTINATION_DEVICE_OWNED:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
 static void parseTopLevelData(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
@@ -406,11 +430,11 @@ static void parseTopLevelData(const uint8_t* wireDataBuffer, size_t wireDataSize
 
 		subctx->serializationFormat = parse_u1be(&view);
 		TRACE("Output serialization format %d", (int) subctx->serializationFormat);
-		// TODO validation
+		_isValidOutputSerializationFormat(subctx->serializationFormat);
 
 		subctx->stateData.destination.type = parse_u1be(&view);
 		TRACE("Output destination type %d", (int) subctx->stateData.destination.type);
-		// TODO validation
+		_isValidDestinationType(subctx->stateData.destination.type);
 
 		switch (subctx->stateData.destination.type) {
 		case DESTINATION_THIRD_PARTY: {
