@@ -61,6 +61,11 @@ security_policy_t policyForSignTxOutputAddressParams(
 security_policy_t policyForSignTxOutputDatumHash(
         security_policy_t outputPolicy
 );
+
+security_policy_t policyForSignTxOutputRefScript(
+        security_policy_t outputPolicy
+);
+
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t addressPolicy,
         uint64_t numAssetGroups

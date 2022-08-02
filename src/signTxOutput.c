@@ -1183,6 +1183,46 @@ static void handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 
 // ========================== REFERENCE SCRIPT =============================
 
+enum {
+	HANDLE_SCRIPT_REF_STEP_DISPLAY = 3600,
+	HANDLE_SCRIPT_REF_STEP_RESPOND,
+	HANDLE_SCRIPT_REF_STEP_INVALID,
+};
+
+static void handleRefScript_ui_runStep()
+{
+	output_context_t* subctx = accessSubcontext();
+	TRACE("UI step %d", subctx->ui_step);
+	ui_callback_fn_t* this_fn = handleRefScript_ui_runStep;
+
+	UI_STEP_BEGIN(subctx->ui_step, this_fn);
+	UI_STEP(HANDLE_SCRIPT_REF_STEP_DISPLAY) {
+		char l1[30];
+		size_t scriptSize = subctx->stateData.refScriptRemainingBytes + subctx->stateData.refScriptChunkSize;
+		// scriptSize with 6 digits fits on the screen, less than max tx size
+		// if more is needed, "bytes" can be replaced by "B" for those larger numbers
+		snprintf(l1, SIZEOF(l1), "Script %u bytes", scriptSize);
+		ASSERT(strlen(l1) + 1 < SIZEOF(l1));
+
+		char l2[20];
+		size_t prefixLength = MIN(subctx->stateData.refScriptChunkSize, 6);
+		size_t len = encode_hex(subctx->stateData.scriptChunk, prefixLength, l2, SIZEOF(l2));
+		snprintf(l2 + len, SIZEOF(l2) - len, "...");
+		ASSERT(strlen(l2) + 1 < SIZEOF(l2));
+
+		ui_displayPaginatedText(
+		        l1,
+		        l2,
+		        this_fn
+		);
+	}
+	UI_STEP(HANDLE_SCRIPT_REF_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+		advanceState();
+	}
+	UI_STEP_END(HANDLE_SCRIPT_REF_STEP_INVALID);
+}
+
 static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
@@ -1230,26 +1270,21 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 		subctx->stateData.refScriptRemainingBytes -= subctx->stateData.refScriptChunkSize;
 	}
 	{
-		// TODO all of this
-
 		// select UI step
-		security_policy_t policy = policyForSignTxOutputDatumHash(subctx->outputSecurityPolicy);
+		security_policy_t policy = policyForSignTxOutputRefScript(subctx->outputSecurityPolicy);
 		TRACE("Policy: %d", (int) policy);
 		ENSURE_NOT_DENIED(policy);
 
 		switch (policy) {
 #	define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_DATUM_HASH_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_DATUM_HASH_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_SCRIPT_REF_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_SCRIPT_REF_STEP_RESPOND);
 #	undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		// TODO
-		respondSuccessEmptyMsg();
-		advanceState();
-		//signTxOutput_handleDatumInline_ui_runStep();
+		handleRefScript_ui_runStep();
 	}
 }
 
