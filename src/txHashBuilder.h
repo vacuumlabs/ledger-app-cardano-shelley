@@ -132,7 +132,7 @@ typedef struct {
 		struct {
 			tx_output_serialization_format_t serializationFormat;
 			bool includeDatum;
-			bool includeRefScript;
+			bool includeScriptRef;
 
 			union {
 				// this is also used for mint, but needs to coexist with output data
@@ -148,7 +148,7 @@ typedef struct {
 
 				struct {
 					size_t remainingBytes;
-				} referenceScriptData;
+				} scriptReferenceData;
 			};
 		} outputData; // TODO rename to output?
 	};
@@ -236,9 +236,9 @@ void txHashBuilder_addOutput_datum_inline_chunk(
         const uint8_t* buffer, size_t bufferSize
 );
 
-void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t bufferSize);
+void txHashBuilder_addOutput_scriptReference(tx_hash_builder_t* builder, size_t bufferSize);
 
-void txHashBuilder_addOutput_referenceScript_dataChunk(
+void txHashBuilder_addOutput_scriptReference_dataChunk(
         tx_hash_builder_t* builder,
         const uint8_t* buffer, size_t bufferSize
 );

@@ -23,8 +23,8 @@ typedef enum {
 	STATE_OUTPUT_TOKEN = 2512,
 	STATE_OUTPUT_DATUM = 2513,
 	STATE_OUTPUT_DATUM_INLINE_CHUNKS = 2514,
-	STATE_OUTPUT_REFERENCE_SCRIPT = 2515,
-	STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS = 2516,
+	STATE_OUTPUT_SCRIPT_REFERENCE = 2515,
+	STATE_OUTPUT_SCRIPT_REFERENCE_CHUNKS = 2516,
 	STATE_OUTPUT_CONFIRM = 2520,
 	STATE_OUTPUT_FINISHED = 2521
 } sign_tx_output_state_t;
@@ -43,7 +43,7 @@ typedef struct {
 	uint16_t numAssetGroups; // positive if there are tokens
 	bool includeDatum;
 	bool datumHashReceived; // is this needed?
-	bool includeRefScript;
+	bool includeScriptRef;
 
 	// this affects whether amounts and tokens are shown
 	security_policy_t outputSecurityPolicy;
@@ -80,8 +80,8 @@ typedef struct {
 			};
 		};
 		struct {
-			size_t refScriptRemainingBytes;
-			size_t refScriptChunkSize;
+			size_t scriptRefRemainingBytes;
+			size_t scriptRefChunkSize;
 			uint8_t scriptChunk[MAX_CHUNK_SIZE];
 		};
 	} stateData;
