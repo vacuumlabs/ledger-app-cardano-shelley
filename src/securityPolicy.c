@@ -474,6 +474,29 @@ static bool is_addressBytes_suitable_for_tx_output(
 #undef CHECK
 }
 
+static bool contains_forbidden_plutus_elements(
+        const tx_output_description_t* output,
+        sign_tx_signingmode_t txSigningMode
+)
+{
+	if (output->includeDatum || output->includeRefScript) {
+		// no Plutus elements for pool registration, only allow in other modes
+		switch (txSigningMode) {
+
+		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+			break;
+
+		default:
+			return true;
+			break;
+		}
+	}
+
+	return false;
+}
+
 // For each transaction output with third-party address
 security_policy_t policyForSignTxOutputAddressBytes(
         const tx_output_description_t* output,
@@ -488,17 +511,10 @@ security_policy_t policyForSignTxOutputAddressBytes(
 
 	DENY_UNLESS(is_addressBytes_suitable_for_tx_output(addressBuffer, addressSize, networkId, protocolMagic));
 
-	if (output->includeDatum) {
-		// together with the above requirement on SPENDING_PATH,
-		// this forbids datum in change outputs entirely
-		DENY_UNLESS(allows_datum_hash(addressType));
+	DENY_IF(contains_forbidden_plutus_elements(output, txSigningMode));
 
-		// no Plutus elements for pool registration, only allow in other modes
-		DENY_UNLESS(
-		        txSigningMode == SIGN_TX_SIGNINGMODE_ORDINARY_TX ||
-		        txSigningMode == SIGN_TX_SIGNINGMODE_MULTISIG_TX ||
-		        txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX
-		);
+	if (output->includeDatum) {
+		DENY_UNLESS(allows_datum_hash(addressType));
 	}
 
 	switch (txSigningMode) {
@@ -584,17 +600,12 @@ security_policy_t policyForSignTxOutputAddressParams(
 
 	DENY_UNLESS(is_addressParams_suitable_for_tx_output(params, networkId, protocolMagic));
 
+	DENY_IF(contains_forbidden_plutus_elements(output, txSigningMode));
+
 	if (output->includeDatum) {
 		// together with the above requirement on SPENDING_PATH,
 		// this forbids datum in change outputs entirely
 		DENY_UNLESS(allows_datum_hash(params->type));
-
-		// no Plutus elements for pool registration, only allow in other modes
-		DENY_UNLESS(
-		        txSigningMode == SIGN_TX_SIGNINGMODE_ORDINARY_TX ||
-		        txSigningMode == SIGN_TX_SIGNINGMODE_MULTISIG_TX ||
-		        txSigningMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX
-		);
 	}
 
 	switch (txSigningMode) {
@@ -604,8 +615,11 @@ security_policy_t policyForSignTxOutputAddressParams(
 		// unusual paths or spending and staking path mismatch
 		SHOW_UNLESS(is_standard_base_address(params));
 
-		// outputs (eUTXOs) with datum hash are not interchangeable
-		SHOW_IF(output->includeDatum); // can't happen for operator
+		// outputs (eUTXOs) with datum hash or ref script are not interchangeable
+		if (output->includeDatum || output->includeRefScript) {
+			// can't happen for SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR
+			SHOW_IF(app_mode_expert());
+		}
 
 		// it is safe to hide the remaining change outputs
 		ALLOW();
@@ -674,13 +688,13 @@ security_policy_t policyForSignTxOutputRefScript(
 {
 	switch (outputPolicy) {
 	case POLICY_ALLOW_WITHOUT_PROMPT:
-		// output was not shown, showing script reference won't make sense
+		// output was not shown, showing ref script won't make sense
 		ALLOW();
 		break;
 
 	case POLICY_SHOW_BEFORE_RESPONSE:
 	case POLICY_PROMPT_WARN_UNUSUAL:
-		// non-expert users are not supposed to be able to verify script reference or its hash even if they saw it
+		// non-expert users are not supposed to be able to verify a script even if they saw it
 		SHOW_IF(app_mode_expert());
 		ALLOW();
 		break;
@@ -695,7 +709,9 @@ security_policy_t policyForSignTxOutputRefScript(
 // For final output confirmation
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t outputPolicy,
-        uint64_t numAssetGroups
+        uint64_t numAssetGroups,
+        bool containsDatum,
+        bool containsRefScript
 )
 {
 	switch (outputPolicy) {
@@ -705,10 +721,12 @@ security_policy_t policyForSignTxOutputConfirm(
 		break;
 
 	case POLICY_SHOW_BEFORE_RESPONSE:
-		// output was shown and it contained (possibly many) tokens
+		// output was shown and it contained (possibly many) included items (e.g. tokens)
 		// show a confirmation prompt, so that the user may abort the transaction sooner
 		PROMPT_IF(numAssetGroups > 0);
-		// however, if there were no tokens, no separate confirmation is needed
+		PROMPT_IF(containsDatum && app_mode_expert());
+		PROMPT_IF(containsRefScript && app_mode_expert());
+		// otherwise no separate confirmation is needed
 		ALLOW();
 		break;
 
@@ -726,9 +744,12 @@ security_policy_t policyForSignTxOutputConfirm(
 security_policy_t policyForSignTxCollateralOutputAddressBytes(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool isTotalCollateralPresent
 )
 {
+	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
+
 	ASSERT(output->destination.type == DESTINATION_THIRD_PARTY);
 	const uint8_t* addressBuffer = output->destination.address.buffer;
 	const size_t addressSize = output->destination.address.size;
@@ -748,9 +769,12 @@ security_policy_t policyForSignTxCollateralOutputAddressBytes(
 security_policy_t policyForSignTxCollateralOutputAddressParams(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic,
+        bool isTotalCollateralPresent
 )
 {
+	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
+
 	ASSERT(output->destination.type == DESTINATION_DEVICE_OWNED);
 	const addressParams_t* params = output->destination.params;
 
@@ -759,29 +783,11 @@ security_policy_t policyForSignTxCollateralOutputAddressParams(
 	DENY_IF(output->includeDatum);
 	DENY_IF(output->includeRefScript);
 
-	switch (txSigningMode) {
+	DENY_IF(txSigningMode != SIGN_TX_SIGNINGMODE_PLUTUS_TX);
 
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
-	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER: {
-		DENY();
-		break;
-	}
-
-	case SIGN_TX_SIGNINGMODE_PLUTUS_TX: {
-		// TODO this depends on the presence of total collateral
-		SHOW();
-		break;
-	}
-
-	default: {
-		ASSERT(false);
-		break;
-	}
-	}
-
-	DENY(); // should not be reached
+	// TODO address must be shown, but tokens and some other elements might be hidden
+	// TODO depends on the presence of total collateral
+	SHOW();
 }
 
 // TODO
@@ -791,6 +797,8 @@ security_policy_t policyForSignTxCollateralOutputConfirm(
         uint64_t numAssetGroups
 )
 {
+	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
+
 	switch (outputPolicy) {
 	case POLICY_ALLOW_WITHOUT_PROMPT:
 		// output was not shown, no confirmation is needed
@@ -1511,15 +1519,22 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 }
 
 // For each transaction collateral input
-security_policy_t policyForSignTxCollateralInput(const sign_tx_signingmode_t txSigningMode)
+security_policy_t policyForSignTxCollateralInput(
+        const sign_tx_signingmode_t txSigningMode,
+        bool isTotalCollateralIncluded
+)
 {
+	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
+
 	// we do not impose restrictions on individual collateral inputs
 	// because a HW wallet cannot verify anything about the input
 
 	switch (txSigningMode) {
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-		// should be shown because the user loses all collateral inputs if Plutus execution fails
-		SHOW_IF(app_mode_expert());
+		// safe to hide if total collateral is given
+		// (if tokens are present, they go to collateral output, and collateral ADA is
+		// shown explicitly, so we don't need to see individual collateral inputs)
+		SHOW_IF(!isTotalCollateralIncluded && app_mode_expert());
 		ALLOW();
 		break;
 
@@ -1601,6 +1616,8 @@ security_policy_t policyForSignTxRequiredSigner(
 
 security_policy_t policyForSignTxTotalCollateral()
 {
+	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
+
 	SHOW_IF(app_mode_expert());
 	ALLOW();
 }

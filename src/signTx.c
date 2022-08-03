@@ -1946,7 +1946,10 @@ static void signTx_handleCollateralAPDU(uint8_t p2, const uint8_t* wireDataBuffe
 
 	parseInput(wireDataBuffer, wireDataSize);
 
-	security_policy_t policy = policyForSignTxCollateralInput(ctx->commonTxData.txSigningMode);
+	security_policy_t policy = policyForSignTxCollateralInput(
+	        ctx->commonTxData.txSigningMode,
+	        ctx->includeTotalCollateral
+	);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 

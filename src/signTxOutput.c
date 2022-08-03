@@ -1349,7 +1349,9 @@ static void handleConfirmAPDU_output(const uint8_t* wireDataBuffer MARK_UNUSED, 
 	output_context_t* subctx = accessSubcontext();
 	security_policy_t policy = policyForSignTxOutputConfirm(
 	                                   subctx->outputSecurityPolicy,
-	                                   subctx->numAssetGroups
+	                                   subctx->numAssetGroups,
+									   subctx->includeDatum,
+									   subctx->includeRefScript
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
