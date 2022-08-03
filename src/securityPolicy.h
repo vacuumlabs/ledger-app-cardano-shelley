@@ -68,7 +68,9 @@ security_policy_t policyForSignTxOutputRefScript(
 
 security_policy_t policyForSignTxOutputConfirm(
         security_policy_t addressPolicy,
-        uint64_t numAssetGroups
+        uint64_t numAssetGroups,
+        bool containsDatum,
+        bool containsRefScript
 );
 
 security_policy_t policyForSignTxCollateralOutputAddressBytes(
@@ -80,6 +82,9 @@ security_policy_t policyForSignTxCollateralOutputAddressParams(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
         const uint8_t networkId, const uint32_t protocolMagic
+);
+security_policy_t policyForSignTxCollateralOutputTokens(
+        const tx_output_description_t* output
 );
 security_policy_t policyForSignTxCollateralOutputConfirm(
         security_policy_t outputPolicy,
@@ -148,7 +153,10 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t outputPolicy);
 
 security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSigningMode);
 
-security_policy_t policyForSignTxCollateralInput(const sign_tx_signingmode_t txSigningMode);
+security_policy_t policyForSignTxCollateralInput(
+        const sign_tx_signingmode_t txSigningMode,
+        bool isTotalCollateralIncluded
+);
 
 security_policy_t policyForSignTxRequiredSigner(
         const sign_tx_signingmode_t txSigningMode,

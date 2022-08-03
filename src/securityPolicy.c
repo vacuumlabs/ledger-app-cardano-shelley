@@ -744,8 +744,7 @@ security_policy_t policyForSignTxOutputConfirm(
 security_policy_t policyForSignTxCollateralOutputAddressBytes(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
-        const uint8_t networkId, const uint32_t protocolMagic,
-        bool isTotalCollateralPresent
+        const uint8_t networkId, const uint32_t protocolMagic
 )
 {
 	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
@@ -769,8 +768,7 @@ security_policy_t policyForSignTxCollateralOutputAddressBytes(
 security_policy_t policyForSignTxCollateralOutputAddressParams(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
-        const uint8_t networkId, const uint32_t protocolMagic,
-        bool isTotalCollateralPresent
+        const uint8_t networkId, const uint32_t protocolMagic
 )
 {
 	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
@@ -788,6 +786,18 @@ security_policy_t policyForSignTxCollateralOutputAddressParams(
 	// TODO address must be shown, but tokens and some other elements might be hidden
 	// TODO depends on the presence of total collateral
 	SHOW();
+}
+
+security_policy_t policyForSignTxCollateralOutputTokens(
+        const tx_output_description_t* output
+)
+{
+	// for non-change outputs, control over the collateral tokens is potentially transferred to
+	// another party, so we should show them in the expert mode
+	// (non-expert users are supposed to not be interested in any collateral loss)
+	const bool lossOfControl = (output->destination.type != DESTINATION_DEVICE_OWNED);
+	SHOW_IF(lossOfControl && app_mode_expert());
+	ALLOW();
 }
 
 // TODO

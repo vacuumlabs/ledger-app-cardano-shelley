@@ -47,6 +47,7 @@ typedef struct {
 
 	// this affects whether amounts and tokens are shown
 	security_policy_t outputSecurityPolicy;
+	security_policy_t outputTokensSecurityPolicy;
 
 	union {
 		struct {

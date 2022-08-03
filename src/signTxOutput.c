@@ -243,6 +243,8 @@ static void handleOutput_addressBytes()
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 	subctx->outputSecurityPolicy = policy;
+	subctx->outputTokensSecurityPolicy = policy; // tokens shown iff output is shown
+
 	{
 		// add to tx
 		txHashBuilder_addOutput_topLevelData(&BODY_CTX->txHashBuilder, &output);
@@ -346,6 +348,7 @@ static void handleOutput_addressParams()
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 	subctx->outputSecurityPolicy = policy;
+	subctx->outputTokensSecurityPolicy = policy; // tokens shown iff output is shown
 
 	{
 		// add to tx
@@ -510,11 +513,11 @@ static void handleTopLevelDataAPDU_output(const uint8_t* wireDataBuffer, size_t 
 }
 
 enum {
-	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO = 3100,
-	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS,
-	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT,
-	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_RESPOND,
-	HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
+	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO = 3100,
+	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS,
+	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT,
+	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND,
+	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
 };
 
 static void signTx_handleCollateralOutput_addressBytes_ui_runStep()
@@ -527,14 +530,14 @@ static void signTx_handleCollateralOutput_addressBytes_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO) {
+	UI_STEP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO) {
 		ui_displayPaginatedText(
 		        "Collateral",
 		        "return output",
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
+	UI_STEP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
 		ASSERT(subctx->stateData.destination.address.size <= SIZEOF(subctx->stateData.destination.address.buffer));
 		ui_displayAddressScreen(
 		        "Address",
@@ -543,15 +546,19 @@ static void signTx_handleCollateralOutput_addressBytes_ui_runStep()
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT) {
-		ui_displayAdaAmountScreen("Amount", subctx->stateData.adaAmount, this_fn);
+	UI_STEP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT) {
+		if (ctx->includeTotalCollateral) {
+			// no need to show the amount because it is calculable from total collateral
+			UI_STEP_JUMP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
+		} else {
+			ui_displayAdaAmountScreen("Amount", subctx->stateData.adaAmount, this_fn);
+		}
 	}
-	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_RESPOND) {
+	UI_STEP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceState();
 	}
-	UI_STEP_END(HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_INVALID);
+	UI_STEP_END(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_INVALID);
 }
 
 static void handleCollateralOutput_addressBytes()
@@ -583,6 +590,12 @@ static void handleCollateralOutput_addressBytes()
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 	subctx->outputSecurityPolicy = policy;
+
+	security_policy_t tokensPolicy = policyForSignTxCollateralOutputTokens(&output);
+	TRACE("Policy: %d", (int) tokensPolicy);
+	ENSURE_NOT_DENIED(tokensPolicy);
+	subctx->outputTokensSecurityPolicy = tokensPolicy;
+
 	{
 		// add to tx
 		txHashBuilder_addCollateralOutput(&BODY_CTX->txHashBuilder, &output);
@@ -591,8 +604,8 @@ static void handleCollateralOutput_addressBytes()
 		// select UI steps
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_COLL_RET_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
 #undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
@@ -685,6 +698,11 @@ static void handleCollateralOutput_addressParams()
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 	subctx->outputSecurityPolicy = policy;
+
+	security_policy_t tokensPolicy = policyForSignTxCollateralOutputTokens(&output);
+	TRACE("Policy: %d", (int) tokensPolicy);
+	ENSURE_NOT_DENIED(tokensPolicy);
+	subctx->outputTokensSecurityPolicy = tokensPolicy;
 
 	{
 		// add to tx
@@ -894,7 +912,7 @@ static void handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 
 	{
 		// select UI step
-		switch (subctx->outputSecurityPolicy) {
+		switch (subctx->outputTokensSecurityPolicy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_TOKEN_STEP_DISPLAY_NAME);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOKEN_STEP_DISPLAY_NAME);
@@ -944,7 +962,6 @@ static void signTxOutput_handleDatumHash_ui_runStep()
 	}
 	UI_STEP(HANDLE_DATUM_HASH_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceState();
 	}
 	UI_STEP_END(HANDLE_DATUM_HASH_STEP_INVALID);
