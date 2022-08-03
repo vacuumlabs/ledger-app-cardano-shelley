@@ -210,7 +210,6 @@ static void signTx_handleOutput_address_bytes_ui_runStep()
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceState();
 	}
 	UI_STEP_END(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_INVALID);
@@ -317,7 +316,6 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceState();
 	}
 	UI_STEP_END(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_INVALID);
