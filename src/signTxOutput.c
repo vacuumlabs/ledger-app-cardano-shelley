@@ -189,7 +189,7 @@ static void signTx_handleOutput_address_bytes_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM) {
-		// TODO why is this warning not shown for address params? can't address params address be script address, I guess?
+		// this warning does not apply to address given by params where we only allow key hash spending part
 		ui_displayPaginatedText(
 		        "WARNING: output",
 		        "could be unspendable due to missing datum",
