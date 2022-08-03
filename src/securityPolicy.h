@@ -83,7 +83,12 @@ security_policy_t policyForSignTxCollateralOutputAddressParams(
         sign_tx_signingmode_t txSigningMode,
         const uint8_t networkId, const uint32_t protocolMagic
 );
+security_policy_t policyForSignTxCollateralOutputAdaAmount(
+        security_policy_t outputPolicy,
+        bool isTotalCollateralPresent
+);
 security_policy_t policyForSignTxCollateralOutputTokens(
+        security_policy_t outputPolicy,
         const tx_output_description_t* output
 );
 security_policy_t policyForSignTxCollateralOutputConfirm(

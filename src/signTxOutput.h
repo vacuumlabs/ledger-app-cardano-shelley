@@ -55,6 +55,7 @@ typedef struct {
 			tx_output_destination_t destination;
 
 			uint64_t adaAmount;
+			security_policy_t adaAmountSecurityPolicy;
 		};
 		struct {
 			// data for processing a multiasset map

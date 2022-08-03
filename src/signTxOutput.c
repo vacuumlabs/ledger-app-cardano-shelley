@@ -314,7 +314,11 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT) {
-		ui_displayAdaAmountScreen(subctx->ui_text4, subctx->stateData.adaAmount, this_fn);
+		if (subctx->stateData.adaAmountSecurityPolicy == POLICY_ALLOW_WITHOUT_PROMPT) {
+			UI_STEP_JUMP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND);
+		} else {
+			ui_displayAdaAmountScreen(subctx->ui_text4, subctx->stateData.adaAmount, this_fn);
+		}
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -384,6 +388,8 @@ static void handleOutput_addressParams()
 		subctx->ui_text2 = "output";
 		subctx->ui_text3 = "Address";
 		subctx->ui_text4 = "Send";
+
+		subctx->stateData.adaAmountSecurityPolicy = POLICY_SHOW_BEFORE_RESPONSE;
 
 		signTx_handleOutput_addressParams_ui_runStep();
 	}
@@ -547,8 +553,7 @@ static void signTx_handleCollateralOutput_addressBytes_ui_runStep()
 		);
 	}
 	UI_STEP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT) {
-		if (ctx->includeTotalCollateral) {
-			// no need to show the amount because it is calculable from total collateral
+		if (subctx->stateData.adaAmountSecurityPolicy == POLICY_ALLOW_WITHOUT_PROMPT) {
 			UI_STEP_JUMP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
 		} else {
 			ui_displayAdaAmountScreen("Amount", subctx->stateData.adaAmount, this_fn);
@@ -591,10 +596,15 @@ static void handleCollateralOutput_addressBytes()
 	ENSURE_NOT_DENIED(policy);
 	subctx->outputSecurityPolicy = policy;
 
-	security_policy_t tokensPolicy = policyForSignTxCollateralOutputTokens(&output);
+	security_policy_t tokensPolicy = policyForSignTxCollateralOutputTokens(policy, &output);
 	TRACE("Policy: %d", (int) tokensPolicy);
 	ENSURE_NOT_DENIED(tokensPolicy);
 	subctx->outputTokensSecurityPolicy = tokensPolicy;
+
+	security_policy_t adaAmountPolicy = policyForSignTxCollateralOutputAdaAmount(policy, ctx->includeTotalCollateral);
+	TRACE("Policy: %d", (int) adaAmountPolicy);
+	ENSURE_NOT_DENIED(adaAmountPolicy);
+	subctx->stateData.adaAmountSecurityPolicy = adaAmountPolicy;
 
 	{
 		// add to tx
@@ -614,64 +624,6 @@ static void handleCollateralOutput_addressBytes()
 		signTx_handleCollateralOutput_addressBytes_ui_runStep();
 	}
 }
-
-// enum {
-// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN = 3200,
-// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH,
-// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO,
-// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS,
-// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT,
-// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND,
-// 	HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_INVALID,
-// };
-
-// __noinline_due_to_stack__
-// static void signTx_handleCollateralOutput_addressParams_ui_runStep()
-// {
-// 	output_context_t* subctx = accessSubcontext();
-// 	TRACE("UI step %d", subctx->ui_step);
-// 	ui_callback_fn_t* this_fn = signTx_handleCollateralOutput_addressParams_ui_runStep;
-
-// 	ASSERT(subctx->stateData.destination.type == DESTINATION_DEVICE_OWNED);
-
-// 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN) {
-// 		ui_displayPaginatedText("Collateral", "return output", this_fn);
-// 	}
-// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
-// 		if (determineSpendingChoice(subctx->stateData.destination.params.type) == SPENDING_NONE) {
-// 			// reward address
-// 			// TODO reward address is not allowed in outputs, why is this here?
-// 			UI_STEP_JUMP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO);
-// 		}
-// 		ui_displaySpendingInfoScreen(&subctx->stateData.destination.params, this_fn);
-// 	}
-// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO) {
-// 		ui_displayStakingInfoScreen(&subctx->stateData.destination.params, this_fn);
-// 	}
-// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
-// 		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
-// 		size_t addressSize = deriveAddress(&subctx->stateData.destination.params, addressBuffer, SIZEOF(addressBuffer));
-// 		ASSERT(addressSize > 0);
-// 		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
-
-// 		ui_displayAddressScreen(
-// 		        "Address",
-// 		        addressBuffer, addressSize,
-// 		        this_fn
-// 		);
-// 	}
-// 	UI_STEP(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT) {
-// 		ui_displayAdaAmountScreen("Amount", subctx->stateData.adaAmount, this_fn);
-// 	}
-// 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND) {
-// 		respondSuccessEmptyMsg();
-
-// 		advanceState();
-// 	}
-// 	UI_STEP_END(HANDLE_COLL_RET_OUTPUT_ADDRESS_PARAMS_STEP_INVALID);
-// }
 
 static void handleCollateralOutput_addressParams()
 {
@@ -699,10 +651,15 @@ static void handleCollateralOutput_addressParams()
 	ENSURE_NOT_DENIED(policy);
 	subctx->outputSecurityPolicy = policy;
 
-	security_policy_t tokensPolicy = policyForSignTxCollateralOutputTokens(&output);
+	security_policy_t tokensPolicy = policyForSignTxCollateralOutputTokens(policy, &output);
 	TRACE("Policy: %d", (int) tokensPolicy);
 	ENSURE_NOT_DENIED(tokensPolicy);
 	subctx->outputTokensSecurityPolicy = tokensPolicy;
+
+	security_policy_t adaAmountPolicy = policyForSignTxCollateralOutputAdaAmount(policy, ctx->includeTotalCollateral);
+	TRACE("Policy: %d", (int) adaAmountPolicy);
+	ENSURE_NOT_DENIED(adaAmountPolicy);
+	subctx->stateData.adaAmountSecurityPolicy = adaAmountPolicy;
 
 	{
 		// add to tx

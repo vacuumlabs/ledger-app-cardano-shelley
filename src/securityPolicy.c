@@ -760,8 +760,6 @@ security_policy_t policyForSignTxCollateralOutputAddressBytes(
 
 	DENY_IF(txSigningMode != SIGN_TX_SIGNINGMODE_PLUTUS_TX);
 
-	// TODO address must be shown, but tokens and some other elements might be hidden
-	// TODO depends on the presence of total collateral
 	SHOW();
 }
 
@@ -783,15 +781,35 @@ security_policy_t policyForSignTxCollateralOutputAddressParams(
 
 	DENY_IF(txSigningMode != SIGN_TX_SIGNINGMODE_PLUTUS_TX);
 
-	// TODO address must be shown, but tokens and some other elements might be hidden
-	// TODO depends on the presence of total collateral
 	SHOW();
 }
 
+security_policy_t policyForSignTxCollateralOutputAdaAmount(
+        security_policy_t outputPolicy,
+        bool isTotalCollateralPresent
+)
+{
+	if (outputPolicy == POLICY_ALLOW_WITHOUT_PROMPT) {
+		// output not shown, so none of its elements should be shown
+		ALLOW();
+	}
+
+	// ADA amount is calculable from total collateral
+	// but only expert users are to be bothered by a possible collateral loss
+	SHOW_IF(!isTotalCollateralPresent && app_mode_expert());
+	ALLOW();
+}
+
 security_policy_t policyForSignTxCollateralOutputTokens(
+        security_policy_t outputPolicy,
         const tx_output_description_t* output
 )
 {
+	if (outputPolicy == POLICY_ALLOW_WITHOUT_PROMPT) {
+		// output not shown, so none of its elements should be shown
+		ALLOW();
+	}
+
 	// for non-change outputs, control over the collateral tokens is potentially transferred to
 	// another party, so we should show them in the expert mode
 	// (non-expert users are supposed to not be interested in any collateral loss)
@@ -800,7 +818,6 @@ security_policy_t policyForSignTxCollateralOutputTokens(
 	ALLOW();
 }
 
-// TODO
 // For final collateral return output confirmation
 security_policy_t policyForSignTxCollateralOutputConfirm(
         security_policy_t outputPolicy,
@@ -1531,7 +1548,7 @@ security_policy_t policyForSignTxScriptDataHash(const sign_tx_signingmode_t txSi
 // For each transaction collateral input
 security_policy_t policyForSignTxCollateralInput(
         const sign_tx_signingmode_t txSigningMode,
-        bool isTotalCollateralIncluded
+        bool isTotalCollateralPresent
 )
 {
 	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
@@ -1544,7 +1561,7 @@ security_policy_t policyForSignTxCollateralInput(
 		// safe to hide if total collateral is given
 		// (if tokens are present, they go to collateral output, and collateral ADA is
 		// shown explicitly, so we don't need to see individual collateral inputs)
-		SHOW_IF(!isTotalCollateralIncluded && app_mode_expert());
+		SHOW_IF(!isTotalCollateralPresent && app_mode_expert());
 		ALLOW();
 		break;
 
