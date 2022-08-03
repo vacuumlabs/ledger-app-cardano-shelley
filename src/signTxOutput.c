@@ -1011,7 +1011,6 @@ static void handleDatumInline(read_view_t* view)
 		subctx->stateData.datumRemainingBytes = parse_u4be(view);
 		TRACE("datumRemainingBytes = %u", subctx->stateData.datumRemainingBytes);
 		VALIDATE(subctx->stateData.datumRemainingBytes > 0, ERR_INVALID_DATA);
-		// TODO some other validation?
 
 		size_t chunkSize = parse_u4be(view);
 		TRACE("chunkSize = %u", chunkSize);
@@ -1191,7 +1190,6 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 		subctx->stateData.refScriptRemainingBytes = parse_u4be(&view);
 		TRACE("refScriptRemainingBytes = %u", subctx->stateData.datumRemainingBytes);
 		VALIDATE(subctx->stateData.refScriptRemainingBytes > 0, ERR_INVALID_DATA);
-		// TODO some other validation?
 
 		size_t chunkSize = parse_u4be(&view);
 		TRACE("chunkSize = %u", chunkSize);

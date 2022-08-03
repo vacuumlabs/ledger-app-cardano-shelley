@@ -549,7 +549,7 @@ void txHashBuilder_addOutput_datum(
 		//   Unsigned[2] ; map entry key
 		//   Array(2)[
 		//     Unsigned[datumType]
-		//     Bytes[buffer]
+		//     Bytes[buffer] / #6.24(Bytes[buffer])
 		//   ]
 
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_OUTPUT_KEY_DATUM_OPTION);
@@ -576,13 +576,13 @@ void txHashBuilder_addOutput_datum(
 		// inline datum only supported since Babbage
 		ASSERT(builder->outputData.serializationFormat == MAP_BABBAGE);
 		ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
-		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
-			//  Chunks of datum will be added later
-		}
 		// bufferSize is total size of datum
 		builder->outputData.datumData.remainingBytes = bufferSize;
-		//	Datum is yet finished, but the size of inline datum is appended
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_TAG, CBOR_TAG_EMBEDDED_CBOR_BYTE_STRING);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
+			// byte chunks will be added later
+		}
 		builder->outputState = TX_OUTPUT_DATUM_INLINE;
 		break;
 
@@ -635,17 +635,15 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 		ASSERT(false);
 	}
 
-	// TODO check where the tag is added
-	//   script_ref = #6.24(bytes .cbor script)
-
 	//   Unsigned[3] ; map entry key
-	//   Bytes[buffer]
+	//   #6.24(Bytes[buffer])
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_OUTPUT_KEY_SCRIPT_REF);
 	}
 	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_TAG, CBOR_TAG_EMBEDDED_CBOR_BYTE_STRING);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, scriptSize);
-		//Chunks will be added later
+		// byte chunks will be added later
 	}
 	builder->outputData.referenceScriptData.remainingBytes = scriptSize;
 	builder->outputState = TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS;
