@@ -754,28 +754,6 @@ static void handleTopLevelDataAPDU_collateralOutput(const uint8_t* wireDataBuffe
 }
 // ============================== ASSET GROUP ==============================
 
-enum {
-	HANDLE_ASSET_GROUP_STEP_DISPLAY = 3300,
-	HANDLE_ASSET_GROUP_STEP_RESPOND,
-	HANDLE_ASSET_GROUP_STEP_INVALID,
-};
-
-static void handleAssetGroup_ui_runStep()
-{
-	output_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = handleAssetGroup_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_ASSET_GROUP_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_ASSET_GROUP_STEP_INVALID);
-}
-
 static void handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
@@ -815,7 +793,6 @@ static void handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
-
 	{
 		// add tokengroup to tx
 		TRACE("Adding token group hash to tx hash");
@@ -826,9 +803,11 @@ static void handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 		);
 		TRACE();
 	}
-
-	subctx->ui_step = HANDLE_ASSET_GROUP_STEP_RESPOND;
-	handleAssetGroup_ui_runStep();
+	{
+		// no UI, tokens are shown via fingerprints
+		respondSuccessEmptyMsg();
+		advanceState();
+	}
 }
 
 // ============================== TOKEN ==============================
