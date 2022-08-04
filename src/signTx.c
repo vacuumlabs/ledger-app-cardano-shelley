@@ -413,6 +413,7 @@ enum {
 	HANDLE_INIT_STEP_DISPLAY_NETWORK_DETAILS,
 	HANDLE_INIT_STEP_SCRIPT_RUNNING_WARNING,
 	HANDLE_INIT_STEP_NO_COLLATERAL_WARNING,
+	HANDLE_INIT_STEP_UNKNOWN_COLLATERAL_WARNING,
 	HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING,
 	HANDLE_INIT_STEP_RESPOND,
 	HANDLE_INIT_STEP_INVALID,
@@ -497,6 +498,13 @@ static void signTx_handleInit_ui_runStep()
 			UI_STEP_JUMP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING);
 		}
 		ui_displayPaginatedText("WARNING:", "No collateral given for Plutus transaction", this_fn);
+	}
+
+	UI_STEP(HANDLE_INIT_STEP_UNKNOWN_COLLATERAL_WARNING) {
+		if (!needsUnknownCollateralWarning(ctx->commonTxData.txSigningMode, ctx->includeTotalCollateral)) {
+			UI_STEP_JUMP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING);
+		}
+		ui_displayPaginatedText("WARNING:", "Unknown collateral amount", this_fn);
 	}
 
 	UI_STEP(HANDLE_INIT_STEP_NO_SCRIPT_DATA_HASH_WARNING) {

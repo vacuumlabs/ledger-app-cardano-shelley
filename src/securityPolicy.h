@@ -27,6 +27,7 @@ bool isTxNetworkIdVerifiable(
 );
 bool needsRunningScriptWarning(int32_t numCollateralInputs);
 bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t numCollateralInputs);
+bool needsUnknownCollateralWarning(sign_tx_signingmode_t signingMode, bool includesTotalCollateral);
 bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash);
 
 security_policy_t policyForSignTxInit(

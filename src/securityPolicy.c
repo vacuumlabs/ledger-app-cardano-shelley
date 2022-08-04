@@ -290,6 +290,12 @@ bool needsMissingCollateralWarning(sign_tx_signingmode_t signingMode, uint32_t n
 	return collateralExpected && (numCollateralInputs == 0);
 }
 
+bool needsUnknownCollateralWarning(sign_tx_signingmode_t signingMode, bool includesTotalCollateral)
+{
+	const bool collateralExpected = (signingMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX);
+	return collateralExpected && (!includesTotalCollateral);
+}
+
 bool needsMissingScriptDataHashWarning(sign_tx_signingmode_t signingMode, bool includesScriptDataHash)
 {
 	const bool scriptDataHashExpected = (signingMode == SIGN_TX_SIGNINGMODE_PLUTUS_TX);
@@ -377,6 +383,7 @@ security_policy_t policyForSignTxInit(
 
 	WARN_IF(needsRunningScriptWarning(numCollateralInputs));
 	WARN_IF(needsMissingCollateralWarning(txSigningMode, numCollateralInputs));
+	WARN_IF(needsUnknownCollateralWarning(txSigningMode, numCollateralInputs));
 	WARN_IF(needsMissingScriptDataHashWarning(txSigningMode, includeScriptDataHash));
 
 	// Could be switched to POLICY_ALLOW_WITHOUT_PROMPT to skip initial "new transaction" question
