@@ -52,7 +52,7 @@ typedef struct {
 	union {
 		struct {
 			// top level data
-			tx_output_destination_t destination;
+			tx_output_destination_storage_t destination;
 
 			uint64_t adaAmount;
 			security_policy_t adaAmountSecurityPolicy;

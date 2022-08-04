@@ -178,6 +178,24 @@ enum {
 	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
 };
 
+static bool _needsMissingDatumWarning()
+{
+	output_context_t* subctx = accessSubcontext();
+	tx_output_destination_t destination;
+	destination.type = subctx->stateData.destination.type;
+	switch (destination.type) {
+	case DESTINATION_DEVICE_OWNED:
+		destination.params = &subctx->stateData.destination.params;
+		break;
+	case DESTINATION_THIRD_PARTY:
+		destination.address.buffer = subctx->stateData.destination.address.buffer;
+		destination.address.size = subctx->stateData.destination.address.size;
+		break;
+	}
+
+	return needsMissingDatumWarning(&destination, subctx->includeDatum);
+}
+
 static void signTx_handleOutput_address_bytes_ui_runStep()
 {
 	output_context_t* subctx = accessSubcontext();
@@ -188,14 +206,6 @@ static void signTx_handleOutput_address_bytes_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM) {
-		// this warning does not apply to address given by params where we only allow key hash spending part
-		ui_displayPaginatedText(
-		        "WARNING: output",
-		        "could be unspendable due to missing datum",
-		        this_fn
-		);
-	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
 		ASSERT(subctx->stateData.destination.address.size <= SIZEOF(subctx->stateData.destination.address.buffer));
 		ui_displayAddressScreen(
@@ -204,6 +214,19 @@ static void signTx_handleOutput_address_bytes_ui_runStep()
 		        subctx->stateData.destination.address.size,
 		        this_fn
 		);
+	}
+	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM) {
+		// this warning does not apply to address given by params where we only allow key hash spending part
+		// in which case datum is just optional and rarely used
+		if (_needsMissingDatumWarning()) {
+			ui_displayPaginatedText(
+					"WARNING: output",
+					"could be unspendable due to missing datum",
+					this_fn
+			);
+		} else {
+			UI_STEP_JUMP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT);
+		}
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT) {
 		ui_displayAdaAmountScreen("Send", subctx->stateData.adaAmount, this_fn);
@@ -253,7 +276,7 @@ static void handleOutput_addressBytes()
 		// select UI steps
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_WARN_UNUSUAL,  HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM);
+			CASE(POLICY_PROMPT_WARN_UNUSUAL,  HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
 #undef   CASE
@@ -268,6 +291,7 @@ static void handleOutput_addressBytes()
 
 enum {
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN = 3200,
+	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_WARNING_DATUM,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO,
 	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS,
@@ -291,11 +315,6 @@ static void signTx_handleOutput_addressParams_ui_runStep()
 		ui_displayPaginatedText(subctx->ui_text1, subctx->ui_text2, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
-		if (determineSpendingChoice(subctx->stateData.destination.params.type) == SPENDING_NONE) {
-			// reward address
-			// TODO reward address is not allowed in outputs, why is this here?
-			UI_STEP_JUMP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO);
-		}
 		ui_displaySpendingInfoScreen(&subctx->stateData.destination.params, this_fn);
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO) {
@@ -377,6 +396,7 @@ static void handleOutput_addressParams()
 		// select UI steps
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_PROMPT_WARN_UNUSUAL,  HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN);
 			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND);
 #undef   CASE

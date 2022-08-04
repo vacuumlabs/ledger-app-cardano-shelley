@@ -40,12 +40,17 @@ static inline bool is_reward_address(const addressParams_t* addressParams)
 	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
-// spending part of the address is a script hash
-static inline bool allows_datum_hash(const uint8_t addressType)
+static address_type_t getDestinationAddressType(const tx_output_destination_t* destination)
 {
-	return (determineSpendingChoice(addressType) == SPENDING_SCRIPT_HASH);
+	switch (destination->type) {
+	case DESTINATION_DEVICE_OWNED:
+		return destination->params->type;
+	case DESTINATION_THIRD_PARTY:
+		return getAddressType(destination->address.buffer[0]);
+	default:
+		ASSERT(false);
+	}
 }
-
 
 // useful shortcuts
 
@@ -504,6 +509,12 @@ static bool contains_forbidden_plutus_elements(
 	return false;
 }
 
+bool needsMissingDatumWarning(const tx_output_destination_t* destination, bool includeDatum)
+{
+	const bool mightRequireDatum = determineSpendingChoice(getDestinationAddressType(destination)) == SPENDING_SCRIPT_HASH;
+	return mightRequireDatum && !includeDatum;
+}
+
 // For each transaction output with third-party address
 security_policy_t policyForSignTxOutputAddressBytes(
         const tx_output_description_t* output,
@@ -514,15 +525,10 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	ASSERT(output->destination.type == DESTINATION_THIRD_PARTY);
 	const uint8_t* addressBuffer = output->destination.address.buffer;
 	const size_t addressSize = output->destination.address.size;
-	const address_type_t addressType = getAddressType(addressBuffer[0]);
 
 	DENY_UNLESS(is_addressBytes_suitable_for_tx_output(addressBuffer, addressSize, networkId, protocolMagic));
 
 	DENY_IF(contains_forbidden_plutus_elements(output, txSigningMode));
-
-	if (output->includeDatum) {
-		DENY_UNLESS(allows_datum_hash(addressType));
-	}
 
 	switch (txSigningMode) {
 
@@ -538,7 +544,7 @@ security_policy_t policyForSignTxOutputAddressBytes(
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		// utxo on a Plutus script address without datum hash is unspendable
 		// but we can't DENY because it is valid for native scripts
-		WARN_IF(allows_datum_hash(addressType) && !output->includeDatum);
+		WARN_IF(needsMissingDatumWarning(&output->destination, output->includeDatum));
 		// we always show third-party output addresses
 		SHOW();
 		break;
@@ -608,12 +614,6 @@ security_policy_t policyForSignTxOutputAddressParams(
 	DENY_UNLESS(is_addressParams_suitable_for_tx_output(params, networkId, protocolMagic));
 
 	DENY_IF(contains_forbidden_plutus_elements(output, txSigningMode));
-
-	if (output->includeDatum) {
-		// together with the above requirement on SPENDING_PATH,
-		// this forbids datum in change outputs entirely
-		DENY_UNLESS(allows_datum_hash(params->type));
-	}
 
 	switch (txSigningMode) {
 
@@ -752,19 +752,7 @@ static bool is_address_suitable_for_collateral_output(
         const tx_output_description_t* output
 )
 {
-	address_type_t addressType;
-	switch (output->destination.type) {
-	case DESTINATION_DEVICE_OWNED:
-		addressType = output->destination.params->type;
-		break;
-	case DESTINATION_THIRD_PARTY:
-		addressType = output->destination.params->type;
-		break;
-	default:
-		ASSERT(false);
-	}
-
-	switch(addressType) {
+	switch(getDestinationAddressType(&output->destination)) {
 
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:

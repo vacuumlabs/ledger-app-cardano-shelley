@@ -29,6 +29,20 @@ typedef struct {
 		} address;
 		addressParams_t params;
 	};
+} tx_output_destination_storage_t;
+
+// consistent with tx_output_destination_storage_t
+// but only contains address buffer pointer instead of the actual buffer
+// or address params pointer instead of actual params
+typedef struct {
+	tx_output_destination_type_t type;
+	union {
+		struct {
+			uint8_t* buffer;
+			size_t size;
+		} address;
+		addressParams_t* params;
+	};
 } tx_output_destination_t;
 
 enum {
@@ -162,23 +176,10 @@ typedef struct {
 typedef struct {
 	tx_output_serialization_format_t format;
 
-	// consistent with tx_output_destination_t
-	// but only contains address buffer pointer instead of the actual buffer
-	// or address params pointer instead of actual params
-	struct {
-		tx_output_destination_type_t type;
-		union {
-			struct {
-				uint8_t* buffer;
-				size_t size;
-			} address;
-			addressParams_t* params;
-		};
-	} destination;
-
+	tx_output_destination_t destination;
 	uint64_t amount;
-	uint16_t numAssetGroups;
 
+	uint16_t numAssetGroups;
 	bool includeDatum;
 	bool includeRefScript;
 } tx_output_description_t;

@@ -49,6 +49,8 @@ security_policy_t policyForSignTxInit(
 
 security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);
 
+bool needsMissingDatumWarning(const tx_output_destination_t* destination, bool includeDatum);
+
 security_policy_t policyForSignTxOutputAddressBytes(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
