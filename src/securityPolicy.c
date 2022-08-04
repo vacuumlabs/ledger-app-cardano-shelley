@@ -741,6 +741,36 @@ security_policy_t policyForSignTxOutputConfirm(
 	DENY(); // should not be reached
 }
 
+static bool is_address_suitable_for_collateral_output(
+        const tx_output_description_t* output
+)
+{
+	address_type_t addressType;
+	switch (output->destination.type) {
+	case DESTINATION_DEVICE_OWNED:
+		addressType = output->destination.params->type;
+		break;
+	case DESTINATION_THIRD_PARTY:
+		addressType = output->destination.params->type;
+		break;
+	default:
+		ASSERT(false);
+	}
+
+	switch(addressType) {
+
+	case BASE_PAYMENT_KEY_STAKE_KEY:
+	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+	case POINTER_KEY:
+	case ENTERPRISE_KEY:
+		// we only allow addresses with payment controlled by key
+		return true;
+
+	default:
+		return false;
+	}
+}
+
 security_policy_t policyForSignTxCollateralOutputAddressBytes(
         const tx_output_description_t* output,
         sign_tx_signingmode_t txSigningMode,
@@ -754,6 +784,7 @@ security_policy_t policyForSignTxCollateralOutputAddressBytes(
 	const size_t addressSize = output->destination.address.size;
 
 	DENY_UNLESS(is_addressBytes_suitable_for_tx_output(addressBuffer, addressSize, networkId, protocolMagic));
+	DENY_UNLESS(is_address_suitable_for_collateral_output(output));
 
 	DENY_IF(output->includeDatum);
 	DENY_IF(output->includeRefScript);
@@ -775,13 +806,26 @@ security_policy_t policyForSignTxCollateralOutputAddressParams(
 	const addressParams_t* params = output->destination.params;
 
 	DENY_UNLESS(is_addressParams_suitable_for_tx_output(params, networkId, protocolMagic));
+	DENY_UNLESS(is_address_suitable_for_collateral_output(output));
 
 	DENY_IF(output->includeDatum);
 	DENY_IF(output->includeRefScript);
 
-	DENY_IF(txSigningMode != SIGN_TX_SIGNINGMODE_PLUTUS_TX);
+	switch (txSigningMode) {
 
-	SHOW();
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		// change outputs can be hidden
+		SHOW_UNLESS(is_standard_base_address(params));
+		ALLOW();
+		break;
+
+	default:
+		// should be used only in Plutus transactions
+		DENY();
+		break;
+	}
+
+	DENY(); // should not be reached
 }
 
 security_policy_t policyForSignTxCollateralOutputAdaAmount(
