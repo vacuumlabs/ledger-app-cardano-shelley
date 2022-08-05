@@ -96,7 +96,6 @@ static void cbor_append_txOutput_array(tx_hash_builder_t* builder, const tx_outp
 		// value = Unsigned[amount]
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, output->amount);
 	} else {
-		builder->outputData.multiassetData.remainingAssetGroups = output->numAssetGroups;
 		// value = Array(2)[
 		//   Unsigned[amount]
 		//   Map(numAssetGroups)[
@@ -141,7 +140,6 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_output
 			// value = Unsigned[amount]
 			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, output->amount);
 		} else {
-			builder->outputData.multiassetData.remainingAssetGroups = output->numAssetGroups;
 			// value = Array(2)[
 			//   Unsigned[amount]
 			//   Map(numAssetGroups)[
@@ -157,8 +155,14 @@ static void cbor_append_txOutput_map(tx_hash_builder_t* builder, const tx_output
 	}
 }
 
-static void cbor_append_txOutput(tx_hash_builder_t* builder, const tx_output_description_t* output)
+// adds top level data: address, ADA amount, starts multiasset map; tokens are added later
+static void processOutputTopLevel(tx_hash_builder_t* builder, const tx_output_description_t* output)
 {
+	builder->outputData.serializationFormat = output->format;
+	builder->outputData.includeDatum = output->includeDatum;
+	builder->outputData.includeRefScript = output->includeRefScript;
+	builder->outputData.multiassetData.remainingAssetGroups = output->numAssetGroups;
+
 	switch (output->format) {
 	case ARRAY_LEGACY:
 		cbor_append_txOutput_array(builder, output);
@@ -387,13 +391,7 @@ void txHashBuilder_addOutput_topLevelData(
 
 	assertCanLeaveCurrentOutput(builder);
 
-	builder->outputData.serializationFormat = output->format;
-	builder->outputData.includeDatum = output->includeDatum;
-	builder->outputData.includeRefScript = output->includeRefScript;
-
-	//  For single-asset outputs, the code below will append complete top level data, however for multi-asset data,
-	//  entries for multi-asset map has to be filled by another call, therefore leaving the top level data incomplete.
-	cbor_append_txOutput(builder, output);
+	processOutputTopLevel(builder, output);
 
 	builder->outputState = TX_OUTPUT_TOP_LEVEL_DATA;
 }
@@ -1712,15 +1710,11 @@ void txHashBuilder_addCollateralOutput(
 	txHashBuilder_assertCanLeaveNetworkId(builder);
 	ASSERT(builder->includeCollateralOutput);
 
-	builder->outputData.serializationFormat = output->format;
-	ASSERT(builder->outputData.includeDatum == false);
-	ASSERT(builder->outputData.includeRefScript == false);
-
 	{
 		// Enter collateral output
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERAL_OUTPUT);
 	}
-	cbor_append_txOutput(builder, output);
+	processOutputTopLevel(builder, output);
 
 	builder->outputState = TX_OUTPUT_TOP_LEVEL_DATA;
 	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_OUTPUT;
