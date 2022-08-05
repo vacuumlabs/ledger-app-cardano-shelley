@@ -539,7 +539,7 @@ static void handleTopLevelDataAPDU_output(const uint8_t* wireDataBuffer, size_t 
 }
 
 enum {
-	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO = 3100,
+	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO = 3300,
 	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS,
 	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT,
 	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND,
@@ -550,7 +550,7 @@ static void signTx_handleCollateralOutput_addressBytes_ui_runStep()
 {
 	output_context_t* subctx = accessSubcontext();
 	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTx_handleOutput_address_bytes_ui_runStep;
+	ui_callback_fn_t* this_fn = signTx_handleCollateralOutput_addressBytes_ui_runStep;
 
 	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
 
@@ -634,7 +634,7 @@ static void handleCollateralOutput_addressBytes()
 		// select UI steps
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
 #undef   CASE
 		default:
@@ -789,12 +789,30 @@ static void handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 	{
 		// add tokengroup to tx
 		TRACE("Adding token group hash to tx hash");
-		txHashBuilder_addOutput_tokenGroup(
-		        &BODY_CTX->txHashBuilder,
-		        subctx->stateData.tokenGroup.policyId, MINTING_POLICY_ID_SIZE,
-		        subctx->stateData.numTokens
-		);
-		TRACE();
+
+		switch (ctx->stage) {
+
+		case SIGN_STAGE_BODY_OUTPUTS_SUBMACHINE:
+			TRACE();
+			txHashBuilder_addOutput_tokenGroup(
+					&BODY_CTX->txHashBuilder,
+					subctx->stateData.tokenGroup.policyId, MINTING_POLICY_ID_SIZE,
+					subctx->stateData.numTokens
+			);
+			break;
+
+		case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
+			TRACE();
+			txHashBuilder_addCollateralOutput_tokenGroup(
+					&BODY_CTX->txHashBuilder,
+					subctx->stateData.tokenGroup.policyId, MINTING_POLICY_ID_SIZE,
+					subctx->stateData.numTokens
+			);
+			break;
+
+		default:
+			ASSERT(false);
+		}
 	}
 	{
 		// no UI, tokens are shown via fingerprints
@@ -886,7 +904,33 @@ static void handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
+	{
+		// add tokengroup to tx
+		TRACE("Adding token group hash to tx hash");
+		switch (ctx->stage) {
 
+		case SIGN_STAGE_BODY_OUTPUTS_SUBMACHINE:
+			TRACE();
+			txHashBuilder_addOutput_token(
+			        &BODY_CTX->txHashBuilder,
+			        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
+			        subctx->stateData.token.amount
+			);
+			break;
+
+		case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
+			TRACE();
+			txHashBuilder_addCollateralOutput_token(
+			        &BODY_CTX->txHashBuilder,
+			        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
+			        subctx->stateData.token.amount
+			);
+			break;
+
+		default:
+			ASSERT(false);
+		}
+	}
 	{
 		// select UI step
 		switch (subctx->outputTokensSecurityPolicy) {
@@ -898,19 +942,9 @@ static void handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
-	}
 
-	{
-		// add tokengroup to tx
-		TRACE("Adding token group hash to tx hash");
-		txHashBuilder_addOutput_token(
-		        &BODY_CTX->txHashBuilder,
-		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
-		        subctx->stateData.token.amount);
-		TRACE();
+		handleToken_ui_runStep();
 	}
-
-	handleToken_ui_runStep();
 }
 
 // ========================== DATUM =============================
@@ -982,7 +1016,7 @@ static void handleDatumHash(read_view_t* view)
 }
 
 enum {
-	HANDLE_DATUM_INLINE_STEP_DISPLAY = 3550,
+	HANDLE_DATUM_INLINE_STEP_DISPLAY = 3600,
 	HANDLE_DATUM_INLINE_STEP_RESPOND,
 	HANDLE_DATUM_INLINE_STEP_INVALID,
 };
@@ -1154,7 +1188,7 @@ static void handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 // ========================== REFERENCE SCRIPT =============================
 
 enum {
-	HANDLE_SCRIPT_REF_STEP_DISPLAY = 3600,
+	HANDLE_SCRIPT_REF_STEP_DISPLAY = 3700,
 	HANDLE_SCRIPT_REF_STEP_RESPOND,
 	HANDLE_SCRIPT_REF_STEP_INVALID,
 };
@@ -1300,7 +1334,7 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 // ============================== CONFIRM ==============================
 
 enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 3600,
+	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 3800,
 	HANDLE_CONFIRM_STEP_RESPOND,
 	HANDLE_CONFIRM_STEP_INVALID,
 };
