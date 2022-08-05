@@ -1,8 +1,5 @@
 FROM ubuntu:20.04
-ENV LANGUAGE en_US.UTF-8
-ENV LC_ALL en_US.UTF-8
-ENV LANG en_US.UTF-8
-
+ENV LANG C.UTF-8
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -10,21 +7,19 @@ ARG LLVM_VERSION=12
 
 RUN apt-get update && apt-get upgrade -qy && \
     apt-get install -qy \
-        astyle \
+        astyle\
         clang-$LLVM_VERSION \
         clang-tools-$LLVM_VERSION \
         clang-format-$LLVM_VERSION \
         cmake \
         curl \
         doxygen \
-        gdb \
         git \
         lcov \
         libbsd-dev \
         libcmocka0 \
         libcmocka-dev \
         lld-$LLVM_VERSION \
-        locales \
         make \
         protobuf-compiler \
         python-is-python3 \
@@ -33,10 +28,6 @@ RUN apt-get update && apt-get upgrade -qy && \
     apt-get autoclean -y && \
     apt-get autoremove -y && \
     apt-get clean
-
-# Set locale
-RUN echo 'en_US.UTF-8 UTF-8' >> /etc/locale.gen
-RUN locale-gen && update-locale LANG=en_US.UTF-8
 
 # Create generic clang & lld symbolic links to their installed version
 RUN cd /usr/bin && \
@@ -78,7 +69,7 @@ RUN git clone --branch 2.0.2-2 --depth 1 https://github.com/LedgerHQ/nanox-secur
 
 # Latest Nano S+ SDK
 ENV NANOSP_SDK=/opt/nanosplus-secure-sdk
-RUN git clone --branch 1.0.2 --depth 1 https://github.com/LedgerHQ/nanosplus-secure-sdk.git "${NANOSP_SDK}"
+RUN git clone --branch 1.0.3 --depth 1 https://github.com/LedgerHQ/nanosplus-secure-sdk.git "${NANOSP_SDK}"
 
 # Default SDK
 ENV BOLOS_SDK=${NANOS_SDK}
