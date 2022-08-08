@@ -1,0 +1,1931 @@
+diff --git a/src/addressUtilsByron.c b/src/addressUtilsByron.c
+index bf043a1..e0b5ff8 100644
+--- a/src/addressUtilsByron.c
++++ b/src/addressUtilsByron.c
+@@ -1,298 +1,298 @@
+-#include "common.h"
+-#include "addressUtilsByron.h"
+-#include "keyDerivation.h"
+-#include "cbor.h"
+-#include "cardano.h"
+-#include "hash.h"
+-#include "crc32.h"
+-#include "bufView.h"
+-
+-enum {
+-	CARDANO_ADDRESS_TYPE_PUBKEY = 0,
+-	/*
+-	CARDANO_ADDRESS_TYPE_SCRIPT = 1,
+-	CARDANO_ADDRESS_TYPE_REDEEM = 2,
+-	*/
+-};
+-
+-static const size_t ADDRESS_ROOT_SIZE = 28;
+-static const size_t PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY = 2;
+-
+-void addressRootFromExtPubKey(
+-        const extendedPublicKey_t* extPubKey,
+-        uint8_t* outBuffer, size_t outSize
+-)
+-{
+-	STATIC_ASSERT(SIZEOF(*extPubKey) == EXTENDED_PUBKEY_SIZE, "wrong ext pub key size");
+-	ASSERT(outSize == ADDRESS_ROOT_SIZE);
+-
+-	uint8_t cborBuffer[64 + 10] = {0};
+-	write_view_t cbor = make_write_view(cborBuffer, END(cborBuffer));
+-
+-	{
+-		// [0, [0, publicKey:chainCode], Map(0)]
+-		// TODO(ppershing): what are the first two 0 constants?
+-		view_appendToken(&cbor, CBOR_TYPE_ARRAY, 3);
+-		{
+-			view_appendToken(&cbor, CBOR_TYPE_UNSIGNED, CARDANO_ADDRESS_TYPE_PUBKEY);
+-		}
+-		{
+-			view_appendToken(&cbor, CBOR_TYPE_ARRAY, 2);
+-			{
+-				view_appendToken(&cbor, CBOR_TYPE_UNSIGNED, 0 /* this seems to be hardcoded to 0*/);
+-			}
+-			{
+-				view_appendToken(&cbor, CBOR_TYPE_BYTES, EXTENDED_PUBKEY_SIZE);
+-				view_appendBuffer(&cbor, (const uint8_t*) extPubKey, EXTENDED_PUBKEY_SIZE);
+-			}
+-		}
+-		{
+-			view_appendToken(&cbor, CBOR_TYPE_MAP, 0 /* addrAttributes is empty */);
+-		}
+-	}
+-
+-	// cborBuffer is hashed twice. First by sha3_256 and then by blake2b_224
+-	uint8_t cborShaHash[32] = {0};
+-	sha3_256_hash(
+-	        VIEW_PROCESSED_TO_TUPLE_BUF_SIZE(&cbor),
+-	        cborShaHash, SIZEOF(cborShaHash)
+-	);
+-	blake2b_224_hash(
+-	        cborShaHash, SIZEOF(cborShaHash),
+-	        outBuffer, outSize
+-	);
+-}
+-
+-
+-size_t cborEncodePubkeyAddressInner(
+-        const uint8_t* addressRoot, size_t addressRootSize,
+-        uint32_t protocolMagic,
+-        uint8_t* outBuffer, size_t outSize
+-        /* potential attributes */
+-)
+-{
+-	ASSERT(addressRootSize == ADDRESS_ROOT_SIZE); // should be result of blake2b_224
+-	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+-
+-	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
+-	{
+-		view_appendToken(&out, CBOR_TYPE_ARRAY, 3);
+-		{
+-			// 1
+-			view_appendToken(&out, CBOR_TYPE_BYTES, addressRootSize);
+-			view_appendBuffer(&out, addressRoot, addressRootSize);
+-		} {
+-			// 2
+-			if (protocolMagic == MAINNET_PROTOCOL_MAGIC) {
+-				view_appendToken(&out, CBOR_TYPE_MAP, 0 /* addrAttributes is empty */);
+-			} else {
+-				/* addrAddtributes contains protocol magic for non-mainnet Byron addresses */
+-				view_appendToken(&out, CBOR_TYPE_MAP, 1);
+-				{
+-					view_appendToken(&out, CBOR_TYPE_UNSIGNED, PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY); /* map key for protocol magic */
+-
+-					// Protocol magic itself is bytes with cbor-encoded content
+-					uint8_t scratch[10] = {0};
+-					size_t scratchSize = cbor_writeToken(CBOR_TYPE_UNSIGNED, protocolMagic, scratch, SIZEOF(scratch));
+-					view_appendToken(&out, CBOR_TYPE_BYTES, scratchSize);
+-					view_appendBuffer(&out, scratch, scratchSize);
+-				}
+-			}
+-		} {
+-			// 3
+-			view_appendToken(&out, CBOR_TYPE_UNSIGNED, CARDANO_ADDRESS_TYPE_PUBKEY);
+-		}
+-	}
+-	return view_processedSize(&out);
+-}
+-
+-
+-size_t cborPackRawAddressWithChecksum(
+-        const uint8_t* rawAddressBuffer, size_t rawAddressSize,
+-        uint8_t* outputBuffer, size_t outputSize
+-)
+-{
+-	ASSERT(rawAddressSize < BUFFER_SIZE_PARANOIA);
+-	ASSERT(outputSize < BUFFER_SIZE_PARANOIA);
+-
+-	write_view_t output = make_write_view(outputBuffer, outputBuffer + outputSize);
+-
+-	{
+-		// Format is
+-		// Array[
+-		//     tag(24):bytes(rawAddress),
+-		//     crc32(rawAddress)
+-		// ]
+-		view_appendToken(&output, CBOR_TYPE_ARRAY, 2);
+-		{
+-			view_appendToken(&output, CBOR_TYPE_TAG, CBOR_TAG_EMBEDDED_CBOR_BYTE_STRING);
+-			view_appendToken(&output, CBOR_TYPE_BYTES, rawAddressSize);
+-			view_appendBuffer(&output, rawAddressBuffer, rawAddressSize);
+-		} {
+-			uint32_t checksum = crc32(rawAddressBuffer, rawAddressSize);
+-			view_appendToken(&output, CBOR_TYPE_UNSIGNED, checksum);
+-		}
+-	}
+-	return view_processedSize(&output);
+-}
+-
+-static uint64_t parseToken(read_view_t* view, uint8_t type)
+-{
+-	const cbor_token_t token = view_parseToken(view);
+-	VALIDATE(token.type == type, ERR_INVALID_DATA);
+-	return token.value;
+-}
+-
+-static void parseTokenWithValue(read_view_t* view, uint8_t type, uint64_t value)
+-{
+-	const cbor_token_t token = view_parseToken(view);
+-	VALIDATE(token.type == type, ERR_INVALID_DATA);
+-	VALIDATE(token.value  == value, ERR_INVALID_DATA);
+-}
+-
+-static size_t parseBytesSizeToken(read_view_t* view)
+-{
+-	uint64_t parsedSize = parseToken(view, CBOR_TYPE_BYTES);
+-	// Validate that we can down-cast
+-	STATIC_ASSERT(sizeof(parsedSize) >= sizeof(SIZE_MAX), "bad int size");
+-	VALIDATE(parsedSize < (uint64_t) SIZE_MAX, ERR_INVALID_DATA);
+-
+-	size_t parsedSizeDowncasted = (size_t) parsedSize;
+-
+-	// overflow pre-check
+-	VALIDATE(parsedSizeDowncasted < BUFFER_SIZE_PARANOIA, ERR_INVALID_DATA);
+-	VALIDATE(parsedSizeDowncasted <= view_remainingSize(view), ERR_INVALID_DATA);
+-
+-	return parsedSizeDowncasted;
+-}
+-
+-
+-uint32_t extractProtocolMagic(
+-        const uint8_t* addressBuffer, size_t addressSize
+-)
+-{
+-	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
+-
+-	read_view_t view = make_read_view(addressBuffer, addressBuffer + addressSize);
+-
+-	uint32_t protocolMagic;
+-	bool protocolMagicFound = false;
+-	{
+-		const uint8_t* unboxedAddressPayload;
+-		size_t unboxedAddressPayloadSize;
+-		parseTokenWithValue(&view, CBOR_TYPE_ARRAY, 2);
+-		{
+-			parseTokenWithValue(&view, CBOR_TYPE_TAG, CBOR_TAG_EMBEDDED_CBOR_BYTE_STRING);
+-
+-			unboxedAddressPayloadSize = parseBytesSizeToken(&view);
+-			unboxedAddressPayload = view.ptr;
+-
+-			parseTokenWithValue(&view, CBOR_TYPE_ARRAY, 3);
+-			{
+-				// address root (public key hash, 224 bits)
+-				{
+-					size_t parsedAddressRootSize = parseBytesSizeToken(&view);
+-					VALIDATE(parsedAddressRootSize == ADDRESS_ROOT_SIZE, ERR_INVALID_DATA);
+-					view_skipBytes(&view, ADDRESS_ROOT_SIZE);
+-				}
+-
+-				// address attributes map { key (unsigned): value(bytes) }
+-				{
+-					/*
+-					* max attributes threshold based on https://github.com/input-output-hk/cardano-wallet/wiki/About-Address-Format---Byron
+-					* address atrributes are technically "open for extension" but unlikely to happen
+-					* as byron addresses are already being deprecated
+-					*/
+-					const size_t MAX_ADDRESS_ATTRIBUTES_MAP_LENGTH = 3;
+-					uint64_t addressAttributesMapLength = parseToken(&view, CBOR_TYPE_MAP);
+-					VALIDATE(addressAttributesMapLength <= (uint64_t) MAX_ADDRESS_ATTRIBUTES_MAP_LENGTH, ERR_INVALID_DATA);
+-
+-					for (size_t i = 0; i < addressAttributesMapLength; i++) {
+-						uint64_t currentKey = parseToken(&view, CBOR_TYPE_UNSIGNED);
+-						size_t currentValueSize = parseBytesSizeToken(&view);
+-
+-						if (currentKey == (uint64_t) PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY) {
+-							VALIDATE(protocolMagicFound == false, ERR_INVALID_DATA);
+-
+-							uint64_t parsedProtocolMagic = parseToken(&view, CBOR_TYPE_UNSIGNED);
+-							// ensure the parsed protocol magic can be downcasted to uint32 (its size by spec)
+-							STATIC_ASSERT(sizeof(parsedProtocolMagic) >= sizeof(SIZE_MAX), "bad int size");
+-							VALIDATE(parsedProtocolMagic < (uint32_t) SIZE_MAX, ERR_INVALID_DATA);
+-
+-							protocolMagic = (uint32_t) parsedProtocolMagic;
+-							// mainnet addresses are not supposed to explicitly contain protocol magic at all
+-							VALIDATE(protocolMagic != MAINNET_PROTOCOL_MAGIC, ERR_INVALID_DATA);
+-
+-							protocolMagicFound = true;
+-						} else {
+-							view_skipBytes(&view, currentValueSize);
+-						}
+-					}
+-				}
+-
+-				// address type (unsigned)
+-				{
+-					parseToken(&view, CBOR_TYPE_UNSIGNED);
+-				}
+-			}
+-		}
+-		{
+-			uint32_t checksum = crc32(unboxedAddressPayload, unboxedAddressPayloadSize);
+-			parseTokenWithValue(&view, CBOR_TYPE_UNSIGNED, checksum);
+-		}
+-	}
+-
+-	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+-
+-	if (!protocolMagicFound) {
+-		protocolMagic = MAINNET_PROTOCOL_MAGIC;
+-	}
+-
+-	return protocolMagic;
+-}
+-
+-size_t deriveRawAddress(
+-        const bip44_path_t* pathSpec, uint32_t protocolMagic,
+-        uint8_t* outBuffer, size_t outSize
+-)
+-{
+-	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+-
+-	uint8_t addressRoot[28] = {0};
+-	{
+-		extendedPublicKey_t extPubKey;
+-
+-		deriveExtendedPublicKey(pathSpec, &extPubKey);
+-
+-		addressRootFromExtPubKey(
+-		        &extPubKey,
+-		        addressRoot, SIZEOF(addressRoot)
+-		);
+-	}
+-
+-	return cborEncodePubkeyAddressInner(
+-	               addressRoot, SIZEOF(addressRoot),
+-	               protocolMagic,
+-	               outBuffer, outSize
+-	       );
+-}
+-
+-size_t deriveAddress_byron(
+-        const bip44_path_t* pathSpec, uint32_t protocolMagic,
+-        uint8_t* outBuffer, size_t outSize
+-)
+-{
+-	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+-
+-	uint8_t rawAddressBuffer[40] = {0};
+-	size_t rawAddressSize = deriveRawAddress(
+-	                                pathSpec, protocolMagic,
+-	                                rawAddressBuffer, SIZEOF(rawAddressBuffer)
+-	                        );
+-
+-	return cborPackRawAddressWithChecksum(
+-	               rawAddressBuffer, rawAddressSize,
+-	               outBuffer, outSize
+-	       );
+-
+-}
++// #include "common.h"
++// #include "addressUtilsByron.h"
++// #include "keyDerivation.h"
++// #include "cbor.h"
++// #include "cardano.h"
++// #include "hash.h"
++// #include "crc32.h"
++// #include "bufView.h"
++
++// enum {
++// 	CARDANO_ADDRESS_TYPE_PUBKEY = 0,
++// 	/*
++// 	CARDANO_ADDRESS_TYPE_SCRIPT = 1,
++// 	CARDANO_ADDRESS_TYPE_REDEEM = 2,
++// 	*/
++// };
++
++// static const size_t ADDRESS_ROOT_SIZE = 28;
++// static const size_t PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY = 2;
++
++// void addressRootFromExtPubKey(
++//         const extendedPublicKey_t* extPubKey,
++//         uint8_t* outBuffer, size_t outSize
++// )
++// {
++// 	STATIC_ASSERT(SIZEOF(*extPubKey) == EXTENDED_PUBKEY_SIZE, "wrong ext pub key size");
++// 	ASSERT(outSize == ADDRESS_ROOT_SIZE);
++
++// 	uint8_t cborBuffer[64 + 10] = {0};
++// 	write_view_t cbor = make_write_view(cborBuffer, END(cborBuffer));
++
++// 	{
++// 		// [0, [0, publicKey:chainCode], Map(0)]
++// 		// TODO(ppershing): what are the first two 0 constants?
++// 		view_appendToken(&cbor, CBOR_TYPE_ARRAY, 3);
++// 		{
++// 			view_appendToken(&cbor, CBOR_TYPE_UNSIGNED, CARDANO_ADDRESS_TYPE_PUBKEY);
++// 		}
++// 		{
++// 			view_appendToken(&cbor, CBOR_TYPE_ARRAY, 2);
++// 			{
++// 				view_appendToken(&cbor, CBOR_TYPE_UNSIGNED, 0 /* this seems to be hardcoded to 0*/);
++// 			}
++// 			{
++// 				view_appendToken(&cbor, CBOR_TYPE_BYTES, EXTENDED_PUBKEY_SIZE);
++// 				view_appendBuffer(&cbor, (const uint8_t*) extPubKey, EXTENDED_PUBKEY_SIZE);
++// 			}
++// 		}
++// 		{
++// 			view_appendToken(&cbor, CBOR_TYPE_MAP, 0 /* addrAttributes is empty */);
++// 		}
++// 	}
++
++// 	// cborBuffer is hashed twice. First by sha3_256 and then by blake2b_224
++// 	uint8_t cborShaHash[32] = {0};
++// 	sha3_256_hash(
++// 	        VIEW_PROCESSED_TO_TUPLE_BUF_SIZE(&cbor),
++// 	        cborShaHash, SIZEOF(cborShaHash)
++// 	);
++// 	blake2b_224_hash(
++// 	        cborShaHash, SIZEOF(cborShaHash),
++// 	        outBuffer, outSize
++// 	);
++// }
++
++
++// size_t cborEncodePubkeyAddressInner(
++//         const uint8_t* addressRoot, size_t addressRootSize,
++//         uint32_t protocolMagic,
++//         uint8_t* outBuffer, size_t outSize
++//         /* potential attributes */
++// )
++// {
++// 	ASSERT(addressRootSize == ADDRESS_ROOT_SIZE); // should be result of blake2b_224
++// 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
++
++// 	write_view_t out = make_write_view(outBuffer, outBuffer + outSize);
++// 	{
++// 		view_appendToken(&out, CBOR_TYPE_ARRAY, 3);
++// 		{
++// 			// 1
++// 			view_appendToken(&out, CBOR_TYPE_BYTES, addressRootSize);
++// 			view_appendBuffer(&out, addressRoot, addressRootSize);
++// 		} {
++// 			// 2
++// 			if (protocolMagic == MAINNET_PROTOCOL_MAGIC) {
++// 				view_appendToken(&out, CBOR_TYPE_MAP, 0 /* addrAttributes is empty */);
++// 			} else {
++// 				/* addrAddtributes contains protocol magic for non-mainnet Byron addresses */
++// 				view_appendToken(&out, CBOR_TYPE_MAP, 1);
++// 				{
++// 					view_appendToken(&out, CBOR_TYPE_UNSIGNED, PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY); /* map key for protocol magic */
++
++// 					// Protocol magic itself is bytes with cbor-encoded content
++// 					uint8_t scratch[10] = {0};
++// 					size_t scratchSize = cbor_writeToken(CBOR_TYPE_UNSIGNED, protocolMagic, scratch, SIZEOF(scratch));
++// 					view_appendToken(&out, CBOR_TYPE_BYTES, scratchSize);
++// 					view_appendBuffer(&out, scratch, scratchSize);
++// 				}
++// 			}
++// 		} {
++// 			// 3
++// 			view_appendToken(&out, CBOR_TYPE_UNSIGNED, CARDANO_ADDRESS_TYPE_PUBKEY);
++// 		}
++// 	}
++// 	return view_processedSize(&out);
++// }
++
++
++// size_t cborPackRawAddressWithChecksum(
++//         const uint8_t* rawAddressBuffer, size_t rawAddressSize,
++//         uint8_t* outputBuffer, size_t outputSize
++// )
++// {
++// 	ASSERT(rawAddressSize < BUFFER_SIZE_PARANOIA);
++// 	ASSERT(outputSize < BUFFER_SIZE_PARANOIA);
++
++// 	write_view_t output = make_write_view(outputBuffer, outputBuffer + outputSize);
++
++// 	{
++// 		// Format is
++// 		// Array[
++// 		//     tag(24):bytes(rawAddress),
++// 		//     crc32(rawAddress)
++// 		// ]
++// 		view_appendToken(&output, CBOR_TYPE_ARRAY, 2);
++// 		{
++// 			view_appendToken(&output, CBOR_TYPE_TAG, CBOR_TAG_EMBEDDED_CBOR_BYTE_STRING);
++// 			view_appendToken(&output, CBOR_TYPE_BYTES, rawAddressSize);
++// 			view_appendBuffer(&output, rawAddressBuffer, rawAddressSize);
++// 		} {
++// 			uint32_t checksum = crc32(rawAddressBuffer, rawAddressSize);
++// 			view_appendToken(&output, CBOR_TYPE_UNSIGNED, checksum);
++// 		}
++// 	}
++// 	return view_processedSize(&output);
++// }
++
++// static uint64_t parseToken(read_view_t* view, uint8_t type)
++// {
++// 	const cbor_token_t token = view_parseToken(view);
++// 	VALIDATE(token.type == type, ERR_INVALID_DATA);
++// 	return token.value;
++// }
++
++// static void parseTokenWithValue(read_view_t* view, uint8_t type, uint64_t value)
++// {
++// 	const cbor_token_t token = view_parseToken(view);
++// 	VALIDATE(token.type == type, ERR_INVALID_DATA);
++// 	VALIDATE(token.value  == value, ERR_INVALID_DATA);
++// }
++
++// static size_t parseBytesSizeToken(read_view_t* view)
++// {
++// 	uint64_t parsedSize = parseToken(view, CBOR_TYPE_BYTES);
++// 	// Validate that we can down-cast
++// 	STATIC_ASSERT(sizeof(parsedSize) >= sizeof(SIZE_MAX), "bad int size");
++// 	VALIDATE(parsedSize < (uint64_t) SIZE_MAX, ERR_INVALID_DATA);
++
++// 	size_t parsedSizeDowncasted = (size_t) parsedSize;
++
++// 	// overflow pre-check
++// 	VALIDATE(parsedSizeDowncasted < BUFFER_SIZE_PARANOIA, ERR_INVALID_DATA);
++// 	VALIDATE(parsedSizeDowncasted <= view_remainingSize(view), ERR_INVALID_DATA);
++
++// 	return parsedSizeDowncasted;
++// }
++
++
++// uint32_t extractProtocolMagic(
++//         const uint8_t* addressBuffer, size_t addressSize
++// )
++// {
++// 	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
++
++// 	read_view_t view = make_read_view(addressBuffer, addressBuffer + addressSize);
++
++// 	uint32_t protocolMagic;
++// 	bool protocolMagicFound = false;
++// 	{
++// 		const uint8_t* unboxedAddressPayload;
++// 		size_t unboxedAddressPayloadSize;
++// 		parseTokenWithValue(&view, CBOR_TYPE_ARRAY, 2);
++// 		{
++// 			parseTokenWithValue(&view, CBOR_TYPE_TAG, CBOR_TAG_EMBEDDED_CBOR_BYTE_STRING);
++
++// 			unboxedAddressPayloadSize = parseBytesSizeToken(&view);
++// 			unboxedAddressPayload = view.ptr;
++
++// 			parseTokenWithValue(&view, CBOR_TYPE_ARRAY, 3);
++// 			{
++// 				// address root (public key hash, 224 bits)
++// 				{
++// 					size_t parsedAddressRootSize = parseBytesSizeToken(&view);
++// 					VALIDATE(parsedAddressRootSize == ADDRESS_ROOT_SIZE, ERR_INVALID_DATA);
++// 					view_skipBytes(&view, ADDRESS_ROOT_SIZE);
++// 				}
++
++// 				// address attributes map { key (unsigned): value(bytes) }
++// 				{
++// 					/*
++// 					* max attributes threshold based on https://github.com/input-output-hk/cardano-wallet/wiki/About-Address-Format---Byron
++// 					* address atrributes are technically "open for extension" but unlikely to happen
++// 					* as byron addresses are already being deprecated
++// 					*/
++// 					const size_t MAX_ADDRESS_ATTRIBUTES_MAP_LENGTH = 3;
++// 					uint64_t addressAttributesMapLength = parseToken(&view, CBOR_TYPE_MAP);
++// 					VALIDATE(addressAttributesMapLength <= (uint64_t) MAX_ADDRESS_ATTRIBUTES_MAP_LENGTH, ERR_INVALID_DATA);
++
++// 					for (size_t i = 0; i < addressAttributesMapLength; i++) {
++// 						uint64_t currentKey = parseToken(&view, CBOR_TYPE_UNSIGNED);
++// 						size_t currentValueSize = parseBytesSizeToken(&view);
++
++// 						if (currentKey == (uint64_t) PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY) {
++// 							VALIDATE(protocolMagicFound == false, ERR_INVALID_DATA);
++
++// 							uint64_t parsedProtocolMagic = parseToken(&view, CBOR_TYPE_UNSIGNED);
++// 							// ensure the parsed protocol magic can be downcasted to uint32 (its size by spec)
++// 							STATIC_ASSERT(sizeof(parsedProtocolMagic) >= sizeof(SIZE_MAX), "bad int size");
++// 							VALIDATE(parsedProtocolMagic < (uint32_t) SIZE_MAX, ERR_INVALID_DATA);
++
++// 							protocolMagic = (uint32_t) parsedProtocolMagic;
++// 							// mainnet addresses are not supposed to explicitly contain protocol magic at all
++// 							VALIDATE(protocolMagic != MAINNET_PROTOCOL_MAGIC, ERR_INVALID_DATA);
++
++// 							protocolMagicFound = true;
++// 						} else {
++// 							view_skipBytes(&view, currentValueSize);
++// 						}
++// 					}
++// 				}
++
++// 				// address type (unsigned)
++// 				{
++// 					parseToken(&view, CBOR_TYPE_UNSIGNED);
++// 				}
++// 			}
++// 		}
++// 		{
++// 			uint32_t checksum = crc32(unboxedAddressPayload, unboxedAddressPayloadSize);
++// 			parseTokenWithValue(&view, CBOR_TYPE_UNSIGNED, checksum);
++// 		}
++// 	}
++
++// 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
++
++// 	if (!protocolMagicFound) {
++// 		protocolMagic = MAINNET_PROTOCOL_MAGIC;
++// 	}
++
++// 	return protocolMagic;
++// }
++
++// size_t deriveRawAddress(
++//         const bip44_path_t* pathSpec, uint32_t protocolMagic,
++//         uint8_t* outBuffer, size_t outSize
++// )
++// {
++// 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
++
++// 	uint8_t addressRoot[28] = {0};
++// 	{
++// 		extendedPublicKey_t extPubKey;
++
++// 		deriveExtendedPublicKey(pathSpec, &extPubKey);
++
++// 		addressRootFromExtPubKey(
++// 		        &extPubKey,
++// 		        addressRoot, SIZEOF(addressRoot)
++// 		);
++// 	}
++
++// 	return cborEncodePubkeyAddressInner(
++// 	               addressRoot, SIZEOF(addressRoot),
++// 	               protocolMagic,
++// 	               outBuffer, outSize
++// 	       );
++// }
++
++// size_t deriveAddress_byron(
++//         const bip44_path_t* pathSpec, uint32_t protocolMagic,
++//         uint8_t* outBuffer, size_t outSize
++// )
++// {
++// 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
++
++// 	uint8_t rawAddressBuffer[40] = {0};
++// 	size_t rawAddressSize = deriveRawAddress(
++// 	                                pathSpec, protocolMagic,
++// 	                                rawAddressBuffer, SIZEOF(rawAddressBuffer)
++// 	                        );
++
++// 	return cborPackRawAddressWithChecksum(
++// 	               rawAddressBuffer, rawAddressSize,
++// 	               outBuffer, outSize
++// 	       );
++
++// }
+diff --git a/src/addressUtilsByron.h b/src/addressUtilsByron.h
+index e5d275a..342be47 100644
+--- a/src/addressUtilsByron.h
++++ b/src/addressUtilsByron.h
+@@ -1,23 +1,23 @@
+-#ifndef H_CARDANO_APP_ADDRESS_UTILS_BYRON
+-#define H_CARDANO_APP_ADDRESS_UTILS_BYRON
++// #ifndef H_CARDANO_APP_ADDRESS_UTILS_BYRON
++// #define H_CARDANO_APP_ADDRESS_UTILS_BYRON
+ 
+-#include "common.h"
+-#include "bip44.h"
++// #include "common.h"
++// #include "bip44.h"
+ 
+-size_t deriveAddress_byron(
+-        const bip44_path_t* pathSpec,
+-        uint32_t protocolMagic,
+-        uint8_t* outBuffer, size_t outSize
+-);
++// size_t deriveAddress_byron(
++//         const bip44_path_t* pathSpec,
++//         uint32_t protocolMagic,
++//         uint8_t* outBuffer, size_t outSize
++// );
+ 
+-// Note: validates the overall address structure at the same time
+-uint32_t extractProtocolMagic(
+-        const uint8_t* addressBuffer, size_t addressSize
+-);
++// // Note: validates the overall address structure at the same time
++// uint32_t extractProtocolMagic(
++//         const uint8_t* addressBuffer, size_t addressSize
++// );
+ 
+ 
+-#ifdef DEVEL
+-void run_addressUtilsByron_test();
+-#endif // DEVEL
++// #ifdef DEVEL
++// void run_addressUtilsByron_test();
++// #endif // DEVEL
+ 
+-#endif // H_CARDANO_APP_ADDRESS_UTILS_BYRON
++// #endif // H_CARDANO_APP_ADDRESS_UTILS_BYRON
+diff --git a/src/addressUtilsByron_test.c b/src/addressUtilsByron_test.c
+index 85f48dc..f4eae79 100644
+--- a/src/addressUtilsByron_test.c
++++ b/src/addressUtilsByron_test.c
+@@ -1,169 +1,169 @@
+-#ifdef DEVEL
+-
+-#include "addressUtilsByron.h"
+-#include "cardano.h"
+-#include "hexUtils.h"
+-#include "testUtils.h"
+-
+-#define HD HARDENED_BIP32
+-
+-static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
+-{
+-	pathSpec->length = pathLength;
+-	memmove(pathSpec->path, pathArray, pathLength * 4);
+-}
+-
+-void testcase_deriveAddress_byron(uint32_t* path, uint32_t pathLen, uint32_t protocolMagic, const char* expectedHex)
+-{
+-	PRINTF("testcase_deriveAddressByron ");
+-
+-	bip44_path_t pathSpec;
+-	pathSpec_init(&pathSpec, path, pathLen);
+-
+-	BIP44_PRINTF(&pathSpec);
+-	PRINTF("\n");
+-
+-	uint8_t address[128] = {0};
+-	size_t addressSize = deriveAddress_byron(&pathSpec, protocolMagic, address, SIZEOF(address));
+-
+-	uint8_t expected[100] = {0};
+-	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));
+-
+-	EXPECT_EQ(addressSize, expectedSize);
+-	EXPECT_EQ_BYTES(address, expected, expectedSize);
+-}
+-
+-void testcase_extractProtocolMagicSucceeds(const char* addressHex, uint32_t expectedProtocolMagic)
+-{
+-	PRINTF("testcase_extractProtocolMagicSucceeds\n");
+-
+-	uint8_t address[100] = {0};
+-	size_t addressSize = decode_hex(addressHex, address, SIZEOF(address));
+-
+-	uint32_t protocolMagic = extractProtocolMagic(address, addressSize);
+-
+-	EXPECT_EQ(protocolMagic, expectedProtocolMagic);
+-}
+-
+-void testcase_extractProtocolMagicThrows(const char* addressHex, uint32_t expectedErrorCode)
+-{
+-	PRINTF("testcase_extractProtocolMagicThrows\n");
+-
+-	uint8_t address[100] = {0};
+-	size_t addressSize = decode_hex(addressHex, address, SIZEOF(address));
+-
+-	EXPECT_THROWS(extractProtocolMagic(address, addressSize), expectedErrorCode);
+-}
+-
+-void testAddressDerivation()
+-{
+-#define TESTCASE(path_, protocolMagic_, expected_) \
+-	{ \
+-		uint32_t path[] = { UNWRAP path_ }; \
+-		testcase_deriveAddress_byron(path, ARRAY_LEN(path), protocolMagic_, expected_); \
+-	}
+-
+-	// Mainnet
+-	TESTCASE(
+-	        (HD + 44, HD + 1815, HD + 0, 1, 55), MAINNET_PROTOCOL_MAGIC,
+-	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912f"
+-	);
+-
+-	TESTCASE(
+-	        (HD + 44, HD + 1815, HD + 0, 1, HD + 26), MAINNET_PROTOCOL_MAGIC,
+-	        "82d818582183581c49dda88b3cdb4c9b60ad35699b2795a446120a2460f1a789c6152ce2a0001a00fb5684"
+-	);
+-
+-	// Testnet
+-	TESTCASE(
+-	        (HD + 44, HD + 1815, HD + 0, 1, 55), 4747,
+-	        "82d818582683581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a1024319128b001af1247f8f"
+-	);
+-#undef TESTCASE
+-}
+-
+-void testProtocolMagicExtractionSucceeds()
+-{
+-#define TESTCASE(addressHex_, expected_) \
+-	{ \
+-		char addressHex[] = addressHex_; \
+-		testcase_extractProtocolMagicSucceeds(addressHex, expected_); \
+-	}
+-
+-	TESTCASE(
+-	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912f",
+-	        MAINNET_PROTOCOL_MAGIC
+-	);
+-
+-	TESTCASE(
+-	        "82d818584283581cd2348b8ef7b8a6d1c922efa499c669b151eeef99e4ce3521e88223f8a101581e581cf281e648a89015a9861bd9e992414d1145ddaf80690be53235b0e2e5001a19983465",
+-	        MAINNET_PROTOCOL_MAGIC
+-	);
+-
+-	TESTCASE(
+-	        "82d818584983581c9c708538a763ff27169987a489e35057ef3cd3778c05e96f7ba9450ea201581e581c9c1722f7e446689256e1a30260f3510d558d99d0c391f2ba89cb697702451a4170cb17001a6979126c",
+-	        TESTNET_PROTOCOL_MAGIC
+-	);
+-
+-	TESTCASE(
+-	        "82d818582583581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a10242182a001a2b7c56f6",
+-	        42
+-	);
+-#undef TESTCASE
+-}
+-
+-void testProtocolMagicExtractionThrows()
+-{
+-#define TESTCASE(addressHex_, expectedErrorCode_) \
+-	{ \
+-		char addressHex[] = addressHex_; \
+-		testcase_extractProtocolMagicThrows(addressHex, expectedErrorCode_); \
+-	}
+-
+-	// invalid CBOR
+-	TESTCASE(
+-	        "deadbeef",
+-	        ERR_UNEXPECTED_TOKEN
+-	);
+-
+-	// shelley address
+-	TESTCASE(
+-	        "035a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c",
+-	        ERR_INVALID_DATA
+-	);
+-
+-	// mainnet protocol magic explicitly encoded
+-	TESTCASE(
+-	        "82d818582883581ca1eda96a9952a56c983d9f49117f935af325e8a6c9d38496e945faa8a102451a2d964a09001a099ade84",
+-	        ERR_INVALID_DATA
+-	);
+-
+-	// too many keys in address attributes
+-	TESTCASE(
+-	        "82d818583183581ca1eda96a9952a56c983d9f49117f935af325e8a6c9d38496e945faa8a40142182f0242182f0342182f0442182f001a965d526c",
+-	        ERR_INVALID_DATA
+-	);
+-
+-	// address attributes value not bytes
+-	TESTCASE(
+-	        "82d818582483581ca1eda96a9952a56c983d9f49117f935af325e8a6c9d38496e945faa8a101182f001a1abe13ed",
+-	        ERR_INVALID_DATA
+-	);
+-
+-	// invalid crc32 checksum
+-	TESTCASE(
+-	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912e",
+-	        ERR_INVALID_DATA
+-	);
+-#undef TESTCASE
+-}
+-
+-
+-void run_addressUtilsByron_test()
+-{
+-	testAddressDerivation();
+-	testProtocolMagicExtractionSucceeds();
+-	testProtocolMagicExtractionThrows();
+-}
+-
+-#endif // DEVEL
++// #ifdef DEVEL
++
++// #include "addressUtilsByron.h"
++// #include "cardano.h"
++// #include "hexUtils.h"
++// #include "testUtils.h"
++
++// #define HD HARDENED_BIP32
++
++// static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
++// {
++// 	pathSpec->length = pathLength;
++// 	memmove(pathSpec->path, pathArray, pathLength * 4);
++// }
++
++// void testcase_deriveAddress_byron(uint32_t* path, uint32_t pathLen, uint32_t protocolMagic, const char* expectedHex)
++// {
++// 	PRINTF("testcase_deriveAddressByron ");
++
++// 	bip44_path_t pathSpec;
++// 	pathSpec_init(&pathSpec, path, pathLen);
++
++// 	BIP44_PRINTF(&pathSpec);
++// 	PRINTF("\n");
++
++// 	uint8_t address[128] = {0};
++// 	size_t addressSize = deriveAddress_byron(&pathSpec, protocolMagic, address, SIZEOF(address));
++
++// 	uint8_t expected[100] = {0};
++// 	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));
++
++// 	EXPECT_EQ(addressSize, expectedSize);
++// 	EXPECT_EQ_BYTES(address, expected, expectedSize);
++// }
++
++// void testcase_extractProtocolMagicSucceeds(const char* addressHex, uint32_t expectedProtocolMagic)
++// {
++// 	PRINTF("testcase_extractProtocolMagicSucceeds\n");
++
++// 	uint8_t address[100] = {0};
++// 	size_t addressSize = decode_hex(addressHex, address, SIZEOF(address));
++
++// 	uint32_t protocolMagic = extractProtocolMagic(address, addressSize);
++
++// 	EXPECT_EQ(protocolMagic, expectedProtocolMagic);
++// }
++
++// void testcase_extractProtocolMagicThrows(const char* addressHex, uint32_t expectedErrorCode)
++// {
++// 	PRINTF("testcase_extractProtocolMagicThrows\n");
++
++// 	uint8_t address[100] = {0};
++// 	size_t addressSize = decode_hex(addressHex, address, SIZEOF(address));
++
++// 	EXPECT_THROWS(extractProtocolMagic(address, addressSize), expectedErrorCode);
++// }
++
++// void testAddressDerivation()
++// {
++// #define TESTCASE(path_, protocolMagic_, expected_) \
++// 	{ \
++// 		uint32_t path[] = { UNWRAP path_ }; \
++// 		testcase_deriveAddress_byron(path, ARRAY_LEN(path), protocolMagic_, expected_); \
++// 	}
++
++// 	// Mainnet
++// 	TESTCASE(
++// 	        (HD + 44, HD + 1815, HD + 0, 1, 55), MAINNET_PROTOCOL_MAGIC,
++// 	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912f"
++// 	);
++
++// 	TESTCASE(
++// 	        (HD + 44, HD + 1815, HD + 0, 1, HD + 26), MAINNET_PROTOCOL_MAGIC,
++// 	        "82d818582183581c49dda88b3cdb4c9b60ad35699b2795a446120a2460f1a789c6152ce2a0001a00fb5684"
++// 	);
++
++// 	// Testnet
++// 	TESTCASE(
++// 	        (HD + 44, HD + 1815, HD + 0, 1, 55), 4747,
++// 	        "82d818582683581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a1024319128b001af1247f8f"
++// 	);
++// #undef TESTCASE
++// }
++
++// void testProtocolMagicExtractionSucceeds()
++// {
++// #define TESTCASE(addressHex_, expected_) \
++// 	{ \
++// 		char addressHex[] = addressHex_; \
++// 		testcase_extractProtocolMagicSucceeds(addressHex, expected_); \
++// 	}
++
++// 	TESTCASE(
++// 	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912f",
++// 	        MAINNET_PROTOCOL_MAGIC
++// 	);
++
++// 	TESTCASE(
++// 	        "82d818584283581cd2348b8ef7b8a6d1c922efa499c669b151eeef99e4ce3521e88223f8a101581e581cf281e648a89015a9861bd9e992414d1145ddaf80690be53235b0e2e5001a19983465",
++// 	        MAINNET_PROTOCOL_MAGIC
++// 	);
++
++// 	TESTCASE(
++// 	        "82d818584983581c9c708538a763ff27169987a489e35057ef3cd3778c05e96f7ba9450ea201581e581c9c1722f7e446689256e1a30260f3510d558d99d0c391f2ba89cb697702451a4170cb17001a6979126c",
++// 	        TESTNET_PROTOCOL_MAGIC
++// 	);
++
++// 	TESTCASE(
++// 	        "82d818582583581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a10242182a001a2b7c56f6",
++// 	        42
++// 	);
++// #undef TESTCASE
++// }
++
++// void testProtocolMagicExtractionThrows()
++// {
++// #define TESTCASE(addressHex_, expectedErrorCode_) \
++// 	{ \
++// 		char addressHex[] = addressHex_; \
++// 		testcase_extractProtocolMagicThrows(addressHex, expectedErrorCode_); \
++// 	}
++
++// 	// invalid CBOR
++// 	TESTCASE(
++// 	        "deadbeef",
++// 	        ERR_UNEXPECTED_TOKEN
++// 	);
++
++// 	// shelley address
++// 	TESTCASE(
++// 	        "035a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c",
++// 	        ERR_INVALID_DATA
++// 	);
++
++// 	// mainnet protocol magic explicitly encoded
++// 	TESTCASE(
++// 	        "82d818582883581ca1eda96a9952a56c983d9f49117f935af325e8a6c9d38496e945faa8a102451a2d964a09001a099ade84",
++// 	        ERR_INVALID_DATA
++// 	);
++
++// 	// too many keys in address attributes
++// 	TESTCASE(
++// 	        "82d818583183581ca1eda96a9952a56c983d9f49117f935af325e8a6c9d38496e945faa8a40142182f0242182f0342182f0442182f001a965d526c",
++// 	        ERR_INVALID_DATA
++// 	);
++
++// 	// address attributes value not bytes
++// 	TESTCASE(
++// 	        "82d818582483581ca1eda96a9952a56c983d9f49117f935af325e8a6c9d38496e945faa8a101182f001a1abe13ed",
++// 	        ERR_INVALID_DATA
++// 	);
++
++// 	// invalid crc32 checksum
++// 	TESTCASE(
++// 	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912e",
++// 	        ERR_INVALID_DATA
++// 	);
++// #undef TESTCASE
++// }
++
++
++// void run_addressUtilsByron_test()
++// {
++// 	testAddressDerivation();
++// 	testProtocolMagicExtractionSucceeds();
++// 	testProtocolMagicExtractionThrows();
++// }
++
++// #endif // DEVEL
+diff --git a/src/addressUtilsShelley.c b/src/addressUtilsShelley.c
+index fff8f60..56a39c0 100644
+--- a/src/addressUtilsShelley.c
++++ b/src/addressUtilsShelley.c
+@@ -1,7 +1,7 @@
+ #include "bufView.h"
+ #include "hash.h"
+ #include "keyDerivation.h"
+-#include "addressUtilsByron.h"
++// #include "addressUtilsByron.h"
+ #include "addressUtilsShelley.h"
+ #include "bip44.h"
+ #include "base58.h"
+@@ -32,7 +32,7 @@ bool isSupportedAddressType(uint8_t addressType)
+ 	case POINTER_SCRIPT:
+ 	case ENTERPRISE_KEY:
+ 	case ENTERPRISE_SCRIPT:
+-	case BYRON:
++	// case BYRON:
+ 	case REWARD_KEY:
+ 	case REWARD_SCRIPT:
+ 		return true;
+@@ -118,7 +118,7 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
+ 
+ 	case ENTERPRISE_KEY:
+ 	case ENTERPRISE_SCRIPT:
+-	case BYRON:
++	// case BYRON:
+ 		CONSISTENT_WITH(NO_STAKING);
+ 		break;
+ 
+@@ -457,8 +457,8 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
+ 	case REWARD_KEY:
+ 	case REWARD_SCRIPT:
+ 		return deriveAddress_reward(addressParams, outBuffer, outSize);
+-	case BYRON:
+-		return deriveAddress_byron(spendingPath, addressParams->protocolMagic, outBuffer, outSize);
++	// case BYRON:
++	// 	return deriveAddress_byron(spendingPath, addressParams->protocolMagic, outBuffer, outSize);
+ 	default:
+ 		ASSERT(false);
+ 	}
+@@ -497,9 +497,9 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
+ 	const uint8_t addressType = getAddressType(address[0]);
+ 	const uint8_t networkId = getNetworkId(address[0]);
+ 
+-	if (addressType == BYRON) {
+-		return base58_encode(address, addressSize, out, outSize);
+-	}
++	// if (addressType == BYRON) {
++	// 	return base58_encode(address, addressSize, out, outSize);
++	// }
+ 
+ 	ASSERT(isValidNetworkId(networkId));
+ 
+@@ -568,7 +568,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
+ 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+ 	case POINTER_KEY:
+ 	case ENTERPRISE_KEY:
+-	case BYRON:
++	// case BYRON:
+ 		view_skipBytes(view, bip44_parseFromWire(&params->spendingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
+ 		BIP44_PRINTF(&params->spendingKeyPath);
+ 		PRINTF("\n");
+@@ -660,10 +660,10 @@ static inline bool isValidSpendingInfo(const addressParams_t* params)
+ {
+ #define CHECK(cond) if (!(cond)) return false
+ 	switch (params->type) {
+-	case BYRON:
+-		CHECK(bip44_classifyPath(&params->spendingKeyPath) == PATH_ORDINARY_SPENDING_KEY);
+-		CHECK(bip44_hasByronPrefix(&params->spendingKeyPath));
+-		break;
++	// case BYRON:
++	// 	CHECK(bip44_classifyPath(&params->spendingKeyPath) == PATH_ORDINARY_SPENDING_KEY);
++	// 	CHECK(bip44_hasByronPrefix(&params->spendingKeyPath));
++	// 	break;
+ 
+ 	case BASE_PAYMENT_KEY_STAKE_KEY:
+ 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+@@ -713,7 +713,7 @@ spending_choice_t determineSpendingChoice(address_type_t addressType)
+ 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+ 	case POINTER_KEY:
+ 	case ENTERPRISE_KEY:
+-	case BYRON:
++	// case BYRON:
+ 		return SPENDING_PATH;
+ 
+ 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
+diff --git a/src/addressUtilsShelley_test.c b/src/addressUtilsShelley_test.c
+index 434365a..5478d8f 100644
+--- a/src/addressUtilsShelley_test.c
++++ b/src/addressUtilsShelley_test.c
+@@ -1,196 +1,196 @@
+-#ifdef DEVEL
+-
+-#include "addressUtilsShelley.h"
+-#include "cardano.h"
+-#include "bip44.h"
+-#include "hexUtils.h"
+-#include "testUtils.h"
+-
+-#define HD HARDENED_BIP32
+-#define MAX_ADDRESS_LENGTH 128
+-
+-static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
+-{
+-	pathSpec->length = pathLength;
+-	memmove(pathSpec->path, pathArray, pathLength * 4);
+-}
+-
+-// networkIdOrProtocolMagic is used as networkId for Shelley addresses and as protocol magic for Byron addresses
+-static void testcase_deriveAddressShelley(
+-        uint8_t type, uint32_t networkIdOrProtocolMagic, const uint32_t* spendingPathArray, size_t spendingPathLen,
+-        uint8_t stakingDataSource, const uint32_t* stakingPathArray, size_t stakingPathLen,
+-        const char* stakingKeyHashHex, const blockchainPointer_t* stakingKeyBlockchainPointer,
+-        const char* expectedHex)
+-{
+-	// avoid inconsistent tests
+-	switch (stakingDataSource) {
+-	case NO_STAKING:
+-		ASSERT(stakingPathLen == 0 && stakingKeyHashHex == NULL && stakingKeyBlockchainPointer == NULL);
+-		break;
+-	case STAKING_KEY_PATH:
+-		ASSERT(stakingPathLen != 0 && stakingKeyHashHex == NULL && stakingKeyBlockchainPointer == NULL);
+-		break;
+-	case STAKING_KEY_HASH:
+-		ASSERT(stakingPathLen == 0 && stakingKeyHashHex != NULL && stakingKeyBlockchainPointer == NULL);
+-		break;
+-	case BLOCKCHAIN_POINTER:
+-		ASSERT(stakingPathLen == 0 && stakingKeyHashHex == NULL && stakingKeyBlockchainPointer != NULL);
+-		break;
+-	default:
+-		ASSERT(false);
+-	}
+-
+-	addressParams_t params;
+-
+-	if (type == BYRON) {
+-		params = (addressParams_t) {
+-			.type = type,
+-			.protocolMagic = networkIdOrProtocolMagic,
+-			.stakingDataSource = stakingDataSource
+-		};
+-	} else {
+-		params = (addressParams_t) {
+-			.type = type,
+-			.networkId = (uint8_t) networkIdOrProtocolMagic,
+-			.stakingDataSource = stakingDataSource
+-		};
+-	}  // the rest of params is initialized to zero
+-
+-	pathSpec_init(&params.spendingKeyPath, spendingPathArray, spendingPathLen);
+-	if (stakingPathLen > 0)
+-		pathSpec_init(&params.stakingKeyPath, stakingPathArray, stakingPathLen);
+-	if (stakingKeyHashHex != NULL) {
+-		ASSERT(strlen(stakingKeyHashHex) == 2 * ADDRESS_KEY_HASH_LENGTH);
+-		decode_hex(stakingKeyHashHex, params.stakingKeyHash, SIZEOF(params.stakingKeyHash));
+-	}
+-	if (stakingKeyBlockchainPointer != NULL) {
+-		params.stakingKeyBlockchainPointer = *stakingKeyBlockchainPointer;
+-	}
+-
+-	if (type == BYRON) {
+-		PRINTF("testcase_deriveAddressShelley (byron) %d ", networkIdOrProtocolMagic);
+-	} else {
+-		PRINTF("testcase_deriveAddressShelley 0x%02x ", constructShelleyAddressHeader(type, (uint8_t) networkIdOrProtocolMagic));
+-	}
+-
+-	BIP44_PRINTF(&params.spendingKeyPath);
+-	PRINTF("\n");
+-
+-	if (stakingDataSource == STAKING_KEY_PATH) {
+-		BIP44_PRINTF(&params.stakingKeyPath);
+-		PRINTF("\n");
+-	}
+-	if (stakingKeyHashHex != NULL) {
+-		PRINTF(" %s", stakingKeyHashHex);
+-	}
+-	if (stakingKeyBlockchainPointer != NULL) {
+-		PRINTF(
+-		        " (%u, %u, %u)",
+-		        (unsigned) stakingKeyBlockchainPointer->blockIndex,
+-		        (unsigned) stakingKeyBlockchainPointer->txIndex,
+-		        (unsigned) stakingKeyBlockchainPointer->certificateIndex
+-		);
+-	}
+-	PRINTF("\n");
+-
+-	uint8_t address[MAX_ADDRESS_LENGTH] = {0};
+-	size_t addressSize = deriveAddress(&params, address, SIZEOF(address));
+-
+-	uint8_t expected[MAX_ADDRESS_LENGTH] = {0};
+-	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));
+-
+-	EXPECT_EQ(addressSize, expectedSize);
+-	EXPECT_EQ_BYTES(address, expected, expectedSize);
+-}
+-
+-// test addresses for Shelley are generated by our Trezor implementation
+-// (from public keys derived by Ledger from the given spending and staking paths)
+-static void testAddressDerivation()
+-{
+-#define NO_STAKING_KEY_PATH ()
+-#define NO_STAKING_KEY_HASH NULL
+-#define TESTCASE(type_, networkIdOrProtocolMagic_, spendingPath_, stakingChoice_, stakingPath_, stakingKeyHashHex_, expected_) \
+-	{ \
+-		uint32_t spendingPath[] = { UNWRAP spendingPath_ }; \
+-		uint32_t stakingPath[] = { UNWRAP stakingPath_ }; \
+-		testcase_deriveAddressShelley(type_, networkIdOrProtocolMagic_, spendingPath, ARRAY_LEN(spendingPath), stakingChoice_, stakingPath, ARRAY_LEN(stakingPath), stakingKeyHashHex_, NULL, expected_); \
+-	}
+-
+-	TESTCASE(
+-	        BYRON, MAINNET_PROTOCOL_MAGIC, (HD + 44, HD + 1815, HD + 0, 1, 55),
+-	        NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
+-	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912f"
+-	);
+-
+-	TESTCASE(
+-	        BASE_PAYMENT_KEY_STAKE_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1),
+-	        STAKING_KEY_PATH, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING_KEY_HASH,
+-	        "035a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
+-	        // bech32: addr1qdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcayfawlf9hwv2fzuygt2km5v92kvf8e3s3mk7ynxw77cwqdquehe
+-	);
+-	TESTCASE(
+-	        BASE_PAYMENT_KEY_STAKE_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1),
+-	        STAKING_KEY_PATH, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING_KEY_HASH,
+-	        "005a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
+-	        // bech32: addr1qpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcayfawlf9hwv2fzuygt2km5v92kvf8e3s3mk7ynxw77cwqhn8sgh
+-	);
+-	TESTCASE(
+-	        BASE_PAYMENT_KEY_STAKE_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1),
+-	        STAKING_KEY_HASH, NO_STAKING_KEY_PATH, "1d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c",
+-	        "005a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
+-	        // bech32: addr1qpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcayfawlf9hwv2fzuygt2km5v92kvf8e3s3mk7ynxw77cwqhn8sgh
+-	);
+-	TESTCASE(
+-	        BASE_PAYMENT_KEY_STAKE_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1),
+-	        STAKING_KEY_HASH, NO_STAKING_KEY_PATH, "122a946b9ad3d2ddf029d3a828f0468aece76895f15c9efbd69b4277",
+-	        "035a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3122a946b9ad3d2ddf029d3a828f0468aece76895f15c9efbd69b4277"
+-	        // bech32: addr1qdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcj922xhxkn6twlq2wn4q50q352annk3903tj00h45mgfmswz93l5
+-	);
+-
+-	TESTCASE(
+-	        ENTERPRISE_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
+-	        "605a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3"
+-	        // bech32: addr1vpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vc93wyej
+-	);
+-	TESTCASE(
+-	        ENTERPRISE_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
+-	        "635a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3"
+-	        // bech32: addr1vdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vc9wh7em
+-	);
+-
+-#undef TESTCASE
+-#undef NO_STAKING_KEY_PATH
+-#undef NO_STAKING_KEY_HASH
+-
+-#define TESTCASE_POINTER(type_, networkId_, spendingPath_, stakingKeyBlockchainPointer_, expected_) \
+-	{ \
+-		uint32_t spendingPath[] = { UNWRAP spendingPath_ }; \
+-		blockchainPointer_t stakingKeyBlockchainPointer = { UNWRAP stakingKeyBlockchainPointer_ }; \
+-		testcase_deriveAddressShelley(type_, networkId_, spendingPath, ARRAY_LEN(spendingPath), BLOCKCHAIN_POINTER, NULL, 0, NULL, &stakingKeyBlockchainPointer, expected_); \
+-	}
+-
+-	TESTCASE_POINTER(
+-	        POINTER_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1), (1, 2, 3),
+-	        "405a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3010203"
+-	        // bech32: addr1gpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcpqgpsh506pr
+-	);
+-	TESTCASE_POINTER(
+-	        POINTER_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), (24157, 177, 42),
+-	        "435a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b381bc5d81312a"
+-	        // bech32: addr1gdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vuph3wczvf288aeyu
+-	);
+-	TESTCASE_POINTER(
+-	        POINTER_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), (0, 0, 0),
+-	        "435a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3000000"
+-	        // bech32: addr1gdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcqqqqqnnd32q
+-	);
+-
+-#undef TESTCASE_POINTER
+-}
+-
+-void run_addressUtilsShelley_test()
+-{
+-	testAddressDerivation();
+-}
+-
+-#endif // DEVEL
++// #ifdef DEVEL
++
++// #include "addressUtilsShelley.h"
++// #include "cardano.h"
++// #include "bip44.h"
++// #include "hexUtils.h"
++// #include "testUtils.h"
++
++// #define HD HARDENED_BIP32
++// #define MAX_ADDRESS_LENGTH 128
++
++// static void pathSpec_init(bip44_path_t* pathSpec, const uint32_t* pathArray, uint32_t pathLength)
++// {
++// 	pathSpec->length = pathLength;
++// 	memmove(pathSpec->path, pathArray, pathLength * 4);
++// }
++
++// // networkIdOrProtocolMagic is used as networkId for Shelley addresses and as protocol magic for Byron addresses
++// static void testcase_deriveAddressShelley(
++//         uint8_t type, uint32_t networkIdOrProtocolMagic, const uint32_t* spendingPathArray, size_t spendingPathLen,
++//         uint8_t stakingDataSource, const uint32_t* stakingPathArray, size_t stakingPathLen,
++//         const char* stakingKeyHashHex, const blockchainPointer_t* stakingKeyBlockchainPointer,
++//         const char* expectedHex)
++// {
++// 	// avoid inconsistent tests
++// 	switch (stakingDataSource) {
++// 	case NO_STAKING:
++// 		ASSERT(stakingPathLen == 0 && stakingKeyHashHex == NULL && stakingKeyBlockchainPointer == NULL);
++// 		break;
++// 	case STAKING_KEY_PATH:
++// 		ASSERT(stakingPathLen != 0 && stakingKeyHashHex == NULL && stakingKeyBlockchainPointer == NULL);
++// 		break;
++// 	case STAKING_KEY_HASH:
++// 		ASSERT(stakingPathLen == 0 && stakingKeyHashHex != NULL && stakingKeyBlockchainPointer == NULL);
++// 		break;
++// 	case BLOCKCHAIN_POINTER:
++// 		ASSERT(stakingPathLen == 0 && stakingKeyHashHex == NULL && stakingKeyBlockchainPointer != NULL);
++// 		break;
++// 	default:
++// 		ASSERT(false);
++// 	}
++
++// 	addressParams_t params;
++
++// 	if (type == BYRON) {
++// 		params = (addressParams_t) {
++// 			.type = type,
++// 			.protocolMagic = networkIdOrProtocolMagic,
++// 			.stakingDataSource = stakingDataSource
++// 		};
++// 	} else {
++// 		params = (addressParams_t) {
++// 			.type = type,
++// 			.networkId = (uint8_t) networkIdOrProtocolMagic,
++// 			.stakingDataSource = stakingDataSource
++// 		};
++// 	}  // the rest of params is initialized to zero
++
++// 	pathSpec_init(&params.spendingKeyPath, spendingPathArray, spendingPathLen);
++// 	if (stakingPathLen > 0)
++// 		pathSpec_init(&params.stakingKeyPath, stakingPathArray, stakingPathLen);
++// 	if (stakingKeyHashHex != NULL) {
++// 		ASSERT(strlen(stakingKeyHashHex) == 2 * ADDRESS_KEY_HASH_LENGTH);
++// 		decode_hex(stakingKeyHashHex, params.stakingKeyHash, SIZEOF(params.stakingKeyHash));
++// 	}
++// 	if (stakingKeyBlockchainPointer != NULL) {
++// 		params.stakingKeyBlockchainPointer = *stakingKeyBlockchainPointer;
++// 	}
++
++// 	if (type == BYRON) {
++// 		PRINTF("testcase_deriveAddressShelley (byron) %d ", networkIdOrProtocolMagic);
++// 	} else {
++// 		PRINTF("testcase_deriveAddressShelley 0x%02x ", constructShelleyAddressHeader(type, (uint8_t) networkIdOrProtocolMagic));
++// 	}
++
++// 	BIP44_PRINTF(&params.spendingKeyPath);
++// 	PRINTF("\n");
++
++// 	if (stakingDataSource == STAKING_KEY_PATH) {
++// 		BIP44_PRINTF(&params.stakingKeyPath);
++// 		PRINTF("\n");
++// 	}
++// 	if (stakingKeyHashHex != NULL) {
++// 		PRINTF(" %s", stakingKeyHashHex);
++// 	}
++// 	if (stakingKeyBlockchainPointer != NULL) {
++// 		PRINTF(
++// 		        " (%u, %u, %u)",
++// 		        (unsigned) stakingKeyBlockchainPointer->blockIndex,
++// 		        (unsigned) stakingKeyBlockchainPointer->txIndex,
++// 		        (unsigned) stakingKeyBlockchainPointer->certificateIndex
++// 		);
++// 	}
++// 	PRINTF("\n");
++
++// 	uint8_t address[MAX_ADDRESS_LENGTH] = {0};
++// 	size_t addressSize = deriveAddress(&params, address, SIZEOF(address));
++
++// 	uint8_t expected[MAX_ADDRESS_LENGTH] = {0};
++// 	size_t expectedSize = decode_hex(expectedHex, expected, SIZEOF(expected));
++
++// 	EXPECT_EQ(addressSize, expectedSize);
++// 	EXPECT_EQ_BYTES(address, expected, expectedSize);
++// }
++
++// // test addresses for Shelley are generated by our Trezor implementation
++// // (from public keys derived by Ledger from the given spending and staking paths)
++// static void testAddressDerivation()
++// {
++// #define NO_STAKING_KEY_PATH ()
++// #define NO_STAKING_KEY_HASH NULL
++// #define TESTCASE(type_, networkIdOrProtocolMagic_, spendingPath_, stakingChoice_, stakingPath_, stakingKeyHashHex_, expected_) \
++// 	{ \
++// 		uint32_t spendingPath[] = { UNWRAP spendingPath_ }; \
++// 		uint32_t stakingPath[] = { UNWRAP stakingPath_ }; \
++// 		testcase_deriveAddressShelley(type_, networkIdOrProtocolMagic_, spendingPath, ARRAY_LEN(spendingPath), stakingChoice_, stakingPath, ARRAY_LEN(stakingPath), stakingKeyHashHex_, NULL, expected_); \
++// 	}
++
++// 	TESTCASE(
++// 	        BYRON, MAINNET_PROTOCOL_MAGIC, (HD + 44, HD + 1815, HD + 0, 1, 55),
++// 	        NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
++// 	        "82d818582183581cb1999ee43d0c3a9fe4a1a5d959ae87069781fbb7f60ff7e8e0136881a0001ad7ed912f"
++// 	);
++
++// 	TESTCASE(
++// 	        BASE_PAYMENT_KEY_STAKE_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1),
++// 	        STAKING_KEY_PATH, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING_KEY_HASH,
++// 	        "035a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
++// 	        // bech32: addr1qdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcayfawlf9hwv2fzuygt2km5v92kvf8e3s3mk7ynxw77cwqdquehe
++// 	);
++// 	TESTCASE(
++// 	        BASE_PAYMENT_KEY_STAKE_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1),
++// 	        STAKING_KEY_PATH, (HD + 1852, HD + 1815, HD + 0, 2, 0), NO_STAKING_KEY_HASH,
++// 	        "005a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
++// 	        // bech32: addr1qpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcayfawlf9hwv2fzuygt2km5v92kvf8e3s3mk7ynxw77cwqhn8sgh
++// 	);
++// 	TESTCASE(
++// 	        BASE_PAYMENT_KEY_STAKE_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1),
++// 	        STAKING_KEY_HASH, NO_STAKING_KEY_PATH, "1d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c",
++// 	        "005a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b31d227aefa4b773149170885aadba30aab3127cc611ddbc4999def61c"
++// 	        // bech32: addr1qpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcayfawlf9hwv2fzuygt2km5v92kvf8e3s3mk7ynxw77cwqhn8sgh
++// 	);
++// 	TESTCASE(
++// 	        BASE_PAYMENT_KEY_STAKE_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1),
++// 	        STAKING_KEY_HASH, NO_STAKING_KEY_PATH, "122a946b9ad3d2ddf029d3a828f0468aece76895f15c9efbd69b4277",
++// 	        "035a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3122a946b9ad3d2ddf029d3a828f0468aece76895f15c9efbd69b4277"
++// 	        // bech32: addr1qdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcj922xhxkn6twlq2wn4q50q352annk3903tj00h45mgfmswz93l5
++// 	);
++
++// 	TESTCASE(
++// 	        ENTERPRISE_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
++// 	        "605a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3"
++// 	        // bech32: addr1vpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vc93wyej
++// 	);
++// 	TESTCASE(
++// 	        ENTERPRISE_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), NO_STAKING, NO_STAKING_KEY_PATH, NO_STAKING_KEY_HASH,
++// 	        "635a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3"
++// 	        // bech32: addr1vdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vc9wh7em
++// 	);
++
++// #undef TESTCASE
++// #undef NO_STAKING_KEY_PATH
++// #undef NO_STAKING_KEY_HASH
++
++// #define TESTCASE_POINTER(type_, networkId_, spendingPath_, stakingKeyBlockchainPointer_, expected_) \
++// 	{ \
++// 		uint32_t spendingPath[] = { UNWRAP spendingPath_ }; \
++// 		blockchainPointer_t stakingKeyBlockchainPointer = { UNWRAP stakingKeyBlockchainPointer_ }; \
++// 		testcase_deriveAddressShelley(type_, networkId_, spendingPath, ARRAY_LEN(spendingPath), BLOCKCHAIN_POINTER, NULL, 0, NULL, &stakingKeyBlockchainPointer, expected_); \
++// 	}
++
++// 	TESTCASE_POINTER(
++// 	        POINTER_KEY, 0x00, (HD + 1852, HD + 1815, HD + 0, 0, 1), (1, 2, 3),
++// 	        "405a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3010203"
++// 	        // bech32: addr1gpd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcpqgpsh506pr
++// 	);
++// 	TESTCASE_POINTER(
++// 	        POINTER_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), (24157, 177, 42),
++// 	        "435a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b381bc5d81312a"
++// 	        // bech32: addr1gdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vuph3wczvf288aeyu
++// 	);
++// 	TESTCASE_POINTER(
++// 	        POINTER_KEY, 0x03, (HD + 1852, HD + 1815, HD + 0, 0, 1), (0, 0, 0),
++// 	        "435a53103829a7382c2ab76111fb69f13e69d616824c62058e44f1a8b3000000"
++// 	        // bech32: addr1gdd9xypc9xnnstp2kas3r7mf7ylxn4sksfxxypvwgnc63vcqqqqqnnd32q
++// 	);
++
++// #undef TESTCASE_POINTER
++// }
++
++// void run_addressUtilsShelley_test()
++// {
++// 	testAddressDerivation();
++// }
++
++// #endif // DEVEL
+diff --git a/src/base58.c b/src/base58.c
+index cc478f6..02dce8e 100644
+--- a/src/base58.c
++++ b/src/base58.c
+@@ -1,77 +1,77 @@
+-/*******************************************************************************
+-*   Ripple Wallet
+-*   (c) 2017 Ledger
+-*
+-*  Licensed under the Apache License, Version 2.0 (the "License");
+-*  you may not use this file except in compliance with the License.
+-*  You may obtain a copy of the License at
+-*
+-*      http://www.apache.org/licenses/LICENSE-2.0
+-*
+-*  Unless required by applicable law or agreed to in writing, software
+-*  distributed under the License is distributed on an "AS IS" BASIS,
+-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-*  See the License for the specific language governing permissions and
+-*  limitations under the License.
+-********************************************************************************/
++// /*******************************************************************************
++// *   Ripple Wallet
++// *   (c) 2017 Ledger
++// *
++// *  Licensed under the Apache License, Version 2.0 (the "License");
++// *  you may not use this file except in compliance with the License.
++// *  You may obtain a copy of the License at
++// *
++// *      http://www.apache.org/licenses/LICENSE-2.0
++// *
++// *  Unless required by applicable law or agreed to in writing, software
++// *  distributed under the License is distributed on an "AS IS" BASIS,
++// *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// *  See the License for the specific language governing permissions and
++// *  limitations under the License.
++// ********************************************************************************/
+ 
+-// This code is slightly modified version of Ripple's code
++// // This code is slightly modified version of Ripple's code
+ 
+-#include "common.h"
+-#include "base58.h"
++// #include "common.h"
++// #include "base58.h"
+ 
+-#define MAX_BUFFER_SIZE 124
++// #define MAX_BUFFER_SIZE 124
+ 
+-static const char BASE58ALPHABET[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
++// static const char BASE58ALPHABET[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+ 
+-size_t base58_encode(
+-        const uint8_t* inBuffer, size_t inSize,
+-        char* outStr, size_t outMaxSize
+-)
+-{
+-	uint8_t tmpBuffer[MAX_BUFFER_SIZE] = {0};
+-	uint8_t buffer[MAX_BUFFER_SIZE * 2] = {0};
+-	size_t startAt;
+-	size_t zeroCount = 0;
++// size_t base58_encode(
++//         const uint8_t* inBuffer, size_t inSize,
++//         char* outStr, size_t outMaxSize
++// )
++// {
++// 	uint8_t tmpBuffer[MAX_BUFFER_SIZE] = {0};
++// 	uint8_t buffer[MAX_BUFFER_SIZE * 2] = {0};
++// 	size_t startAt;
++// 	size_t zeroCount = 0;
+ 
+-	ASSERT(inSize <= SIZEOF(tmpBuffer));
+-	ASSERT(outMaxSize < BUFFER_SIZE_PARANOIA);
++// 	ASSERT(inSize <= SIZEOF(tmpBuffer));
++// 	ASSERT(outMaxSize < BUFFER_SIZE_PARANOIA);
+ 
+-	memmove(tmpBuffer, inBuffer, inSize);
++// 	memmove(tmpBuffer, inBuffer, inSize);
+ 
+-	while ((zeroCount < inSize) && (tmpBuffer[zeroCount] == 0)) {
+-		++zeroCount;
+-	}
+-	size_t j = 2 * inSize;
+-	startAt = zeroCount;
++// 	while ((zeroCount < inSize) && (tmpBuffer[zeroCount] == 0)) {
++// 		++zeroCount;
++// 	}
++// 	size_t j = 2 * inSize;
++// 	startAt = zeroCount;
+ 
+-	while (startAt < inSize) {
+-		unsigned short remainder = 0;
+-		size_t divLoop;
+-		for (divLoop = startAt; divLoop < inSize; divLoop++) {
+-			unsigned short digit256 = (unsigned short)(tmpBuffer[divLoop] & 0xff);
+-			unsigned short tmpDiv = remainder * 256 + digit256;
+-			tmpBuffer[divLoop] = (unsigned char)(tmpDiv / 58);
+-			remainder = (tmpDiv % 58);
+-		}
+-		if (tmpBuffer[startAt] == 0) {
+-			++startAt;
+-		}
+-		ASSERT((0 < j) && (j <= SIZEOF(buffer)));
+-		buffer[--j] = BASE58ALPHABET[remainder];
+-	}
+-	while ((j < (2 * inSize)) && (buffer[j] == BASE58ALPHABET[0])) {
+-		++j;
+-	}
+-	while (zeroCount-- > 0) {
+-		ASSERT((0 < j) && (j <= SIZEOF(buffer)));
+-		buffer[--j] = BASE58ALPHABET[0];
+-	}
+-	size_t outSize = 2 * inSize - j;
++// 	while (startAt < inSize) {
++// 		unsigned short remainder = 0;
++// 		size_t divLoop;
++// 		for (divLoop = startAt; divLoop < inSize; divLoop++) {
++// 			unsigned short digit256 = (unsigned short)(tmpBuffer[divLoop] & 0xff);
++// 			unsigned short tmpDiv = remainder * 256 + digit256;
++// 			tmpBuffer[divLoop] = (unsigned char)(tmpDiv / 58);
++// 			remainder = (tmpDiv % 58);
++// 		}
++// 		if (tmpBuffer[startAt] == 0) {
++// 			++startAt;
++// 		}
++// 		ASSERT((0 < j) && (j <= SIZEOF(buffer)));
++// 		buffer[--j] = BASE58ALPHABET[remainder];
++// 	}
++// 	while ((j < (2 * inSize)) && (buffer[j] == BASE58ALPHABET[0])) {
++// 		++j;
++// 	}
++// 	while (zeroCount-- > 0) {
++// 		ASSERT((0 < j) && (j <= SIZEOF(buffer)));
++// 		buffer[--j] = BASE58ALPHABET[0];
++// 	}
++// 	size_t outSize = 2 * inSize - j;
+ 
+-	ASSERT(outSize < outMaxSize);
++// 	ASSERT(outSize < outMaxSize);
+ 
+-	memmove(outStr, (buffer + j), outSize);
+-	outStr[outSize] = 0;
+-	return outSize;
+-}
++// 	memmove(outStr, (buffer + j), outSize);
++// 	outStr[outSize] = 0;
++// 	return outSize;
++// }
+diff --git a/src/base58.h b/src/base58.h
+index 2543e66..59701cb 100644
+--- a/src/base58.h
++++ b/src/base58.h
+@@ -1,17 +1,17 @@
+-#ifndef H_CARDANO_APP_BASE58
+-#define H_CARDANO_APP_BASE58
++// #ifndef H_CARDANO_APP_BASE58
++// #define H_CARDANO_APP_BASE58
+ 
+-#include <stdint.h>
+-#include <stddef.h>
++// #include <stdint.h>
++// #include <stddef.h>
+ 
+-size_t base58_encode(
+-        const uint8_t *inBuffer, size_t inSize,
+-        char *outStr, size_t outMaxSize
+-);
++// size_t base58_encode(
++//         const uint8_t *inBuffer, size_t inSize,
++//         char *outStr, size_t outMaxSize
++// );
+ 
+ 
+-#ifdef DEVEL
+-void run_base58_test();
+-#endif // DEVEL
++// #ifdef DEVEL
++// void run_base58_test();
++// #endif // DEVEL
+ 
+-#endif // H_CARDANO_APP_BASE58
++// #endif // H_CARDANO_APP_BASE58
+diff --git a/src/base58_test.c b/src/base58_test.c
+index be5e39f..064cf0c 100644
+--- a/src/base58_test.c
++++ b/src/base58_test.c
+@@ -1,57 +1,57 @@
+-#ifdef DEVEL
+-
+-#include "base58.h"
+-#include "assert.h"
+-#include "hexUtils.h"
+-#include "testUtils.h"
+-
+-void testcase_base58(const char* inputHex, const char* expectedStr)
+-{
+-	PRINTF("testcase_base58: %s\n", inputHex);
+-	uint8_t inputBuffer[100] = {0};
+-	size_t inputSize;
+-	inputSize = decode_hex(inputHex, inputBuffer, SIZEOF(inputBuffer));
+-	char outputStr[100] = {0};
+-	size_t outputLen = base58_encode(inputBuffer, inputSize, outputStr, SIZEOF(outputStr));
+-	EXPECT_EQ(outputLen, strlen(expectedStr));
+-	EXPECT_EQ_BYTES(expectedStr, outputStr, outputLen + 1);
+-}
+-
+-void run_base58_test()
+-{
+-	struct {
+-		const char* inputHex;
+-		const char* expectedHex;
+-	} testVectors[] = {
+-		{"", ""},
+-
+-		{"ab", "3x"},
+-		{"16", "P"},
+-		{"f2", "5B"},
+-
+-		{"a1b3", "DJi"},
+-		{"25b6", "3sT"},
+-		{"ffff", "LUv"},
+-		{"0000", "11"},
+-
+-		{
+-			"82d818582183581ce63175c654dfd93a9290342a067158dc0f57a1108ddbd8cace3839bda0001a0a0e41ce",
+-			"Ae2tdPwUPEZKmwoy3AU3cXb5Chnasj6mvVNxV1H11997q3VW5ihbSfQwGpm"
+-		},
+-
+-		{
+-			"82d818583983581c07d99d3987090111d70b83e21c1db61acdb659d45cc1b5769a77ae11a1015655c94dbc8f2a15f95499becfbf9f2de442bce11eacd1001abd57ca7a",
+-			"4swhHtxKapQbj3TZEipgtp7NQzcRWDYqCxXYoPQWjGyHmhxS1w1TjUEszCQT1sQucGwmPQMYdv1FYs3d51KgoubviPBf"
+-		},
+-
+-		{"00000000ab", "11113x"},
+-		{"00000000df256631", "11116hpoSQ"},
+-		{"2536000000", "5CVj3Vq"},
+-		{"0000000000361200000000", "11111TvgAkW5V"},
+-	};
+-	ITERATE(it, testVectors) {
+-		testcase_base58(PTR_PIC(it->inputHex), PTR_PIC(it->expectedHex));
+-	}
+-}
+-
+-#endif // DEVEL
++// #ifdef DEVEL
++
++// #include "base58.h"
++// #include "assert.h"
++// #include "hexUtils.h"
++// #include "testUtils.h"
++
++// void testcase_base58(const char* inputHex, const char* expectedStr)
++// {
++// 	PRINTF("testcase_base58: %s\n", inputHex);
++// 	uint8_t inputBuffer[100] = {0};
++// 	size_t inputSize;
++// 	inputSize = decode_hex(inputHex, inputBuffer, SIZEOF(inputBuffer));
++// 	char outputStr[100] = {0};
++// 	size_t outputLen = base58_encode(inputBuffer, inputSize, outputStr, SIZEOF(outputStr));
++// 	EXPECT_EQ(outputLen, strlen(expectedStr));
++// 	EXPECT_EQ_BYTES(expectedStr, outputStr, outputLen + 1);
++// }
++
++// void run_base58_test()
++// {
++// 	struct {
++// 		const char* inputHex;
++// 		const char* expectedHex;
++// 	} testVectors[] = {
++// 		{"", ""},
++
++// 		{"ab", "3x"},
++// 		{"16", "P"},
++// 		{"f2", "5B"},
++
++// 		{"a1b3", "DJi"},
++// 		{"25b6", "3sT"},
++// 		{"ffff", "LUv"},
++// 		{"0000", "11"},
++
++// 		{
++// 			"82d818582183581ce63175c654dfd93a9290342a067158dc0f57a1108ddbd8cace3839bda0001a0a0e41ce",
++// 			"Ae2tdPwUPEZKmwoy3AU3cXb5Chnasj6mvVNxV1H11997q3VW5ihbSfQwGpm"
++// 		},
++
++// 		{
++// 			"82d818583983581c07d99d3987090111d70b83e21c1db61acdb659d45cc1b5769a77ae11a1015655c94dbc8f2a15f95499becfbf9f2de442bce11eacd1001abd57ca7a",
++// 			"4swhHtxKapQbj3TZEipgtp7NQzcRWDYqCxXYoPQWjGyHmhxS1w1TjUEszCQT1sQucGwmPQMYdv1FYs3d51KgoubviPBf"
++// 		},
++
++// 		{"00000000ab", "11113x"},
++// 		{"00000000df256631", "11116hpoSQ"},
++// 		{"2536000000", "5CVj3Vq"},
++// 		{"0000000000361200000000", "11111TvgAkW5V"},
++// 	};
++// 	ITERATE(it, testVectors) {
++// 		testcase_base58(PTR_PIC(it->inputHex), PTR_PIC(it->expectedHex));
++// 	}
++// }
++
++// #endif // DEVEL
+diff --git a/src/bip44.c b/src/bip44.c
+index 8099ac0..dc7ae6a 100644
+--- a/src/bip44.c
++++ b/src/bip44.c
+@@ -52,15 +52,15 @@ uint32_t unharden(uint32_t value)
+ }
+ 
+ // Byron: /44'/1815'
+-bool bip44_hasByronPrefix(const bip44_path_t* pathSpec)
+-{
+-#define CHECK(cond) if (!(cond)) return false
+-	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
+-	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_BYRON | HARDENED_BIP32));
+-	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+-	return true;
+-#undef CHECK
+-}
++// bool bip44_hasByronPrefix(const bip44_path_t* pathSpec)
++// {
++// #define CHECK(cond) if (!(cond)) return false
++// 	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
++// 	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_BYRON | HARDENED_BIP32));
++// 	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
++// 	return true;
++// #undef CHECK
++// }
+ 
+ // Shelley: /1852'/1815'
+ bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec)
+@@ -76,7 +76,7 @@ bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec)
+ // /44'/1815' or /1852'/1815'
+ bool bip44_hasOrdinaryWalletKeyPrefix(const bip44_path_t* pathSpec)
+ {
+-	return bip44_hasByronPrefix(pathSpec) || bip44_hasShelleyPrefix(pathSpec);
++	return bip44_hasShelleyPrefix(pathSpec);
+ }
+ 
+ // /1854'/1815'
+diff --git a/src/bip44.h b/src/bip44.h
+index daff51f..b8cddb3 100644
+--- a/src/bip44.h
++++ b/src/bip44.h
+@@ -53,7 +53,7 @@ enum {
+ };
+ 
+ 
+-bool bip44_hasByronPrefix(const bip44_path_t* pathSpec);
++// bool bip44_hasByronPrefix(const bip44_path_t* pathSpec);
+ bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec);
+ bool bip44_hasOrdinaryWalletKeyPrefix(const bip44_path_t* pathSpec);
+ bool bip44_hasMultisigWalletKeyPrefix(const bip44_path_t* pathSpec);
+diff --git a/src/deriveAddress.c b/src/deriveAddress.c
+index f64caaa..722b3d9 100644
+--- a/src/deriveAddress.c
++++ b/src/deriveAddress.c
+@@ -3,7 +3,7 @@
+ #include "securityPolicy.h"
+ #include "uiHelpers.h"
+ #include "uiScreens.h"
+-#include "addressUtilsByron.h"
++// #include "addressUtilsByron.h"
+ #include "addressUtilsShelley.h"
+ #include "base58.h"
+ #include "bech32.h"
+diff --git a/src/securityPolicy.c b/src/securityPolicy.c
+index 1be5402..016706c 100644
+--- a/src/securityPolicy.c
++++ b/src/securityPolicy.c
+@@ -1,5 +1,5 @@
+ #include "addressUtilsShelley.h"
+-#include "addressUtilsByron.h"
++// #include "addressUtilsByron.h"
+ #include "app_mode.h"
+ #include "bip44.h"
+ #include "cardano.h"
+@@ -196,7 +196,7 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
+ 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+ 	case POINTER_KEY:
+ 	case ENTERPRISE_KEY:
+-	case BYRON:
++	// case BYRON:
+ 		// unusual path
+ 		WARN_UNLESS(bip44_isPathReasonable(&addressParams->spendingKeyPath));
+ 		break;
+@@ -417,9 +417,9 @@ security_policy_t policyForSignTxOutputAddressBytes(
+ 
+ 	switch (addressType) {
+ 
+-	case BYRON:
+-		DENY_IF(extractProtocolMagic(rawAddressBuffer, rawAddressSize) != protocolMagic);
+-		break;
++	// case BYRON:
++	// 	DENY_IF(extractProtocolMagic(rawAddressBuffer, rawAddressSize) != protocolMagic);
++	// 	break;
+ 
+ 	case REWARD_KEY:
+ 	case REWARD_SCRIPT:
+diff --git a/src/signTx.c b/src/signTx.c
+index ec23d83..6072ee8 100644
+--- a/src/signTx.c
++++ b/src/signTx.c
+@@ -3,7 +3,7 @@
+ #include "state.h"
+ #include "bech32.h"
+ #include "cardano.h"
+-#include "addressUtilsByron.h"
++// #include "addressUtilsByron.h"
+ #include "addressUtilsShelley.h"
+ #include "uiHelpers.h"
+ #include "signTxUtils.h"
+diff --git a/src/signTxUtils.c b/src/signTxUtils.c
+index c2ac296..a75034e 100644
+--- a/src/signTxUtils.c
++++ b/src/signTxUtils.c
+@@ -26,7 +26,7 @@ bool violatesSingleAccountOrStoreIt(const bip44_path_t* path)
+ 		ASSERT(false);
+ 	}
+ 
+-	const bool isByron = bip44_hasByronPrefix(path);
++	const bool isByron = false;
+ 	const uint32_t account = bip44_getAccount(path);
+ 	if (singleAccountData->isStored) {
+ 		const uint32_t storedAccount = singleAccountData->accountNumber;
+diff --git a/src/uiScreens.c b/src/uiScreens.c
+index 0374819..77eb7fc 100644
+--- a/src/uiScreens.c
++++ b/src/uiScreens.c
+@@ -119,12 +119,7 @@ static void _ui_displayAccountWithDescriptionScreen(
+ 		uint32_t account = unharden(bip44_getAccount(path));
+ 		STATIC_ASSERT(sizeof(account + 1) <= sizeof(unsigned), "oversized type for %u");
+ 		STATIC_ASSERT(!IS_SIGNED(account + 1), "signed type for %u");
+-		if (bip44_hasByronPrefix(path)) {
+-			snprintf(
+-			        accountDescription, SIZEOF(accountDescription),
+-			        "Byron account #%u  ", account + 1
+-			);
+-		} else if (bip44_hasShelleyPrefix(path)) {
++		if (bip44_hasShelleyPrefix(path)) {
+ 			snprintf(
+ 			        accountDescription, SIZEOF(accountDescription),
+ 			        "Account #%u  ", account + 1
+@@ -394,10 +389,10 @@ void ui_displayStakingInfoScreen(
+ 	case NO_STAKING: {
+ 		switch (addressParams->type) {
+ 
+-		case BYRON:
+-			heading = STAKING_HEADING_WARNING;
+-			strncpy(stakingInfo, "legacy Byron address (no staking rewards)", SIZEOF(stakingInfo));
+-			break;
++		// case BYRON:
++		// 	heading = STAKING_HEADING_WARNING;
++		// 	strncpy(stakingInfo, "legacy Byron address (no staking rewards)", SIZEOF(stakingInfo));
++		// 	break;
+ 
+ 		case ENTERPRISE_KEY:
+ 		case ENTERPRISE_SCRIPT:

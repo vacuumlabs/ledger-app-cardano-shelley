@@ -1,0 +1,507 @@
+diff --git a/src/handlers.c b/src/handlers.c
+index f591160..44f98df 100644
+--- a/src/handlers.c
++++ b/src/handlers.c
+@@ -12,7 +12,7 @@
+ #include "deriveAddress.h"
+ #include "deriveNativeScriptHash.h"
+ #include "signTx.h"
+-#include "signOpCert.h"
++// #include "signOpCert.h"
+ 
+ // The APDU protocol uses a single-byte instruction code (INS) to specify
+ // which command should be executed. We'll use this code to dispatch on a
+@@ -32,7 +32,7 @@ handler_fn_t* lookupHandler(uint8_t ins)
+ 
+ 		// 0x2* -  signing related
+ 		CASE(0x21, signTx_handleAPDU);
+-		CASE(0x22, signOpCert_handleAPDU);
++		// CASE(0x22, signOpCert_handleAPDU);
+ 
+ 		#ifdef DEVEL
+ 		// 0xF* -  debug_mode related
+diff --git a/src/signOpCert.c b/src/signOpCert.c
+index 6bf0794..f1c16da 100644
+--- a/src/signOpCert.c
++++ b/src/signOpCert.c
+@@ -1,205 +1,205 @@
+-#include "common.h"
+-
+-#include "signOpCert.h"
+-#include "keyDerivation.h"
+-#include "endian.h"
+-#include "state.h"
+-#include "uiHelpers.h"
+-#include "uiScreens.h"
+-#include "securityPolicy.h"
+-#include "messageSigning.h"
+-#include "textUtils.h"
+-
+-static ins_sign_op_cert_context_t* ctx = &(instructionState.signOpCertContext);
+-
+-
+-static int16_t RESPONSE_READY_MAGIC = 31678;
+-
+-// forward declaration
+-static void signOpCert_ui_runStep();
+-enum {
+-	UI_STEP_WARNING = 100,
+-	UI_STEP_CONFIRM_START,
+-	UI_STEP_DISPLAY_POOL_COLD_KEY_PATH,
+-	UI_STEP_DISPLAY_POOL_ID,
+-	UI_STEP_DISPLAY_KES_PUBLIC_KEY,
+-	UI_STEP_DISPLAY_KES_PERIOD,
+-	UI_STEP_DISPLAY_ISSUE_COUNTER,
+-	UI_STEP_CONFIRM,
+-	UI_STEP_RESPOND,
+-	UI_STEP_INVALID,
+-};
+-
+-void signOpCert_handleAPDU(
+-        uint8_t p1,
+-        uint8_t p2,
+-        uint8_t *wireDataBuffer,
+-        size_t wireDataSize,
+-        bool isNewCall
+-)
+-{
+-	// Initialize state
+-	if (isNewCall) {
+-		explicit_bzero(ctx, SIZEOF(*ctx));
+-	}
+-	ctx->responseReadyMagic = 0;
+-
+-	// Validate params
+-	VALIDATE(p1 == P1_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+-	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+-
+-	{
+-		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+-		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+-
+-		STATIC_ASSERT(SIZEOF(ctx->kesPublicKey) == KES_PUBLIC_KEY_LENGTH, "wrong KES public key size");
+-		view_parseBuffer(ctx->kesPublicKey, &view, KES_PUBLIC_KEY_LENGTH);
+-		TRACE("KES key:");
+-		TRACE_BUFFER(ctx->kesPublicKey, KES_PUBLIC_KEY_LENGTH);
+-
+-		ctx->kesPeriod = parse_u8be(&view);
+-		TRACE("KES period:");
+-		TRACE_UINT64(ctx->kesPeriod);
+-
+-		ctx->issueCounter = parse_u8be(&view);
+-		TRACE("Issue counter:");
+-		TRACE_UINT64(ctx->issueCounter);
+-
+-		view_skipBytes(&view, bip44_parseFromWire(&ctx->poolColdKeyPathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
+-
+-		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+-	}
+-
+-	// Check security policy
+-	security_policy_t policy = policyForSignOpCert(&ctx->poolColdKeyPathSpec);
+-	ENSURE_NOT_DENIED(policy);
+-
+-	{
+-		uint8_t opCertBodyBuffer[OP_CERT_BODY_LENGTH] = {0};
+-		write_view_t opCertBodyBufferView = make_write_view(opCertBodyBuffer, opCertBodyBuffer + OP_CERT_BODY_LENGTH);
+-
+-		view_appendBuffer(&opCertBodyBufferView, (const uint8_t*) &ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey));
+-		{
+-			uint8_t chunk[8] = {0};
+-			u8be_write(chunk, ctx->issueCounter);
+-			#ifdef FUZZING
+-			view_appendBuffer(&opCertBodyBufferView, chunk, 8);
+-			#else
+-			view_appendBuffer(&opCertBodyBufferView, chunk, SIZEOF(chunk));
+-			#endif
+-		}
+-		{
+-			uint8_t chunk[8] = {0};
+-			u8be_write(chunk, ctx->kesPeriod);
+-			#ifdef FUZZING
+-			view_appendBuffer(&opCertBodyBufferView, chunk, 8);
+-			#else
+-			view_appendBuffer(&opCertBodyBufferView, chunk, SIZEOF(chunk));
+-			#endif
+-		}
+-
+-		ASSERT(view_processedSize(&opCertBodyBufferView) == OP_CERT_BODY_LENGTH);
+-		TRACE_BUFFER(opCertBodyBuffer, SIZEOF(opCertBodyBuffer));
+-
+-		getOpCertSignature(
+-		        &ctx->poolColdKeyPathSpec,
+-		        opCertBodyBuffer,
+-		        OP_CERT_BODY_LENGTH,
+-		        ctx->signature,
+-		        SIZEOF(ctx->signature)
+-		);
+-	}
+-	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
+-
+-	switch (policy) {
+-#define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
+-		CASE(POLICY_PROMPT_WARN_UNUSUAL,    UI_STEP_WARNING);
+-		CASE(POLICY_PROMPT_BEFORE_RESPONSE, UI_STEP_CONFIRM_START);
+-		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   UI_STEP_RESPOND);
+-#undef   CASE
+-	default:
+-		THROW(ERR_NOT_IMPLEMENTED);
+-	}
+-	signOpCert_ui_runStep();
+-}
+-
+-static void signOpCert_ui_runStep()
+-{
+-	ui_callback_fn_t* this_fn = signOpCert_ui_runStep;
+-
+-	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+-
+-	UI_STEP(UI_STEP_WARNING) {
+-		ui_displayPaginatedText(
+-		        "Unusual request",
+-		        "Proceed with care",
+-		        this_fn
+-		);
+-	}
+-	UI_STEP(UI_STEP_CONFIRM_START) {
+-		ui_displayPrompt(
+-		        "Start new",
+-		        "operational certificate?",
+-		        this_fn,
+-		        respond_with_user_reject
+-		);
+-	}
+-	UI_STEP(UI_STEP_DISPLAY_POOL_COLD_KEY_PATH) {
+-		ui_displayPathScreen("Pool cold key path", &ctx->poolColdKeyPathSpec, this_fn);
+-	}
+-	UI_STEP(UI_STEP_DISPLAY_POOL_ID) {
+-		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
+-		bip44_pathToKeyHash(&ctx->poolColdKeyPathSpec, poolKeyHash, SIZEOF(poolKeyHash));
+-
+-		ui_displayBech32Screen(
+-		        "Pool ID",
+-		        "pool_vk",
+-		        poolKeyHash, SIZEOF(poolKeyHash),
+-		        this_fn
+-		);
+-	}
+-	UI_STEP(UI_STEP_DISPLAY_KES_PUBLIC_KEY) {
+-		ui_displayBech32Screen(
+-		        "KES public key",
+-		        "kes_vk",
+-		        ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey),
+-		        this_fn
+-		);
+-	}
+-	UI_STEP(UI_STEP_DISPLAY_KES_PERIOD) {
+-		char kesPeriodString[50] = {0};
+-		explicit_bzero(kesPeriodString, SIZEOF(kesPeriodString));
+-		str_formatUint64(ctx->kesPeriod, kesPeriodString, SIZEOF(kesPeriodString));
+-		ui_displayPaginatedText(
+-		        "KES period",
+-		        kesPeriodString,
+-		        this_fn
+-		);
+-	}
+-	UI_STEP(UI_STEP_DISPLAY_ISSUE_COUNTER) {
+-		char issueCounterString[50] = {0};
+-		explicit_bzero(issueCounterString, SIZEOF(issueCounterString));
+-		str_formatUint64(ctx->issueCounter, issueCounterString, SIZEOF(issueCounterString));
+-		ui_displayPaginatedText(
+-		        "Issue counter",
+-		        issueCounterString,
+-		        this_fn
+-		);
+-	}
+-	UI_STEP(UI_STEP_CONFIRM) {
+-		ui_displayPrompt(
+-		        "Confirm",
+-		        "operational certificate?",
+-		        this_fn,
+-		        respond_with_user_reject
+-		);
+-	}
+-	UI_STEP(UI_STEP_RESPOND) {
+-		ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
+-
+-		io_send_buf(SUCCESS, (uint8_t*) &ctx->signature, SIZEOF(ctx->signature));
+-		ui_idle();
+-
+-	}
+-	UI_STEP_END(UI_STEP_INVALID);
+-}
++// #include "common.h"
++
++// #include "signOpCert.h"
++// #include "keyDerivation.h"
++// #include "endian.h"
++// #include "state.h"
++// #include "uiHelpers.h"
++// #include "uiScreens.h"
++// #include "securityPolicy.h"
++// #include "messageSigning.h"
++// #include "textUtils.h"
++
++// static ins_sign_op_cert_context_t* ctx = &(instructionState.signOpCertContext);
++
++
++// static int16_t RESPONSE_READY_MAGIC = 31678;
++
++// // forward declaration
++// static void signOpCert_ui_runStep();
++// enum {
++// 	UI_STEP_WARNING = 100,
++// 	UI_STEP_CONFIRM_START,
++// 	UI_STEP_DISPLAY_POOL_COLD_KEY_PATH,
++// 	UI_STEP_DISPLAY_POOL_ID,
++// 	UI_STEP_DISPLAY_KES_PUBLIC_KEY,
++// 	UI_STEP_DISPLAY_KES_PERIOD,
++// 	UI_STEP_DISPLAY_ISSUE_COUNTER,
++// 	UI_STEP_CONFIRM,
++// 	UI_STEP_RESPOND,
++// 	UI_STEP_INVALID,
++// };
++
++// void signOpCert_handleAPDU(
++//         uint8_t p1,
++//         uint8_t p2,
++//         uint8_t *wireDataBuffer,
++//         size_t wireDataSize,
++//         bool isNewCall
++// )
++// {
++// 	// Initialize state
++// 	if (isNewCall) {
++// 		explicit_bzero(ctx, SIZEOF(*ctx));
++// 	}
++// 	ctx->responseReadyMagic = 0;
++
++// 	// Validate params
++// 	VALIDATE(p1 == P1_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
++// 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
++
++// 	{
++// 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
++// 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
++
++// 		STATIC_ASSERT(SIZEOF(ctx->kesPublicKey) == KES_PUBLIC_KEY_LENGTH, "wrong KES public key size");
++// 		view_parseBuffer(ctx->kesPublicKey, &view, KES_PUBLIC_KEY_LENGTH);
++// 		TRACE("KES key:");
++// 		TRACE_BUFFER(ctx->kesPublicKey, KES_PUBLIC_KEY_LENGTH);
++
++// 		ctx->kesPeriod = parse_u8be(&view);
++// 		TRACE("KES period:");
++// 		TRACE_UINT64(ctx->kesPeriod);
++
++// 		ctx->issueCounter = parse_u8be(&view);
++// 		TRACE("Issue counter:");
++// 		TRACE_UINT64(ctx->issueCounter);
++
++// 		view_skipBytes(&view, bip44_parseFromWire(&ctx->poolColdKeyPathSpec, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(&view)));
++
++// 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
++// 	}
++
++// 	// Check security policy
++// 	security_policy_t policy = policyForSignOpCert(&ctx->poolColdKeyPathSpec);
++// 	ENSURE_NOT_DENIED(policy);
++
++// 	{
++// 		uint8_t opCertBodyBuffer[OP_CERT_BODY_LENGTH] = {0};
++// 		write_view_t opCertBodyBufferView = make_write_view(opCertBodyBuffer, opCertBodyBuffer + OP_CERT_BODY_LENGTH);
++
++// 		view_appendBuffer(&opCertBodyBufferView, (const uint8_t*) &ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey));
++// 		{
++// 			uint8_t chunk[8] = {0};
++// 			u8be_write(chunk, ctx->issueCounter);
++// 			#ifdef FUZZING
++// 			view_appendBuffer(&opCertBodyBufferView, chunk, 8);
++// 			#else
++// 			view_appendBuffer(&opCertBodyBufferView, chunk, SIZEOF(chunk));
++// 			#endif
++// 		}
++// 		{
++// 			uint8_t chunk[8] = {0};
++// 			u8be_write(chunk, ctx->kesPeriod);
++// 			#ifdef FUZZING
++// 			view_appendBuffer(&opCertBodyBufferView, chunk, 8);
++// 			#else
++// 			view_appendBuffer(&opCertBodyBufferView, chunk, SIZEOF(chunk));
++// 			#endif
++// 		}
++
++// 		ASSERT(view_processedSize(&opCertBodyBufferView) == OP_CERT_BODY_LENGTH);
++// 		TRACE_BUFFER(opCertBodyBuffer, SIZEOF(opCertBodyBuffer));
++
++// 		getOpCertSignature(
++// 		        &ctx->poolColdKeyPathSpec,
++// 		        opCertBodyBuffer,
++// 		        OP_CERT_BODY_LENGTH,
++// 		        ctx->signature,
++// 		        SIZEOF(ctx->signature)
++// 		);
++// 	}
++// 	ctx->responseReadyMagic = RESPONSE_READY_MAGIC;
++
++// 	switch (policy) {
++// #define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
++// 		CASE(POLICY_PROMPT_WARN_UNUSUAL,    UI_STEP_WARNING);
++// 		CASE(POLICY_PROMPT_BEFORE_RESPONSE, UI_STEP_CONFIRM_START);
++// 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   UI_STEP_RESPOND);
++// #undef   CASE
++// 	default:
++// 		THROW(ERR_NOT_IMPLEMENTED);
++// 	}
++// 	signOpCert_ui_runStep();
++// }
++
++// static void signOpCert_ui_runStep()
++// {
++// 	ui_callback_fn_t* this_fn = signOpCert_ui_runStep;
++
++// 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
++
++// 	UI_STEP(UI_STEP_WARNING) {
++// 		ui_displayPaginatedText(
++// 		        "Unusual request",
++// 		        "Proceed with care",
++// 		        this_fn
++// 		);
++// 	}
++// 	UI_STEP(UI_STEP_CONFIRM_START) {
++// 		ui_displayPrompt(
++// 		        "Start new",
++// 		        "operational certificate?",
++// 		        this_fn,
++// 		        respond_with_user_reject
++// 		);
++// 	}
++// 	UI_STEP(UI_STEP_DISPLAY_POOL_COLD_KEY_PATH) {
++// 		ui_displayPathScreen("Pool cold key path", &ctx->poolColdKeyPathSpec, this_fn);
++// 	}
++// 	UI_STEP(UI_STEP_DISPLAY_POOL_ID) {
++// 		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
++// 		bip44_pathToKeyHash(&ctx->poolColdKeyPathSpec, poolKeyHash, SIZEOF(poolKeyHash));
++
++// 		ui_displayBech32Screen(
++// 		        "Pool ID",
++// 		        "pool_vk",
++// 		        poolKeyHash, SIZEOF(poolKeyHash),
++// 		        this_fn
++// 		);
++// 	}
++// 	UI_STEP(UI_STEP_DISPLAY_KES_PUBLIC_KEY) {
++// 		ui_displayBech32Screen(
++// 		        "KES public key",
++// 		        "kes_vk",
++// 		        ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey),
++// 		        this_fn
++// 		);
++// 	}
++// 	UI_STEP(UI_STEP_DISPLAY_KES_PERIOD) {
++// 		char kesPeriodString[50] = {0};
++// 		explicit_bzero(kesPeriodString, SIZEOF(kesPeriodString));
++// 		str_formatUint64(ctx->kesPeriod, kesPeriodString, SIZEOF(kesPeriodString));
++// 		ui_displayPaginatedText(
++// 		        "KES period",
++// 		        kesPeriodString,
++// 		        this_fn
++// 		);
++// 	}
++// 	UI_STEP(UI_STEP_DISPLAY_ISSUE_COUNTER) {
++// 		char issueCounterString[50] = {0};
++// 		explicit_bzero(issueCounterString, SIZEOF(issueCounterString));
++// 		str_formatUint64(ctx->issueCounter, issueCounterString, SIZEOF(issueCounterString));
++// 		ui_displayPaginatedText(
++// 		        "Issue counter",
++// 		        issueCounterString,
++// 		        this_fn
++// 		);
++// 	}
++// 	UI_STEP(UI_STEP_CONFIRM) {
++// 		ui_displayPrompt(
++// 		        "Confirm",
++// 		        "operational certificate?",
++// 		        this_fn,
++// 		        respond_with_user_reject
++// 		);
++// 	}
++// 	UI_STEP(UI_STEP_RESPOND) {
++// 		ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
++
++// 		io_send_buf(SUCCESS, (uint8_t*) &ctx->signature, SIZEOF(ctx->signature));
++// 		ui_idle();
++
++// 	}
++// 	UI_STEP_END(UI_STEP_INVALID);
++// }
+diff --git a/src/signOpCert.h b/src/signOpCert.h
+index af84479..e7cf564 100644
+--- a/src/signOpCert.h
++++ b/src/signOpCert.h
+@@ -1,23 +1,23 @@
+-#ifndef H_CARDANO_APP_SIGN_OP_CERT
+-#define H_CARDANO_APP_SIGN_OP_CERT
++// #ifndef H_CARDANO_APP_SIGN_OP_CERT
++// #define H_CARDANO_APP_SIGN_OP_CERT
+ 
+-#include "common.h"
+-#include "handlers.h"
+-#include "bip44.h"
+-#include "keyDerivation.h"
++// #include "common.h"
++// #include "handlers.h"
++// #include "bip44.h"
++// #include "keyDerivation.h"
+ 
+-handler_fn_t signOpCert_handleAPDU;
++// handler_fn_t signOpCert_handleAPDU;
+ 
+-#define KES_PUBLIC_KEY_LENGTH 32
++// #define KES_PUBLIC_KEY_LENGTH 32
+ 
+-typedef struct {
+-	int16_t responseReadyMagic;
+-	uint8_t kesPublicKey[KES_PUBLIC_KEY_LENGTH];
+-	uint64_t kesPeriod;
+-	uint64_t issueCounter;
+-	bip44_path_t poolColdKeyPathSpec;
+-	uint8_t signature[64];
+-	int ui_step;
+-} ins_sign_op_cert_context_t;
++// typedef struct {
++// 	int16_t responseReadyMagic;
++// 	uint8_t kesPublicKey[KES_PUBLIC_KEY_LENGTH];
++// 	uint64_t kesPeriod;
++// 	uint64_t issueCounter;
++// 	bip44_path_t poolColdKeyPathSpec;
++// 	uint8_t signature[64];
++// 	int ui_step;
++// } ins_sign_op_cert_context_t;
+ 
+-#endif // H_CARDANO_APP_SIGN_OP_CERT
+\ No newline at end of file
++// #endif // H_CARDANO_APP_SIGN_OP_CERT
+\ No newline at end of file
+diff --git a/src/state.h b/src/state.h
+index 8549086..79504b8 100644
+--- a/src/state.h
++++ b/src/state.h
+@@ -6,7 +6,7 @@
+ #include "deriveAddress.h"
+ #include "deriveNativeScriptHash.h"
+ #include "signTx.h"
+-#include "signOpCert.h"
++// #include "signOpCert.h"
+ 
+ 
+ typedef union {
+@@ -15,7 +15,7 @@ typedef union {
+ 	ins_derive_address_context_t deriveAddressContext;
+ 	ins_derive_native_script_hash_context_t deriveNativeScriptHashContext;
+ 	ins_sign_tx_context_t signTxContext;
+-	ins_sign_op_cert_context_t signOpCertContext;
++	// ins_sign_op_cert_context_t signOpCertContext;
+ } instructionState_t;
+ 
+ // Note(instructions are uint8_t but we have a special INS_NONE value
