@@ -1686,8 +1686,9 @@ security_policy_t policyForSignTxTotalCollateral()
 {
 	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
 
-	SHOW_IF(app_mode_expert());
-	ALLOW();
+	// showing protects against unlimited collateral loss
+	// if not present, we display a warning about unknown collateral
+	SHOW();
 }
 
 security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSigningMode)
