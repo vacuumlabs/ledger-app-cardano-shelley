@@ -387,6 +387,11 @@ security_policy_t policyForSignTxInit(
 	WARN_UNLESS(isNetworkUsual(networkId, protocolMagic));
 
 	WARN_IF(needsRunningScriptWarning(numCollateralInputs));
+
+	// these warnings are relevant for Plutus only, but the functions determining
+	// if a warning is needed are called from UI machines in signTx that are not
+	// specific for Plutus, so we rather want to keep them here
+	// instead of moving them to the switch above to be consistent
 	WARN_IF(needsMissingCollateralWarning(txSigningMode, numCollateralInputs));
 	WARN_IF(needsUnknownCollateralWarning(txSigningMode, numCollateralInputs));
 	WARN_IF(needsMissingScriptDataHashWarning(txSigningMode, includeScriptDataHash));
@@ -436,14 +441,13 @@ static bool is_addressBytes_suitable_for_tx_output(
 		// check address type and network identification
 		switch (addressType) {
 
-		case BYRON:
-			CHECK(extractProtocolMagic(addressBuffer, addressSize) == protocolMagic);
-			break;
-
 		case REWARD_KEY:
 		case REWARD_SCRIPT:
 			// outputs may not contain reward addresses
 			return false;
+
+		case BYRON:
+			CHECK(extractProtocolMagic(addressBuffer, addressSize) == protocolMagic);
 			break;
 
 		default: {
@@ -502,7 +506,6 @@ static bool contains_forbidden_plutus_elements(
 
 		default:
 			return true;
-			break;
 		}
 	}
 
@@ -568,14 +571,13 @@ static bool is_addressParams_suitable_for_tx_output(
 	// and check network identification as appropriate
 	switch (params->type) {
 
-	case BYRON:
-		CHECK(params->protocolMagic == protocolMagic);
-		break;
-
 	case REWARD_KEY:
 	case REWARD_SCRIPT:
 		// outputs must not contain reward addresses (true not only for HW wallets)
 		return false;
+
+	case BYRON:
+		CHECK(params->protocolMagic == protocolMagic);
 		break;
 
 	default: // all Shelley types allowed in output
