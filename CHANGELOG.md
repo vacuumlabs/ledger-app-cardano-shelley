@@ -6,7 +6,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [4.1.2](TBD) - [TBD]
+## [5.0.0](TBD) - [TBD]
+
+Support for Babbage era
+
+### Added
+
+- support for all new Babbage era transaction elements
+
+### Changed
+
+- updated tickers for native tokens
+- minor UI changes (e.g. Cardano logo added to the initial screen)
+
+
+## [4.1.2](https://github.com/LedgerHQ/app-cardano/compare/v4.0.0...LedgerHQ:4.1.2) - [July 4th 2022]
 
 Expert mode and token decimal places
 
