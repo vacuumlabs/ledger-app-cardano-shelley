@@ -228,27 +228,29 @@ bool bip44_isMultisigSpendingKeyPath(const bip44_path_t* pathSpec)
 // staking keys (one per account, should end with /2/0 after account)
 bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec)
 {
-	if (!bip44_containsAddress(pathSpec)) return false;
-	if (bip44_containsMoreThanAddress(pathSpec)) return false;
-	if (!bip44_hasShelleyPrefix(pathSpec)) return false;
-
-	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
-	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
-
-	return (bip44_getAddressValue(pathSpec) == 0);
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(bip44_containsAddress(pathSpec));
+	CHECK(!bip44_containsMoreThanAddress(pathSpec));
+	CHECK(bip44_hasShelleyPrefix(pathSpec));
+	CHECK(isHardened(bip44_getAccount(pathSpec)));
+	CHECK(bip44_getChainTypeValue(pathSpec) == CARDANO_CHAIN_STAKING_KEY);
+	CHECK(bip44_getAddressValue(pathSpec) == 0); // other values might be allowed in the future
+	return true;
+#undef CHECK
 }
 
 // multisig staking keys
 bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec)
 {
-	if (!bip44_containsAddress(pathSpec)) return false;
-	if (bip44_containsMoreThanAddress(pathSpec)) return false;
-	if (!bip44_hasMultisigWalletKeyPrefix(pathSpec)) return false;
-
-	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
-	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
-
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(bip44_containsAddress(pathSpec));
+	CHECK(!bip44_containsMoreThanAddress(pathSpec));
+	CHECK(bip44_hasMultisigWalletKeyPrefix(pathSpec));
+	CHECK(isHardened(bip44_getAccount(pathSpec)));
+	CHECK(bip44_getChainTypeValue(pathSpec) == CARDANO_CHAIN_STAKING_KEY);
+	CHECK(!isHardened(bip44_getAddressValue(pathSpec)));
 	return true;
+#undef CHECK
 }
 
 bool bip44_isMintKeyPath(const bip44_path_t* pathSpec)
