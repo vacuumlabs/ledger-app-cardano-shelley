@@ -74,11 +74,11 @@ void getTxWitness(bip44_path_t* pathSpec,
 	#endif
 }
 
-void getCatalystVotingRegistrationSignature(bip44_path_t* pathSpec,
+void getGovernanceVotingRegistrationSignature(bip44_path_t* pathSpec,
         const uint8_t* payloadHashBuffer, size_t payloadHashSize,
         uint8_t* outBuffer, size_t outSize)
 {
-	ASSERT(payloadHashSize == CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH);
+	ASSERT(payloadHashSize == GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_HASH_LENGTH);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	#ifndef FUZZING
