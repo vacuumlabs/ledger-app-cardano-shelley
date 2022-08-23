@@ -137,7 +137,7 @@ uint32_t bip44_getColdKeyIndex(const bip44_path_t* pathSpec)
 	return pathSpec->path[BIP44_I_POOL_COLD_KEY];
 }
 
-bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
+static bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsAccount(pathSpec)) return false;
 	uint32_t account = bip44_getAccount(pathSpec);
@@ -145,7 +145,7 @@ bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec)
 	return unharden(account) <= MAX_REASONABLE_ACCOUNT;
 }
 
-bool bip44_hasReasonableMintPolicy(const bip44_path_t* pathSpec)
+static bool bip44_hasReasonableMintPolicy(const bip44_path_t* pathSpec)
 {
 	if (!bip44_isMintKeyPath(pathSpec)) return false;
 	uint32_t mintPolicyIndex = bip44_getMintPolicy(pathSpec);
@@ -154,7 +154,7 @@ bool bip44_hasReasonableMintPolicy(const bip44_path_t* pathSpec)
 	return unharden(mintPolicyIndex) <= MAX_REASONABLE_MINT_POLICY_INDEX;
 }
 
-bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec)
+static bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec)
 {
 	if (!bip44_isPoolColdKeyPath(pathSpec)) return false;
 	uint32_t coldKeyIndex = bip44_getColdKeyIndex(pathSpec);
@@ -197,7 +197,7 @@ uint32_t bip44_getAddressValue(const bip44_path_t* pathSpec)
 	return pathSpec->path[BIP44_I_ADDRESS];
 }
 
-bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec)
+static bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsAddress(pathSpec)) return false;
 	const uint32_t address = bip44_getAddressValue(pathSpec);

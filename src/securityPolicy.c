@@ -1743,7 +1743,7 @@ security_policy_t policyForCatalystRegistrationStakingKey(
 )
 {
 	DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
-	WARN_UNLESS(bip44_hasReasonableAccount(stakingKeyPath));
+	WARN_UNLESS(bip44_isPathReasonable(stakingKeyPath));
 
 	SHOW();
 }
