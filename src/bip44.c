@@ -182,14 +182,6 @@ uint32_t bip44_getChainTypeValue(const bip44_path_t* pathSpec)
 	return pathSpec->path[BIP44_I_CHAIN];
 }
 
-static bool bip44_hasValidChainTypeForAddress(const bip44_path_t* pathSpec)
-{
-	if (!bip44_containsChainType(pathSpec)) return false;
-	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
-
-	return (chainType == CARDANO_CHAIN_EXTERNAL) || (chainType == CARDANO_CHAIN_INTERNAL);
-}
-
 // Address
 
 bool bip44_containsAddress(const bip44_path_t* pathSpec)
@@ -210,19 +202,9 @@ static bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec)
 	return (address <= MAX_REASONABLE_ADDRESS);
 }
 
-// path is valid as the spending path in all addresses except REWARD
-bool bip44_isOrdinarySpendingKeyPath(const bip44_path_t* pathSpec)
+static bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 {
-	return bip44_hasOrdinaryWalletKeyPrefix(pathSpec) &&
-	       bip44_hasValidChainTypeForAddress(pathSpec) &&
-	       bip44_containsAddress(pathSpec);
-}
-
-bool bip44_isMultisigSpendingKeyPath(const bip44_path_t* pathSpec)
-{
-	return bip44_hasMultisigWalletKeyPrefix(pathSpec) &&
-	       bip44_hasValidChainTypeForAddress(pathSpec) &&
-	       bip44_containsAddress(pathSpec);
+	return (pathSpec->length > BIP44_I_ADDRESS + 1);
 }
 
 // staking keys (one per account, should end with /2/0 after account)
@@ -272,11 +254,6 @@ bool bip44_isPoolColdKeyPath(const bip44_path_t* pathSpec)
 	CHECK(isHardened(pathSpec->path[BIP44_I_POOL_COLD_KEY]));
 	return true;
 #undef CHECK
-}
-
-bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
-{
-	return (pathSpec->length > BIP44_I_ADDRESS + 1);
 }
 
 // returns the length of the resulting string

@@ -69,13 +69,9 @@ uint32_t bip44_getAccount(const bip44_path_t* pathSpec);
 bool bip44_containsChainType(const bip44_path_t* pathSpec);
 
 bool bip44_containsAddress(const bip44_path_t* pathSpec);
-bool bip44_isOrdinarySpendingKeyPath(const bip44_path_t* pathSpec);
-bool bip44_isMultisigSpendingKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec);
 bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec);
-
-bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
 
 bool bip44_isMintKeyPath(const bip44_path_t* pathSpec);
 
