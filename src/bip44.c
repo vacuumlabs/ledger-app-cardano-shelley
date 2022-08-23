@@ -45,6 +45,12 @@ bool isHardened(uint32_t value)
 	return value == (value | HARDENED_BIP32);
 }
 
+uint32_t harden(uint32_t value)
+{
+	ASSERT(!isHardened(value));
+	return value | HARDENED_BIP32;
+}
+
 uint32_t unharden(uint32_t value)
 {
 	ASSERT(isHardened(value));
@@ -56,8 +62,8 @@ bool bip44_hasByronPrefix(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
-	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_BYRON | HARDENED_BIP32));
-	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == harden(PURPOSE_BYRON));
+	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == harden(ADA_COIN_TYPE));
 	return true;
 #undef CHECK
 }
@@ -67,8 +73,8 @@ bool bip44_hasShelleyPrefix(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
-	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_SHELLEY | HARDENED_BIP32));
-	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == harden(PURPOSE_SHELLEY));
+	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == harden(ADA_COIN_TYPE));
 	return true;
 #undef CHECK
 }
@@ -84,8 +90,8 @@ bool bip44_hasMultisigWalletKeyPrefix(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
-	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_MULTISIG | HARDENED_BIP32));
-	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == harden(PURPOSE_MULTISIG));
+	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == harden(ADA_COIN_TYPE));
 	return true;
 #undef CHECK
 }
@@ -95,8 +101,8 @@ bool bip44_hasMintKeyPrefix(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
-	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_MINT | HARDENED_BIP32));
-	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == harden(PURPOSE_MINT));
+	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == harden(ADA_COIN_TYPE));
 	return true;
 #undef CHECK
 }
@@ -106,8 +112,8 @@ bool bip44_hasPoolColdKeyPrefix(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
-	CHECK(pathSpec->path[BIP44_I_PURPOSE] == (PURPOSE_POOL_COLD_KEY | HARDENED_BIP32));
-	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == (ADA_COIN_TYPE | HARDENED_BIP32));
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == harden(PURPOSE_POOL_COLD_KEY));
+	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == harden(ADA_COIN_TYPE));
 	return true;
 #undef CHECK
 }
@@ -250,7 +256,7 @@ bool bip44_isMintKeyPath(const bip44_path_t* pathSpec)
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(pathSpec->length == BIP44_I_MINT_POLICY + 1);
 	CHECK(bip44_hasMintKeyPrefix(pathSpec));
-	CHECK(pathSpec->path[BIP44_I_MINT_POLICY] >= HARDENED_BIP32);
+	CHECK(isHardened(pathSpec->path[BIP44_I_MINT_POLICY]));
 	return true;
 #undef CHECK
 }
@@ -260,8 +266,8 @@ bool bip44_isPoolColdKeyPath(const bip44_path_t* pathSpec)
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(pathSpec->length == BIP44_I_POOL_COLD_KEY + 1);
 	CHECK(bip44_hasPoolColdKeyPrefix(pathSpec));
-	CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY_USECASE] == 0 + HARDENED_BIP32);
-	CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY] >= HARDENED_BIP32);
+	CHECK(pathSpec->path[BIP44_I_POOL_COLD_KEY_USECASE] == harden(0));
+	CHECK(isHardened(pathSpec->path[BIP44_I_POOL_COLD_KEY]));
 	return true;
 #undef CHECK
 }
@@ -306,8 +312,8 @@ size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
 	for (size_t i = 0; i < pathSpec->length; i++) {
 		const uint32_t value = pathSpec->path[i];
 
-		if ((value & HARDENED_BIP32) == HARDENED_BIP32) {
-			WRITE("/%u'", (value & ~HARDENED_BIP32));
+		if (isHardened(value)) {
+			WRITE("/%u'", unharden(value));
 		} else {
 			WRITE("/%u", value);
 		}

@@ -34,7 +34,7 @@ bool violatesSingleAccountOrStoreIt(const bip44_path_t* path)
 			return true;
 		}
 		const bool combinesByronAndShelley = singleAccountData->isByron != isByron;
-		const bool combinationAllowed = (storedAccount == 0 + HARDENED_BIP32);
+		const bool combinationAllowed = (storedAccount == harden(0));
 		if (combinesByronAndShelley && !combinationAllowed) {
 			return true;
 		}
