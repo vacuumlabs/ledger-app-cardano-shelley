@@ -7,7 +7,7 @@ void getTxWitness(bip44_path_t* pathSpec,
                   const uint8_t* txHashBuffer, size_t txHashSize,
                   uint8_t* outBuffer, size_t outSize);
 
-void getCatalystVotingRegistrationSignature(bip44_path_t* pathSpec,
+void getGovernanceVotingRegistrationSignature(bip44_path_t* pathSpec,
         const uint8_t* payloadHashBuffer, size_t payloadHashSize,
         uint8_t* outBuffer, size_t outSize);
 

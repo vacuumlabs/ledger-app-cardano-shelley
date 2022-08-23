@@ -10,7 +10,7 @@
 #include "signTxMint.h"
 #include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
-#include "signTxCatalystRegistration.h"
+#include "signTxGovernanceVotingRegistration.h"
 #include "signTxAuxData.h"
 
 // the signing mode significantly affects restrictions on tx being signed
@@ -26,7 +26,7 @@ typedef enum {
 	SIGN_STAGE_NONE = 0,
 	SIGN_STAGE_INIT = 23,
 	SIGN_STAGE_AUX_DATA = 24,
-	SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE = 25,
+	SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE = 25,
 	SIGN_STAGE_BODY_INPUTS = 26,
 	SIGN_STAGE_BODY_OUTPUTS = 27,
 	SIGN_STAGE_BODY_OUTPUTS_SUBMACHINE = 28,
@@ -121,7 +121,7 @@ typedef struct {
 	aux_data_hash_builder_t auxDataHashBuilder;
 
 	struct {
-		catalyst_registration_context_t catalyst_registration_subctx;
+		governance_voting_registration_context_t governance_voting_registration_subctx;
 	} stageContext;
 } ins_sign_tx_aux_data_context_t;
 

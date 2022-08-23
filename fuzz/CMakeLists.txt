@@ -96,7 +96,7 @@ set(SOURCES
 		../src/signTxOutput.c
 		../src/state.c
 		../src/signTxPoolRegistration.c
-		../src/signTxCatalystRegistration.c
+		../src/signTxGovernanceVotingRegistration.c
 		../src/signTxUtils.c
 		../src/textUtils.c
 		../src/txHashBuilder.c

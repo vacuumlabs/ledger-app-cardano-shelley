@@ -1530,10 +1530,10 @@ security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType)
 		SHOW_IF(app_mode_expert());
 		ALLOW();
 
-	case AUX_DATA_TYPE_CATALYST_REGISTRATION:
+	case AUX_DATA_TYPE_GOVERNANCE_VOTING_REGISTRATION:
 		// this is the policy for the initial prompt
 		// details of the registration are governed by separate policies
-		// (see policyForCatalystRegistration...)
+		// (see policyForGovernanceVotingRegistration...)
 		SHOW();
 		break;
 
@@ -1745,7 +1745,7 @@ security_policy_t policyForSignTxConfirm()
 	PROMPT();
 }
 
-security_policy_t policyForCatalystRegistrationVotingRewardsAddressParams(
+security_policy_t policyForGovernanceVotingRegistrationVotingRewardsAddressParams(
         const addressParams_t* params,
         const uint8_t networkId
 )
@@ -1759,7 +1759,7 @@ security_policy_t policyForCatalystRegistrationVotingRewardsAddressParams(
 	SHOW();
 }
 
-security_policy_t policyForCatalystRegistrationStakingKey(
+security_policy_t policyForGovernanceVotingRegistrationStakingKey(
         const bip44_path_t* stakingKeyPath
 )
 {
@@ -1769,17 +1769,17 @@ security_policy_t policyForCatalystRegistrationStakingKey(
 	SHOW();
 }
 
-security_policy_t policyForCatalystRegistrationVotingKey()
+security_policy_t policyForGovernanceVotingRegistrationVotingKey()
 {
 	SHOW();
 }
 
-security_policy_t policyForCatalystRegistrationNonce()
+security_policy_t policyForGovernanceVotingRegistrationNonce()
 {
 	SHOW();
 }
 
-security_policy_t policyForCatalystRegistrationConfirm()
+security_policy_t policyForGovernanceVotingRegistrationConfirm()
 {
 	PROMPT();
 }
