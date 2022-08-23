@@ -93,6 +93,9 @@ security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
 
 	case PATH_POOL_COLD_KEY:
 
+	case PATH_GOVERNANCE_VOTING_ACCOUNT:
+	case PATH_GOVERNANCE_VOTING_KEY:
+
 		ALLOW();
 		break;
 
@@ -121,24 +124,51 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 
 	case PATH_ORDINARY_ACCOUNT:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
-		// in expert mode, do not export keys without permission
-		PROMPT_IF(app_mode_expert());
-
 		// show Byron paths
 		PROMPT_UNLESS(bip44_hasShelleyPrefix(pathSpec));
+
+		// in expert mode, do not export keys without permission
+		PROMPT_IF(app_mode_expert());
 		// do not bother the user with confirmation --- required by LedgerLive to improve UX
+		ALLOW();
+		break;
+
+	case PATH_MULTISIG_ACCOUNT:
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+		// ask for confirmation, multisig users need high awareness of what keys are being used
+		PROMPT();
+		break;
+
+	case PATH_MINT_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+		// used rarely, so making the user aware of the export does not hamper him
+		// but could be relaxed to expert mode if needed
+		PROMPT();
+		break;
+
+	case PATH_POOL_COLD_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+		// used rarely, so making the user aware of the export does not hamper him
+		// but could be relaxed to expert mode if needed
+		PROMPT();
+		break;
+
+	case PATH_GOVERNANCE_VOTING_ACCOUNT:
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+
+		// in expert mode, do not export keys without permission
+		PROMPT_IF(app_mode_expert());
+		// do not bother the user with confirmation, similar to ordinary account
 		ALLOW();
 		break;
 
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
-	case PATH_MULTISIG_ACCOUNT:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
-	case PATH_MINT_KEY:
-	case PATH_POOL_COLD_KEY:
+	case PATH_GOVERNANCE_VOTING_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
-		// ask for permission
+		// ask for permission (it is unusual if client asks this instead of the account key)
 		PROMPT();
 		break;
 
@@ -162,6 +192,8 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_MINT_KEY:
+	case PATH_GOVERNANCE_VOTING_ACCOUNT:
+	case PATH_GOVERNANCE_VOTING_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 		// we do not show these paths since there may be many of them
 		ALLOW();
