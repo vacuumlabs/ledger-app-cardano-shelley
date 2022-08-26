@@ -141,6 +141,50 @@ void auxDataHashBuilder_governanceVotingRegistration_addVotingKey(
 	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_KEY;
 }
 
+void auxDataHashBuilder_governanceVotingRegistration_enterDelegations(
+        aux_data_hash_builder_t* builder,
+        size_t numDelegations
+)
+{
+	_TRACE("state = %d", builder->state);
+
+	builder->remainingDelegations = numDelegations;
+
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_INIT);
+	{
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_KEY_VOTING_KEY);
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_ARRAY, numDelegations);
+	}
+	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_DELEGATIONS;
+}
+
+void auxDataHashBuilder_governanceVotingRegistration_addDelegation(
+        aux_data_hash_builder_t* builder,
+        const uint8_t* votingPubKeyBuffer, size_t votingPubKeySize,
+        uint64_t proportion
+)
+{
+	_TRACE("state = %d", builder->state);
+
+	ASSERT(votingPubKeySize < BUFFER_SIZE_PARANOIA);
+
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_DELEGATIONS);
+	ASSERT(builder->remainingDelegations > 0);
+
+	builder->remainingDelegations--;
+
+	{
+		// TODO maybe without the array, I've asked in https://input-output-rnd.slack.com/archives/G01P2DUE01F/p1662450001054179
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_ARRAY, 2);
+		{
+			ASSERT(votingPubKeySize == PUBLIC_KEY_SIZE);
+			APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_BYTES, votingPubKeySize);
+			APPEND_DATA(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, votingPubKeyBuffer, votingPubKeySize);
+		}
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, proportion);
+	}
+}
+
 void auxDataHashBuilder_governanceVotingRegistration_addStakingKey(
         aux_data_hash_builder_t* builder,
         const uint8_t* stakingPubKeyBuffer, size_t stakingPubKeySize
@@ -150,7 +194,10 @@ void auxDataHashBuilder_governanceVotingRegistration_addStakingKey(
 
 	ASSERT(stakingPubKeySize < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_KEY);
+	ASSERT(
+	        builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_KEY ||
+	        (builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_DELEGATIONS && builder->remainingDelegations == 0)
+	);
 	{
 		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_KEY_STAKING_KEY);
 		{
@@ -198,13 +245,31 @@ void auxDataHashBuilder_governanceVotingRegistration_addNonce(
 	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE;
 }
 
+void auxDataHashBuilder_governanceVotingRegistration_addVotingPurpose(
+        aux_data_hash_builder_t* builder,
+        uint64_t votingPurpose
+)
+{
+	_TRACE("state = %d", builder->state);
+
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE);
+	{
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_KEY_VOTING_PURPOSE);
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, votingPurpose);
+	}
+	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_PURPOSE;
+}
+
 void auxDataHashBuilder_governanceVotingRegistration_finalizePayload(aux_data_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
 {
 	_TRACE("state = %d", builder->state);
 
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE);
+	ASSERT(
+	        builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE ||
+	        builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_PURPOSE
+	);
 
 	ASSERT(outSize == GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_HASH_LENGTH);
 	{
@@ -221,7 +286,10 @@ void auxDataHashBuilder_governanceVotingRegistration_addSignature(
 
 	ASSERT(signatureSize < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE);
+	ASSERT(
+	        builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE ||
+	        builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_PURPOSE
+	);
 	{
 		APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_UNSIGNED, METADATA_KEY_GOVERNANCE_VOTING_SIGNATURE);
 		{
