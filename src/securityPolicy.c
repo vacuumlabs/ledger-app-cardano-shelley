@@ -1763,6 +1763,35 @@ security_policy_t policyForSignTxConfirm()
 	PROMPT();
 }
 
+security_policy_t policyForGovernanceVotingRegistrationVotingKey()
+{
+	SHOW();
+}
+
+security_policy_t policyForGovernanceVotingRegistrationVotingKeyPath(
+        bip44_path_t* path,
+        governance_voting_registration_format_t format
+)
+{
+	// encourages people to use the new format,
+	// so that we can drop support for CIP15 sooner
+	DENY_UNLESS(format == CIP36);
+
+	DENY_UNLESS(bip44_classifyPath(path) == PATH_GOVERNANCE_VOTING_KEY);
+	WARN_UNLESS(bip44_isPathReasonable(path));
+	SHOW();
+}
+
+security_policy_t policyForGovernanceVotingRegistrationStakingKey(
+        const bip44_path_t* stakingKeyPath
+)
+{
+	DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
+	WARN_UNLESS(bip44_isPathReasonable(stakingKeyPath));
+
+	SHOW();
+}
+
 security_policy_t policyForGovernanceVotingRegistrationVotingRewardsAddressParams(
         const addressParams_t* params,
         const uint8_t networkId
@@ -1777,24 +1806,16 @@ security_policy_t policyForGovernanceVotingRegistrationVotingRewardsAddressParam
 	SHOW();
 }
 
-security_policy_t policyForGovernanceVotingRegistrationStakingKey(
-        const bip44_path_t* stakingKeyPath
-)
-{
-	DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
-	WARN_UNLESS(bip44_isPathReasonable(stakingKeyPath));
-
-	SHOW();
-}
-
-security_policy_t policyForGovernanceVotingRegistrationVotingKey()
-{
-	SHOW();
-}
-
 security_policy_t policyForGovernanceVotingRegistrationNonce()
 {
 	SHOW();
+}
+
+security_policy_t policyForGovernanceVotingRegistrationVotingPurpose()
+{
+	// since it will only be used for Catalyst, we don't show this value to non-experts
+	SHOW_IF(app_mode_expert());
+	ALLOW();
 }
 
 security_policy_t policyForGovernanceVotingRegistrationConfirm()

@@ -429,8 +429,8 @@ static bip44_path_type_t bip44_classifyGovernanceVotingPath(const bip44_path_t* 
 	}
 	case 5: {
 		return bip44_isGovernanceVotingKeyPath(pathSpec) ?
-				PATH_GOVERNANCE_VOTING_KEY :
-				PATH_INVALID;
+		       PATH_GOVERNANCE_VOTING_KEY :
+		       PATH_INVALID;
 	}
 	default:
 		return PATH_INVALID;

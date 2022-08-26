@@ -2405,7 +2405,7 @@ static void signTx_handleWitness_ui_runStep()
 			advanceStage();
 		}
 	}
-	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
+	UI_STEP_END(HANDLE_WITNESS_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
