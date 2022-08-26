@@ -91,14 +91,27 @@ void auxDataHashBuilder_init(
 	builder->state = AUX_DATA_HASH_BUILDER_INIT;
 }
 
-void auxDataHashBuilder_governanceVotingRegistration_enter(aux_data_hash_builder_t* builder)
+void auxDataHashBuilder_governanceVotingRegistration_enter(
+        aux_data_hash_builder_t* builder,
+        governance_voting_registration_format_t format
+)
 {
 	_TRACE("state = %d", builder->state);
 
+	ASSERT(format == CIP15 || format == CIP36);
+	builder->governanceVotingRegistrationData.format = format;
+
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_INIT);
 	{
+		// for governance voting, in the completed auxiliary data
+		// there is a map with two entries 61284 and 61285
 		APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_MAP, 2);
+		// however, the data being signed is a map with a single entry 61284
+		APPEND_CBOR(HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_MAP, 1);
+		// the remainder of the payload serialization shares the cbor tokens
+		// with the overall auxiliary data CBOR
 	}
+
 	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_REGISTRATION_INIT;
 }
 
@@ -108,14 +121,10 @@ void auxDataHashBuilder_governanceVotingRegistration_enterPayload(aux_data_hash_
 
 	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_REGISTRATION_INIT);
 	{
-		// map {61284: <payload>} is being hashed and signed in the governance voting registration
-		// this instruction introduces the beginning of this single-key dictionary
-		// the remainder of the payload serialization shares the tokens with the overall auxiliary data CBOR
-		APPEND_CBOR(HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_MAP, 1)
-
 		// Enter the governance voting key registration payload inner map
+		size_t mapSize = (builder->governanceVotingRegistrationData.format == CIP36) ? 5 : 4;
 		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, METADATA_KEY_GOVERNANCE_VOTING_REGISTRATION_PAYLOAD);
-		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_MAP, 4);
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_MAP, mapSize);
 	}
 	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_INIT;
 }
@@ -141,6 +150,49 @@ void auxDataHashBuilder_governanceVotingRegistration_addVotingKey(
 	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_KEY;
 }
 
+void auxDataHashBuilder_governanceVotingRegistration_enterDelegations(
+        aux_data_hash_builder_t* builder,
+        size_t numDelegations
+)
+{
+	_TRACE("state = %d", builder->state);
+
+	builder->governanceVotingRegistrationData.remainingDelegations = numDelegations;
+
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_INIT);
+	{
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_KEY_VOTING_KEY);
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_ARRAY, numDelegations);
+	}
+	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_DELEGATIONS;
+}
+
+void auxDataHashBuilder_governanceVotingRegistration_addDelegation(
+        aux_data_hash_builder_t* builder,
+        const uint8_t* votingPubKeyBuffer, size_t votingPubKeySize,
+        uint32_t weight
+)
+{
+	_TRACE("state = %d", builder->state);
+
+	ASSERT(votingPubKeySize < BUFFER_SIZE_PARANOIA);
+
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_DELEGATIONS);
+	ASSERT(builder->governanceVotingRegistrationData.remainingDelegations > 0);
+
+	builder->governanceVotingRegistrationData.remainingDelegations--;
+
+	{
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_ARRAY, 2);
+		{
+			ASSERT(votingPubKeySize == PUBLIC_KEY_SIZE);
+			APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_BYTES, votingPubKeySize);
+			APPEND_DATA(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, votingPubKeyBuffer, votingPubKeySize);
+		}
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, weight);
+	}
+}
+
 void auxDataHashBuilder_governanceVotingRegistration_addStakingKey(
         aux_data_hash_builder_t* builder,
         const uint8_t* stakingPubKeyBuffer, size_t stakingPubKeySize
@@ -150,7 +202,21 @@ void auxDataHashBuilder_governanceVotingRegistration_addStakingKey(
 
 	ASSERT(stakingPubKeySize < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_KEY);
+	switch(builder->state) {
+
+	case AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_KEY:
+		// ok
+		break;
+
+	case AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_DELEGATIONS:
+		ASSERT(builder->governanceVotingRegistrationData.remainingDelegations == 0);
+		break;
+
+	default:
+		// should not happen
+		ASSERT(false);
+	}
+
 	{
 		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_KEY_STAKING_KEY);
 		{
@@ -198,13 +264,31 @@ void auxDataHashBuilder_governanceVotingRegistration_addNonce(
 	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE;
 }
 
+void auxDataHashBuilder_governanceVotingRegistration_addVotingPurpose(
+        aux_data_hash_builder_t* builder,
+        uint64_t votingPurpose
+)
+{
+	_TRACE("state = %d", builder->state);
+
+	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE);
+	{
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_KEY_VOTING_PURPOSE);
+		APPEND_CBOR(HC_AUX_DATA | HC_GOVERNANCE_VOTING_PAYLOAD, CBOR_TYPE_UNSIGNED, votingPurpose);
+	}
+	builder->state = AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_PURPOSE;
+}
+
 void auxDataHashBuilder_governanceVotingRegistration_finalizePayload(aux_data_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
 {
 	_TRACE("state = %d", builder->state);
 
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE);
+	ASSERT(
+	        builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE ||
+	        builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_PURPOSE
+	);
 
 	ASSERT(outSize == GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_HASH_LENGTH);
 	{
@@ -221,7 +305,10 @@ void auxDataHashBuilder_governanceVotingRegistration_addSignature(
 
 	ASSERT(signatureSize < BUFFER_SIZE_PARANOIA);
 
-	ASSERT(builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE);
+	ASSERT(
+	        builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_NONCE ||
+	        builder->state == AUX_DATA_HASH_BUILDER_IN_GOVERNANCE_VOTING_PAYLOAD_VOTING_PURPOSE
+	);
 	{
 		APPEND_CBOR(HC_AUX_DATA, CBOR_TYPE_UNSIGNED, METADATA_KEY_GOVERNANCE_VOTING_SIGNATURE);
 		{

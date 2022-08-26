@@ -4,7 +4,7 @@
 
 Cardano uses a sidechain for its governance voting. One needs to "register" to participate on this sidechain by submitting a registration transaction on the Cardano blockchain. This is done by submitting a transaction with specific auxiliary data attached to the transaction body. These auxiliary data contain a signature by user's staking key, hence serialization of the it by Ledger is required which after confirming by the user returns that signature for the client software to be able to assemble the full serialized transaction.
 
-For more details about governance voting registration see [CIP-0015](https://github.com/cardano-foundation/CIPs/blob/master/CIP-0015/CIP-0015.md)
+For more details about governance voting registration see [CIP-0036](https://cips.cardano.org/cips/cip36/).
 
 ---
 
@@ -21,7 +21,22 @@ All but the last response are empty. The last response contains the overall auxi
 
 ---
 
+**Init**
+
+P2 = `0x36`
+
+*Data*
+
+|Field| Length | Comments|
+|-----|--------|---------|
+|Governance voting registration format |  1 | 0x01 or 0x02 for CIP15 and CIP36, respectively|
+|Number of delegations                 |  4 | big endian |
+
+---
+
 **Voting key**
+
+A single APDU with voting key is sent if the number of delegations specified in the init APDU is 0 (otherwise no such APDU is allowed).
 
 P2 = `0x30`
 
@@ -29,7 +44,23 @@ P2 = `0x30`
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Voting public key |  32 | |
+|Key type                                               |   1 | 0x01 or 0x02 if a 32-byte key or its derivation path follows |
+|Voting public key: bytestring or BIP44 derivation path |     | (depends on previous line) |
+
+
+**Delegation**
+
+The number of delegation APDUs must be equal to the number of delegations specified in the init APDU.
+
+P2 = `0x37`
+
+*Data*
+
+|Field| Length | Comments|
+|-----|--------|---------|
+|Key type                                               |   1 | 0x01 or 0x02 if a 32-byte key or its derivation path follows |
+|Voting public key: bytestring or BIP44 derivation path |     | (depends on previous line) |
+|Weight                                                 |   4 | big endian |
 
 ---
 
@@ -68,6 +99,22 @@ P2 = `0x33`
 |Field| Length | Comments|
 |-----|--------|--------|
 |Nonce| 8| Big endian|
+
+---
+
+**Voting purpose**
+
+For CIP36, this is optional; if not sent, voting purpose is set to the default 0.
+
+For CIP15, this is not allowed (and no voting purpose is serialized).
+
+P2 = `0x35`
+
+*Data*
+
+|Field         | Length | Comments  |
+|--------------|--------|-----------|
+|Voting purpose|       8| Big endian|
 
 ---
 
