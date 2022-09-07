@@ -2,15 +2,19 @@
 
 Cardano Ledger App for Ledger Nano S
 
-
 ## Building
+
+### Dependencies
+
+We recommend using the containerized build. See [Getting started](doc/build.md) for details.
 
 ### Loading the app
 
 `make load`
 
-Builds and loads the application into connected device. Just make sure to close the Ledger app on the device before running the command.
+Builds and loads the application into the connected device. Make sure to close the Ledger app on the device before running the command.
 
+Most common reason for a failed loading is the app taking too much space. Check `make size` (should be below 140K or so).
 
 ### Debug version
 
@@ -31,7 +35,7 @@ Make sure you have:
 - SDK >= 2.0.0
 - MCU >= 1.11
 
-Environment setup and developer documentation is sufficiently provided in Ledger’s [Read the Docs](https://developers.ledger.com/docs/nano-app/quickstart/).
+Environment setup and developer documentation is sufficiently provided in Ledger’s [Read the Docs](https://developers.ledger.com/docs/nano-app/start-here/).
 
 You want a debug version of the MCU firmware (but it blocks SDK firmware updates, so for the purpose of upgrading SDK, replace it temporarily with a non-debug one). Instructions for swapping MCU versions: https://github.com/LedgerHQ/ledger-dev-doc/blob/master/source/userspace/debugging.rst
 
@@ -91,10 +95,10 @@ Ledger computes a rolling hash of the serialized transaction body, but the body 
 ```javascript
        const logfile = `<content of the log file>`
        console.log(logfile.split('\n').filter((x) => x.includes('blake2b_256_append'))
-           .map((x) => x.split(' ')[1]).join(''))
+           .map((x) => x.split(' ')[3]).join(''))
 ```
-Replace `x.split(' ')[1]` with `x.split(' ')[3]` if you are running the tests in Speculos.
+Replace `x.split(' ')[3]` with `x.split(' ')[1]` if you are running the tests on the physical device instead of Speculos.
 
-WARNING: the output of tracing sometimes (although very rarely) gets slightly mangled (for instance, the output contains `blake2b_s56_append` instead of `blake2b_256_append`) and then the script above produces an incorrect result.
+WARNING: the output of tracing sometimes (although very rarely) gets slightly mangled on the physical device (for instance, the output contains `blake2b_s56_append` instead of `blake2b_256_append`) and then the script above produces an incorrect result.
 
 6. Analyze the obtained output via https://cbor.me. The result of the decoding is close to valid json and can be pretty-printed by https://jsonformatter.curiousconcept.com/ (replacing `h'` with `'` removes the errors).

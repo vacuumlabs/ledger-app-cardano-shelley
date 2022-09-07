@@ -16,9 +16,9 @@
 #*******************************************************************************
 
 APPNAME      = "Cardano ADA"
-APPVERSION_M = 4
-APPVERSION_N = 1
-APPVERSION_P = 2
+APPVERSION_M = 5
+APPVERSION_N = 0
+APPVERSION_P = 0
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 ifeq ($(BOLOS_SDK),)
@@ -37,14 +37,11 @@ endif
 #  Compiler  #
 ##############
 
-ifeq ($(TARGET_NAME),TARGET_NANOX)
-WERROR   := -Werror=return-type
-else
-WERROR   := -Werror=incompatible-pointer-types -Werror=return-type
-endif
+# based in part on https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags
+WERROR   := -Werror=incompatible-pointer-types -Werror=return-type -Werror=parentheses -Werror=format-security
 
 CC       := $(CLANGPATH)clang
-CFLAGS   += -std=gnu99 -Wall -Wextra -Wuninitialized $(WERROR)
+CFLAGS   += -std=gnu99 -Wall -Wextra -Wuninitialized -Wshadow -Wformat=2 -Wwrite-strings -Wundef -fno-common $(WERROR)
 
 AS       := $(GCCPATH)arm-none-eabi-gcc
 LD       := $(GCCPATH)arm-none-eabi-gcc

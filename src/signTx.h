@@ -39,10 +39,14 @@ typedef enum {
 	SIGN_STAGE_BODY_MINT = 35,
 	SIGN_STAGE_BODY_MINT_SUBMACHINE = 36,
 	SIGN_STAGE_BODY_SCRIPT_DATA_HASH = 37,
-	SIGN_STAGE_BODY_COLLATERALS = 38,
+	SIGN_STAGE_BODY_COLLATERAL_INPUTS = 38,
 	SIGN_STAGE_BODY_REQUIRED_SIGNERS = 39,
-	SIGN_STAGE_CONFIRM = 40,
-	SIGN_STAGE_WITNESSES = 41,
+	SIGN_STAGE_BODY_COLLATERAL_OUTPUT = 40,
+	SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE = 41,
+	SIGN_STAGE_BODY_TOTAL_COLLATERAL = 42,
+	SIGN_STAGE_BODY_REFERENCE_INPUTS = 43,
+	SIGN_STAGE_CONFIRM = 44,
+	SIGN_STAGE_WITNESSES = 45,
 } sign_tx_stage_t;
 
 enum {
@@ -50,10 +54,13 @@ enum {
 	SIGN_MAX_OUTPUTS = UINT16_MAX,
 	SIGN_MAX_CERTIFICATES = UINT16_MAX,
 	SIGN_MAX_REWARD_WITHDRAWALS = UINT16_MAX,
-	SIGN_MAX_COLLATERALS = UINT16_MAX,
+	SIGN_MAX_COLLATERAL_INPUTS = UINT16_MAX,
 	SIGN_MAX_REQUIRED_SIGNERS = UINT16_MAX,
+	SIGN_MAX_REFERENCE_INPUTS = UINT16_MAX,
 	SIGN_MAX_WITNESSES = SIGN_MAX_INPUTS + SIGN_MAX_OUTPUTS + SIGN_MAX_CERTIFICATES + SIGN_MAX_REWARD_WITHDRAWALS,
 };
+
+#define UI_INPUT_LABEL_SIZE 20
 
 typedef struct {
 	bool isStored;
@@ -93,8 +100,8 @@ typedef struct {
 } sign_tx_certificate_data_t;
 
 typedef struct {
-	uint8_t txHashBuffer[TX_HASH_LENGTH];
-	uint32_t parsedIndex;
+	tx_input_t input_data;
+	char label[UI_INPUT_LABEL_SIZE];
 } sign_tx_transaction_input_t;
 
 typedef struct {
@@ -138,12 +145,15 @@ typedef struct {
 	uint16_t currentWithdrawal;
 	uint16_t currentCollateral;
 	uint16_t currentRequiredSigner;
+	uint16_t currentReferenceInput;
 
 	bool feeReceived;
 	bool ttlReceived;
 	bool validityIntervalStartReceived;
 	bool mintReceived;
 	bool scriptDataHashReceived;
+	bool collateralOutputReceived;
+	bool totalCollateralReceived;
 
 	// TODO move these to commonTxData?
 	tx_hash_builder_t txHashBuilder;
@@ -157,8 +167,8 @@ typedef struct {
 		sign_tx_withdrawal_data_t withdrawal;
 		uint64_t validityIntervalStart;
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
-		sign_tx_transaction_input_t collateral;
 		sign_tx_required_signer_t requiredSigner;
+		uint64_t totalCollateral;
 	} stageData; // TODO rename to reflect single-APDU scope
 
 	union {
@@ -189,9 +199,14 @@ typedef struct {
 	bool includeValidityIntervalStart;
 	bool includeMint;
 	bool includeScriptDataHash;
-	uint16_t numCollaterals;
+	uint16_t numCollateralInputs;
 	uint16_t numRequiredSigners;
 	bool includeNetworkId;
+	bool includeCollateralOutput;
+	bool includeTotalCollateral;
+	uint64_t totalCollateral;
+	uint16_t numReferenceInputs;
+
 	uint16_t numWitnesses;
 
 	uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
@@ -209,6 +224,7 @@ typedef struct {
 	bool shouldDisplayTxid; // long bytestrings (e.g. datums in outputs) are better verified indirectly
 
 	int ui_step;
+	void (*ui_advanceState)();
 } ins_sign_tx_context_t;
 
 ins_sign_tx_aux_data_context_t* accessAuxDataContext();

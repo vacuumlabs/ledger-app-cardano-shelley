@@ -32,7 +32,7 @@ uint32_t bech32_polymod_step(uint32_t pre)
 	       (-((b >> 3) & 1) & 0x3d4233ddUL) ^ (-((b >> 4) & 1) & 0x2a1462b3UL);
 }
 
-static const char *charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
+static const char* charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 
 /** Encode a Bech32 string
  *
@@ -42,8 +42,8 @@ static const char *charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
  *      data :    Pointer to an array of 5-bit values.
  *      data_len: Length of the data array.
  */
-void bech32_encode_5bit(const char *hrp, const uint8_t *data,
-                        size_t data_len, char *output, size_t maxOutputSize)
+void bech32_encode_5bit(const char* hrp, const uint8_t* data,
+                        size_t data_len, char* output, size_t maxOutputSize)
 {
 	ASSERT(maxOutputSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(maxOutputSize >= strlen(hrp) + data_len + 8);
@@ -84,13 +84,13 @@ void bech32_encode_5bit(const char *hrp, const uint8_t *data,
 	APPEND_OUT(0);
 }
 
-size_t bech32_encode(const char *hrp, const uint8_t *bytes, size_t bytesSize,
-                     char *output, size_t maxOutputSize)
-{
-	// we are not supposed to use more for Cardano Shelley
-	// WARNING: increasing this would take more stack space, see data5bit definition below
-	const size_t MAX_BYTES = 65;
+// we are not supposed to use more for Cardano Shelley
+// WARNING: increasing this would take more stack space, see data5bit definition below
+#define MAX_BYTES 65
 
+size_t bech32_encode(const char* hrp, const uint8_t* bytes, size_t bytesSize,
+                     char* output, size_t maxOutputSize)
+{
 	ASSERT(bytesSize <= MAX_BYTES);
 	ASSERT(strlen(hrp) >= 1); // not allowed for bech32
 

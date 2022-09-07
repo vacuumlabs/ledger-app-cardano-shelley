@@ -385,7 +385,7 @@ void ui_displayStakingInfoScreen(
         ui_callback_fn_t callback
 )
 {
-	const char *heading = NULL;
+	const char* heading = NULL;
 	char stakingInfo[120] = {0};
 	explicit_bzero(stakingInfo, SIZEOF(stakingInfo));
 
@@ -834,31 +834,32 @@ void ui_displayIpPortScreen(
 }
 
 void ui_displayInputScreen(
-        const char* screenHeader,
         const sign_tx_transaction_input_t* input,
         ui_callback_fn_t callback)
 {
-	char txHex[2 * SIZEOF(input->txHashBuffer) + 1] = {0};
+	const tx_input_t* inputData = &input->input_data;
+	ASSERT(SIZEOF(inputData->txHashBuffer) == TX_HASH_LENGTH);
+	char txHex[2 * TX_HASH_LENGTH + 1] = {0};
 	explicit_bzero(txHex, SIZEOF(txHex));
 
 	size_t length = encode_hex(
-	                        input->txHashBuffer, SIZEOF(input->txHashBuffer),
+	                        inputData->txHashBuffer, TX_HASH_LENGTH,
 	                        txHex, SIZEOF(txHex)
 	                );
 	ASSERT(length == strlen(txHex));
-	ASSERT(length == 2 * SIZEOF(input->txHashBuffer));
+	ASSERT(length == 2 * TX_HASH_LENGTH);
 
-	// parsedIndex 32 bit (10) + separator (" / ") + utxo hash hex format + \0
+	// index 32 bit (10) + separator (" / ") + utxo hash hex format + \0
 	// + 1 byte to detect if everything has been written
-	char inputStr[10 + 3 + SIZEOF(input->txHashBuffer) * 2 + 1 + 1] = {0};
+	char inputStr[10 + 3 + TX_HASH_LENGTH * 2 + 1 + 1] = {0};
 	explicit_bzero(inputStr, SIZEOF(inputStr));
 
-	snprintf(inputStr, SIZEOF(inputStr), "%u / %s", input->parsedIndex, txHex);
+	snprintf(inputStr, SIZEOF(inputStr), "%u / %s", inputData->index, txHex);
 	// make sure all the information is displayed to the user
 	ASSERT(strlen(inputStr) + 1 < SIZEOF(inputStr));
 
 	ui_displayPaginatedText(
-	        screenHeader,
+	        input->label,
 	        inputStr,
 	        callback
 	);

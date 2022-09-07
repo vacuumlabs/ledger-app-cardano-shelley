@@ -118,7 +118,7 @@ void test_hex_nibble_parsing()
 void test_hex_parsing()
 {
 	struct {
-		char* hex;
+		const char* hex;
 		uint8_t raw;
 	} testVectors[] = {
 		{"ff", 0xff},

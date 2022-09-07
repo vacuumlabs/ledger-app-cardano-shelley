@@ -44,7 +44,7 @@
  * author:
  *	Paul Vixie, 1996.
  */
-void inet_ntop4 (const uint8_t *src, char *dst, size_t dstSize)
+void inet_ntop4 (const uint8_t* src, char* dst, size_t dstSize)
 {
 
 	ASSERT(dstSize >= IPV4_STR_SIZE_MAX);
@@ -61,7 +61,7 @@ void inet_ntop4 (const uint8_t *src, char *dst, size_t dstSize)
  * author:
  *	Paul Vixie, 1996.
  */
-void inet_ntop6 (const uint8_t *src, char *dst, size_t dstSize)
+void inet_ntop6 (const uint8_t* src, char* dst, size_t dstSize)
 {
 	STATIC_ASSERT(sizeof(size_t) >= 4, "bad size_t size");
 	STATIC_ASSERT(sizeof(unsigned int) >= 4, "bad unsigned int size");
