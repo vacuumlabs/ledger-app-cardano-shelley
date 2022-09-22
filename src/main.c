@@ -41,6 +41,7 @@ STATIC_ASSERT(CX_APILEVEL >= 9, "bad api level");
 
 static const int INS_NONE = -1;
 
+#ifdef HAVE_BAGL
 // ui_idle displays the main menu. Note that your app isn't required to use a
 // menu as its idle screen; you can define your own completely custom screen.
 void ui_idle(void)
@@ -63,6 +64,7 @@ void ui_idle(void)
 	STATIC_ASSERT(false);
 	#endif
 }
+#endif
 
 static const uint8_t CLA = 0xD7;
 
@@ -216,13 +218,18 @@ __attribute__((section(".boot"))) int main(void)
 	__asm volatile("cpsie i");
 
 	for (;;) {
+#ifdef HAVE_BAGL
 		UX_INIT();
+#endif // HAVE_BAGL
+#ifdef HAVE_NBGL
+		nbgl_objInit();
+#endif // HAVE_NBGL
 		os_boot();
 		BEGIN_TRY {
 			TRY {
 				io_seproxyhal_init();
 
-				#if defined(TARGET_NANOX)
+				#if defined(HAVE_BLE)
 				// grab the current plane mode setting
 				G_io_app.plane_mode = os_setting_get(OS_SETTING_PLANEMODE, NULL, 0);
 				#endif
