@@ -6,6 +6,7 @@
 #include "io.h"
 #include "utils.h"
 #include "securityPolicy.h"
+#include "ui.h"
 
 displayState_t displayState;
 
@@ -18,13 +19,14 @@ displayState_t displayState;
 // ux is a magic global variable implicitly referenced by the UX_ macros. Apps
 // should never need to reference it directly
 ux_state_t ux;
-#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
+#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2) || defined(TARGET_STAX)
 ux_state_t G_ux;
 bolos_ux_params_t G_ux_params;
 #endif
 
 STATIC_ASSERT(SIZEOF(uint8_t) == SIZEOF(char), "bad char size");
 
+#ifdef HAVE_BAGL
 void assert_uiPaginatedText_magic()
 {
 	ASSERT(paginatedTextState->initMagic == INIT_MAGIC_PAGINATED_TEXT);
@@ -216,6 +218,7 @@ void ui_displayPaginatedText(
 	}
 	#endif // HEADLESS
 }
+#endif
 
 void respond_with_user_reject()
 {
