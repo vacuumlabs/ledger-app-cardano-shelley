@@ -12,6 +12,7 @@ static ins_get_keys_context_t* ctx = &(instructionState.getKeysContext);
 // it should be set to this value at the beginning and after a UI state machine is finished
 static int UI_STEP_NONE = 0;
 
+// this is supposed to be called at the beginning of each APDU handler
 static inline void CHECK_STAGE(get_keys_stage_t expected)
 {
 	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);

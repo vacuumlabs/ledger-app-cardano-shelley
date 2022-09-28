@@ -402,9 +402,11 @@ static inline void checkForFinishedSubmachines()
 }
 
 // this is supposed to be called at the beginning of each APDU handler
-#define CHECK_STAGE(expected)\
-	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);\
+static inline void CHECK_STAGE(sign_tx_stage_t expected)
+{
+	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
 	VALIDATE(ctx->stage == expected, ERR_INVALID_STATE);
+}
 
 // ============================== INIT ==============================
 
@@ -2447,12 +2449,12 @@ static void signTx_handleWitnessAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 
 	{
 		// compute witness
-		TRACE("getTxWitness");
+		TRACE("getWitness");
 		TRACE("TX HASH");
 		TRACE_BUFFER(ctx->txHash, SIZEOF(ctx->txHash));
 		TRACE("END TX HASH");
 
-		getTxWitness(
+		getWitness(
 		        &WITNESS_CTX->stageData.witness.path,
 		        ctx->txHash, SIZEOF(ctx->txHash),
 		        WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature)
