@@ -1868,3 +1868,28 @@ security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 
 	DENY(); // should not be reached
 }
+
+security_policy_t policyForSignGovernanceVoteInit()
+{
+	PROMPT();
+}
+
+security_policy_t policyForSignGovernanceVoteConfirm()
+{
+	PROMPT();
+}
+
+security_policy_t policyForSignGovernanceVoteWitness(bip44_path_t* path)
+{
+	switch (bip44_classifyPath(path)) {
+	case PATH_GOVERNANCE_VOTING_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
+
+	default:
+		DENY();
+		break;
+	}
+}

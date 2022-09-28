@@ -402,9 +402,11 @@ static inline void checkForFinishedSubmachines()
 }
 
 // this is supposed to be called at the beginning of each APDU handler
-#define CHECK_STAGE(expected)\
-	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);\
+static inline void CHECK_STAGE(sign_tx_stage_t expected)
+{
+	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
 	VALIDATE(ctx->stage == expected, ERR_INVALID_STATE);
+}
 
 // ============================== INIT ==============================
 
@@ -2278,7 +2280,7 @@ static void signTx_handleConfirm_ui_runStep()
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
 		io_send_buf(SUCCESS, ctx->txHash, SIZEOF(ctx->txHash));
-		ui_displayBusy(); // displays dots, called after I/O to avoid freezing
+		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
 
 		advanceStage();
 	}
@@ -2355,7 +2357,7 @@ static void signTx_handleConfirmAPDU(uint8_t p2, const uint8_t* wireDataBuffer M
 
 static void _wipeWitnessSignature()
 {
-	// safer not to keep this in memory
+	// safer not to keep the signature in memory
 	explicit_bzero(WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature));
 	respond_with_user_reject();
 }
@@ -2398,7 +2400,7 @@ static void signTx_handleWitness_ui_runStep()
 		TRACE("Sending witness data");
 		TRACE_BUFFER(WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature));
 		io_send_buf(SUCCESS, WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature));
-		ui_displayBusy(); // needs to happen after I/O
+		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
 
 		WITNESS_CTX->currentWitness++;
 		if (WITNESS_CTX->currentWitness == ctx->numWitnesses) {
@@ -2447,12 +2449,12 @@ static void signTx_handleWitnessAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 
 	{
 		// compute witness
-		TRACE("getTxWitness");
+		TRACE("getWitness");
 		TRACE("TX HASH");
 		TRACE_BUFFER(ctx->txHash, SIZEOF(ctx->txHash));
 		TRACE("END TX HASH");
 
-		getTxWitness(
+		getWitness(
 		        &WITNESS_CTX->stageData.witness.path,
 		        ctx->txHash, SIZEOF(ctx->txHash),
 		        WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature)

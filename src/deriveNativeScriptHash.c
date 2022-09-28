@@ -211,7 +211,7 @@ static void deriveScriptHash_display_ui_runStep()
 
 	UI_STEP(DISPLAY_UI_STEP_RESPOND) {
 		io_send_buf(SUCCESS, NULL, 0);
-		ui_displayBusy(); // displays dots, called after I/O to avoid freezing
+		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
 	}
 
 	UI_STEP_END(DISPLAY_UI_STEP_INVALID);

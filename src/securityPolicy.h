@@ -203,4 +203,8 @@ security_policy_t policyForGovernanceVotingRegistrationNonce();
 security_policy_t policyForGovernanceVotingRegistrationVotingPurpose();
 security_policy_t policyForGovernanceVotingRegistrationConfirm();
 
+security_policy_t policyForSignGovernanceVoteInit();
+security_policy_t policyForSignGovernanceVoteConfirm();
+security_policy_t policyForSignGovernanceVoteWitness(bip44_path_t* path);
+
 #endif // H_CARDANO_APP_SECURITY_POLICY

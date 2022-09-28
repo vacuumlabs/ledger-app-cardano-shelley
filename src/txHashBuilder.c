@@ -32,8 +32,7 @@ The following macros and functions have dual purpose:
 
 static void blake2b_256_append_buffer_tx_body(
         blake2b_256_context_t* hashCtx,
-        const uint8_t* buffer,
-        size_t bufferSize
+        const uint8_t* buffer, size_t bufferSize
 )
 {
 	TRACE_BUFFER(buffer, bufferSize);
