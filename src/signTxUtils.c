@@ -10,7 +10,7 @@ void respondSuccessEmptyMsg()
 {
 	TRACE();
 	io_send_buf(SUCCESS, NULL, 0);
-	ui_displayBusy(); // displays dots, called after I/O to avoid freezing
+	ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
 }
 
 bool violatesSingleAccountOrStoreIt(const bip44_path_t* path)
