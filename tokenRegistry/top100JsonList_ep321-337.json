@@ -462,7 +462,7 @@
     "assetSubject": "f4d97191f857096b441a410c036f63d6697dde0c71d2755dd664e3024d4b41",
     "name": "Merkaba",
     "ticker": "MKA",
-    "decimals": 2,
+    "decimals": 5,
     "outUTXOs": 119036,
     "rank": 52,
     "comment": ""
