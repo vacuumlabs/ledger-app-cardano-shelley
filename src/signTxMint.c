@@ -1,12 +1,18 @@
 #include "signTxMint.h"
+#include "signTxMint_ui.h"
 #include "signTxUtils.h"
 #include "state.h"
 #include "uiHelpers.h"
 #include "utils.h"
-#include "uiScreens.h"
 #include "textUtils.h"
 #include "securityPolicy.h"
 #include "tokens.h"
+
+#ifdef HAVE_BAGL
+#include "uiScreens_bagl.h"
+#elif defined(HAVE_NBGL)
+#include "uiScreens_nbgl.h"
+#endif
 
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 
@@ -20,91 +26,6 @@ static inline void CHECK_STATE(sign_tx_mint_state_t expected)
 	mint_context_t* subctx = accessSubcontext();
 	TRACE("Mint submachine state: current %d, expected %d", subctx->state, expected);
 	VALIDATE(subctx->state == expected, ERR_INVALID_STATE);
-}
-
-static inline void advanceState()
-{
-	mint_context_t* subctx = accessSubcontext();
-	TRACE("Advancing mint state from: %d", subctx->state);
-
-	switch (subctx->state) {
-
-	case STATE_MINT_TOP_LEVEL_DATA:
-		ASSERT(subctx->numAssetGroups > 0);
-		ASSERT(subctx->currentAssetGroup == 0);
-		subctx->state = STATE_MINT_ASSET_GROUP;
-		break;
-
-	case STATE_MINT_ASSET_GROUP:
-		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
-
-		// we are going to receive token amounts for this group
-		ASSERT(subctx->numTokens > 0);
-		ASSERT(subctx->currentToken == 0);
-
-		subctx->state = STATE_MINT_TOKEN;
-		break;
-
-	case STATE_MINT_TOKEN:
-		// we are done with the current token group
-		ASSERT(subctx->currentToken == subctx->numTokens);
-		subctx->currentToken = 0;
-		ASSERT(subctx->currentAssetGroup < subctx->numAssetGroups);
-		subctx->currentAssetGroup++;
-
-		if (subctx->currentAssetGroup == subctx->numAssetGroups) {
-			// the whole token bundle has been received
-			subctx->state = STATE_MINT_CONFIRM;
-		} else {
-			subctx->state = STATE_MINT_ASSET_GROUP;
-		}
-		break;
-
-	case STATE_MINT_CONFIRM:
-		subctx->state = STATE_MINT_FINISHED;
-		break;
-
-	default:
-		ASSERT(false);
-	}
-
-	TRACE("Advancing mint state to: %d", subctx->state);
-}
-
-enum {
-	HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY = 9200,
-	HANDLE_MINT_TOP_LEVEL_DATA_RESPOND,
-	HANDLE_MINT_TOP_LEVEL_DATA_INVALID,
-};
-
-__noinline_due_to_stack__
-static void signTxMint_handleTopLevelData_ui_runStep()
-{
-	mint_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-
-	ui_callback_fn_t* this_fn = signTxMint_handleTopLevelData_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY) {
-		char secondLine[50] = {0};
-		explicit_bzero(secondLine, SIZEOF(secondLine));
-		STATIC_ASSERT(!IS_SIGNED(subctx->numAssetGroups), "signed type for %u");
-		snprintf(secondLine, SIZEOF(secondLine), "%u asset groups", subctx->numAssetGroups);
-		ASSERT(strlen(secondLine) + 1 < SIZEOF(secondLine));
-
-		ui_displayPaginatedText(
-		        "Mint",
-		        secondLine,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_MINT_TOP_LEVEL_DATA_INVALID);
 }
 
 static void signTxMint_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -137,28 +58,6 @@ static void signTxMint_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, siz
 
 	subctx->ui_step = HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY;
 	signTxMint_handleTopLevelData_ui_runStep();
-}
-
-enum {
-	HANDLE_ASSET_GROUP_STEP_DISPLAY = 9300,
-	HANDLE_ASSET_GROUP_STEP_RESPOND,
-	HANDLE_ASSET_GROUP_STEP_INVALID,
-};
-
-static void signTxMint_handleAssetGroup_ui_runStep()
-{
-	mint_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-
-	ui_callback_fn_t* this_fn = signTxMint_handleAssetGroup_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_ASSET_GROUP_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_ASSET_GROUP_STEP_INVALID);
 }
 
 static void signTxMint_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -214,50 +113,6 @@ static void signTxMint_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_
 
 	subctx->ui_step = HANDLE_ASSET_GROUP_STEP_RESPOND;
 	signTxMint_handleAssetGroup_ui_runStep();
-}
-
-enum {
-	HANDLE_TOKEN_STEP_DISPLAY_NAME = 9400,
-	HANDLE_TOKEN_STEP_DISPLAY_AMOUNT,
-	HANDLE_TOKEN_STEP_RESPOND,
-	HANDLE_TOKEN_STEP_INVALID,
-};
-
-
-static void signTxMint_handleToken_ui_runStep()
-{
-	mint_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxMint_handleToken_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_NAME) {
-		ui_displayAssetFingerprintScreen(
-		        &subctx->stateData.tokenGroup,
-		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_AMOUNT) {
-		ui_displayTokenAmountMintScreen(
-		        &subctx->stateData.tokenGroup,
-		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
-		        subctx->stateData.token.amount,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_TOKEN_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-
-		ASSERT(subctx->currentToken < subctx->numTokens);
-		subctx->currentToken++;
-
-		if (subctx->currentToken == subctx->numTokens) {
-			advanceState();
-		}
-	}
-	UI_STEP_END(HANDLE_TOKEN_STEP_INVALID);
 }
 
 static void signTxMint_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -323,35 +178,6 @@ static void signTxMint_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wir
 	}
 
 	signTxMint_handleToken_ui_runStep();
-}
-
-enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 9500,
-	HANDLE_CONFIRM_STEP_RESPOND,
-	HANDLE_CONFIRM_STEP_INVALID,
-};
-
-static void signTxMint_handleConfirm_ui_runStep()
-{
-	mint_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxMint_handleConfirm_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
-		ui_displayPrompt(
-		        "Confirm",
-		        "mint?",
-		        this_fn,
-		        respond_with_user_reject
-		);
-	}
-	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
 
 static void signTxMint_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
