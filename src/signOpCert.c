@@ -5,10 +5,15 @@
 #include "endian.h"
 #include "state.h"
 #include "uiHelpers.h"
-#include "uiScreens.h"
 #include "securityPolicy.h"
 #include "messageSigning.h"
 #include "textUtils.h"
+
+#ifdef HAVE_BAGL
+#include "uiScreens_bagl.h"
+#elif defined(HAVE_NBGL)
+#include "uiScreens_nbgl.h"
+#endif
 
 static ins_sign_op_cert_context_t* ctx = &(instructionState.signOpCertContext);
 
@@ -130,69 +135,116 @@ static void signOpCert_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(UI_STEP_WARNING) {
+#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "Unusual request",
 		        "Proceed with care",
 		        this_fn
 		);
+#elif defined(HAVE_NBGL)
+        display_warning(
+                "Unusual request",
+                this_fn, 
+                respond_with_user_reject
+        );
+#endif // HAVE_BAGL
 	}
 	UI_STEP(UI_STEP_CONFIRM_START) {
+#ifdef HAVE_BAGL
 		ui_displayPrompt(
 		        "Start new",
 		        "operational certificate?",
 		        this_fn,
 		        respond_with_user_reject
 		);
+#elif defined(HAVE_NBGL)
+		display_prompt(
+		        "Start new\noperational certificate",
+                "",
+		        this_fn,
+		        respond_with_user_reject
+		);
+#endif // HAVE_BAGL
 	}
 	UI_STEP(UI_STEP_DISPLAY_POOL_COLD_KEY_PATH) {
+#ifdef HAVE_BAGL
 		ui_displayPathScreen("Pool cold key path", &ctx->poolColdKeyPathSpec, this_fn);
+#elif defined(HAVE_NBGL)
+            char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
+            ui_getPathScreen(pathStr, SIZEOF(pathStr), &ctx->poolColdKeyPathSpec);
+            fill_and_display_if_required("Pool cold key path", pathStr, this_fn, respond_with_user_reject);
+#endif // HAVE_BAGL
 	}
 	UI_STEP(UI_STEP_DISPLAY_POOL_ID) {
 		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
 		bip44_pathToKeyHash(&ctx->poolColdKeyPathSpec, poolKeyHash, SIZEOF(poolKeyHash));
 
+#ifdef HAVE_BAGL
 		ui_displayBech32Screen(
 		        "Pool ID",
 		        "pool",
 		        poolKeyHash, SIZEOF(poolKeyHash),
 		        this_fn
 		);
+#elif defined(HAVE_NBGL)
+            char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+            ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", poolKeyHash, SIZEOF(poolKeyHash));
+            fill_and_display_if_required("Pool ID", encodedStr, this_fn, respond_with_user_reject);
+#endif // HAVE_BAGL
 	}
 	UI_STEP(UI_STEP_DISPLAY_KES_PUBLIC_KEY) {
+#ifdef HAVE_BAGL
 		ui_displayBech32Screen(
 		        "KES public key",
 		        "kes_vk",
 		        ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey),
 		        this_fn
 		);
+#elif defined(HAVE_NBGL)
+            char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+            ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "kes_vk", ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey));
+            fill_and_display_if_required("KES public key", encodedStr, this_fn, respond_with_user_reject);
+#endif // HAVE_BAGL
 	}
 	UI_STEP(UI_STEP_DISPLAY_KES_PERIOD) {
 		char kesPeriodString[50] = {0};
 		explicit_bzero(kesPeriodString, SIZEOF(kesPeriodString));
 		str_formatUint64(ctx->kesPeriod, kesPeriodString, SIZEOF(kesPeriodString));
+#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "KES period",
 		        kesPeriodString,
 		        this_fn
 		);
+#elif defined(HAVE_NBGL)
+            fill_and_display_if_required("KES period", kesPeriodString, this_fn, respond_with_user_reject);
+#endif // HAVE_BAGL
 	}
 	UI_STEP(UI_STEP_DISPLAY_ISSUE_COUNTER) {
 		char issueCounterString[50] = {0};
 		explicit_bzero(issueCounterString, SIZEOF(issueCounterString));
 		str_formatUint64(ctx->issueCounter, issueCounterString, SIZEOF(issueCounterString));
+#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "Issue counter",
 		        issueCounterString,
 		        this_fn
 		);
+#elif defined(HAVE_NBGL)
+            fill_and_display_if_required("Issue counter", issueCounterString, this_fn, respond_with_user_reject);
+#endif // HAVE_BAGL
 	}
 	UI_STEP(UI_STEP_CONFIRM) {
+#ifdef HAVE_BAGL
 		ui_displayPrompt(
 		        "Confirm",
 		        "operational certificate?",
 		        this_fn,
 		        respond_with_user_reject
 		);
+#elif defined(HAVE_NBGL)
+        display_confirmation("Confirm\n operation certificate", "", "OP CERTIFICATE\nCONFIRMED", "Op certificate\nrejected", this_fn, respond_with_user_reject);
+#endif // HAVE_BAGL
 	}
 	UI_STEP(UI_STEP_RESPOND) {
 		ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
