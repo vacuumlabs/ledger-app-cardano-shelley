@@ -1,8 +1,14 @@
 #include "state.h"
 #include "securityPolicy.h"
 #include "uiHelpers.h"
-#include "uiScreens.h"
 #include "getPublicKeys.h"
+#include "getPublicKeys_ui.h"
+
+#ifdef HAVE_BAGL
+#include "uiScreens_bagl.h"
+#elif defined(HAVE_NBGL)
+#include "uiScreens_nbgl.h"
+#endif
 
 static int16_t RESPONSE_READY_MAGIC = 23456;
 
@@ -27,86 +33,10 @@ static void parsePath(read_view_t* view)
 	PRINTF("\n");
 }
 
-static void advanceStage()
-{
-	TRACE("Advancing from stage: %d", ctx->stage);
-
-	switch (ctx->stage) {
-
-	case GET_KEYS_STAGE_INIT:
-		ctx->stage = GET_KEYS_STAGE_GET_KEYS;
-
-		if (ctx->numPaths > 1) {
-			// there are more paths to be received
-			// so we don't want to advance beyond GET_KEYS_STAGE_GET_KEYS
-			break;
-		}
-
-	// intentional fallthrough
-
-	case GET_KEYS_STAGE_GET_KEYS:
-		ASSERT(ctx->currentPath == ctx->numPaths);
-		ctx->stage = GET_KEYS_STAGE_NONE;
-		ui_idle(); // we are done with this key export
-		break;
-
-	case SIGN_STAGE_NONE:
-	default:
-		ASSERT(false);
-	}
-}
-
 // ============================== derivation and UI state machine for one key ==============================
 
-enum {
-	GET_KEY_UI_STEP_WARNING = 200,
-	GET_KEY_UI_STEP_DISPLAY,
-	GET_KEY_UI_STEP_CONFIRM,
-	GET_KEY_UI_STEP_RESPOND,
-} ;
-
-static void getPublicKeys_respondOneKey_ui_runStep()
-{
-	TRACE("UI step %d", ctx->ui_step);
-	ui_callback_fn_t* this_fn = getPublicKeys_respondOneKey_ui_runStep;
-
-	UI_STEP_BEGIN(ctx->ui_step, this_fn);
-	UI_STEP(GET_KEY_UI_STEP_WARNING) {
-		ui_displayPaginatedText(
-		        "Unusual request",
-		        "Proceed with care",
-		        this_fn
-		);
-	}
-	UI_STEP(GET_KEY_UI_STEP_DISPLAY) {
-		ui_displayGetPublicKeyPathScreen(&ctx->pathSpec, this_fn);
-	}
-	UI_STEP(GET_KEY_UI_STEP_CONFIRM) {
-		ui_displayPrompt(
-		        "Confirm export",
-		        "public key?",
-		        this_fn,
-		        respond_with_user_reject
-		);
-	}
-	UI_STEP(GET_KEY_UI_STEP_RESPOND) {
-		ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
-
-		io_send_buf(SUCCESS, (uint8_t*) &ctx->extPubKey, SIZEOF(ctx->extPubKey));
-		ctx->responseReadyMagic = 0; // just for safety
-		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
-
-		ctx->currentPath++;
-		TRACE("Current path: %u / %u", ctx->currentPath, ctx->numPaths);
-
-		if (ctx->currentPath == 1 || ctx->currentPath == ctx->numPaths)
-			advanceStage();
-	}
-	UI_STEP_END(UI_STEP_NONE);
-}
-
 // derive the key described by ctx->pathSpec and run the ui state machine accordingly
-static void runGetOnePublicKeyUIFlow()
+void runGetOnePublicKeyUIFlow()
 {
 	ASSERT(ctx->ui_step == UI_STEP_NONE); // make sure no ui state machine is running
 
@@ -142,52 +72,6 @@ static void runGetOnePublicKeyUIFlow()
 }
 
 // ============================== INIT ==============================
-
-enum {
-	HANDLE_INIT_UI_STEP_CONFIRM = 100,
-	HANDLE_INIT_UI_STEP_RESPOND, // WARNING: this must be the last valid step, see below
-} ;
-
-static void getPublicKeys_handleInit_ui_runStep()
-{
-	TRACE("UI step %d", ctx->ui_step);
-	ui_callback_fn_t* this_fn = getPublicKeys_handleInit_ui_runStep;
-
-	UI_STEP_BEGIN(ctx->ui_step, this_fn);
-	UI_STEP(HANDLE_INIT_UI_STEP_CONFIRM) {
-		char secondLine[100] = {0};
-		explicit_bzero(secondLine, SIZEOF(secondLine));
-		STATIC_ASSERT(sizeof(ctx->numPaths) <= sizeof(unsigned), "oversized type for %u");
-		STATIC_ASSERT(!IS_SIGNED(ctx->numPaths), "signed type for %u");
-		snprintf(secondLine, SIZEOF(secondLine), "%u public keys?", ctx->numPaths);
-		// make sure all the information is displayed to the user
-		ASSERT(strlen(secondLine) + 1 < SIZEOF(secondLine));
-
-		ui_displayPrompt(
-		        "Confirm export",
-		        secondLine,
-		        this_fn,
-		        respond_with_user_reject
-		);
-	}
-	UI_STEP(HANDLE_INIT_UI_STEP_RESPOND) {
-		ctx->ui_step = UI_STEP_NONE; // we are finished with this UI state machine
-
-		runGetOnePublicKeyUIFlow(); // run another UI state machine
-
-		// This return statement is needed to bail out from this UI state machine
-		// which would otherwise be in conflict with the (async) UI state
-		// machine triggered by promptAndRespondOneKey.
-
-		// Those two machines share the ctx->ui_state variable.
-		// Without the return statement, UI_STEP_END would overwrite it.
-
-		// WARNING: This works under the assumption that HANDLE_INIT_UI_STEP_RESPOND
-		// is a terminal state of this UI state machine!
-		return;
-	}
-	UI_STEP_END(UI_STEP_NONE);
-}
 
 static void getPublicKeys_handleInitAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
