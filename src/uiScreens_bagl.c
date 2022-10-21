@@ -1,4 +1,4 @@
-#include "uiScreens.h"
+#ifdef HAVE_BAGL
 #include "bech32.h"
 #include "cardano.h"
 #include "hexUtils.h"
@@ -7,7 +7,34 @@
 #include "signTx.h"
 #include "signTxPoolRegistration.h"
 #include "tokens.h"
+#include "state.h"
+#include "uiHelpers.h"
+#include "menu.h"
 
+static const int INS_NONE = -1;
+
+// ui_idle displays the main menu. Note that your app isn't required to use a
+// menu as its idle screen; you can define your own completely custom screen.
+void ui_idle(void)
+{
+	currentInstruction = INS_NONE;
+
+	#if defined(TARGET_NANOS)
+	nanos_clear_timer();
+	h_expert_update();
+	// The first argument is the starting index within menu_main, and the last
+	// argument is a preprocessor.
+	UX_MENU_DISPLAY(0, menu_main, NULL);
+	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
+	// reserve a display stack slot if none yet
+	if (G_ux.stack_count == 0) {
+		ux_stack_push();
+	}
+	ux_flow_init(0, ux_idle_flow, NULL);
+	#else
+	STATIC_ASSERT(false);
+	#endif
+}
 
 // encodes a buffer into bech32 and displays it (works for bufferSize <= 150 and prefix length <= 12)
 void ui_displayBech32Screen(
@@ -861,3 +888,4 @@ void ui_displayInputScreen(
 	        callback
 	);
 }
+#endif // HAVE_BAGL
