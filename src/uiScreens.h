@@ -6,6 +6,7 @@
 #include "signTx.h"
 #include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
+#include "bech32.h"
 
 __noinline_due_to_stack__
 void ui_displayBech32Screen(
