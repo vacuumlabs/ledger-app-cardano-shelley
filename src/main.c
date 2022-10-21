@@ -33,6 +33,12 @@
 #include "assert.h"
 #include "io.h"
 
+#ifdef HAVE_BAGL
+#include "uiScreens_bagl.h"
+#elif defined(HAVE_NBGL)
+#include "uiScreens_nbgl.h"
+#endif
+
 // The whole app is designed for a specific api level.
 // In case there is an api change, first *verify* changes
 // (especially potential security implications) before bumping
@@ -40,31 +46,6 @@
 STATIC_ASSERT(CX_APILEVEL >= 9, "bad api level");
 
 static const int INS_NONE = -1;
-
-#ifdef HAVE_BAGL
-// ui_idle displays the main menu. Note that your app isn't required to use a
-// menu as its idle screen; you can define your own completely custom screen.
-void ui_idle(void)
-{
-	currentInstruction = INS_NONE;
-
-	#if defined(TARGET_NANOS)
-	nanos_clear_timer();
-	h_expert_update();
-	// The first argument is the starting index within menu_main, and the last
-	// argument is a preprocessor.
-	UX_MENU_DISPLAY(0, menu_main, NULL);
-	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-	// reserve a display stack slot if none yet
-	if (G_ux.stack_count == 0) {
-		ux_stack_push();
-	}
-	ux_flow_init(0, ux_idle_flow, NULL);
-	#else
-	STATIC_ASSERT(false);
-	#endif
-}
-#endif
 
 static const uint8_t CLA = 0xD7;
 

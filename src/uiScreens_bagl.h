@@ -1,5 +1,5 @@
-#ifndef H_CARDANO_APP_UI_SCREENS
-#define H_CARDANO_APP_UI_SCREENS
+#ifndef H_CARDANO_APP_UI_SCREENS_BAGL
+#define H_CARDANO_APP_UI_SCREENS_BAGL
 
 #include "uiHelpers.h"
 #include "addressUtilsShelley.h"
@@ -173,4 +173,4 @@ void ui_displayInputScreen(
         ui_callback_fn_t callback
 );
 
-#endif // H_CARDANO_APP_UI_SCREENS
+#endif // H_CARDANO_APP_UI_SCREENS_BAGL
