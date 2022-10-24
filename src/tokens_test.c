@@ -5,7 +5,12 @@
 #include "hexUtils.h"
 #include "testUtils.h"
 #include "tokens.h"
-#include "uiScreens.h"
+
+#ifdef HAVE_BAGL
+#include "uiScreens_bagl.h"
+#elif defined(HAVE_NBGL)
+#include "uiScreens_nbgl.h"
+#endif
 
 void testcase_assetFingerprint(
         const char* policyIdHex,
