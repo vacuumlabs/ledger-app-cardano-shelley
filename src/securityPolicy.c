@@ -250,11 +250,18 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 // true iff network is the standard mainnet or testnet
 bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic)
 {
-	if (networkId == MAINNET_NETWORK_ID && protocolMagic == MAINNET_PROTOCOL_MAGIC)
+	if (networkId == MAINNET_NETWORK_ID && protocolMagic == MAINNET_PROTOCOL_MAGIC) {
 		return true;
+	}
 
-	if (networkId == TESTNET_NETWORK_ID && protocolMagic == TESTNET_PROTOCOL_MAGIC)
+	const bool knownTestnetProtocolMagic =
+		protocolMagic == TESTNET_PROTOCOL_MAGIC_LEGACY ||
+		protocolMagic == TESTNET_PROTOCOL_MAGIC_PREPROD ||
+		protocolMagic == TESTNET_PROTOCOL_MAGIC_PREVIEW;
+
+	if (networkId == TESTNET_NETWORK_ID && knownTestnetProtocolMagic) {
 		return true;
+	}
 
 	return false;
 }
