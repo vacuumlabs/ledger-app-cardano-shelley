@@ -134,28 +134,28 @@ For each output, at least two messages are required: the first one with top-leve
 |-----|-----|
 |  P1 | `0x03` |
 |  P2 | `0x30` |
-| data | depends on output type |
+| data | depends on output destination type |
 
-*Data for SIGN_TX_OUTPUT_TYPE_ADDRESS_BYTES*
+*Data for DESTINATION_THIRD_PARTY*
 
 This output type is used for regular destination addresses.
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `SIGN_TX_OUTPUT_TYPE_ADDRESS_BYTES=0x01`|
+|Output type| 1 | `DESTINATION_THIRD_PARTY=0x01`|
 |Address size| 4 | Big endian|
 |Address| variable | raw address (before bech32/base58-encoding)|
 |Amount| 8| Big endian. Amount in Lovelace|
 |Number of asset groups| 4 | Big endian|
 
-*Data for SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS*
+*Data for DESTINATION_DEVICE_OWNED*
 
 This output type is used for change addresses. Depending (mostly) on staking info, these might or might not be shown to the user. 
 (See [src/securityPolicy.c](../src/securityPolicy.c) for details.)
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS=0x02`|
+|Output type| 1 | `DESTINATION_DEVICE_OWNED=0x02`|
 |Address params | variable | see `view_parseAddressParams` in [src/addressUtilsShelley.c](../src/addressUtilsShelley.c)|
 |Amount| 8| Big endian. Amount in Lovelace|
 |Number of asset groups| 4 | Big endian|

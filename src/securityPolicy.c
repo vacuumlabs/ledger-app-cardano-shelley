@@ -33,13 +33,6 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 #undef CHECK
 }
 
-static inline bool is_reward_address(const addressParams_t* addressParams)
-{
-	ASSERT(isValidAddressParams(addressParams));
-
-	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
-}
-
 static address_type_t getDestinationAddressType(const tx_output_destination_t* destination)
 {
 	switch (destination->type) {
@@ -287,9 +280,9 @@ bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic)
 	}
 
 	const bool knownTestnetProtocolMagic =
-		protocolMagic == TESTNET_PROTOCOL_MAGIC_LEGACY ||
-		protocolMagic == TESTNET_PROTOCOL_MAGIC_PREPROD ||
-		protocolMagic == TESTNET_PROTOCOL_MAGIC_PREVIEW;
+	        protocolMagic == TESTNET_PROTOCOL_MAGIC_LEGACY ||
+	        protocolMagic == TESTNET_PROTOCOL_MAGIC_PREPROD ||
+	        protocolMagic == TESTNET_PROTOCOL_MAGIC_PREVIEW;
 
 	if (networkId == TESTNET_NETWORK_ID && knownTestnetProtocolMagic) {
 		return true;
@@ -1792,18 +1785,51 @@ security_policy_t policyForGovernanceVotingRegistrationStakingKey(
 	SHOW();
 }
 
-security_policy_t policyForGovernanceVotingRegistrationVotingRewardsAddressParams(
-        const addressParams_t* params,
+// based on https://input-output-rnd.slack.com/archives/C036XSMFXE3/p1668185230182239
+// TODO make sure this is what we want
+security_policy_t policyForGovernanceVotingRegistrationVotingRewardsDestination(
+        const tx_output_destination_storage_t* destination,
         const uint8_t networkId
 )
 {
-	DENY_UNLESS(isValidAddressParams(params));
-	DENY_UNLESS(isShelleyAddressType(params->type));
-	DENY_IF(params->networkId != networkId);
+	switch (destination->type) {
 
-	WARN_UNLESS(is_reward_address(params) || is_standard_base_address(params));
+	case DESTINATION_DEVICE_OWNED: {
+		DENY_UNLESS(isValidAddressParams(&destination->params));
+		DENY_UNLESS(isShelleyAddressType(destination->params.type));
+		DENY_IF(destination->params.networkId != networkId);
 
-	SHOW();
+		// in a typical case, the rewards go to an address controlled by this device
+		// and the address is sent in a way allowing a verification of that fact
+		WARN_UNLESS(
+		        is_standard_base_address(&destination->params)
+		);
+
+		// we are sure the address belongs to the device
+		SHOW();
+		break;
+	}
+
+	case DESTINATION_THIRD_PARTY: {
+		const uint8_t header = getAddressHeader(
+		                               destination->address.buffer, destination->address.size
+		                       );
+		DENY_UNLESS(isShelleyAddressType(getAddressType(header)));
+		DENY_IF(getNetworkId(header) != networkId);
+
+		// we don't know who owns the address
+		// to possibly avoid this warning, send the address as parameters (see above)
+		WARN();
+		break;
+	}
+
+	default:
+		ASSERT(false);
+		break;
+	}
+
+	DENY(); // should not be reached
+
 }
 
 security_policy_t policyForGovernanceVotingRegistrationNonce()

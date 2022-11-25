@@ -195,8 +195,8 @@ security_policy_t policyForGovernanceVotingRegistrationVotingKeyPath(
 security_policy_t policyForGovernanceVotingRegistrationStakingKey(
         const bip44_path_t* stakingKeyPath
 );
-security_policy_t policyForGovernanceVotingRegistrationVotingRewardsAddressParams(
-        const addressParams_t* params,
+security_policy_t policyForGovernanceVotingRegistrationVotingRewardsDestination(
+        const tx_output_destination_storage_t* destination,
         const uint8_t networkId
 );
 security_policy_t policyForGovernanceVotingRegistrationNonce();

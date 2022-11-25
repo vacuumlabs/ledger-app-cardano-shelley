@@ -80,13 +80,24 @@ P2 = `0x31`
 
 P2 = `0x32`
 
-*Data*
+There are two possibilities for sending the address: as a bytestring (third-party) or via address parameters (device-owned).
+
+*Data for DESTINATION_THIRD_PARTY*
 
 |Field| Length | Comments|
-|-----|--------|--------|
+|-----|--------|---------|
+|Output type| 1 | `DESTINATION_THIRD_PARTY=0x01`|
+|Address size| 4 | Big endian|
+|Address| variable | raw address (before bech32/base58-encoding)|
+
+*Data for DESTINATION_DEVICE_OWNED*
+
+|Field| Length | Comments|
+|-----|--------|---------|
+|Output type| 1 | `DESTINATION_DEVICE_OWNED=0x02`|
 |Address params | variable | see `view_parseAddressParams` in [src/addressUtilsShelley.c](../src/addressUtilsShelley.c)|
 
-Note: Only Shelley-era address parameters are accepted.
+Note: Only Shelley-era addresses are accepted (not Byron ones).
 
 ---
 

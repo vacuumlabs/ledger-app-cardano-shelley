@@ -572,6 +572,40 @@ static void signTxGovernanceVotingRegistration_handleStakingKeyAPDU(const uint8_
 
 // ============================== VOTING REWARDS ADDRESS ==============================
 
+static size_t _destinationToAddress(
+        tx_output_destination_storage_t* destination,
+        uint8_t* addressBuffer,
+        size_t addressBufferSize
+)
+{
+	size_t addressSize = 0;
+
+	switch (destination->type) {
+	case DESTINATION_DEVICE_OWNED:
+		addressSize = deriveAddress(
+		                      &destination->params,
+		                      addressBuffer,
+		                      addressBufferSize
+		              );
+		break;
+
+	case DESTINATION_THIRD_PARTY:
+		addressSize = destination->address.size;
+		ASSERT(addressSize <= addressBufferSize);
+		memcpy(
+		        addressBuffer,
+		        destination->address.buffer,
+		        addressSize
+		);
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	return addressSize;
+}
+
 enum {
 	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_WARNING = 8500,
 	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS,
@@ -580,12 +614,12 @@ enum {
 };
 
 __noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleVotingRewardsAddress_addressParams_ui_runStep()
+static void signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep()
 {
 	governance_voting_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleVotingRewardsAddress_addressParams_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -598,13 +632,10 @@ static void signTxGovernanceVotingRegistration_handleVotingRewardsAddress_addres
 	}
 	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
 		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
-		size_t addressSize = deriveAddress(
-		                             &subctx->stateData.votingRewardsAddressParams,
-		                             addressBuffer,
-		                             SIZEOF(addressBuffer)
+		size_t addressSize = _destinationToAddress(
+		                             &subctx->stateData.rewardDestination,
+		                             addressBuffer, SIZEOF(addressBuffer)
 		                     );
-		ASSERT(addressSize > 0);
-		ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 
 		ui_displayAddressScreen(
 		        "Rewards go to",
@@ -632,8 +663,8 @@ static void signTxGovernanceVotingRegistration_handleVotingRewardsAddressAPDU(co
 	governance_voting_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(
-		        &subctx->stateData.votingRewardsAddressParams,
-		        SIZEOF(subctx->stateData.votingRewardsAddressParams)
+		        &subctx->stateData.rewardDestination,
+		        SIZEOF(subctx->stateData.rewardDestination)
 		);
 	}
 	{
@@ -641,28 +672,24 @@ static void signTxGovernanceVotingRegistration_handleVotingRewardsAddressAPDU(co
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		view_parseAddressParams(&view, &subctx->stateData.votingRewardsAddressParams);
+		view_parseDestination(&view, &subctx->stateData.rewardDestination);
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForGovernanceVotingRegistrationVotingRewardsAddressParams(
-	                                   &subctx->stateData.votingRewardsAddressParams,
+	security_policy_t policy = policyForGovernanceVotingRegistrationVotingRewardsDestination(
+	                                   &subctx->stateData.rewardDestination,
 	                                   commonTxData->networkId
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	{
-		ASSERT(isShelleyAddressType(subctx->stateData.votingRewardsAddressParams.type));
 		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
-		size_t addressSize = deriveAddress(
-		                             &subctx->stateData.votingRewardsAddressParams,
-		                             addressBuffer,
-		                             SIZEOF(addressBuffer)
+		size_t addressSize = _destinationToAddress(
+		                             &subctx->stateData.rewardDestination,
+		                             addressBuffer, SIZEOF(addressBuffer)
 		                     );
-		ASSERT(addressSize > 0);
-		ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
 
 		auxDataHashBuilder_governanceVotingRegistration_addVotingRewardsAddress(
 		        &AUX_DATA_CTX->auxDataHashBuilder, addressBuffer, addressSize
@@ -681,7 +708,7 @@ static void signTxGovernanceVotingRegistration_handleVotingRewardsAddressAPDU(co
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		signTxGovernanceVotingRegistration_handleVotingRewardsAddress_addressParams_ui_runStep();
+		signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep();
 	}
 }
 
