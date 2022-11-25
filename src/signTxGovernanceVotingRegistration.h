@@ -4,6 +4,7 @@
 #include "common.h"
 #include "cardano.h"
 #include "auxDataHashBuilder.h"
+#include "txHashBuilder.h"
 #include "addressUtilsShelley.h"
 
 
@@ -52,7 +53,7 @@ typedef struct {
 			uint8_t votingPubKey[GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH];
 			uint32_t weight;
 		} delegation;
-		addressParams_t votingRewardsAddressParams;
+		tx_output_destination_storage_t rewardDestination;
 		uint64_t nonce;
 		uint64_t votingPurpose;
 		uint8_t registrationSignature[ED25519_SIGNATURE_LENGTH];

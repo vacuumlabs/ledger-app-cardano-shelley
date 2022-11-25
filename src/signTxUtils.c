@@ -45,3 +45,15 @@ bool violatesSingleAccountOrStoreIt(const bip44_path_t* path)
 	}
 	return false;
 }
+
+bool isValidDestinationType(tx_output_destination_type_t type)
+{
+	switch (type) {
+	case DESTINATION_THIRD_PARTY:
+	case DESTINATION_DEVICE_OWNED:
+		return true;
+
+	default:
+		return false;
+	}
+}
