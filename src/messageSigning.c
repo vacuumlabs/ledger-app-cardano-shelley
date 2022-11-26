@@ -1,3 +1,5 @@
+#include <cx.h>
+
 #include "messageSigning.h"
 #include "cardano.h"
 #include "keyDerivation.h"
