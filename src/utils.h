@@ -1,8 +1,9 @@
 #ifndef H_CARDANO_APP_UTILS
 #define H_CARDANO_APP_UTILS
 
-#include "assert.h"
+#include <os.h>
 
+#include "assert.h"
 
 // Does not compile if x is pointer of some kind
 // See http://zubplot.blogspot.com/2015/01/gcc-is-wonderful-better-arraysize-macro.html

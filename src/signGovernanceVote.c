@@ -1,11 +1,9 @@
 #include "messageSigning.h"
 #include "securityPolicy.h"
 #include "signGovernanceVote.h"
+#include "signTxUtils.h"
 #include "state.h"
 #include "uiScreens.h"
-#include "securityPolicy.h"
-#include "messageSigning.h"
-#include "signTxUtils.h"
 
 static ins_sign_governance_vote_context_t* ctx = &(instructionState.signGovernanceVoteContext);
 
