@@ -447,32 +447,7 @@ static void parseTopLevelData(const uint8_t* wireDataBuffer, size_t wireDataSize
 		TRACE("Output serialization format %d", (int) subctx->serializationFormat);
 		VALIDATE(_isValidOutputSerializationFormat(subctx->serializationFormat), ERR_INVALID_DATA);
 
-		tx_output_destination_storage_t* destination = &subctx->stateData.destination;
-
-		destination->type = parse_u1be(&view);
-		TRACE("Output destination type %d", (int) destination->type);
-		VALIDATE(isValidDestinationType(destination->type), ERR_INVALID_DATA);
-
-		switch (destination->type) {
-		case DESTINATION_THIRD_PARTY: {
-			STATIC_ASSERT(sizeof(destination->address.size) >= 4, "wrong address size type");
-			destination->address.size = parse_u4be(&view);
-			TRACE("Address length %u", destination->address.size);
-			VALIDATE(destination->address.size <= MAX_ADDRESS_SIZE, ERR_INVALID_DATA);
-
-			STATIC_ASSERT(SIZEOF(destination->address.buffer) >= MAX_ADDRESS_SIZE, "wrong address buffer size");
-			view_parseBuffer(destination->address.buffer, &view, destination->address.size);
-			TRACE_BUFFER(destination->address.buffer, destination->address.size);
-			break;
-		}
-		case DESTINATION_DEVICE_OWNED: {
-			view_parseAddressParams(&view, &destination->params);
-			break;
-		}
-
-		default:
-			THROW(ERR_INVALID_DATA);
-		};
+		view_parseDestination(&view, &subctx->stateData.destination);
 
 		uint64_t adaAmount = parse_u8be(&view);
 		subctx->stateData.adaAmount = adaAmount;
