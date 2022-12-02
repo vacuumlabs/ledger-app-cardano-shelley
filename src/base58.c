@@ -20,7 +20,7 @@
 #include "common.h"
 #include "base58.h"
 
-static const uint32_t MAX_BUFFER_SIZE = 124;
+#define MAX_BUFFER_SIZE 124
 
 static const char BASE58ALPHABET[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 

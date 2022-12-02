@@ -93,7 +93,7 @@ static void getPublicKeys_respondOneKey_ui_runStep()
 
 		io_send_buf(SUCCESS, (uint8_t*) &ctx->extPubKey, SIZEOF(ctx->extPubKey));
 		ctx->responseReadyMagic = 0; // just for safety
-		ui_displayBusy(); // needs to happen after I/O
+		ui_displayBusy(); // displays dots, called after I/O to avoid freezing
 
 		ctx->currentPath++;
 		TRACE("Current path: %u / %u", ctx->currentPath, ctx->numPaths);
@@ -188,7 +188,7 @@ static void getPublicKeys_handleInit_ui_runStep()
 	UI_STEP_END(UI_STEP_NONE);
 }
 
-static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void getPublicKeys_handleInitAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		CHECK_STAGE(GET_KEYS_STAGE_INIT);
@@ -258,7 +258,7 @@ static void getPublicKeys_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDat
 
 
 void getPublicKeys_handleGetNextKeyAPDU(
-        uint8_t *wireDataBuffer,
+        const uint8_t* wireDataBuffer,
         size_t wireDataSize
 )
 {
@@ -277,7 +277,7 @@ void getPublicKeys_handleGetNextKeyAPDU(
 
 // ============================== MAIN HANDLER ==============================
 
-typedef void subhandler_fn_t(uint8_t* dataBuffer, size_t dataSize);
+typedef void subhandler_fn_t(const uint8_t* dataBuffer, size_t dataSize);
 
 static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 {
@@ -295,7 +295,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 void getPublicKeys_handleAPDU(
         uint8_t p1,
         uint8_t p2,
-        uint8_t* wireDataBuffer,
+        const uint8_t* wireDataBuffer,
         size_t wireDataSize,
         bool isNewCall
 )

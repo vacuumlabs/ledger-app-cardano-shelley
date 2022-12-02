@@ -22,8 +22,8 @@ UX_STEP_CB(
         bnnn_paging,
         paginated_text_confirm(),
         LINES(
-                (char *) &displayState.paginatedText.header,
-                (char *) &displayState.paginatedText.fullText
+                (char*) &displayState.paginatedText.header,
+                (char*) &displayState.paginatedText.fullText
         )
 );
 
@@ -33,8 +33,8 @@ UX_STEP_CB(
         paginated_text_confirm(),
         LINES(
                 &C_icon_eye,
-                (char *) &displayState.paginatedText.header,
-                (char *) &displayState.paginatedText.fullText
+                (char*) &displayState.paginatedText.header,
+                (char*) &displayState.paginatedText.fullText
         )
 );
 
@@ -90,8 +90,8 @@ UX_STEP_CB(
         prompt_confirm(),
         LINES(
                 &C_icon_validate_14,
-                (char *) &displayState.paginatedText.header,
-                (char *) &displayState.paginatedText.currentText,
+                (char*) &displayState.paginatedText.header,
+                (char*) &displayState.paginatedText.currentText,
         )
 );
 

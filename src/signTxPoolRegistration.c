@@ -157,7 +157,7 @@ static void handlePoolInit_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxPoolRegistration_handleInitAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxPoolRegistration_handleInitAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -308,7 +308,7 @@ static void _parsePoolId(read_view_t* view)
 }
 
 __noinline_due_to_stack__
-static void signTxPoolRegistration_handlePoolKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxPoolRegistration_handlePoolKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -411,7 +411,7 @@ static void handlePoolVrfKey_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxPoolRegistration_handleVrfKeyAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxPoolRegistration_handleVrfKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -511,7 +511,7 @@ static void handlePoolFinancials_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxPoolRegistration_handlePoolFinancialsAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -548,12 +548,12 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(uint8_t* wireDataBuf
 
 			ASSERT_TYPE(subctx->stateData.marginNumerator, uint64_t);
 			subctx->stateData.marginNumerator = u8be_read(wireHeader->marginNumerator);
-			TRACE_BUFFER((uint8_t *) &subctx->stateData.marginNumerator, 8);
+			TRACE_BUFFER((uint8_t*) &subctx->stateData.marginNumerator, 8);
 			VALIDATE(subctx->stateData.marginNumerator <= MARGIN_DENOMINATOR_MAX, ERR_INVALID_DATA);
 
 			ASSERT_TYPE(subctx->stateData.marginDenominator, uint64_t);
 			subctx->stateData.marginDenominator = u8be_read(wireHeader->marginDenominator);
-			TRACE_BUFFER((uint8_t *) &subctx->stateData.marginDenominator, 8);
+			TRACE_BUFFER((uint8_t*) &subctx->stateData.marginDenominator, 8);
 			VALIDATE(subctx->stateData.marginDenominator != 0, ERR_INVALID_DATA);
 			VALIDATE(subctx->stateData.marginDenominator <= MARGIN_DENOMINATOR_MAX, ERR_INVALID_DATA);
 			VALIDATE(subctx->stateData.marginNumerator <= subctx->stateData.marginDenominator, ERR_INVALID_DATA);
@@ -634,7 +634,7 @@ static void _parsePoolRewardAccount(read_view_t* view)
 }
 
 __noinline_due_to_stack__
-static void signTxPoolRegistration_handleRewardAccountAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxPoolRegistration_handleRewardAccountAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -750,7 +750,7 @@ static void _addOwnerToTxHash()
 }
 
 __noinline_due_to_stack__
-static void signTxPoolRegistration_handleOwnerAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxPoolRegistration_handleOwnerAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1016,7 +1016,7 @@ format 2 multi_host_name:
 [0-64B dns_name]
 */
 __noinline_due_to_stack__
-static void signTxPoolRegistration_handleRelayAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxPoolRegistration_handleRelayAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1237,7 +1237,7 @@ static void handleNullMetadata()
 }
 
 __noinline_due_to_stack__
-static void signTxPoolRegistration_handlePoolMetadataAPDU(uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxPoolRegistration_handlePoolMetadataAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1376,7 +1376,7 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxPoolRegistration_handleConfirmAPDU(uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+static void signTxPoolRegistration_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1445,7 +1445,7 @@ bool signTxPoolRegistration_isValidInstruction(uint8_t p2)
 	}
 }
 
-void signTxPoolRegistration_handleAPDU(uint8_t p2, uint8_t* wireDataBuffer, size_t wireDataSize)
+void signTxPoolRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	TRACE("p2 = 0x%x", p2);

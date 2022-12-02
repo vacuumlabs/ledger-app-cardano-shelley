@@ -223,12 +223,12 @@ void respond_with_user_reject()
 	ui_idle();
 }
 
-bool uiPaginatedText_canFitStringIntoHeader(const char *str)
+bool uiPaginatedText_canFitStringIntoHeader(const char* str)
 {
 	return strlen(str) < SIZEOF(paginatedTextState->header);
 }
 
-bool uiPaginatedText_canFitStringIntoFullText(const char *str)
+bool uiPaginatedText_canFitStringIntoFullText(const char* str)
 {
 	return strlen(str) < SIZEOF(paginatedTextState->fullText);
 }

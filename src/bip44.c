@@ -17,7 +17,7 @@ static const uint32_t MAX_REASONABLE_MINT_POLICY_INDEX = 1000000;
 
 size_t bip44_parseFromWire(
         bip44_path_t* pathSpec,
-        const uint8_t *dataBuffer, size_t dataSize
+        const uint8_t* dataBuffer, size_t dataSize
 )
 {
 	// Ensure we have length

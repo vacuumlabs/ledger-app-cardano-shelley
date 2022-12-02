@@ -76,6 +76,13 @@ void rewardAccountToBuffer(
 );
 
 
+// ==============================  INPUTS  ==============================
+
+typedef struct {
+	uint8_t txHashBuffer[TX_HASH_LENGTH];
+	uint32_t index;
+} tx_input_t;
+
 // ==============================  OUTPUTS  ==============================
 
 typedef struct {
@@ -87,7 +94,6 @@ typedef struct {
 	size_t assetNameSize;
 	uint64_t amount;
 } output_token_amount_t;
-
 
 // ==============================  CERTIFICATES  ==============================
 
@@ -152,7 +158,7 @@ typedef struct {
 // ==============================  NATIVE SCRIPTS  ==============================
 
 // depth of n means it can handle up to n-1 levels of nesting
-static const uint8_t MAX_SCRIPT_DEPTH = 11;
+#define MAX_SCRIPT_DEPTH 11
 
 typedef enum {
 	NATIVE_SCRIPT_PUBKEY = 0,

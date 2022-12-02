@@ -11,7 +11,7 @@ void deriveAssetFingerprintBytes(
         size_t policyIdSize,
         const uint8_t* assetName,
         size_t assetNameSize,
-        uint8_t *fingerprintBuffer,
+        uint8_t* fingerprintBuffer,
         size_t fingerprintBufferSize
 )
 {
