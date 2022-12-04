@@ -232,7 +232,7 @@ static void _displayVotingKey(ui_callback_fn_t callback)
 		STATIC_ASSERT(SIZEOF(subctx->stateData.delegation.votingPubKey) == GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
 		ui_displayBech32Screen(
 		        "Voting public key",
-		        "gov_pk",
+		        "gov_vk",
 		        subctx->stateData.delegation.votingPubKey, GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH,
 		        callback
 		);
