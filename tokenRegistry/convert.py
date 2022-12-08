@@ -6,7 +6,7 @@ import hashlib
 # WARNING --- make sure that:
 #     1. token tickers are meaningful and none is "(unknown decimals)"
 #     2. buffers (e.g. tokenAmountStr) are big enough to hold the tickers
-filename = "top100JsonList_ep321-337.json"
+filename = "top100JsonList.json"
 
 registry = json.load(open(filename))
 
