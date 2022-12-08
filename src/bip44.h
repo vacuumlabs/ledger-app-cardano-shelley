@@ -22,10 +22,15 @@ static const uint32_t PURPOSE_MINT = 1855;
 
 static const uint32_t PURPOSE_POOL_COLD_KEY = 1853;
 
+static const uint32_t PURPOSE_GOVERNANCE_VOTING_KEY = 1694;
+
 static const uint32_t ADA_COIN_TYPE = 1815;
 
 static const uint32_t HARDENED_BIP32 = ((uint32_t) 1 << 31);
 
+bool isHardened(uint32_t value);
+uint32_t harden(uint32_t value);
+uint32_t unharden(uint32_t value);
 
 size_t bip44_parseFromWire(
         bip44_path_t* pathSpec,
@@ -37,6 +42,8 @@ enum {
 	// wallet keys:
 	// ordinary https://cips.cardano.org/cips/cip1852/
 	// multisig https://cips.cardano.org/cips/cip1854/
+	// governance voting keys:
+	// https://cips.cardano.org/cips/cip36/
 	BIP44_I_PURPOSE = 0,
 	BIP44_I_COIN_TYPE = 1,
 	BIP44_I_ACCOUNT = 2,
@@ -59,30 +66,23 @@ bool bip44_hasOrdinaryWalletKeyPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasMultisigWalletKeyPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasMintKeyPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasPoolColdKeyPrefix(const bip44_path_t* pathSpec);
+bool bip44_hasGovernanceVotingKeyPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
 uint32_t bip44_getAccount(const bip44_path_t* pathSpec);
-bool bip44_hasReasonableAccount(const bip44_path_t* pathSpec);
 
 bool bip44_containsChainType(const bip44_path_t* pathSpec);
 
 bool bip44_containsAddress(const bip44_path_t* pathSpec);
-bool bip44_isOrdinarySpendingKeyPath(const bip44_path_t* pathSpec);
-bool bip44_isMultisigSpendingKeyPath(const bip44_path_t* pathSpec);
-bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec);
 
 bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec);
 bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec);
 
-bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
-
 bool bip44_isMintKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_isPoolColdKeyPath(const bip44_path_t* pathSpec);
-bool bip44_hasReasonablePoolColdKeyIndex(const bip44_path_t* pathSpec);
 
-bool isHardened(uint32_t value);
-uint32_t unharden(uint32_t value);
+bool bip44_isGovernanceVotingKeyPath(const bip44_path_t* pathSpec);
 
 size_t bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
 
@@ -105,6 +105,10 @@ typedef enum {
 
 	// pool cold key in pool registrations and retirements
 	PATH_POOL_COLD_KEY,
+
+	// governance voting, incl. Catalyst
+	PATH_GOVERNANCE_VOTING_ACCOUNT,
+	PATH_GOVERNANCE_VOTING_KEY,
 
 	// none of the above
 	PATH_INVALID,

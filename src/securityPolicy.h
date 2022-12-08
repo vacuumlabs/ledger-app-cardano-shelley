@@ -187,15 +187,24 @@ security_policy_t policyForSignTxConfirm();
 
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec);
 
-security_policy_t policyForCatalystRegistrationVotingRewardsAddressParams(
-        const addressParams_t* params,
-        const uint8_t networkId
+security_policy_t policyForGovernanceVotingRegistrationVotingKey();
+security_policy_t policyForGovernanceVotingRegistrationVotingKeyPath(
+        bip44_path_t* path,
+        governance_voting_registration_format_t format
 );
-security_policy_t policyForCatalystRegistrationStakingKey(
+security_policy_t policyForGovernanceVotingRegistrationStakingKey(
         const bip44_path_t* stakingKeyPath
 );
-security_policy_t policyForCatalystRegistrationVotingKey();
-security_policy_t policyForCatalystRegistrationNonce();
-security_policy_t policyForCatalystRegistrationConfirm();
+security_policy_t policyForGovernanceVotingRegistrationVotingRewardsDestination(
+        const tx_output_destination_storage_t* destination,
+        const uint8_t networkId
+);
+security_policy_t policyForGovernanceVotingRegistrationNonce();
+security_policy_t policyForGovernanceVotingRegistrationVotingPurpose();
+security_policy_t policyForGovernanceVotingRegistrationConfirm();
+
+security_policy_t policyForSignGovernanceVoteInit();
+security_policy_t policyForSignGovernanceVoteConfirm();
+security_policy_t policyForSignGovernanceVoteWitness(bip44_path_t* path);
 
 #endif // H_CARDANO_APP_SECURITY_POLICY

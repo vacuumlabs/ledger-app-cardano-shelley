@@ -1,12 +1,27 @@
 # Change Log
 
 All notable changes to this project will be documented in this file.
- 
+
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [5.0.0](TBD) - [TBD]
+## [6.0.0](TBD) - [TBD]
+
+Support for governance voting (CIP-0036)
+
+### Added
+
+- export of governance voting keys (1694'/1815'/...)
+- support for governance voting (signing of vote-cast fragments with 1694 keys)
+- support for CIP-36 features (governance voting registration in transaction auxiliary data)
+
+### Changed
+
+- API for Catalyst voting registration (it is still possible to use CIP-0015 in auxiliary data)
+
+
+## [5.0.0](https://github.com/LedgerHQ/app-cardano/compare/4.1.2...LedgerHQ:nanos_2.1.0_5.0.0) - [October 11th 2022]
 
 Support for Babbage era
 

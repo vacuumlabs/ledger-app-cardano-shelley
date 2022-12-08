@@ -1,3 +1,5 @@
+#include <cx.h>
+
 #include "messageSigning.h"
 #include "cardano.h"
 #include "keyDerivation.h"
@@ -62,23 +64,23 @@ static void signRawMessageWithPath(bip44_path_t* pathSpec,
 	} END_TRY;
 }
 
-void getTxWitness(bip44_path_t* pathSpec,
-                  const uint8_t* txHashBuffer, size_t txHashSize,
-                  uint8_t* outBuffer, size_t outSize)
+// sign the given hash by the private key derived according to the given path
+void getWitness(bip44_path_t* pathSpec,
+                const uint8_t* hashBuffer, size_t hashSize,
+                uint8_t* outBuffer, size_t outSize)
 {
-	ASSERT(txHashSize == TX_HASH_LENGTH);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	#ifndef FUZZING
-	signRawMessageWithPath(pathSpec, txHashBuffer, txHashSize, outBuffer, outSize);
+	signRawMessageWithPath(pathSpec, hashBuffer, hashSize, outBuffer, outSize);
 	#endif
 }
 
-void getCatalystVotingRegistrationSignature(bip44_path_t* pathSpec,
+void getGovernanceVotingRegistrationSignature(bip44_path_t* pathSpec,
         const uint8_t* payloadHashBuffer, size_t payloadHashSize,
         uint8_t* outBuffer, size_t outSize)
 {
-	ASSERT(payloadHashSize == CATALYST_REGISTRATION_PAYLOAD_HASH_LENGTH);
+	ASSERT(payloadHashSize == GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_HASH_LENGTH);
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 
 	#ifndef FUZZING

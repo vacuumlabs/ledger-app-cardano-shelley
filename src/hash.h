@@ -1,6 +1,8 @@
 #ifndef H_CARDANO_APP_HASH
 #define H_CARDANO_APP_HASH
 
+#include <cx.h>
+
 #include "common.h"
 
 // This file provides convenience functions for using firmware hashing api

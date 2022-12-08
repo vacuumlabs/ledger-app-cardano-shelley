@@ -186,7 +186,7 @@ void ui_displayStakingKeyScreen(
 {
 	ASSERT(bip44_isOrdinaryStakingKeyPath(stakingPath));
 
-	bool showAccountDescription = bip44_hasReasonableAccount(stakingPath);
+	bool showAccountDescription = bip44_isPathReasonable(stakingPath);
 
 	_ui_displayAccountWithDescriptionScreen(
 	        "Staking key",

@@ -365,15 +365,15 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
-	case SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE:
-		if (signTxCatalystRegistration_isFinished()) {
+	case SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE:
+		if (signTxGovernanceVotingRegistration_isFinished()) {
 			TRACE();
 			ctx->stage = SIGN_STAGE_AUX_DATA;
 			AUX_DATA_CTX->auxDataReceived = true;
 
 			STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
-			STATIC_ASSERT(SIZEOF(AUX_DATA_CTX->stageContext.catalyst_registration_subctx.auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
-			memmove(ctx->auxDataHash, AUX_DATA_CTX->stageContext.catalyst_registration_subctx.auxDataHash, AUX_DATA_HASH_LENGTH);
+			STATIC_ASSERT(SIZEOF(AUX_DATA_CTX->stageContext.governance_voting_registration_subctx.auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
+			memmove(ctx->auxDataHash, AUX_DATA_CTX->stageContext.governance_voting_registration_subctx.auxDataHash, AUX_DATA_HASH_LENGTH);
 
 			advanceStage();
 		}
@@ -402,9 +402,11 @@ static inline void checkForFinishedSubmachines()
 }
 
 // this is supposed to be called at the beginning of each APDU handler
-#define CHECK_STAGE(expected)\
-	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);\
+static inline void CHECK_STAGE(sign_tx_stage_t expected)
+{
+	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
 	VALIDATE(ctx->stage == expected, ERR_INVALID_STATE);
+}
 
 // ============================== INIT ==============================
 
@@ -724,33 +726,33 @@ static void signTx_handleAuxDataArbitraryHash_ui_runStep()
 
 
 enum {
-	HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_DISPLAY = 850,
-	HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_RESPOND,
-	HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_INVALID,
+	HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_DISPLAY = 850,
+	HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_RESPOND,
+	HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_INVALID,
 };
 
-static void signTx_handleAuxDataCatalystRegistration_ui_runStep()
+static void signTx_handleAuxDataGovernanceVotingRegistration_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTx_handleAuxDataCatalystRegistration_ui_runStep;
+	ui_callback_fn_t* this_fn = signTx_handleAuxDataGovernanceVotingRegistration_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_DISPLAY) {
+	UI_STEP(HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_DISPLAY) {
 		ui_displayPrompt(
-		        "Register Catalyst",
+		        "Register governance",
 		        "voting key?",
 		        this_fn,
 		        respond_with_user_reject
 		);
 	}
-	UI_STEP(HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_RESPOND) {
+	UI_STEP(HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-		signTxCatalystRegistration_init();
-		ctx->stage = SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE;
+		signTxGovernanceVotingRegistration_init();
+		ctx->stage = SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE;
 	}
-	UI_STEP_END(HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_INVALID);
+	UI_STEP_END(HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
@@ -762,13 +764,13 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 		ASSERT(ctx->includeAuxData == true);
 
 		// delegate to state sub-machine for stake pool registration certificate data
-		if (signTxCatalystRegistration_isValidInstruction(p2)) {
+		if (signTxGovernanceVotingRegistration_isValidInstruction(p2)) {
 			TRACE();
-			CHECK_STAGE(SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE);
+			CHECK_STAGE(SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE);
 
 			TRACE_STACK_USAGE();
 
-			signTxCatalystRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
+			signTxGovernanceVotingRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
 			return;
 		} else {
 			CHECK_STAGE(SIGN_STAGE_AUX_DATA);
@@ -791,7 +793,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 			break;
 		}
 
-		case AUX_DATA_TYPE_CATALYST_REGISTRATION:
+		case AUX_DATA_TYPE_GOVERNANCE_VOTING_REGISTRATION:
 			break;
 
 		default:
@@ -820,18 +822,18 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 		signTx_handleAuxDataArbitraryHash_ui_runStep();
 		break;
 	}
-	case AUX_DATA_TYPE_CATALYST_REGISTRATION:
+	case AUX_DATA_TYPE_GOVERNANCE_VOTING_REGISTRATION:
 		// select UI step
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_AUX_DATA_CATALYST_REGISTRATION_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_RESPOND);
 #undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		signTx_handleAuxDataCatalystRegistration_ui_runStep();
+		signTx_handleAuxDataGovernanceVotingRegistration_ui_runStep();
 		break;
 	default:
 		ASSERT(false);
@@ -2278,7 +2280,7 @@ static void signTx_handleConfirm_ui_runStep()
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
 		io_send_buf(SUCCESS, ctx->txHash, SIZEOF(ctx->txHash));
-		ui_displayBusy(); // displays dots, called after I/O to avoid freezing
+		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
 
 		advanceStage();
 	}
@@ -2355,7 +2357,7 @@ static void signTx_handleConfirmAPDU(uint8_t p2, const uint8_t* wireDataBuffer M
 
 static void _wipeWitnessSignature()
 {
-	// safer not to keep this in memory
+	// safer not to keep the signature in memory
 	explicit_bzero(WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature));
 	respond_with_user_reject();
 }
@@ -2398,14 +2400,14 @@ static void signTx_handleWitness_ui_runStep()
 		TRACE("Sending witness data");
 		TRACE_BUFFER(WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature));
 		io_send_buf(SUCCESS, WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature));
-		ui_displayBusy(); // needs to happen after I/O
+		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
 
 		WITNESS_CTX->currentWitness++;
 		if (WITNESS_CTX->currentWitness == ctx->numWitnesses) {
 			advanceStage();
 		}
 	}
-	UI_STEP_END(HANDLE_INPUT_STEP_INVALID);
+	UI_STEP_END(HANDLE_WITNESS_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
@@ -2447,12 +2449,12 @@ static void signTx_handleWitnessAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 
 	{
 		// compute witness
-		TRACE("getTxWitness");
+		TRACE("getWitness");
 		TRACE("TX HASH");
 		TRACE_BUFFER(ctx->txHash, SIZEOF(ctx->txHash));
 		TRACE("END TX HASH");
 
-		getTxWitness(
+		getWitness(
 		        &WITNESS_CTX->stageData.witness.path,
 		        ctx->txHash, SIZEOF(ctx->txHash),
 		        WITNESS_CTX->stageData.witness.signature, SIZEOF(WITNESS_CTX->stageData.witness.signature)
@@ -2569,7 +2571,7 @@ ins_sign_tx_aux_data_context_t* accessAuxDataContext()
 	switch (ctx->stage) {
 
 	case SIGN_STAGE_AUX_DATA:
-	case SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE:
+	case SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE:
 		return &(ctx->txPartCtx.aux_data_ctx);
 
 	default:
