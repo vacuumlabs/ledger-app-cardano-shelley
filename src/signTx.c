@@ -763,7 +763,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 		ASSERT(ctx->includeAuxData == true);
 
-		// delegate to state sub-machine for stake pool registration certificate data
+		// delegate to state sub-machine for governance voting registration data
 		if (signTxGovernanceVotingRegistration_isValidInstruction(p2)) {
 			TRACE();
 			CHECK_STAGE(SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE);
@@ -772,9 +772,10 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 
 			signTxGovernanceVotingRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
 			return;
-		} else {
-			CHECK_STAGE(SIGN_STAGE_AUX_DATA);
 		}
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+		CHECK_STAGE(SIGN_STAGE_AUX_DATA);
 	}
 	{
 		explicit_bzero(ctx->auxDataHash, SIZEOF(ctx->auxDataHash));
@@ -978,7 +979,7 @@ static void signTx_handleOutputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, s
 	ASSERT(BODY_CTX->currentOutput < ctx->numOutputs);
 
 	// all output handling is delegated to a state sub-machine
-	VALIDATE(signTxOutput_isValidInstruction(p2), ERR_INVALID_DATA);
+	VALIDATE(signTxOutput_isValidInstruction(p2), ERR_INVALID_REQUEST_PARAMETERS);
 	signTxOutput_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
 
@@ -1478,8 +1479,8 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 		return;
 	}
 
-	CHECK_STAGE(SIGN_STAGE_BODY_CERTIFICATES);
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+	CHECK_STAGE(SIGN_STAGE_BODY_CERTIFICATES);
 
 	// a new certificate arrived
 	explicit_bzero(&BODY_CTX->stageData.certificate, SIZEOF(BODY_CTX->stageData.certificate));
@@ -1847,7 +1848,7 @@ static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 	CHECK_STAGE(SIGN_STAGE_BODY_MINT_SUBMACHINE);
 
 	// all mint handling is delegated to a state sub-machine
-	VALIDATE(signTxMint_isValidInstruction(p2), ERR_INVALID_DATA);
+	VALIDATE(signTxMint_isValidInstruction(p2), ERR_INVALID_REQUEST_PARAMETERS);
 	signTxMint_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
 
@@ -2118,7 +2119,7 @@ static void signTx_handleCollateralOutputAPDU(uint8_t p2, const uint8_t* wireDat
 	CHECK_STAGE(SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE);
 
 	// all output handling is delegated to a state sub-machine
-	VALIDATE(signTxCollateralOutput_isValidInstruction(p2), ERR_INVALID_DATA);
+	VALIDATE(signTxCollateralOutput_isValidInstruction(p2), ERR_INVALID_REQUEST_PARAMETERS);
 	signTxCollateralOutput_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
 
