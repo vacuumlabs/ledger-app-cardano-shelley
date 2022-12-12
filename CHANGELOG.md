@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [6.0.0](TBD) - [TBD]
+## [6.0.1](TBD) - [TBD]
 
 Support for governance voting (CIP-0036)
 
@@ -19,6 +19,7 @@ Support for governance voting (CIP-0036)
 ### Changed
 
 - API for Catalyst voting registration (it is still possible to use CIP-0015 in auxiliary data)
+- updated list of native tokens recognized by the app with correct decimal places
 
 
 ## [5.0.0](https://github.com/LedgerHQ/app-cardano/compare/4.1.2...LedgerHQ:nanos_2.1.0_5.0.0) - [October 11th 2022]
