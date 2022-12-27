@@ -42,4 +42,5 @@ typedef struct {
 
 handler_fn_t signGovernanceVote_handleAPDU;
 
+void vote_advanceStage();
 #endif // H_CARDANO_APP_SIGN_GOVERNANCE_VOTE
