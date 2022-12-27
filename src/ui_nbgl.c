@@ -21,6 +21,7 @@
 #include "ui.h"
 #include "uiHelpers.h"
 #include "uiScreens_nbgl.h"
+#include "nbgl_use_case.h"
 
 #define MAX_LINE_PER_PAGE_COUNT 9
 #define MAX_TAG_PER_PAGE_COUNT 5
@@ -29,13 +30,17 @@
 #define MAX_TAG_CONTENT_CHAR_PER_LINE 22
 #define MAX_TEXT_STRING 50
 
-enum {
-  QUIT_APP_TOKEN,
-  QUIT_INFO_TOKEN,
-  SETTINGS_TOKEN,
-  EXPERT_MODE_TOKEN,
-  INFO_TOKEN,
+#define PAGE_START 0
+#define NB_PAGE_SETTING 2
+#define IS_TOUCHABLE false
+#define NB_INFO_FIELDS 3
+#define NB_SETTINGS_SWITCHES 1
 
+enum {
+  SWITCH_APP_MODE_TOKEN = FIRST_USER_TOKEN,
+};
+
+enum {
   CANCEL_PROMPT_TOKEN,
   ACCEPT_TOKEN,
   ACCEPT_PAGE_TOKEN,
@@ -63,10 +68,11 @@ typedef struct {
 } UiContext_t;
 
 static const int INS_NONE = -1;
-static const char *const infoContents[] = {APPVERSION, "(c) 2022 Ledger"};
-static const char *const settingsBarTexts[] = {"App mode", "About"};
-static const char *const appMode[] = {"Normal mode", "Expert mode"};
-static const char settingsBarTokens[] = {EXPERT_MODE_TOKEN, INFO_TOKEN};
+
+static nbgl_layoutSwitch_t switches[NB_SETTINGS_SWITCHES];
+
+static const char* const infoTypes[] = {"Version", "Developer", "Copyright"};
+static const char* const infoContents[] = {APPVERSION, "Ledger", "(c) 2022 Ledger"};
 static nbgl_page_t *pageContext;
 static nbgl_layoutTagValue_t tagValues[5];
 static int8_t saved_token;
@@ -85,10 +91,6 @@ static void _display_prompt(void);
 static void display_cancel(void);
 static void display_confirmation_message(void);
 static void display_cancel_message(void);
-static void menu_callback(int token, uint8_t unused);
-static void ui_expert_mode(void);
-static void ui_menu_settings(void);
-static void ui_menu_about(void);
 static void ui_idle_flow(void);
 
 static void releaseContext(void) {
@@ -98,126 +100,61 @@ static void releaseContext(void) {
   }
 }
 
-static void menu_callback(int token, uint8_t unused) {
-  (void) unused;
-  switch (token) {
-  case QUIT_APP_TOKEN:
-    releaseContext();
+static void exit(void) {
     os_sched_exit(-1);
-    break;
-  case QUIT_INFO_TOKEN:
-    ui_idle_flow();
-    break;
-  case SETTINGS_TOKEN:
-    saved_token = SETTINGS_TOKEN;
-    ui_menu_settings();
-    break;
-  case INFO_TOKEN:
-    ui_menu_about();
-    break;
-  case EXPERT_MODE_TOKEN:
-    ui_expert_mode();
-    break;
-  case CONFIRMATION_MESSAGE_TOKEN:
-    saved_token = CONFIRMATION_MESSAGE_TOKEN;
-    break;
-  }
 }
 
-static void expert_mode_callback(int token, uint8_t index) {
-  switch (token) {
-  case EXPERT_MODE_TOKEN:
-    app_mode_expert(index == 1);
-    break;
-  case SETTINGS_TOKEN:
-    ui_menu_settings();
-    break;
-  case QUIT_INFO_TOKEN:
-    ui_idle_flow();
-    break;
-  }
+static bool settings_navigation_cb(uint8_t page, nbgl_pageContent_t *content) {
+    if (page == 0) {
+        switches[0].text = (char*)"Enable expert mode";
+        switches[0].subText = (char*)"Select application mode";
+        switches[0].token = SWITCH_APP_MODE_TOKEN;
+        switches[0].tuneId = TUNE_TAP_CASUAL;
+        switches[0].initState = app_mode_expert();
+
+        content->type = SWITCHES_LIST;
+        content->switchesList.nbSwitches = NB_SETTINGS_SWITCHES;
+        content->switchesList.switches = (nbgl_layoutSwitch_t*) switches;
+    }
+    else if (page == 1) {
+        content->type = INFOS_LIST;
+        content->infosList.nbInfos = NB_INFO_FIELDS;
+        content->infosList.infoTypes = (const char**) infoTypes;
+        content->infosList.infoContents = (const char**) infoContents;
+    }
+    else {
+        return false;
+    }
+    return true;
 }
 
-static void ui_expert_mode(void) {
-  releaseContext();
-  nbgl_layoutDescription_t layoutDescription = {
-      .modal = false, .onActionCallback = &expert_mode_callback};
-  nbgl_layout_t *layout = nbgl_layoutGet(&layoutDescription);
+static void settings_control_cb(int token, uint8_t index) {
+    UNUSED(index);
+    switch(token)
+    {
+        case SWITCH_APP_MODE_TOKEN:
+            app_mode_set_expert(index);
+            break;
 
-  nbgl_layoutRadioChoice_t layoutRadioChoice = {.names = (char** )appMode,
-                                                .localized = false,
-                                                .nbChoices = 2,
-                                                .initChoice = app_mode_expert(),
-                                                .token = EXPERT_MODE_TOKEN,
-                                                .tuneId = TUNE_TAP_CASUAL};
-
-  nbgl_layoutBar_t layoutBar = {.iconLeft = &C_leftArrow32px,
-                                .text = (char *) "Select app mode",
-                                .iconRight = NULL,
-                                .subText = NULL,
-                                .token = SETTINGS_TOKEN,
-                                .inactive = false,
-                                .centered = true,
-                                .tuneId = TUNE_TAP_CASUAL};
-
-  nbgl_layoutAddTouchableBar(layout, &layoutBar);
-  nbgl_layoutAddRadioChoice(layout, &layoutRadioChoice);
-  nbgl_layoutAddBottomButton(layout, &C_cross32px, QUIT_INFO_TOKEN, true,
-                             TUNE_TAP_CASUAL);
-  nbgl_layoutDraw(layout);
-  nbgl_refresh();
-  nbgl_layoutRelease(layout);
-}
-
-static void ui_menu_about(void) {
-  const char *infoTypes[] = {"Version", "Cardano App"};
-
-  nbgl_pageContent_t content = {.title = "About Cardano",
-                                .titleToken = SETTINGS_TOKEN,
-                                .isTouchableTitle = true};
-  nbgl_pageNavigationInfo_t nav = {.activePage = 0,
-                                   .nbPages = 1,
-                                   .navType = NAV_WITH_BUTTONS,
-                                   .navWithButtons.quitButton = true,
-                                   .navWithButtons.navToken = QUIT_INFO_TOKEN,
-                                   .tuneId = TUNE_TAP_CASUAL};
-  content.type = INFOS_LIST;
-  content.infosList.nbInfos = 2;
-  content.infosList.infoTypes = (const char **)infoTypes;
-  content.infosList.infoContents = (const char **)infoContents;
-
-  releaseContext();
-  pageContext = nbgl_pageDrawGenericContent(&menu_callback, &nav, &content);
-  nbgl_refresh();
+        default:
+            PRINTF("Should not happen !");
+            break;
+    }
 }
 
 static void ui_menu_settings(void) {
-  nbgl_pageContent_t content = {.title = "Cardano settings",
-                                .titleToken = QUIT_INFO_TOKEN,
-                                .isTouchableTitle = true};
-  nbgl_pageNavigationInfo_t nav = {.activePage = 0,
-                                   .nbPages = 1,
-                                   .navType = NAV_WITH_BUTTONS,
-                                   .navWithButtons.quitButton = true,
-                                   .navWithButtons.navToken = QUIT_INFO_TOKEN,
-                                   .tuneId = TUNE_TAP_CASUAL};
-  content.type = BARS_LIST;
-  content.barsList.nbBars = 2;
-  content.barsList.tokens = (uint8_t *)settingsBarTokens;
-  content.barsList.barTexts = (const char **)settingsBarTexts;
-
-  releaseContext();
-  pageContext = nbgl_pageDrawGenericContent(&menu_callback, &nav, &content);
-  nbgl_refresh();
+  nbgl_useCaseSettings((char*)"Cardano settings", PAGE_START, NB_PAGE_SETTING, IS_TOUCHABLE, ui_idle_flow, 
+          settings_navigation_cb, settings_control_cb);
 }
 
 static void ui_idle_flow(void) {
-  nbgl_useCaseHome("Cardano", &C_cardano_64, NULL, true, ui_menu_settings, exit);
+  nbgl_useCaseHome((char*)"Cardano", &C_cardano_64, NULL, true, ui_menu_settings, exit);
 }
 
 static inline uint8_t getElementLineCount(const char* line) {
     return strlen(line) / MAX_TAG_CONTENT_CHAR_PER_LINE + 2;
 }
+
 static void display_callback(int token, unsigned char index) {
     (void) index;
 
