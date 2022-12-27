@@ -10,6 +10,7 @@
 #include "uiScreens_bagl.h"
 #elif defined(HAVE_NBGL)
 #include "nbgl_use_case.h"
+#include "uiScreens_nbgl.h"
 #endif
 
 void respondSuccessEmptyMsg()
