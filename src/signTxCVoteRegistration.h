@@ -67,4 +67,10 @@ void signTxCVoteRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffe
 
 bool signTxCVoteRegistration_isFinished();
 
+void voting_registration_advanceState();
+size_t _destinationToAddress(
+        tx_output_destination_storage_t* destination,
+        uint8_t* addressBuffer,
+        size_t addressBufferSize
+);
 #endif // H_CARDANO_APP_SIGN_TX_CVOTE_REGISTRATION
