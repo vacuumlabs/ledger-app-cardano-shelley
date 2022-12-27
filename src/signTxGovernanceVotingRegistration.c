@@ -3,13 +3,13 @@
 #include "state.h"
 #include "uiHelpers.h"
 #include "signTxUtils.h"
-#include "uiScreens.h"
 #include "auxDataHashBuilder.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
 #include "bufView.h"
 #include "securityPolicy.h"
 #include "messageSigning.h"
+#include "signTxGovernanceVotingRegistration_ui.h"
 
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 
@@ -56,7 +56,7 @@ static inline void CHECK_STATE(sign_tx_governance_voting_registration_state_t ex
 	VALIDATE(accessSubContext()->state == expected, ERR_INVALID_STATE);
 }
 
-static inline void advanceState()
+void voting_registration_advanceState()
 {
 	governance_voting_registration_context_t* subctx = accessSubContext();
 	TRACE("Advancing governance voting registration state from: %d", subctx->state);
@@ -158,7 +158,7 @@ static void signTxGovernanceVotingRegistration_handleInitAPDU(const uint8_t* wir
 	}
 
 	respondSuccessEmptyMsg();
-	advanceState();
+	voting_registration_advanceState();
 }
 
 // ============================== VOTING KEY ==============================
@@ -222,66 +222,6 @@ security_policy_t _determineVotingKeyPolicy()
 		ASSERT(false);
 	}
 	return POLICY_DENY;
-}
-
-static void _displayVotingKey(ui_callback_fn_t callback)
-{
-	governance_voting_registration_context_t* subctx = accessSubContext();
-	switch (subctx->stateData.delegation.type) {
-	case DELEGATION_KEY: {
-		STATIC_ASSERT(SIZEOF(subctx->stateData.delegation.votingPubKey) == GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
-		ui_displayBech32Screen(
-		        "Voting public key",
-		        "gov_vk",
-		        subctx->stateData.delegation.votingPubKey, GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH,
-		        callback
-		);
-		break;
-	}
-	case DELEGATION_PATH: {
-		ui_displayPathScreen(
-		        "Voting public key",
-		        &subctx->stateData.delegation.votingPubKeyPath,
-		        callback
-		);
-		break;
-	}
-	default:
-		ASSERT(false);
-	}
-}
-
-enum {
-	HANDLE_VOTING_KEY_STEP_WARNING = 8200,
-	HANDLE_VOTING_KEY_STEP_DISPLAY,
-	HANDLE_VOTING_KEY_STEP_RESPOND,
-	HANDLE_VOTING_KEY_STEP_INVALID,
-};
-
-static void signTxGovernanceVotingRegistration_handleVotingKey_ui_runStep()
-{
-	governance_voting_registration_context_t* subctx = accessSubContext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleVotingKey_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_VOTING_KEY_STEP_WARNING) {
-		ui_displayPaginatedText(
-		        "WARNING:",
-		        "unusual voting key",
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_VOTING_KEY_STEP_DISPLAY) {
-		_displayVotingKey(this_fn);
-	}
-	UI_STEP(HANDLE_VOTING_KEY_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_VOTING_KEY_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
@@ -354,50 +294,6 @@ static void signTxGovernanceVotingRegistration_handleVotingKeyAPDU(const uint8_t
 }
 
 // ============================== DELEGATION ==============================
-
-enum {
-	HANDLE_DELEGATION_STEP_WARNING = 8300,
-	HANDLE_DELEGATION_STEP_VOTING_KEY,
-	HANDLE_DELEGATION_STEP_WEIGHT,
-	HANDLE_DELEGATION_STEP_RESPOND,
-	HANDLE_DELEGATION_STEP_INVALID,
-};
-
-static void signTxGovernanceVotingRegistration_handleDelegation_ui_runStep()
-{
-	governance_voting_registration_context_t* subctx = accessSubContext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleDelegation_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_VOTING_KEY_STEP_WARNING) {
-		ui_displayPaginatedText(
-		        "WARNING:",
-		        "unusual voting key",
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_DELEGATION_STEP_VOTING_KEY) {
-		_displayVotingKey(this_fn);
-	}
-	UI_STEP(HANDLE_DELEGATION_STEP_WEIGHT) {
-		ui_displayUint64Screen(
-		        "Weight",
-		        subctx->stateData.delegation.weight,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_DELEGATION_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		subctx->currentDelegation++;
-		if (subctx->currentDelegation == subctx->numDelegations) {
-			advanceState();
-		}
-	}
-	UI_STEP_END(HANDLE_DELEGATION_STEP_INVALID);
-}
 
 __noinline_due_to_stack__
 static void signTxGovernanceVotingRegistration_handleDelegationAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -476,42 +372,6 @@ static void signTxGovernanceVotingRegistration_handleDelegationAPDU(const uint8_
 
 // ============================== STAKING KEY ==============================
 
-enum {
-	HANDLE_STAKING_KEY_STEP_WARNING = 8400,
-	HANDLE_STAKING_KEY_STEP_DISPLAY,
-	HANDLE_STAKING_KEY_STEP_RESPOND,
-	HANDLE_STAKING_KEY_STEP_INVALID,
-};
-
-static void signTxGovernanceVotingRegistration_handleStakingKey_ui_runStep()
-{
-	governance_voting_registration_context_t* subctx = accessSubContext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleStakingKey_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_STAKING_KEY_STEP_WARNING) {
-		ui_displayPaginatedText(
-		        "Unusual request",
-		        "Proceed with care",
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_STAKING_KEY_STEP_DISPLAY) {
-		ui_displayStakingKeyScreen(
-		        &subctx->stakingKeyPath,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_STAKING_KEY_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_STAKING_KEY_STEP_INVALID);
-}
-
 __noinline_due_to_stack__
 static void signTxGovernanceVotingRegistration_handleStakingKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
@@ -572,7 +432,7 @@ static void signTxGovernanceVotingRegistration_handleStakingKeyAPDU(const uint8_
 
 // ============================== VOTING REWARDS ADDRESS ==============================
 
-static size_t _destinationToAddress(
+size_t _destinationToAddress(
         tx_output_destination_storage_t* destination,
         uint8_t* addressBuffer,
         size_t addressBufferSize
@@ -604,51 +464,6 @@ static size_t _destinationToAddress(
 	}
 
 	return addressSize;
-}
-
-enum {
-	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_WARNING = 8500,
-	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS,
-	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_RESPOND,
-	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_INVALID
-};
-
-__noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep()
-{
-	governance_voting_registration_context_t* subctx = accessSubContext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_WARNING) {
-		ui_displayPaginatedText(
-		        "Unusual request",
-		        "Proceed with care",
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
-		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
-		size_t addressSize = _destinationToAddress(
-		                             &subctx->stateData.rewardDestination,
-		                             addressBuffer, SIZEOF(addressBuffer)
-		                     );
-
-		ui_displayAddressScreen(
-		        "Rewards go to",
-		        addressBuffer,
-		        addressSize,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
@@ -714,35 +529,6 @@ static void signTxGovernanceVotingRegistration_handleVotingRewardsAddressAPDU(co
 
 // ============================== NONCE ==============================
 
-enum {
-	HANDLE_NONCE_STEP_DISPLAY = 8600,
-	HANDLE_NONCE_STEP_RESPOND,
-	HANDLE_NONCE_STEP_INVALID,
-};
-
-static void signTxGovernanceVotingRegistration_handleNonce_ui_runStep()
-{
-	governance_voting_registration_context_t* subctx = accessSubContext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleNonce_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_NONCE_STEP_DISPLAY) {
-		ui_displayUint64Screen(
-		        "Nonce",
-		        subctx->stateData.nonce,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_NONCE_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_NONCE_STEP_INVALID);
-}
-
 __noinline_due_to_stack__
 static void signTxGovernanceVotingRegistration_handleNonceAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
@@ -790,35 +576,6 @@ static void signTxGovernanceVotingRegistration_handleNonceAPDU(const uint8_t* wi
 
 // ============================== VOTING PURPOSE ==============================
 
-enum {
-	HANDLE_VOTING_PURPOSE_STEP_DISPLAY = 8700,
-	HANDLE_VOTING_PURPOSE_STEP_RESPOND,
-	HANDLE_VOTING_PURPOSE_STEP_INVALID,
-};
-
-static void signTxGovernanceVotingRegistration_handleVotingPurpose_ui_runStep()
-{
-	governance_voting_registration_context_t* subctx = accessSubContext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleVotingPurpose_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_VOTING_PURPOSE_STEP_DISPLAY) {
-		ui_displayUint64Screen(
-		        "Voting purpose",
-		        subctx->stateData.votingPurpose,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_VOTING_PURPOSE_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_VOTING_PURPOSE_STEP_INVALID);
-}
-
 #define DEFAULT_VOTING_PURPOSE (0)
 
 __noinline_due_to_stack__
@@ -861,7 +618,7 @@ static void signTxGovernanceVotingRegistration_handleVotingPurposeAPDU(const uin
 	if (subctx->format != CIP36) {
 		// nothing to do, the APDU was only received to simplify the state machine
 		respondSuccessEmptyMsg();
-		advanceState();
+		voting_registration_advanceState();
 		return;
 	}
 
@@ -892,60 +649,6 @@ static void signTxGovernanceVotingRegistration_handleVotingPurposeAPDU(const uin
 
 
 // ============================== CONFIRM ==============================
-
-enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 8800,
-	HANDLE_CONFIRM_STEP_DISPLAY_HASH,
-	HANDLE_CONFIRM_STEP_RESPOND,
-	HANDLE_CONFIRM_STEP_INVALID,
-};
-
-static void signTxGovernanceVotingRegistration_handleConfirm_ui_runStep()
-{
-	governance_voting_registration_context_t* subctx = accessSubContext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleConfirm_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
-		// confirming this means the signature being sent out of the device
-		// so we want to show it in non-expert mode too
-		ui_displayPrompt(
-		        "Confirm voting key",
-		        "registration?",
-		        this_fn,
-		        respond_with_user_reject
-		);
-	}
-	UI_STEP(HANDLE_CONFIRM_STEP_DISPLAY_HASH) {
-		if (!app_mode_expert()) {
-			UI_STEP_JUMP(HANDLE_CONFIRM_STEP_RESPOND);
-		}
-		ui_displayHexBufferScreen(
-		        "Auxiliary data hash",
-		        subctx->auxDataHash,
-		        SIZEOF(subctx->auxDataHash),
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
-		struct {
-			uint8_t auxDataHash[AUX_DATA_HASH_LENGTH];
-			uint8_t signature[ED25519_SIGNATURE_LENGTH];
-		} wireResponse = {0};
-
-		STATIC_ASSERT(SIZEOF(subctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong aux data hash length");
-		memmove(wireResponse.auxDataHash, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
-
-		STATIC_ASSERT(SIZEOF(subctx->stateData.registrationSignature) == ED25519_SIGNATURE_LENGTH, "Wrong governance voting registration signature length");
-		memmove(wireResponse.signature, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
-
-		io_send_buf(SUCCESS, (uint8_t*) &wireResponse, SIZEOF(wireResponse));
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
-}
 
 __noinline_due_to_stack__
 static void signTxGovernanceVotingRegistration_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
