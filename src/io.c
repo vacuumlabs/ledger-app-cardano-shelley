@@ -107,6 +107,9 @@ unsigned char io_event(unsigned char channel MARK_UNUSED)
 #ifdef HAVE_BAGL
 		UX_DISPLAYED_EVENT({});
 #endif
+#ifdef HAVE_NBGL
+        UX_DEFAULT_EVENT();
+#endif
 		break;
 
 	case SEPROXYHAL_TAG_TICKER_EVENT:
