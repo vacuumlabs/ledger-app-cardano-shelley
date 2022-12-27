@@ -3,11 +3,11 @@
 #include "signCVote.h"
 #include "signTxUtils.h"
 #include "state.h"
-#include "uiScreens.h"
+#include "signCVote_ui.h"
 
 static ins_sign_cvote_context_t* ctx = &(instructionState.signCVoteContext);
 
-static void advanceStage()
+void vote_advanceStage()
 {
 	TRACE("Advancing cip36 voting stage from: %d", ctx->stage);
 
@@ -35,7 +35,7 @@ static void advanceStage()
 		break;
 
 	case VOTECAST_STAGE_NONE:
-		// advanceStage() not supposed to be called after votecast processing is finished
+		// vote_advanceStage() not supposed to be called after votecast processing is finished
 		ASSERT(false);
 
 	default:
@@ -54,58 +54,6 @@ static inline void CHECK_STAGE(sign_cvote_stage_t expected)
 }
 
 // ============================== INIT ==============================
-
-enum {
-	HANDLE_INIT_CONFIRM_START = 100,
-	HANDLE_INIT_VOTE_PLAN_ID,
-	HANDLE_INIT_PROPOSAL_INDEX,
-	HANDLE_INIT_PAYLOAD_TYPE_TAG,
-	HANDLE_INIT_RESPOND,
-	HANDLE_INIT_INVALID,
-};
-
-static void handleInit_ui_runStep()
-{
-	ui_callback_fn_t* this_fn = handleInit_ui_runStep;
-
-	UI_STEP_BEGIN(ctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_INIT_CONFIRM_START) {
-		ui_displayPrompt(
-		        "Start new",
-		        "vote? (CIP-36)",
-		        this_fn,
-		        respond_with_user_reject
-		);
-	}
-	UI_STEP(HANDLE_INIT_VOTE_PLAN_ID) {
-		ui_displayHexBufferScreen(
-		        "Vote plan id",
-		        ctx->votePlanId, SIZEOF(ctx->votePlanId),
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_INIT_PROPOSAL_INDEX) {
-		ui_displayUint64Screen(
-		        "Proposal index",
-		        ctx->proposalIndex,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_INIT_PAYLOAD_TYPE_TAG) {
-		ui_displayUint64Screen(
-		        "Payload type tag",
-		        ctx->payloadTypeTag,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_INIT_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceStage();
-	}
-	UI_STEP_END(HANDLE_INIT_INVALID);
-}
-
 __noinline_due_to_stack__
 void signCVote_handleInitAPDU(
         const uint8_t* wireDataBuffer, size_t wireDataSize
@@ -199,43 +147,11 @@ void signCVote_handleVotecastChunkAPDU(
 
 	respondSuccessEmptyMsg();
 	if (ctx->remainingVotecastBytes == 0) {
-		advanceStage();
+		vote_advanceStage();
 	}
 }
 
 // ============================== CONFIRM ==============================
-
-enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 200,
-	HANDLE_CONFIRM_STEP_RESPOND,
-	HANDLE_CONFIRM_STEP_INVALID,
-};
-
-static void handleConfirm_ui_runStep()
-{
-	TRACE("UI step %d", ctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handleConfirm_ui_runStep;
-
-	UI_STEP_BEGIN(ctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
-		ui_displayPrompt(
-		        "Confirm",
-		        "vote?",
-		        this_fn,
-		        respond_with_user_reject
-		);
-	}
-	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
-		io_send_buf(SUCCESS, ctx->votecastHash, SIZEOF(ctx->votecastHash));
-		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
-
-		advanceStage();
-	}
-	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
-}
-
 __noinline_due_to_stack__
 void signCVote_handleConfirmAPDU(
         const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize
@@ -281,58 +197,6 @@ void signCVote_handleConfirmAPDU(
 }
 
 // ============================== WITNESS ==============================
-
-static void _wipeWitnessSignature()
-{
-	// safer not to keep the signature in memory
-	explicit_bzero(ctx->witnessData.signature, SIZEOF(ctx->witnessData.signature));
-	respond_with_user_reject();
-}
-
-enum {
-	HANDLE_WITNESS_STEP_WARNING = 300,
-	HANDLE_WITNESS_STEP_DISPLAY,
-	HANDLE_WITNESS_STEP_CONFIRM,
-	HANDLE_WITNESS_STEP_RESPOND,
-	HANDLE_WITNESS_STEP_INVALID,
-};
-
-static void handleWitness_ui_runStep()
-{
-	TRACE("UI step %d", ctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handleWitness_ui_runStep;
-
-	UI_STEP_BEGIN(ctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_WITNESS_STEP_WARNING) {
-		ui_displayPaginatedText(
-		        "WARNING:",
-		        "unusual witness requested",
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_WITNESS_STEP_DISPLAY) {
-		ui_displayPathScreen("Witness path", &ctx->witnessData.path, this_fn);
-	}
-	UI_STEP(HANDLE_WITNESS_STEP_CONFIRM) {
-		ui_displayPrompt(
-		        "Sign using",
-		        "this witness?",
-		        this_fn,
-		        _wipeWitnessSignature
-		);
-	}
-	UI_STEP(HANDLE_WITNESS_STEP_RESPOND) {
-		TRACE("Sending witness data");
-		TRACE_BUFFER(ctx->witnessData.signature, SIZEOF(ctx->witnessData.signature));
-		io_send_buf(SUCCESS, ctx->witnessData.signature, SIZEOF(ctx->witnessData.signature));
-		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
-
-		advanceStage();
-	}
-	UI_STEP_END(HANDLE_WITNESS_STEP_INVALID);
-}
 
 __noinline_due_to_stack__
 void signCVote_handleWitnessAPDU(
