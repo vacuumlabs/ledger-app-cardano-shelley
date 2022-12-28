@@ -2,13 +2,13 @@
 #include "state.h"
 #include "uiHelpers.h"
 #include "signTxUtils.h"
-#include "uiScreens.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
 #include "bufView.h"
 #include "securityPolicy.h"
 #include "tokens.h"
 #include "hexUtils.h"
+#include "signTxOutput_ui.h"
 
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
@@ -57,7 +57,7 @@ static inline void CHECK_STATE(sign_tx_output_state_t expected)
 	VALIDATE(subctx->state == expected, ERR_INVALID_STATE);
 }
 
-static inline void advanceState()
+void tx_output_advanceState()
 {
 	output_context_t* subctx = accessSubcontext();
 	TRACE("Advancing output state from: %d", subctx->state);
@@ -170,74 +170,6 @@ static inline void advanceState()
 
 // ============================== TOP LEVEL DATA ==============================
 
-enum {
-	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM = 3100,
-	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS,
-	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT,
-	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND,
-	HANDLE_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
-};
-
-static bool _needsMissingDatumWarning()
-{
-	output_context_t* subctx = accessSubcontext();
-	tx_output_destination_t destination;
-	destination.type = subctx->stateData.destination.type;
-	switch (destination.type) {
-	case DESTINATION_DEVICE_OWNED:
-		destination.params = &subctx->stateData.destination.params;
-		break;
-	case DESTINATION_THIRD_PARTY:
-		destination.address.buffer = subctx->stateData.destination.address.buffer;
-		destination.address.size = subctx->stateData.destination.address.size;
-		break;
-	}
-
-	return needsMissingDatumWarning(&destination, subctx->includeDatum);
-}
-
-static void signTx_handleOutput_address_bytes_ui_runStep()
-{
-	output_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTx_handleOutput_address_bytes_ui_runStep;
-
-	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
-		ASSERT(subctx->stateData.destination.address.size <= SIZEOF(subctx->stateData.destination.address.buffer));
-		ui_displayAddressScreen(
-		        "Send to address",
-		        subctx->stateData.destination.address.buffer,
-		        subctx->stateData.destination.address.size,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM) {
-		// this warning does not apply to address given by params where we only allow key hash spending part
-		// in which case datum is just optional and rarely used
-		if (_needsMissingDatumWarning()) {
-			ui_displayPaginatedText(
-			        "WARNING: output",
-			        "could be unspendable due to missing datum",
-			        this_fn
-			);
-		} else {
-			UI_STEP_JUMP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT);
-		}
-	}
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT) {
-		ui_displayAdaAmountScreen("Send", subctx->stateData.adaAmount, this_fn);
-	}
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_INVALID);
-}
-
 static void handleOutput_addressBytes()
 {
 	output_context_t* subctx = accessSubcontext();
@@ -288,63 +220,6 @@ static void handleOutput_addressBytes()
 	}
 }
 
-
-enum {
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN = 3200,
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_WARNING_DATUM,
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH,
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO,
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS,
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT,
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND,
-	HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_INVALID,
-};
-
-__noinline_due_to_stack__
-static void signTx_handleOutput_addressParams_ui_runStep()
-{
-	output_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTx_handleOutput_addressParams_ui_runStep;
-
-	ASSERT(subctx->stateData.destination.type == DESTINATION_DEVICE_OWNED);
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_BEGIN) {
-		ui_displayPaginatedText(subctx->ui_text1, subctx->ui_text2, this_fn);
-	}
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
-		ui_displaySpendingInfoScreen(&subctx->stateData.destination.params, this_fn);
-	}
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO) {
-		ui_displayStakingInfoScreen(&subctx->stateData.destination.params, this_fn);
-	}
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
-		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
-		size_t addressSize = deriveAddress(&subctx->stateData.destination.params, addressBuffer, SIZEOF(addressBuffer));
-		ASSERT(addressSize > 0);
-		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
-
-		ui_displayAddressScreen(
-		        subctx->ui_text3,
-		        addressBuffer, addressSize,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT) {
-		if (subctx->stateData.adaAmountSecurityPolicy == POLICY_ALLOW_WITHOUT_PROMPT) {
-			UI_STEP_JUMP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND);
-		} else {
-			ui_displayAdaAmountScreen(subctx->ui_text4, subctx->stateData.adaAmount, this_fn);
-		}
-	}
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_INVALID);
-}
 
 static void handleOutput_addressParams()
 {
@@ -501,54 +376,6 @@ static void handleTopLevelDataAPDU_output(const uint8_t* wireDataBuffer, size_t 
 	default:
 		ASSERT(false);
 	};
-}
-
-enum {
-	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO = 3300,
-	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS,
-	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT,
-	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND,
-	HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_INVALID,
-};
-
-static void signTx_handleCollateralOutput_addressBytes_ui_runStep()
-{
-	output_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTx_handleCollateralOutput_addressBytes_ui_runStep;
-
-	ASSERT(subctx->stateData.destination.type == DESTINATION_THIRD_PARTY);
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_INTRO) {
-		ui_displayPaginatedText(
-		        "Collateral",
-		        "return output",
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADDRESS) {
-		ASSERT(subctx->stateData.destination.address.size <= SIZEOF(subctx->stateData.destination.address.buffer));
-		ui_displayAddressScreen(
-		        "Address",
-		        subctx->stateData.destination.address.buffer,
-		        subctx->stateData.destination.address.size,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_DISPLAY_ADA_AMOUNT) {
-		if (subctx->stateData.adaAmountSecurityPolicy == POLICY_ALLOW_WITHOUT_PROMPT) {
-			UI_STEP_JUMP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND);
-		} else {
-			ui_displayAdaAmountScreen("Amount", subctx->stateData.adaAmount, this_fn);
-		}
-	}
-	UI_STEP(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_COLLATERAL_OUTPUT_ADDRESS_BYTES_STEP_INVALID);
 }
 
 static void handleCollateralOutput_addressBytes()
@@ -783,54 +610,11 @@ static void handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 	{
 		// no UI, tokens are shown via fingerprints
 		respondSuccessEmptyMsg();
-		advanceState();
+		tx_output_advanceState();
 	}
 }
 
 // ============================== TOKEN ==============================
-
-enum {
-	HANDLE_TOKEN_STEP_DISPLAY_NAME = 3400,
-	HANDLE_TOKEN_STEP_DISPLAY_AMOUNT,
-	HANDLE_TOKEN_STEP_RESPOND,
-	HANDLE_TOKEN_STEP_INVALID,
-};
-
-static void handleToken_ui_runStep()
-{
-	output_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = handleToken_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_NAME) {
-		ui_displayAssetFingerprintScreen(
-		        &subctx->stateData.tokenGroup,
-		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_AMOUNT) {
-		ui_displayTokenAmountOutputScreen(
-		        &subctx->stateData.tokenGroup,
-		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
-		        subctx->stateData.token.amount,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_TOKEN_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-
-		ASSERT(subctx->stateData.currentToken < subctx->stateData.numTokens);
-		subctx->stateData.currentToken++;
-
-		if (subctx->stateData.currentToken == subctx->stateData.numTokens) {
-			advanceState();
-		}
-	}
-	UI_STEP_END(HANDLE_TOKEN_STEP_INVALID);
-}
 
 static void handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
@@ -915,35 +699,6 @@ static void handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 
 // ========================== DATUM =============================
 
-enum {
-	HANDLE_DATUM_HASH_STEP_DISPLAY = 3500,
-	HANDLE_DATUM_HASH_STEP_RESPOND,
-	HANDLE_DATUM_HASH_STEP_INVALID,
-};
-
-static void signTxOutput_handleDatumHash_ui_runStep()
-{
-	output_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxOutput_handleDatumHash_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_DATUM_HASH_STEP_DISPLAY) {
-		ui_displayBech32Screen(
-		        "Datum hash",
-		        "datum",
-		        subctx->stateData.datumHash, OUTPUT_DATUM_HASH_LENGTH,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_DATUM_HASH_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_DATUM_HASH_STEP_INVALID);
-}
-
 static void handleDatumHash(read_view_t* view)
 {
 	output_context_t* subctx = accessSubcontext();
@@ -979,48 +734,6 @@ static void handleDatumHash(read_view_t* view)
 
 		signTxOutput_handleDatumHash_ui_runStep();
 	}
-}
-
-enum {
-	HANDLE_DATUM_INLINE_STEP_DISPLAY = 3600,
-	HANDLE_DATUM_INLINE_STEP_RESPOND,
-	HANDLE_DATUM_INLINE_STEP_INVALID,
-};
-
-__noinline_due_to_stack__
-static void signTxOutput_handleDatumInline_ui_runStep()
-{
-	output_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxOutput_handleDatumInline_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_DATUM_INLINE_STEP_DISPLAY) {
-		char l1[30];
-		size_t datumSize = subctx->stateData.datumRemainingBytes + subctx->stateData.datumChunkSize;
-		// datumSize with 6 digits fits on the screen, less than max tx size
-		// if more is needed, "bytes" can be replaced by "B" for those larger numbers
-		snprintf(l1, SIZEOF(l1), "Datum %u bytes", datumSize);
-		ASSERT(strlen(l1) + 1 < SIZEOF(l1));
-
-		char l2[20];
-		size_t prefixLength = MIN(subctx->stateData.datumChunkSize, 6);
-		size_t len = encode_hex(subctx->stateData.datumChunk, prefixLength, l2, SIZEOF(l2));
-		snprintf(l2 + len, SIZEOF(l2) - len, "...");
-		ASSERT(strlen(l2) + 1 < SIZEOF(l2));
-
-		ui_displayPaginatedText(
-		        l1,
-		        l2,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_DATUM_INLINE_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_DATUM_INLINE_STEP_INVALID);
 }
 
 static void handleDatumInline(read_view_t* view)
@@ -1147,51 +860,11 @@ static void handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 	}
 	respondSuccessEmptyMsg();
 	if (subctx->stateData.datumRemainingBytes == 0) {
-		advanceState();
+		tx_output_advanceState();
 	}
 }
 
 // ========================== REFERENCE SCRIPT =============================
-
-enum {
-	HANDLE_SCRIPT_REF_STEP_DISPLAY = 3700,
-	HANDLE_SCRIPT_REF_STEP_RESPOND,
-	HANDLE_SCRIPT_REF_STEP_INVALID,
-};
-
-static void handleRefScript_ui_runStep()
-{
-	output_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = handleRefScript_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-	UI_STEP(HANDLE_SCRIPT_REF_STEP_DISPLAY) {
-		char l1[30];
-		size_t scriptSize = subctx->stateData.refScriptRemainingBytes + subctx->stateData.refScriptChunkSize;
-		// scriptSize with 6 digits fits on the screen, less than max tx size
-		// if more is needed, "bytes" can be replaced by "B" for those larger numbers
-		snprintf(l1, SIZEOF(l1), "Script %u bytes", scriptSize);
-		ASSERT(strlen(l1) + 1 < SIZEOF(l1));
-
-		char l2[20];
-		size_t prefixLength = MIN(subctx->stateData.refScriptChunkSize, 6);
-		size_t len = encode_hex(subctx->stateData.scriptChunk, prefixLength, l2, SIZEOF(l2));
-		snprintf(l2 + len, SIZEOF(l2) - len, "...");
-		ASSERT(strlen(l2) + 1 < SIZEOF(l2));
-
-		ui_displayPaginatedText(
-		        l1,
-		        l2,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_SCRIPT_REF_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_SCRIPT_REF_STEP_INVALID);
-}
 
 static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
@@ -1293,40 +966,11 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 	}
 	respondSuccessEmptyMsg();
 	if (subctx->stateData.refScriptRemainingBytes == 0) {
-		advanceState();
+		tx_output_advanceState();
 	}
 }
 
 // ============================== CONFIRM ==============================
-
-enum {
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM = 3800,
-	HANDLE_CONFIRM_STEP_RESPOND,
-	HANDLE_CONFIRM_STEP_INVALID,
-};
-
-static void signTxOutput_handleConfirm_ui_runStep()
-{
-	output_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	ui_callback_fn_t* this_fn = signTxOutput_handleConfirm_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
-		ui_displayPrompt(
-		        subctx->ui_text1,
-		        subctx->ui_text2,
-		        this_fn,
-		        respond_with_user_reject
-		);
-	}
-	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
-}
 
 static void handleConfirmAPDU_output(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
