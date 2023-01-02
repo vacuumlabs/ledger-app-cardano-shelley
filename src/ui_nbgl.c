@@ -41,16 +41,9 @@ enum {
 };
 
 enum {
-  CANCEL_PROMPT_TOKEN,
-  ACCEPT_TOKEN,
+  CANCEL_PROMPT_TOKEN = 1,
   ACCEPT_PAGE_TOKEN,
-  CANCEL_MESSAGE_TOKEN,
   CONFIRMATION_MESSAGE_TOKEN,
-
-  _WARNING_TOKEN,
-  _PAGE_TOKEN,
-  _CONFIRMATION_TOKEN,
-  _PROMPT_TOKEN,
 };
 
 typedef struct {
@@ -76,7 +69,6 @@ static const char* const infoTypes[] = {"Version", "Developer", "Copyright"};
 static const char* const infoContents[] = {APPVERSION, "Ledger", "(c) 2022 Ledger"};
 static nbgl_page_t *pageContext;
 static nbgl_layoutTagValue_t tagValues[5];
-static int8_t saved_token;
 static UiContext_t uiContext = {
     .rejected = NULL,
     .confirmed = NULL,
@@ -165,36 +157,13 @@ static void display_callback(int token, unsigned char index) {
         case CANCEL_PROMPT_TOKEN:
             display_cancel();
             break;
-        case CANCEL_MESSAGE_TOKEN:
-            display_cancel_message();
-            break;
         case ACCEPT_PAGE_TOKEN:
             uiContext.currentElementCount = 0;
             uiContext.currentLineCount = 0;
             uiContext.approved_cb();
             break;
-        case ACCEPT_TOKEN:
-            if (index == 0) {
-                uiContext.approved_cb();
-            }
-            else {
-                display_cancel();
-            }
-            break;
-        case _WARNING_TOKEN:
-            _display_warning();
-            break;
-        case _PAGE_TOKEN:
-            _display_page();
-            break;
-        case _CONFIRMATION_TOKEN:
-            _display_confirmation();
-            break;
         case CONFIRMATION_MESSAGE_TOKEN:
             display_confirmation_message();
-            break;
-        case _PROMPT_TOKEN:
-            _display_prompt();
             break;
         default: 
             TRACE("%d unknown", token);
@@ -214,8 +183,6 @@ static void _display_confirmation(void) {
         uiContext.approved_cb = uiContext.pendingCb;
         uiContext.pendingCb = NULL;
     }
-    saved_token = _CONFIRMATION_TOKEN;
-
     nbgl_pageNavigationInfo_t info = {
         .activePage = 0,
         .nbPages = 0,
@@ -234,17 +201,18 @@ static void _display_confirmation(void) {
         .infoLongPress.longPressText = (char*)"Hold to approve",
         .infoLongPress.longPressToken = CONFIRMATION_MESSAGE_TOKEN,
         .infoLongPress.tuneId = TUNE_TAP_NEXT};
+
     releaseContext();
-#ifndef HEADLESS
     pageContext = nbgl_pageDrawGenericContent(&display_callback, &info, &content);
-#else
+    nbgl_refresh();
+
+#ifdef HEADLESS
     nbgl_screenTickerConfiguration_t ticker = {
         .tickerCallback = &headless_cb,
         .tickerIntervale = 0,
         .tickerValue = 100};
     pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
 #endif
-    nbgl_refresh();
 }
 
 static void light_confirm_cb(bool confirm) {
@@ -263,27 +231,26 @@ static void _display_light_confirmation(void) {
         uiContext.pendingCb = NULL;
     }
 
-#ifndef HEADLESS
     nbgl_useCaseChoice(&C_cardano_64, uiContext.pageText[0], (char*)"", (char*)"Confirm", (char*)"Cancel", light_confirm_cb);
-#else
+
+#ifdef HEADLESS
     nbgl_screenTickerConfiguration_t ticker = {
         .tickerCallback = &headless_cb,
         .tickerIntervale = 0,
         .tickerValue = 100};
     pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
 #endif
-    nbgl_refresh();
 }
 
 static void _display_page(void) {
     TRACE("_page");
-    saved_token = _PAGE_TOKEN;
 
     for (uint8_t i = 0; i < uiContext.currentElementCount; i++) {
         tagValues[i].item = uiContext.tagTitle[i];
         tagValues[i].value = uiContext.tagContent[i];
     }
 
+    releaseContext();
     nbgl_pageNavigationInfo_t info = {
         .activePage = 0,
         .nbPages = 0,
@@ -301,19 +268,18 @@ static void _display_page(void) {
         .tagValueList.nbPairs = uiContext.currentElementCount,
         .tagValueList.pairs = (nbgl_layoutTagValue_t *)tagValues};
 
-    releaseContext();
-#ifndef HEADLESS
     pageContext = nbgl_pageDrawGenericContent(&display_callback, &info, &content);
-#else
+
+#ifdef HEADLESS
     uiContext.currentElementCount = 0;
     uiContext.currentLineCount = 0;
+    nbgl_refresh();
     nbgl_screenTickerConfiguration_t ticker = {
-        .tickerCallback = &headless_cb,
+        .tickerCallback = &display_callback,
         .tickerIntervale = 0,
         .tickerValue = 100};
     pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
 #endif
-    nbgl_refresh();
 }
 
 static void _display_prompt(void) {
@@ -323,32 +289,15 @@ static void _display_prompt(void) {
         uiContext.pendingCb = NULL;
     }
 
-    saved_token = _PROMPT_TOKEN;
-
-    nbgl_pageConfirmationDescription_t info = {
-        .centeredInfo.text1 = uiContext.pageText[0],
-        .centeredInfo.text2 = uiContext.pageText[1],
-        .centeredInfo.text3 = NULL,
-        .centeredInfo.style = LARGE_CASE_INFO,
-        .centeredInfo.icon = &C_cardano_64,
-        .centeredInfo.offsetY = -64,
-        .confirmationText = "Continue",
-        .cancelText = "Reject if not sure",
-        .confirmationToken = ACCEPT_TOKEN,
-        .cancelToken = CANCEL_PROMPT_TOKEN,
-        .tuneId = TUNE_TAP_CASUAL};
-
-    releaseContext();
-#ifndef HEADLESS
-    pageContext = nbgl_pageDrawConfirmation(&display_callback, &info);
-#else
+    nbgl_useCaseReviewStart(&C_cardano_64, uiContext.pageText[0], uiContext.pageText[1], 
+           (char*) "Reject if not sure", uiContext.approved_cb, &display_cancel);
+#ifdef HEADLESS
     nbgl_screenTickerConfiguration_t ticker = {
-        .tickerCallback = &headless_cb,
+        .tickerCallback = uiContext.approved_cb,
         .tickerIntervale = 0,
         .tickerValue = 100};
     pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
 #endif
-    nbgl_refresh();
 }
 
 static void _display_warning(void) {
@@ -357,32 +306,16 @@ static void _display_warning(void) {
         uiContext.approved_cb = uiContext.pendingCb;
         uiContext.pendingCb = NULL;
     }
-    saved_token = _WARNING_TOKEN;
 
-    nbgl_pageConfirmationDescription_t info = {
-        .centeredInfo.text1 = (char*) "WARNING",
-        .centeredInfo.text2 = uiContext.pageText[0],
-        .centeredInfo.text3 = NULL,
-        .centeredInfo.style = LARGE_CASE_INFO,
-        .centeredInfo.icon = &C_cardano_64,
-        .centeredInfo.offsetY = -64,
-        .confirmationText = "Continue",
-        .cancelText = "Reject if not sure",
-        .confirmationToken = ACCEPT_TOKEN,
-        .cancelToken = CANCEL_PROMPT_TOKEN,
-        .tuneId = TUNE_TAP_CASUAL};
-
-    releaseContext();
-#ifndef HEADLESS
-    pageContext = nbgl_pageDrawConfirmation(&display_callback, &info);
-#else
+    nbgl_useCaseReviewStart(&C_warning64px, (char*)"WARNING", uiContext.pageText[0], 
+            (char*)"Reject if not sure", uiContext.approved_cb, &display_cancel);
+#ifdef HEADLESS
     nbgl_screenTickerConfiguration_t ticker = {
-        .tickerCallback = &headless_cb,
+        .tickerCallback = uiContext.approved_cb,
         .tickerIntervale = 0,
         .tickerValue = 100};
     pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
 #endif
-    nbgl_refresh();
 }
 
 static void display_page(callback_t user_accept_cb, callback_t user_reject_cb) {
@@ -394,39 +327,53 @@ static void display_page(callback_t user_accept_cb, callback_t user_reject_cb) {
 }
 
 static void display_confirmation_message(void) {
-  nbgl_screenTickerConfiguration_t ticker = {.tickerCallback = uiContext.approved_cb,
-                                             .tickerIntervale = 0,
-                                             .tickerValue = 100};
-  releaseContext();
-  pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, uiContext.confirmed, 0);
-  nbgl_refresh();
+    if (uiContext.approved_cb) {
+        uiContext.approved_cb();
+    }
+    
+    if (uiContext.confirmed) {
+        nbgl_useCaseStatus(uiContext.confirmed, true, ui_home);
+    }
+    else {
+        nbgl_useCaseStatus((char*)"ACTION\nCONFIRMED", true, ui_home);
+    }
+
+    uiContext.lightConfirmation = false;
+    uiContext.rejected = NULL;
+    uiContext.confirmed = NULL;
+    uiContext.currentElementCount = 0;
+    uiContext.currentLineCount = 0;
 }
 
 static void display_cancel_message(void) {
-  nbgl_screenTickerConfiguration_t ticker = {.tickerCallback = uiContext.abandon_cb,
-                                             .tickerIntervale = 0,
-                                             .tickerValue = 100};
-  releaseContext();
-  pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, uiContext.rejected, 0);
-  nbgl_refresh();
+    if (uiContext.abandon_cb) {
+        uiContext.abandon_cb();
+    }
+
+    ui_idle();
+
+    if (uiContext.rejected) {
+        nbgl_useCaseStatus(uiContext.rejected, false, ui_home);
+    }
+    else {
+        nbgl_useCaseStatus((char*)"Action rejected", false, ui_home);
+    }
+
+    uiContext.lightConfirmation = false;
+    uiContext.rejected = NULL;
+    uiContext.confirmed = NULL;
+    uiContext.currentElementCount = 0;
+    uiContext.currentLineCount = 0;
 }
 
-static void display_cancel(void) {
-  nbgl_pageConfirmationDescription_t info = {
-      .cancelToken = saved_token,
-      .centeredInfo.text1 = (char *) "Cancel",
-      .centeredInfo.text2 = NULL,
-      .centeredInfo.text3 = NULL,
-      .centeredInfo.style = LARGE_CASE_INFO,
-      .centeredInfo.icon = &C_cardano_64,
-      .centeredInfo.offsetY = -64,
-      .confirmationText = "Yes",
-      .confirmationToken = CANCEL_MESSAGE_TOKEN,
-      .tuneId = TUNE_TAP_NEXT};
 
-  releaseContext();
-  pageContext = nbgl_pageDrawConfirmation(&display_callback, &info);
-  nbgl_refresh();
+static void display_cancel(void) {
+    if (uiContext.lightConfirmation) {
+        display_cancel_message();
+    }
+    else {
+        nbgl_useCaseConfirm((char*)"Reject ?", NULL, (char*)"Yes, Reject", (char*)"Go back", display_cancel_message);
+    }
 }
 
 void fill_and_display_if_required(const char* line1, const char* line2, callback_t user_accept_cb, callback_t user_reject_cb) {
