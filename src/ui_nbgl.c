@@ -282,6 +282,11 @@ static void _display_page(void) {
 #endif
 }
 
+static void confirmation_cb(void) {
+    ui_home();
+    uiContext.approved_cb();
+}
+
 static void _display_prompt(void) {
     TRACE("_prompt");
     if (uiContext.pendingCb) {
@@ -573,7 +578,9 @@ void set_light_confirmation(bool needed) {
 
 void ui_idle(void) {
   currentInstruction = INS_NONE;
-  ui_idle_flow();
 }
 
+void ui_home(void) {
+  ui_idle_flow();
+}
 #endif // HAVE_NBGL

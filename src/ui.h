@@ -17,7 +17,8 @@ void display_prompt(const char* text1, const char* text2, callback_t user_accept
 void display_warning(const char* text, callback_t user_accept_cb, callback_t user_reject_cb);
 void display_continue(callback_t user_accept_cb);
 void ui_idle(void);
-#endif
+void ui_home(void);
+#endif 
 
 #ifdef HAVE_BAGL
 void io_seproxyhal_display(const bagl_element_t *element);
