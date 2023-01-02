@@ -249,7 +249,8 @@ static void deriveAddress_display_ui_runStep()
         char line1[30] = {0};
         char spendingInfo[SPENDING_INFO_SIZE] = {0};
 		ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &ctx->addressParams);
-        fill_and_display_if_required(line1, spendingInfo, this_fn, respond_with_user_reject);
+        fill_address_data(line1, spendingInfo);
+        UI_STEP_JUMP(DISPLAY_UI_STEP_STAKING_INFO);
 #endif // HAVE_BAGL
 	}
 	UI_STEP(DISPLAY_UI_STEP_STAKING_INFO) {
@@ -259,7 +260,8 @@ static void deriveAddress_display_ui_runStep()
         char line1[30] = {0};
         char stakingInfo[120] = {0};
 		ui_getStakingInfoScreen(line1, SIZEOF(line1), stakingInfo, SIZEOF(stakingInfo), &ctx->addressParams);
-        fill_and_display_if_required(line1, stakingInfo, this_fn, respond_with_user_reject);
+        fill_address_data(line1, stakingInfo);
+        UI_STEP_JUMP(DISPLAY_UI_STEP_ADDRESS);
 #endif // HAVE_BAGL
 	}
 	UI_STEP(DISPLAY_UI_STEP_ADDRESS) {
@@ -278,7 +280,8 @@ static void deriveAddress_display_ui_runStep()
 		        ctx->address.buffer,
 		        ctx->address.size
 		);
-        fill_and_display_if_required("Address", humanAddress, this_fn, respond_with_user_reject);
+        fill_address_data((char*)"Address", humanAddress);
+        UI_STEP_JUMP(DISPLAY_UI_STEP_CONFIRM)
 #endif // HAVE_BAGL
 	}
 	UI_STEP(DISPLAY_UI_STEP_CONFIRM) {
@@ -290,11 +293,7 @@ static void deriveAddress_display_ui_runStep()
 		        respond_with_user_reject
 		);
 #elif defined(HAVE_NBGL)
-        display_confirmation(
-                "Confirm\n address",
-                "",
-                "ADDRESS\nCONFIRMED",
-                "ADDRESS\nREJECTED",
+        display_address(
                 this_fn, 
                 respond_with_user_reject
         );

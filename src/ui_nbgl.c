@@ -59,6 +59,7 @@ typedef struct {
   char tagContent[MAX_TAG_PER_PAGE_COUNT + 1][MAX_TAG_CONTENT_LENGTH];
   char pageText[2][MAX_TEXT_STRING];
   bool lightConfirmation;
+  nbgl_layoutTagValueList_t pairList;
 } UiContext_t;
 
 static const int INS_NONE = -1;
@@ -582,5 +583,59 @@ void ui_idle(void) {
 
 void ui_home(void) {
   ui_idle_flow();
+}
+
+void fill_address_data(char* text, char *content) {
+    snprintf(uiContext.tagTitle[uiContext.currentElementCount], MAX_TAG_TITLE_LINE_LENGTH, "%s", text);
+    snprintf(uiContext.tagContent[uiContext.currentElementCount], MAX_TAG_CONTENT_LENGTH, "%s", content);
+
+    tagValues[uiContext.currentElementCount].item = uiContext.tagTitle[uiContext.currentElementCount];
+    uiContext.currentElementCount++;
+}
+
+static void display_address_callback(void) {
+    uint8_t i;
+ 
+    uiContext.pairList.nbPairs = uiContext.currentElementCount - 1;
+    uiContext.pairList.pairs = tagValues;
+
+    uiContext.confirmed = (char*)"ADDRESS\nVERIFIED";
+    uiContext.rejected = (char*)"Address rejected";
+
+    for (i = 0; i < uiContext.currentElementCount; i++) {
+        if (strcmp(uiContext.tagTitle[i], "Address")) {
+            tagValues[i].item = uiContext.tagTitle[i];
+            tagValues[i].value = uiContext.tagContent[i];
+        }
+    }
+
+    for (i = 0; i < uiContext.currentElementCount; i++) {
+        if (!strcmp(uiContext.tagTitle[i], "Address")) {
+#ifndef HEADLESS
+            nbgl_useCaseAddressConfirmationExt(uiContext.tagContent[i], light_confirm_cb, &uiContext.pairList);
+#else
+            nbgl_screenTickerConfiguration_t ticker = {
+                .tickerCallback = &headless_cb,
+                .tickerIntervale = 0,
+                .tickerValue = 100};
+            pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
+#endif
+        }
+    }
+}
+
+void display_address(callback_t user_accept_cb, callback_t user_reject_cb) {
+    uiContext.approved_cb = user_accept_cb;
+    uiContext.abandon_cb = user_reject_cb;
+#ifndef HEADLESS
+    nbgl_useCaseReviewStart(&C_cardano_64, "Verify Cardano\naddress", NULL, "Cancel", display_address_callback, display_cancel_message);
+#else
+    nbgl_screenTickerConfiguration_t ticker = {
+        .tickerCallback = &headless_cb,
+        .tickerIntervale = 0,
+        .tickerValue = 100};
+    pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
+#endif
+
 }
 #endif // HAVE_NBGL
