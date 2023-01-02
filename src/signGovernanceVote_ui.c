@@ -32,6 +32,7 @@ void handleInit_ui_runStep()
 		        respond_with_user_reject
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_prompt("Start new\ngovernance vote?", "", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}
@@ -149,6 +150,7 @@ void handleWitness_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_warning("Unusual\nwitness requested", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}

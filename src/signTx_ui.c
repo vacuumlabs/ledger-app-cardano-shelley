@@ -241,6 +241,7 @@ void signTx_handleAuxDataGovernanceVotingRegistration_ui_runStep()
 		        respond_with_user_reject
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_prompt("Register Governance\nvoting key", "", this_fn, respond_with_user_reject); 
 #endif // HAVE_BAGL
 	}
@@ -393,6 +394,7 @@ void signTx_handleCertificate_ui_runStep()
 			        this_fn
 			);
 #elif defined(HAVE_NBGL)
+            set_light_confirmation(true);
             display_prompt("Register\nstaking key", "", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 			break;
@@ -405,6 +407,7 @@ void signTx_handleCertificate_ui_runStep()
 			        this_fn
 			);
 #elif defined(HAVE_NBGL)
+            set_light_confirmation(true);
             display_prompt("Deregister\nstaking key", "", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 			break;
@@ -418,6 +421,7 @@ void signTx_handleCertificate_ui_runStep()
 			        this_fn
 			);
 #elif defined(HAVE_NBGL)
+            set_light_confirmation(true);
             display_prompt("Delegate staking\nconfirmation key", "", signTx_handleCertificate_ui_delegation_cb, respond_with_user_reject);
 #endif // HAVE_BAGL
 			break;
@@ -556,6 +560,7 @@ void signTx_handleCertificatePoolRetirement_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
         ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", BODY_CTX->stageData.certificate.poolKeyHash, SIZEOF(BODY_CTX->stageData.certificate.poolKeyHash));
         fill_and_display_if_required("Retire stake pool", encodedStr, this_fn, respond_with_user_reject);

@@ -116,6 +116,7 @@ void signTx_handleOutput_addressParams_ui_runStep()
 #ifdef HAVE_BAGL
 		ui_displayPaginatedText(subctx->ui_text1, subctx->ui_text2, this_fn);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_prompt("Change output", "", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}
@@ -201,6 +202,7 @@ void signTx_handleCollateralOutput_addressBytes_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+            set_light_confirmation(true);
             display_prompt("Collateral\nreturn output", "", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}
@@ -324,6 +326,7 @@ void signTxOutput_handleDatumHash_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
         ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "datum", subctx->stateData.datumHash, OUTPUT_DATUM_HASH_LENGTH);
         fill_and_display_if_required("Datum hash", encodedStr, this_fn, respond_with_user_reject);
@@ -365,6 +368,7 @@ void signTxOutput_handleDatumInline_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_prompt(l1, l2, this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}
@@ -405,6 +409,7 @@ void handleRefScript_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_prompt(l1, l2, this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}
@@ -434,6 +439,7 @@ void signTxOutput_handleConfirm_ui_runStep()
 		        respond_with_user_reject
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_confirmation("Confirm output", "",  "OUTPUT\nCONFIRMED", "Output\nrejected", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}

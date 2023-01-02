@@ -32,6 +32,7 @@ static void _displayVotingKey(ui_callback_fn_t callback)
 		        callback
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
         ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "gov_vk", subctx->stateData.delegation.votingPubKey, GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH);
         fill_and_display_if_required("Voting public key", encodedStr, callback, respond_with_user_reject);
@@ -46,6 +47,7 @@ static void _displayVotingKey(ui_callback_fn_t callback)
 		        callback
 		);
 #elif defined(HAVE_NBGL)
+           set_light_confirmation(true);
             char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
             ui_getPathScreen(pathStr, SIZEOF(pathStr), &subctx->stateData.delegation.votingPubKeyPath);
             fill_and_display_if_required("Voting public key", pathStr, callback, respond_with_user_reject);
@@ -74,6 +76,7 @@ void signTxGovernanceVotingRegistration_handleVotingKey_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_warning("Unusual\nvoting key", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}
@@ -106,6 +109,7 @@ void signTxGovernanceVotingRegistration_handleDelegation_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_warning("Unusual\nvoting key", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}
@@ -120,6 +124,7 @@ void signTxGovernanceVotingRegistration_handleDelegation_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         char line[30];
 		ui_getUint64Screen(
                 line,
@@ -172,6 +177,7 @@ void signTxGovernanceVotingRegistration_handleStakingKey_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_warning("Unusual request\nProceed with care", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}
@@ -182,6 +188,7 @@ void signTxGovernanceVotingRegistration_handleStakingKey_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         bool showAccountDescription = bip44_isPathReasonable(&subctx->stakingKeyPath);
         if (showAccountDescription) {
             char line1[30];
@@ -224,6 +231,7 @@ void signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_warning("Unusual request\nProceed with care", this_fn, respond_with_user_reject);
 #endif // HAVE_BAGL
 	}
@@ -242,6 +250,7 @@ void signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         char humanAddress[MAX_HUMAN_ADDRESS_SIZE] = {0};
 		ui_getAddressScreen(
                 humanAddress,

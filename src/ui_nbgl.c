@@ -65,6 +65,7 @@ typedef struct {
   char tagTitle[MAX_TAG_PER_PAGE_COUNT + 1][MAX_TAG_TITLE_LINE_LENGTH];
   char tagContent[MAX_TAG_PER_PAGE_COUNT + 1][MAX_TAG_CONTENT_LENGTH];
   char pageText[2][MAX_TEXT_STRING];
+  bool lightConfirmation;
 } UiContext_t;
 
 static const int INS_NONE = -1;
@@ -81,12 +82,14 @@ static UiContext_t uiContext = {
     .confirmed = NULL,
     .currentLineCount = 0,
     .currentElementCount = 0,
+    .lightConfirmation = 0,
 };
 
 // Forward declaration
 static void _display_warning(void);
 static void _display_page(void);
 static void _display_confirmation(void);
+static void _display_light_confirmation(void);
 static void _display_prompt(void);
 static void display_cancel(void);
 static void display_confirmation_message(void);
@@ -234,6 +237,34 @@ static void _display_confirmation(void) {
     releaseContext();
 #ifndef HEADLESS
     pageContext = nbgl_pageDrawGenericContent(&display_callback, &info, &content);
+#else
+    nbgl_screenTickerConfiguration_t ticker = {
+        .tickerCallback = &headless_cb,
+        .tickerIntervale = 0,
+        .tickerValue = 100};
+    pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
+#endif
+    nbgl_refresh();
+}
+
+static void light_confirm_cb(bool confirm) {
+    if (confirm) {
+        display_confirmation_message();
+    }
+    else {
+        display_cancel_message();
+    }
+}
+
+static void _display_light_confirmation(void) {
+    TRACE("_light_confirmation");
+    if (uiContext.pendingCb) {
+        uiContext.approved_cb = uiContext.pendingCb;
+        uiContext.pendingCb = NULL;
+    }
+
+#ifndef HEADLESS
+    nbgl_useCaseChoice(&C_cardano_64, uiContext.pageText[0], (char*)"", (char*)"Confirm", (char*)"Cancel", light_confirm_cb);
 #else
     nbgl_screenTickerConfiguration_t ticker = {
         .tickerCallback = &headless_cb,
@@ -504,11 +535,21 @@ void display_confirmation(const char* text1, const char* text2, const char* conf
 
     if (uiContext.currentElementCount > 0) {
         uiContext.pendingCb = user_accept_cb;
-        uiContext.approved_cb = &_display_confirmation;
+        if (uiContext.lightConfirmation) {
+            uiContext.approved_cb = &_display_light_confirmation;
+        }
+        else {
+            uiContext.approved_cb = &_display_confirmation;
+        }
         _display_page();
     }
     else {
-        _display_confirmation();
+        if (uiContext.lightConfirmation) {
+            _display_light_confirmation();
+        }
+        else {
+            _display_confirmation();
+        }
     }
 
 }
@@ -577,6 +618,10 @@ void display_continue(callback_t user_accept_cb) {
   releaseContext();
   pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
   nbgl_refresh();
+}
+
+void set_light_confirmation(bool needed) {
+    uiContext.lightConfirmation = needed;
 }
 
 void ui_idle(void) {

@@ -89,6 +89,7 @@ static void deriveAddress_return_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_warning(
                 "Unusual request",
                 this_fn, 
@@ -100,6 +101,7 @@ static void deriveAddress_return_ui_runStep()
 #ifdef HAVE_BAGL
 		ui_displayPaginatedText("Export", "address", this_fn);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_prompt(
                 "Export address",
                 "",
@@ -211,6 +213,7 @@ static void deriveAddress_display_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_warning(
                 "Unusual request",
                 this_fn, 
@@ -226,6 +229,7 @@ static void deriveAddress_display_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_warning(
                 "Make sure address matches\nwith your computer", 
                 this_fn,

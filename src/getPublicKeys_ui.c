@@ -77,6 +77,7 @@ void getPublicKeys_respondOneKey_ui_runStep()
 		        this_fn
 		);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_warning(
                 "Unusual request",
                 this_fn, 
@@ -100,6 +101,7 @@ void getPublicKeys_respondOneKey_ui_runStep()
 #ifdef HAVE_BAGL
 		ui_displayGetPublicKeyPathScreen(&ctx->pathSpec, this_fn);
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         bool showAccountDescription = (bip44_classifyPath(&ctx->pathSpec) == PATH_ORDINARY_ACCOUNT);
         if (showAccountDescription) {
             char line1[30];
@@ -183,6 +185,7 @@ void getPublicKeys_handleInit_ui_runStep()
 		);
 
 #elif defined(HAVE_NBGL)
+        set_light_confirmation(true);
         display_prompt(
                 "Review export",
 		        secondLine,

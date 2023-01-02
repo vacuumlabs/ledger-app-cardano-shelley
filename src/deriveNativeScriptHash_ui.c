@@ -76,6 +76,7 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 	        callback
 	);
 #elif defined(HAVE_NBGL)
+    set_light_confirmation(true);
     fill_and_display_new_page(HEADER, positionDescription, callback, respond_with_user_reject);
 #endif // HAVE_BAGL
 }
@@ -119,6 +120,7 @@ void deriveScriptHash_display_ui_runStep()
     }
 #ifdef HAVE_NBGL
 	UI_STEP(DISPLAY_UI_STEP_SCRIPT_TYPE) {
+        set_light_confirmation(true);
 		switch (ctx->ui_scriptType) {
 		case UI_SCRIPT_PUBKEY_PATH: 
             fill_and_display_if_required("Script type", "Pubkey path", this_fn, respond_with_user_reject);
