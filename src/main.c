@@ -157,7 +157,12 @@ static void cardano_main(void)
 				if (e >= _ERR_AUTORESPOND_START && e < _ERR_AUTORESPOND_END) {
 					io_send_buf(e, NULL, 0);
 					flags = IO_ASYNCH_REPLY;
-					ui_idle();
+#ifdef HAVE_NBGL
+					if (e != ERR_REJECTED_BY_USER) {
+					    ui_idle();
+					    display_error();
+					}
+#endif
 				} else {
 					PRINTF("Uncaught error 0x%x", (unsigned) e);
 					#ifdef RESET_ON_CRASH

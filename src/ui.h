@@ -20,6 +20,8 @@ void display_warning(const char* text, callback_t user_accept_cb, callback_t use
 void display_continue(callback_t user_accept_cb);
 void ui_idle(void);
 void ui_home(void);
+void display_cancel_message(void);
+void display_error(void);
 #endif 
 
 #ifdef HAVE_BAGL

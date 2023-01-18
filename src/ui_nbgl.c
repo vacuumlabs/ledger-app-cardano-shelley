@@ -167,6 +167,10 @@ static void display_callback(int token, unsigned char index) {
             display_confirmation_message();
             break;
         default: 
+            uiContext.currentElementCount = 0;
+            uiContext.currentLineCount = 0;
+            uiContext.approved_cb();
+            uiContext.lightConfirmation = false;
             TRACE("%d unknown", token);
     }
 }
@@ -351,7 +355,7 @@ static void display_confirmation_message(void) {
     uiContext.currentLineCount = 0;
 }
 
-static void display_cancel_message(void) {
+void display_cancel_message(void) {
     if (uiContext.abandon_cb) {
         uiContext.abandon_cb();
     }
@@ -637,5 +641,14 @@ void display_address(callback_t user_accept_cb, callback_t user_reject_cb) {
     pageContext = nbgl_pageDrawLedgerInfo(NULL, &ticker, NULL, 0);
 #endif
 
+}
+
+void display_error(void) {
+    nbgl_useCaseStatus((char*)"An error has occurred", false, ui_home);
+    uiContext.lightConfirmation = false;
+    uiContext.rejected = NULL;
+    uiContext.confirmed = NULL;
+    uiContext.currentElementCount = 0;
+    uiContext.currentLineCount = 0;
 }
 #endif // HAVE_NBGL
