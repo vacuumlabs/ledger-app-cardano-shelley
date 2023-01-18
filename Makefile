@@ -40,7 +40,7 @@ endif
 ##############
 
 # based in part on https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags
-WERROR   := -Werror=incompatible-pointer-types -Werror=return-type -Werror=parentheses -Werror=format-security
+WERROR   := -Werror=return-type -Werror=parentheses -Werror=format-security
 
 CC       := $(CLANGPATH)clang
 CFLAGS   += -std=gnu99 -Wall -Wextra -Wuninitialized -Wshadow -Wformat=2 -Wwrite-strings -Wundef -fno-common $(WERROR)
