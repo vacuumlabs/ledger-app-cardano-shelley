@@ -742,7 +742,7 @@ static void signTx_handleAuxDataGovernanceVotingRegistration_ui_runStep()
 	UI_STEP(HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_DISPLAY) {
 		ui_displayPrompt(
 		        "Register governance",
-		        "voting key?",
+		        "vote key?",
 		        this_fn,
 		        respond_with_user_reject
 		);
