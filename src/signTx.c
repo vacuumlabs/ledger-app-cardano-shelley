@@ -794,7 +794,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 			break;
 		}
 
-		case AUX_DATA_TYPE_GOVERNANCE_VOTING_REGISTRATION:
+		case AUX_DATA_TYPE_CIP36_REGISTRATION:
 			break;
 
 		default:
@@ -823,7 +823,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 		signTx_handleAuxDataArbitraryHash_ui_runStep();
 		break;
 	}
-	case AUX_DATA_TYPE_GOVERNANCE_VOTING_REGISTRATION:
+	case AUX_DATA_TYPE_CIP36_REGISTRATION:
 		// select UI step
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}

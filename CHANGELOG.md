@@ -8,17 +8,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [6.0.1](TBD) - [TBD]
 
-Support for governance voting (CIP-0036)
+Support for CIP-36 voting
 
 ### Added
 
-- export of governance voting keys (1694'/1815'/...)
-- support for governance voting (signing of vote-cast fragments with 1694 keys)
-- support for CIP-36 features (governance voting registration in transaction auxiliary data)
+- export of vote keys (1694'/1815'/...)
+- support for CIP-36 voting (signing of vote-cast fragments with 1694 keys)
+- support for CIP-36 registrations (in transaction auxiliary data)
 
 ### Changed
 
-- API for Catalyst voting registration (it is still possible to use CIP-0015 in auxiliary data)
+- API for Catalyst voting registration (it is still possible to use CIP-15 in auxiliary data)
 - updated list of native tokens recognized by the app with correct decimal places
 
 
