@@ -1,10 +1,10 @@
-# Governance Voting Key Registration
+# CIP36 Voting Key Registration
 
 ## Description
 
-Cardano uses a sidechain for its governance voting. One needs to "register" to participate on this sidechain by submitting a registration transaction on the Cardano blockchain. This is done by submitting a transaction with specific auxiliary data attached to the transaction body. These auxiliary data contain a signature by user's staking key, hence serialization of the it by Ledger is required which after confirming by the user returns that signature for the client software to be able to assemble the full serialized transaction.
+Cardano uses a sidechain for voting (initially used only for Catalyst, but CIP-36 allows other voting purposes). One needs to "register" to participate on this sidechain by submitting a registration transaction on the Cardano blockchain. This is done by submitting a transaction with specific auxiliary data attached to the transaction body. These auxiliary data contain a signature by user's staking key, hence serialization of the it by Ledger is required which after confirming by the user returns that signature for the client software to be able to assemble the full serialized transaction.
 
-For more details about governance voting registration see [CIP-0036](https://cips.cardano.org/cips/cip36/).
+For more details about voting registration see [CIP-0036](https://cips.cardano.org/cips/cip36/).
 
 ---
 
@@ -17,7 +17,7 @@ In the following list of APDU messages (which are to be sent in the listed order
 |  P1 | `0x08` |
 |  P2 | (specific for each subcall) |
 
-All but the last response are empty. The last response contains the overall auxiliary data hash and the signature needed for the client to assemble the governance voting registration auxiliary data.
+All but the last response are empty. The last response contains the overall auxiliary data hash and the signature needed for the client to assemble the CIP36 registration auxiliary data.
 
 ---
 
@@ -29,7 +29,7 @@ P2 = `0x36`
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Governance voting registration format |  1 | 0x01 or 0x02 for CIP15 and CIP36, respectively|
+|Registration format                   |  1 | 0x01 or 0x02 for CIP15 and CIP36, respectively|
 |Number of delegations                 |  4 | big endian |
 
 ---
@@ -139,7 +139,7 @@ Data must be empty.
 
 |Field|Length| Comments|
 |-----|-----|-----|
-| Auxiliary data hash | 32 | Hash of the governance voting registration auxiliary data|
-| Signature |64| Governance voting registration signature by the staking key that has been supplied|
+| Auxiliary data hash | 32 | Hash of the registration auxiliary data|
+| Signature |64| Voting registration signature by the staking key that has been supplied|
 
-Note: governance voting registration auxiliary data is serialized in the [Mary-era format](https://github.com/input-output-hk/cardano-ledger-specs/blob/dcdbc38eb9caea16485827bd095d5adcdcca0aba/shelley-ma/shelley-ma-test/cddl-files/shelley-ma.cddl#L214), where the array of auxiliary scripts is fixed to an empty array.
+Note: voting registration auxiliary data is serialized in the [Mary-era format](https://github.com/input-output-hk/cardano-ledger-specs/blob/dcdbc38eb9caea16485827bd095d5adcdcca0aba/shelley-ma/shelley-ma-test/cddl-files/shelley-ma.cddl#L214), where the array of auxiliary scripts is fixed to an empty array.

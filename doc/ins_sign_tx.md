@@ -86,7 +86,7 @@ Optional.
 |Field|Value|
 |-----|-----|
 |  P1 | `0x08` |
-|  P2 | (unused / see [Governance Voting Registration](ins_sign_governance_voting_registration.md)) |
+|  P2 | (unused / see [CIP-36 Voting Registration](ins_sign_cip36_registration.md)) |
 
 **Data for AUX_DATA_TYPE_ARBITRARY_HASH**
 
@@ -98,13 +98,13 @@ So only the hash is transferred and displayed and the user has to use other mean
 | Auxiliary data type | 1 | `AUX_DATA_TYPE_ARBITRARY_HASH=0x00` |
 | Auxiliary data hash | 32 | |
 
-**Data for AUX_DATA_TYPE_GOVERNANCE_VOTING_REGISTRATION**
+**Data for AUX_DATA_TYPE_CIP36_REGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-| Auxiliary data type | 1 | `AUX_DATA_TYPE_GOVERNANCE_VOTING_REGISTRATION=0x01` |
+| Auxiliary data type | 1 | `AUX_DATA_TYPE_CIP36_REGISTRATION=0x01` |
 
-This only describes the initial message. All the data for this type of auxiliary data are obtained via a series of additional APDU messages; see [Governance Voting Registration](ins_sign_governance_voting_registration.md) for the details.
+This only describes the initial message. All the data for this type of auxiliary data are obtained via a series of additional APDU messages; see [CIP-36 Voting Registration](ins_sign_cip36_registration.md) for the details.
 
 ### Set UTxO inputs
 

@@ -231,8 +231,8 @@ static void _displayVotingKey(ui_callback_fn_t callback)
 	case DELEGATION_KEY: {
 		STATIC_ASSERT(SIZEOF(subctx->stateData.delegation.votingPubKey) == GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
 		ui_displayBech32Screen(
-		        "Voting public key",
-		        "gov_vk",
+		        "Vote public key",
+		        "cvote_vk",
 		        subctx->stateData.delegation.votingPubKey, GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH,
 		        callback
 		);
@@ -240,7 +240,7 @@ static void _displayVotingKey(ui_callback_fn_t callback)
 	}
 	case DELEGATION_PATH: {
 		ui_displayPathScreen(
-		        "Voting public key",
+		        "Vote public key",
 		        &subctx->stateData.delegation.votingPubKeyPath,
 		        callback
 		);
@@ -270,7 +270,7 @@ static void signTxGovernanceVotingRegistration_handleVotingKey_ui_runStep()
 	UI_STEP(HANDLE_VOTING_KEY_STEP_WARNING) {
 		ui_displayPaginatedText(
 		        "WARNING:",
-		        "unusual voting key",
+		        "unusual vote key",
 		        this_fn
 		);
 	}
@@ -375,7 +375,7 @@ static void signTxGovernanceVotingRegistration_handleDelegation_ui_runStep()
 	UI_STEP(HANDLE_VOTING_KEY_STEP_WARNING) {
 		ui_displayPaginatedText(
 		        "WARNING:",
-		        "unusual voting key",
+		        "unusual vote key",
 		        this_fn
 		);
 	}
@@ -912,7 +912,7 @@ static void signTxGovernanceVotingRegistration_handleConfirm_ui_runStep()
 		// confirming this means the signature being sent out of the device
 		// so we want to show it in non-expert mode too
 		ui_displayPrompt(
-		        "Confirm voting key",
+		        "Confirm vote key",
 		        "registration?",
 		        this_fn,
 		        respond_with_user_reject
