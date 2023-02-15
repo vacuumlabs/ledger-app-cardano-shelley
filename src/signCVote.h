@@ -1,5 +1,5 @@
-#ifndef H_CARDANO_APP_SIGN_GOVERNANCE_VOTE
-#define H_CARDANO_APP_SIGN_GOVERNANCE_VOTE
+#ifndef H_CARDANO_APP_SIGN_CVOTE
+#define H_CARDANO_APP_SIGN_CVOTE
 
 #include "cardano.h"
 #include "common.h"
@@ -16,10 +16,10 @@ typedef enum {
 	VOTECAST_STAGE_CHUNK = 40,
 	VOTECAST_STAGE_CONFIRM = 60,
 	VOTECAST_STAGE_WITNESS = 80,
-} sign_governance_vote_stage_t;
+} sign_cvote_stage_t;
 
 typedef struct {
-	sign_governance_vote_stage_t stage;
+	sign_cvote_stage_t stage;
 	int ui_step;
 	size_t remainingVotecastBytes;
 
@@ -38,8 +38,8 @@ typedef struct {
 			uint8_t signature[ED25519_SIGNATURE_LENGTH];
 		} witnessData;
 	};
-} ins_sign_governance_vote_context_t;
+} ins_sign_cvote_context_t;
 
-handler_fn_t signGovernanceVote_handleAPDU;
+handler_fn_t signCVote_handleAPDU;
 
-#endif // H_CARDANO_APP_SIGN_GOVERNANCE_VOTE
+#endif // H_CARDANO_APP_SIGN_CVOTE

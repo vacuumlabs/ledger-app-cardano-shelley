@@ -1,5 +1,6 @@
 ledger
 bin
+build
 debug
 dep
 obj

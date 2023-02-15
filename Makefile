@@ -176,7 +176,7 @@ seed:
 ##############
 
 format:
-	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c
+	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c --ignore-exclude-errors
 
 
 ##############
