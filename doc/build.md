@@ -3,11 +3,9 @@
 ## Dependencies
 
 - Install Docker
-- Update [Dockerfile](../Dockerfile) if needed: check https://github.com/LedgerHQ/ledger-app-builder/blob/master/Dockerfile.
-- Create Docker image
+- Pull the required containers as discussed in https://github.com/LedgerHQ/ledger-app-builder/ (lite container is sufficient for a C build):
 
-  `docker build -t ledger-app-builder-cardano:latest .`
-
+  `sudo docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest`
 
 ## Compiling the app
 
@@ -19,7 +17,7 @@ Based on https://developers.ledger.com/docs/nano-app/build/.
 
 - Create container with the image
 
-  `docker run --rm -ti -v "$(realpath .):/app" ledger-app-builder-cardano:latest`
+  `docker run --rm -ti -v "$(realpath .):/app" --user $(id -u $USER):$(id -g $USER) ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest`
 
 - Run make commands
 
