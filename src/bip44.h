@@ -96,7 +96,7 @@ typedef enum {
 	PATH_ORDINARY_SPENDING_KEY,
 	PATH_MULTISIG_SPENDING_KEY,
 
-	// hd wallet reward adress, withdrawal witness, pool owner
+	// hd wallet reward address, withdrawal witness, pool owner
 	PATH_ORDINARY_STAKING_KEY,
 	PATH_MULTISIG_STAKING_KEY,
 

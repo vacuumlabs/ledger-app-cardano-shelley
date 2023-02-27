@@ -202,7 +202,7 @@ static void signTxMint_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_
 	}
 
 	{
-		// add tokengroup to tx
+		// add token group to tx
 		TRACE("Adding token group hash to tx hash");
 		txHashBuilder_addMint_tokenGroup(
 		        &BODY_CTX->txHashBuilder,
@@ -312,7 +312,7 @@ static void signTxMint_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wir
 	}
 
 	{
-		// add tokengroup to tx
+		// add token group to tx
 		TRACE("Adding token group hash to tx hash");
 		txHashBuilder_addMint_token(
 		        &BODY_CTX->txHashBuilder,

@@ -571,7 +571,7 @@ static void handleCollateralOutput_addressBytes()
 		.includeRefScript = subctx->includeRefScript,
 	};
 
-	// TODO maybe restric to specific address types? we don't support datum in coll ret outputs
+	// TODO maybe restrict to specific address types? we don't support datum in coll ret outputs
 	security_policy_t policy = policyForSignTxCollateralOutputAddressBytes(
 	                                   &output,
 	                                   commonTxData->txSigningMode,
@@ -753,7 +753,7 @@ static void handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 	{
-		// add tokengroup to tx
+		// add token group to tx
 		TRACE("Adding token group hash to tx hash");
 
 		switch (ctx->stage) {
@@ -871,7 +871,7 @@ static void handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 	{
-		// add tokengroup to tx
+		// add token group to tx
 		TRACE("Adding token group hash to tx hash");
 		switch (ctx->stage) {
 

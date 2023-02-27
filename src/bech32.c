@@ -32,6 +32,7 @@ uint32_t bech32_polymod_step(uint32_t pre)
 	       (-((b >> 3) & 1) & 0x3d4233ddUL) ^ (-((b >> 4) & 1) & 0x2a1462b3UL);
 }
 
+/* cspell:disable-next-line */
 static const char* charset = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 
 /** Encode a Bech32 string

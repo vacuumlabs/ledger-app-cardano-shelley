@@ -976,13 +976,13 @@ security_policy_t policyForSignTxCertificate(
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		// pool registration is allowed only in POOL_REGISTRATION signging modes
+		// pool registration is allowed only in POOL_REGISTRATION signing modes
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		// pool registration is allowed only in POOL_REGISTRATION signging modes
+		// pool registration is allowed only in POOL_REGISTRATION signing modes
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		// pool retirement is impossible with multisig keys
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
@@ -1590,7 +1590,7 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t mintInitPolicy)
 		break;
 
 	case POLICY_SHOW_BEFORE_RESPONSE:
-		// all minted coins were shown, show a final cofirmation prompt as well
+		// all minted coins were shown, show a final confirmation prompt as well
 		PROMPT();
 		break;
 

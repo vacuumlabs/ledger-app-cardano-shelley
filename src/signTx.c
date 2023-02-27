@@ -482,7 +482,7 @@ static void signTx_handleInit_ui_runStep()
 			// technically, no pool reg. certificate as well, but the UI message would be too long
 			ui_displayPaginatedText(
 			        "Warning:",
-			        "cannot verify network id: no outputs or withrawals",
+			        "cannot verify network id: no outputs or withdrawals",
 			        this_fn
 			);
 		}
@@ -901,7 +901,7 @@ static void constructInputLabel(const char* prefix, uint16_t index)
 	char* label = BODY_CTX->stageData.input.label;
 	const size_t labelSize = SIZEOF(BODY_CTX->stageData.input.label);
 	explicit_bzero(label, labelSize);
-	// indexed from 0 as agreed with IOHK on Slack
+	// indexed from 0 as agreed with IOG on Slack
 	snprintf(label, labelSize, "%s #%u", prefix, index);
 	// make sure all the information is displayed to the user
 	ASSERT(strlen(label) + 1 < labelSize);
