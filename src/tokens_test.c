@@ -72,15 +72,15 @@ typedef struct {
 	char expectedMint[50];
 } token_testcase_t;
 
-const token_testcase_t tokenTestcases[] = {
+const token_testcase_t tokenTestCases[] = {
 	{
 		{ 0x94, 0xcb, 0xb4, 0xfc, 0xbc, 0xaa, 0x29, 0x75, 0x77, 0x9f, 0x27, 0x3b, 0x26, 0x3e, 0xb3, 0xb5, 0xf2, 0x4a, 0x99, 0x51, 0xe4, 0x46, 0xd6, 0xdc, 0x4c, 0x13, 0x58, 0x64 },
 		{ 0x52, 0x45, 0x56, 0x55 },
 		4,
 		234,
-		"0.00000234 REVU",
+		"0.00000234 REVU", // cspell:disable-line
 		-234,
-		"-0.00000234 REVU"
+		"-0.00000234 REVU" // cspell:disable-line
 	},
 	{
 		// no decimal places in our table
@@ -96,26 +96,26 @@ const token_testcase_t tokenTestcases[] = {
 
 void test_decimalPlaces()
 {
-	for (size_t i = 0; i < ARRAY_LEN(tokenTestcases); i++) {
+	for (size_t i = 0; i < ARRAY_LEN(tokenTestCases); i++) {
 		char tokenAmountStr[60];
 		token_group_t group;
-		memcpy(group.policyId, tokenTestcases[i].policyId, MINTING_POLICY_ID_SIZE);
+		memcpy(group.policyId, tokenTestCases[i].policyId, MINTING_POLICY_ID_SIZE);
 
 		str_formatTokenAmountOutput(
 		        &group,
-		        tokenTestcases[i].assetNameBytes, tokenTestcases[i].assetNameSize,
-		        tokenTestcases[i].amountOutput,
+		        tokenTestCases[i].assetNameBytes, tokenTestCases[i].assetNameSize,
+		        tokenTestCases[i].amountOutput,
 		        tokenAmountStr, SIZEOF(tokenAmountStr)
 		);
-		EXPECT_EQ(strcmp(tokenAmountStr, tokenTestcases[i].expectedOutput), 0);
+		EXPECT_EQ(strcmp(tokenAmountStr, tokenTestCases[i].expectedOutput), 0);
 
 		str_formatTokenAmountMint(
 		        &group,
-		        tokenTestcases[i].assetNameBytes, tokenTestcases[i].assetNameSize,
-		        tokenTestcases[i].amountMint,
+		        tokenTestCases[i].assetNameBytes, tokenTestCases[i].assetNameSize,
+		        tokenTestCases[i].amountMint,
 		        tokenAmountStr, SIZEOF(tokenAmountStr)
 		);
-		EXPECT_EQ(strcmp(tokenAmountStr, tokenTestcases[i].expectedMint), 0);
+		EXPECT_EQ(strcmp(tokenAmountStr, tokenTestCases[i].expectedMint), 0);
 	}
 }
 

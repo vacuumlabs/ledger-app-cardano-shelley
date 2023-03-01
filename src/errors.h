@@ -2,7 +2,7 @@
 #define H_CARDANO_APP_ERRORS
 
 enum {
-	// Successfull responses
+	// Successful responses
 	SUCCESS                 = 0x9000,
 
 	// Start of error which trigger automatic response

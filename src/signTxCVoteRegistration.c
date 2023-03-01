@@ -1,5 +1,5 @@
 #include "app_mode.h"
-#include "signTxGovernanceVotingRegistration.h"
+#include "signTxCVoteRegistration.h"
 #include "state.h"
 #include "uiHelpers.h"
 #include "signTxUtils.h"
@@ -13,28 +13,28 @@
 
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 
-static inline governance_voting_registration_context_t* accessSubContext()
+static inline cvote_registration_context_t* accessSubContext()
 {
-	return &AUX_DATA_CTX->stageContext.governance_voting_registration_subctx;
+	return &AUX_DATA_CTX->stageContext.cvote_registration_subctx;
 }
 
-bool signTxGovernanceVotingRegistration_isFinished()
+bool signTxCVoteRegistration_isFinished()
 {
-	const governance_voting_registration_context_t* subctx = accessSubContext();
-	TRACE("Governance voting registration submachine state: %d", subctx->state);
+	const cvote_registration_context_t* subctx = accessSubContext();
+	TRACE("CIP-36 voting registration submachine state: %d", subctx->state);
 	// we are also asserting that the state is valid
 	switch (subctx->state) {
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_FINISHED:
+	case STATE_CVOTE_REGISTRATION_FINISHED:
 		return true;
 
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_INIT:
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_KEY:
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_DELEGATIONS:
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_STAKING_KEY:
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_REWARDS_ADDRESS:
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_NONCE:
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_PURPOSE:
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_CONFIRM:
+	case STATE_CVOTE_REGISTRATION_INIT:
+	case STATE_CVOTE_REGISTRATION_VOTE_KEY:
+	case STATE_CVOTE_REGISTRATION_DELEGATIONS:
+	case STATE_CVOTE_REGISTRATION_STAKING_KEY:
+	case STATE_CVOTE_REGISTRATION_PAYMENT_ADDRESS:
+	case STATE_CVOTE_REGISTRATION_NONCE:
+	case STATE_CVOTE_REGISTRATION_VOTING_PURPOSE:
+	case STATE_CVOTE_REGISTRATION_CONFIRM:
 		return false;
 
 	default:
@@ -42,86 +42,86 @@ bool signTxGovernanceVotingRegistration_isFinished()
 	}
 }
 
-void signTxGovernanceVotingRegistration_init()
+void signTxCVoteRegistration_init()
 {
 	explicit_bzero(&AUX_DATA_CTX->stageContext, SIZEOF(AUX_DATA_CTX->stageContext));
 	auxDataHashBuilder_init(&AUX_DATA_CTX->auxDataHashBuilder);
 
-	accessSubContext()->state = STATE_GOVERNANCE_VOTING_REGISTRATION_INIT;
+	accessSubContext()->state = STATE_CVOTE_REGISTRATION_INIT;
 }
 
-static inline void CHECK_STATE(sign_tx_governance_voting_registration_state_t expected)
+static inline void CHECK_STATE(sign_tx_cvote_registration_state_t expected)
 {
-	TRACE("Governance voting registration submachine state: current %d, expected %d", accessSubContext()->state, expected);
+	TRACE("CIP-36 voting registration submachine state: current %d, expected %d", accessSubContext()->state, expected);
 	VALIDATE(accessSubContext()->state == expected, ERR_INVALID_STATE);
 }
 
 static inline void advanceState()
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
-	TRACE("Advancing governance voting registration state from: %d", subctx->state);
+	cvote_registration_context_t* subctx = accessSubContext();
+	TRACE("Advancing CIP-36 voting registration state from: %d", subctx->state);
 
 	switch (subctx->state) {
 
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_INIT:
+	case STATE_CVOTE_REGISTRATION_INIT:
 		if (subctx->numDelegations > 0) {
-			subctx->state = STATE_GOVERNANCE_VOTING_REGISTRATION_DELEGATIONS;
-			auxDataHashBuilder_governanceVotingRegistration_enterDelegations(
+			subctx->state = STATE_CVOTE_REGISTRATION_DELEGATIONS;
+			auxDataHashBuilder_cVoteRegistration_enterDelegations(
 			        &AUX_DATA_CTX->auxDataHashBuilder,
 			        subctx->numDelegations
 			);
 		} else {
-			// we expect a single voting key
-			subctx->state = STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_KEY;
+			// we expect a single vote key
+			subctx->state = STATE_CVOTE_REGISTRATION_VOTE_KEY;
 		}
 		break;
 
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_DELEGATIONS:
+	case STATE_CVOTE_REGISTRATION_DELEGATIONS:
 		ASSERT(subctx->currentDelegation == subctx->numDelegations);
-		subctx->state = STATE_GOVERNANCE_VOTING_REGISTRATION_STAKING_KEY;
+		subctx->state = STATE_CVOTE_REGISTRATION_STAKING_KEY;
 		break;
 
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_KEY:
-		subctx->state = STATE_GOVERNANCE_VOTING_REGISTRATION_STAKING_KEY;
+	case STATE_CVOTE_REGISTRATION_VOTE_KEY:
+		subctx->state = STATE_CVOTE_REGISTRATION_STAKING_KEY;
 		break;
 
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_STAKING_KEY:
-		subctx->state = STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_REWARDS_ADDRESS;
+	case STATE_CVOTE_REGISTRATION_STAKING_KEY:
+		subctx->state = STATE_CVOTE_REGISTRATION_PAYMENT_ADDRESS;
 		break;
 
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_REWARDS_ADDRESS:
-		subctx->state = STATE_GOVERNANCE_VOTING_REGISTRATION_NONCE;
+	case STATE_CVOTE_REGISTRATION_PAYMENT_ADDRESS:
+		subctx->state = STATE_CVOTE_REGISTRATION_NONCE;
 		break;
 
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_NONCE:
-		subctx->state = STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_PURPOSE;
+	case STATE_CVOTE_REGISTRATION_NONCE:
+		subctx->state = STATE_CVOTE_REGISTRATION_VOTING_PURPOSE;
 		break;
 
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_PURPOSE:
-		subctx->state = STATE_GOVERNANCE_VOTING_REGISTRATION_CONFIRM;
+	case STATE_CVOTE_REGISTRATION_VOTING_PURPOSE:
+		subctx->state = STATE_CVOTE_REGISTRATION_CONFIRM;
 		break;
 
-	case STATE_GOVERNANCE_VOTING_REGISTRATION_CONFIRM:
-		subctx->state = STATE_GOVERNANCE_VOTING_REGISTRATION_FINISHED;
+	case STATE_CVOTE_REGISTRATION_CONFIRM:
+		subctx->state = STATE_CVOTE_REGISTRATION_FINISHED;
 		break;
 
 	default:
 		ASSERT(false);
 	}
 
-	TRACE("Advancing governance voting registration state to: %d", subctx->state);
+	TRACE("Advancing CIP-36 voting registration state to: %d", subctx->state);
 }
 
 // ============================== INIT ==============================
 
-static void signTxGovernanceVotingRegistration_handleInitAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCVoteRegistration_handleInitAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
-		CHECK_STATE(STATE_GOVERNANCE_VOTING_REGISTRATION_INIT);
+		CHECK_STATE(STATE_CVOTE_REGISTRATION_INIT);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 	}
@@ -132,7 +132,7 @@ static void signTxGovernanceVotingRegistration_handleInitAPDU(const uint8_t* wir
 			read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
 			subctx->format = parse_u1be(&view);
-			TRACE("Governance voting registration format = %d", (int) subctx->format);
+			TRACE("CIP-36 voting registration format = %d", (int) subctx->format);
 			switch (subctx->format) {
 			case CIP15:
 			case CIP36:
@@ -153,8 +153,8 @@ static void signTxGovernanceVotingRegistration_handleInitAPDU(const uint8_t* wir
 	}
 	{
 		aux_data_hash_builder_t* auxDataHashBuilder = &AUX_DATA_CTX->auxDataHashBuilder;
-		auxDataHashBuilder_governanceVotingRegistration_enter(auxDataHashBuilder, subctx->format);
-		auxDataHashBuilder_governanceVotingRegistration_enterPayload(auxDataHashBuilder);
+		auxDataHashBuilder_cVoteRegistration_enter(auxDataHashBuilder, subctx->format);
+		auxDataHashBuilder_cVoteRegistration_enterPayload(auxDataHashBuilder);
 	}
 
 	respondSuccessEmptyMsg();
@@ -163,9 +163,9 @@ static void signTxGovernanceVotingRegistration_handleInitAPDU(const uint8_t* wir
 
 // ============================== VOTING KEY ==============================
 
-static void _parseVotingKey(read_view_t* view)
+static void _parseVoteKey(read_view_t* view)
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 
 	subctx->stateData.delegation.type = parse_u1be(view);
 	TRACE("delegation type = %d", (int) subctx->stateData.delegation.type);
@@ -173,13 +173,13 @@ static void _parseVotingKey(read_view_t* view)
 
 	case DELEGATION_KEY: {
 		STATIC_ASSERT(
-		        SIZEOF(subctx->stateData.delegation.votingPubKey) == GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH,
-		        "wrong voting public key size"
+		        SIZEOF(subctx->stateData.delegation.votePubKey) == CVOTE_PUBLIC_KEY_LENGTH,
+		        "wrong vote public key size"
 		);
 		view_parseBuffer(
-		        subctx->stateData.delegation.votingPubKey,
+		        subctx->stateData.delegation.votePubKey,
 		        view,
-		        GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH
+		        CVOTE_PUBLIC_KEY_LENGTH
 		);
 		break;
 	}
@@ -188,12 +188,12 @@ static void _parseVotingKey(read_view_t* view)
 		view_skipBytes(
 		        view,
 		        bip44_parseFromWire(
-		                &subctx->stateData.delegation.votingPubKeyPath,
+		                &subctx->stateData.delegation.votePubKeyPath,
 		                VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)
 		        )
 		);
 		TRACE();
-		BIP44_PRINTF(&subctx->stateData.delegation.votingPubKeyPath);
+		BIP44_PRINTF(&subctx->stateData.delegation.votePubKeyPath);
 		PRINTF("\n");
 		break;
 	}
@@ -203,20 +203,20 @@ static void _parseVotingKey(read_view_t* view)
 	}
 }
 
-security_policy_t _determineVotingKeyPolicy()
+security_policy_t _determineVoteKeyPolicy()
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 
 	switch (subctx->stateData.delegation.type) {
 
 	case DELEGATION_PATH:
-		return policyForGovernanceVotingRegistrationVotingKeyPath(
-		               &subctx->stateData.delegation.votingPubKeyPath,
+		return policyForCVoteRegistrationVoteKeyPath(
+		               &subctx->stateData.delegation.votePubKeyPath,
 		               subctx->format
 		       );
 
 	case DELEGATION_KEY:
-		return policyForGovernanceVotingRegistrationVotingKey();
+		return policyForCVoteRegistrationVoteKey();
 
 	default:
 		ASSERT(false);
@@ -224,16 +224,16 @@ security_policy_t _determineVotingKeyPolicy()
 	return POLICY_DENY;
 }
 
-static void _displayVotingKey(ui_callback_fn_t callback)
+static void _displayVoteKey(ui_callback_fn_t callback)
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	switch (subctx->stateData.delegation.type) {
 	case DELEGATION_KEY: {
-		STATIC_ASSERT(SIZEOF(subctx->stateData.delegation.votingPubKey) == GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH, "wrong voting public key size");
+		STATIC_ASSERT(SIZEOF(subctx->stateData.delegation.votePubKey) == CVOTE_PUBLIC_KEY_LENGTH, "wrong vote public key size");
 		ui_displayBech32Screen(
 		        "Vote public key",
 		        "cvote_vk",
-		        subctx->stateData.delegation.votingPubKey, GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH,
+		        subctx->stateData.delegation.votePubKey, CVOTE_PUBLIC_KEY_LENGTH,
 		        callback
 		);
 		break;
@@ -241,7 +241,7 @@ static void _displayVotingKey(ui_callback_fn_t callback)
 	case DELEGATION_PATH: {
 		ui_displayPathScreen(
 		        "Vote public key",
-		        &subctx->stateData.delegation.votingPubKeyPath,
+		        &subctx->stateData.delegation.votePubKeyPath,
 		        callback
 		);
 		break;
@@ -252,47 +252,47 @@ static void _displayVotingKey(ui_callback_fn_t callback)
 }
 
 enum {
-	HANDLE_VOTING_KEY_STEP_WARNING = 8200,
-	HANDLE_VOTING_KEY_STEP_DISPLAY,
-	HANDLE_VOTING_KEY_STEP_RESPOND,
-	HANDLE_VOTING_KEY_STEP_INVALID,
+	HANDLE_VOTE_KEY_STEP_WARNING = 8200,
+	HANDLE_VOTE_KEY_STEP_DISPLAY,
+	HANDLE_VOTE_KEY_STEP_RESPOND,
+	HANDLE_VOTE_KEY_STEP_INVALID,
 };
 
-static void signTxGovernanceVotingRegistration_handleVotingKey_ui_runStep()
+static void signTxCVoteRegistration_handleVoteKey_ui_runStep()
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleVotingKey_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxCVoteRegistration_handleVoteKey_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_VOTING_KEY_STEP_WARNING) {
+	UI_STEP(HANDLE_VOTE_KEY_STEP_WARNING) {
 		ui_displayPaginatedText(
 		        "WARNING:",
 		        "unusual vote key",
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_VOTING_KEY_STEP_DISPLAY) {
-		_displayVotingKey(this_fn);
+	UI_STEP(HANDLE_VOTE_KEY_STEP_DISPLAY) {
+		_displayVoteKey(this_fn);
 	}
-	UI_STEP(HANDLE_VOTING_KEY_STEP_RESPOND) {
+	UI_STEP(HANDLE_VOTE_KEY_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 		advanceState();
 	}
-	UI_STEP_END(HANDLE_VOTING_KEY_STEP_INVALID);
+	UI_STEP_END(HANDLE_VOTE_KEY_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleVotingKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCVoteRegistration_handleVoteKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
-		CHECK_STATE(STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_KEY);
+		CHECK_STATE(STATE_CVOTE_REGISTRATION_VOTE_KEY);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 	}
@@ -300,12 +300,12 @@ static void signTxGovernanceVotingRegistration_handleVotingKeyAPDU(const uint8_t
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		_parseVotingKey(&view);
+		_parseVoteKey(&view);
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = _determineVotingKeyPolicy();
+	security_policy_t policy = _determineVoteKeyPolicy();
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -316,18 +316,18 @@ static void signTxGovernanceVotingRegistration_handleVotingKeyAPDU(const uint8_t
 		switch (subctx->stateData.delegation.type) {
 
 		case DELEGATION_KEY: {
-			auxDataHashBuilder_governanceVotingRegistration_addVotingKey(
-			        auxDataHashBuilder, subctx->stateData.delegation.votingPubKey,
-			        GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH
+			auxDataHashBuilder_cVoteRegistration_addVoteKey(
+			        auxDataHashBuilder, subctx->stateData.delegation.votePubKey,
+			        CVOTE_PUBLIC_KEY_LENGTH
 			);
 			break;
 		}
 
 		case DELEGATION_PATH: {
-			extendedPublicKey_t extVotingPubKey;
-			deriveExtendedPublicKey(&subctx->stateData.delegation.votingPubKeyPath, &extVotingPubKey);
-			auxDataHashBuilder_governanceVotingRegistration_addVotingKey(
-			        auxDataHashBuilder, extVotingPubKey.pubKey, SIZEOF(extVotingPubKey.pubKey)
+			extendedPublicKey_t extVotePubKey;
+			deriveExtendedPublicKey(&subctx->stateData.delegation.votePubKeyPath, &extVotePubKey);
+			auxDataHashBuilder_cVoteRegistration_addVoteKey(
+			        auxDataHashBuilder, extVotePubKey.pubKey, SIZEOF(extVotePubKey.pubKey)
 			);
 			break;
 		}
@@ -341,46 +341,46 @@ static void signTxGovernanceVotingRegistration_handleVotingKeyAPDU(const uint8_t
 		// select UI steps
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_VOTING_KEY_STEP_WARNING);
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VOTING_KEY_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VOTING_KEY_STEP_RESPOND);
+			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_VOTE_KEY_STEP_WARNING);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VOTE_KEY_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VOTE_KEY_STEP_RESPOND);
 #undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 	}
 
-	signTxGovernanceVotingRegistration_handleVotingKey_ui_runStep();
+	signTxCVoteRegistration_handleVoteKey_ui_runStep();
 }
 
 // ============================== DELEGATION ==============================
 
 enum {
 	HANDLE_DELEGATION_STEP_WARNING = 8300,
-	HANDLE_DELEGATION_STEP_VOTING_KEY,
+	HANDLE_DELEGATION_STEP_VOTE_KEY,
 	HANDLE_DELEGATION_STEP_WEIGHT,
 	HANDLE_DELEGATION_STEP_RESPOND,
 	HANDLE_DELEGATION_STEP_INVALID,
 };
 
-static void signTxGovernanceVotingRegistration_handleDelegation_ui_runStep()
+static void signTxCVoteRegistration_handleDelegation_ui_runStep()
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleDelegation_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxCVoteRegistration_handleDelegation_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_VOTING_KEY_STEP_WARNING) {
+	UI_STEP(HANDLE_VOTE_KEY_STEP_WARNING) {
 		ui_displayPaginatedText(
 		        "WARNING:",
 		        "unusual vote key",
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_DELEGATION_STEP_VOTING_KEY) {
-		_displayVotingKey(this_fn);
+	UI_STEP(HANDLE_DELEGATION_STEP_VOTE_KEY) {
+		_displayVoteKey(this_fn);
 	}
 	UI_STEP(HANDLE_DELEGATION_STEP_WEIGHT) {
 		ui_displayUint64Screen(
@@ -400,11 +400,11 @@ static void signTxGovernanceVotingRegistration_handleDelegation_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleDelegationAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCVoteRegistration_handleDelegationAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	{
-		CHECK_STATE(STATE_GOVERNANCE_VOTING_REGISTRATION_DELEGATIONS);
+		CHECK_STATE(STATE_CVOTE_REGISTRATION_DELEGATIONS);
 		ASSERT(subctx->currentDelegation < subctx->numDelegations);
 	}
 	{
@@ -414,16 +414,16 @@ static void signTxGovernanceVotingRegistration_handleDelegationAPDU(const uint8_
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		_parseVotingKey(&view);
+		_parseVoteKey(&view);
 
 		subctx->stateData.delegation.weight = parse_u4be(&view);
-		TRACE("Governance voting registration delegation weight:");
+		TRACE("CIP-36 voting registration delegation weight:");
 		TRACE_UINT64(subctx->stateData.delegation.weight);
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = _determineVotingKeyPolicy();
+	security_policy_t policy = _determineVoteKeyPolicy();
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -434,20 +434,20 @@ static void signTxGovernanceVotingRegistration_handleDelegationAPDU(const uint8_
 		switch (subctx->stateData.delegation.type) {
 
 		case DELEGATION_KEY: {
-			auxDataHashBuilder_governanceVotingRegistration_addDelegation(
+			auxDataHashBuilder_cVoteRegistration_addDelegation(
 			        auxDataHashBuilder,
-			        subctx->stateData.delegation.votingPubKey, GOVERNANCE_VOTING_PUBLIC_KEY_LENGTH,
+			        subctx->stateData.delegation.votePubKey, CVOTE_PUBLIC_KEY_LENGTH,
 			        subctx->stateData.delegation.weight
 			);
 			break;
 		}
 
 		case DELEGATION_PATH: {
-			extendedPublicKey_t extVotingPubKey;
-			deriveExtendedPublicKey(&subctx->stateData.delegation.votingPubKeyPath, &extVotingPubKey);
-			auxDataHashBuilder_governanceVotingRegistration_addDelegation(
+			extendedPublicKey_t extVotePubKey;
+			deriveExtendedPublicKey(&subctx->stateData.delegation.votePubKeyPath, &extVotePubKey);
+			auxDataHashBuilder_cVoteRegistration_addDelegation(
 			        auxDataHashBuilder,
-			        extVotingPubKey.pubKey, SIZEOF(extVotingPubKey.pubKey),
+			        extVotePubKey.pubKey, SIZEOF(extVotePubKey.pubKey),
 			        subctx->stateData.delegation.weight
 			);
 			break;
@@ -463,7 +463,7 @@ static void signTxGovernanceVotingRegistration_handleDelegationAPDU(const uint8_
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
 			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_DELEGATION_STEP_WARNING);
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_DELEGATION_STEP_VOTING_KEY);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_DELEGATION_STEP_VOTE_KEY);
 			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_DELEGATION_STEP_RESPOND);
 #undef   CASE
 		default:
@@ -471,7 +471,7 @@ static void signTxGovernanceVotingRegistration_handleDelegationAPDU(const uint8_
 		}
 	}
 
-	signTxGovernanceVotingRegistration_handleDelegation_ui_runStep();
+	signTxCVoteRegistration_handleDelegation_ui_runStep();
 }
 
 // ============================== STAKING KEY ==============================
@@ -483,12 +483,12 @@ enum {
 	HANDLE_STAKING_KEY_STEP_INVALID,
 };
 
-static void signTxGovernanceVotingRegistration_handleStakingKey_ui_runStep()
+static void signTxCVoteRegistration_handleStakingKey_ui_runStep()
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleStakingKey_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxCVoteRegistration_handleStakingKey_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -513,15 +513,15 @@ static void signTxGovernanceVotingRegistration_handleStakingKey_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleStakingKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCVoteRegistration_handleStakingKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
 		// sanity checks
-		CHECK_STATE(STATE_GOVERNANCE_VOTING_REGISTRATION_STAKING_KEY);
+		CHECK_STATE(STATE_CVOTE_REGISTRATION_STAKING_KEY);
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stakingKeyPath, SIZEOF(subctx->stakingKeyPath));
 	}
@@ -540,7 +540,7 @@ static void signTxGovernanceVotingRegistration_handleStakingKeyAPDU(const uint8_
 
 	}
 
-	security_policy_t policy = policyForGovernanceVotingRegistrationStakingKey(
+	security_policy_t policy = policyForCVoteRegistrationStakingKey(
 	                                   &subctx->stakingKeyPath
 	                           );
 	TRACE("Policy: %d", (int) policy);
@@ -549,7 +549,7 @@ static void signTxGovernanceVotingRegistration_handleStakingKeyAPDU(const uint8_
 	{
 		extendedPublicKey_t extStakingPubKey;
 		deriveExtendedPublicKey(&subctx->stakingKeyPath, &extStakingPubKey);
-		auxDataHashBuilder_governanceVotingRegistration_addStakingKey(
+		auxDataHashBuilder_cVoteRegistration_addStakingKey(
 		        &AUX_DATA_CTX->auxDataHashBuilder, extStakingPubKey.pubKey, SIZEOF(extStakingPubKey.pubKey)
 		);
 	}
@@ -567,7 +567,7 @@ static void signTxGovernanceVotingRegistration_handleStakingKeyAPDU(const uint8_
 		}
 	}
 
-	signTxGovernanceVotingRegistration_handleStakingKey_ui_runStep();
+	signTxCVoteRegistration_handleStakingKey_ui_runStep();
 }
 
 // ============================== VOTING REWARDS ADDRESS ==============================
@@ -607,33 +607,33 @@ static size_t _destinationToAddress(
 }
 
 enum {
-	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_WARNING = 8500,
-	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS,
-	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_RESPOND,
-	HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_INVALID
+	HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_WARNING = 8500,
+	HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS,
+	HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_RESPOND,
+	HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_INVALID
 };
 
 __noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep()
+static void signTxCVoteRegistration_handlePaymentAddress_ui_runStep()
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxCVoteRegistration_handlePaymentAddress_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_WARNING) {
+	UI_STEP(HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_WARNING) {
 		ui_displayPaginatedText(
 		        "Unusual request",
 		        "Proceed with care",
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
+	UI_STEP(HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
 		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
 		size_t addressSize = _destinationToAddress(
-		                             &subctx->stateData.rewardDestination,
+		                             &subctx->stateData.paymentDestination,
 		                             addressBuffer, SIZEOF(addressBuffer)
 		                     );
 
@@ -644,27 +644,27 @@ static void signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_run
 		        this_fn
 		);
 	}
-	UI_STEP(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_RESPOND) {
+	UI_STEP(HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 		advanceState();
 	}
-	UI_STEP_END(HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_INVALID);
+	UI_STEP_END(HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleVotingRewardsAddressAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCVoteRegistration_handlePaymentAddressAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// safety checks
-		CHECK_STATE(STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_REWARDS_ADDRESS);
+		CHECK_STATE(STATE_CVOTE_REGISTRATION_PAYMENT_ADDRESS);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(
-		        &subctx->stateData.rewardDestination,
-		        SIZEOF(subctx->stateData.rewardDestination)
+		        &subctx->stateData.paymentDestination,
+		        SIZEOF(subctx->stateData.paymentDestination)
 		);
 	}
 	{
@@ -672,13 +672,13 @@ static void signTxGovernanceVotingRegistration_handleVotingRewardsAddressAPDU(co
 
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 
-		view_parseDestination(&view, &subctx->stateData.rewardDestination);
+		view_parseDestination(&view, &subctx->stateData.paymentDestination);
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForGovernanceVotingRegistrationVotingRewardsDestination(
-	                                   &subctx->stateData.rewardDestination,
+	security_policy_t policy = policyForCVoteRegistrationPaymentDestination(
+	                                   &subctx->stateData.paymentDestination,
 	                                   commonTxData->networkId
 	                           );
 	TRACE("Policy: %d", (int) policy);
@@ -687,11 +687,11 @@ static void signTxGovernanceVotingRegistration_handleVotingRewardsAddressAPDU(co
 	{
 		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
 		size_t addressSize = _destinationToAddress(
-		                             &subctx->stateData.rewardDestination,
+		                             &subctx->stateData.paymentDestination,
 		                             addressBuffer, SIZEOF(addressBuffer)
 		                     );
 
-		auxDataHashBuilder_governanceVotingRegistration_addVotingRewardsAddress(
+		auxDataHashBuilder_cVoteRegistration_addPaymentAddress(
 		        &AUX_DATA_CTX->auxDataHashBuilder, addressBuffer, addressSize
 		);
 	}
@@ -700,15 +700,15 @@ static void signTxGovernanceVotingRegistration_handleVotingRewardsAddressAPDU(co
 		// select UI steps
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {subctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_WARNING);
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VOTING_REWARDS_ADDRESS_PARAMS_STEP_RESPOND);
+			CASE(POLICY_PROMPT_WARN_UNUSUAL, HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_WARNING);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_RESPOND);
 #undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		signTxGovernanceVotingRegistration_handleVotingRewardsAddress_ui_runStep();
+		signTxCVoteRegistration_handlePaymentAddress_ui_runStep();
 	}
 }
 
@@ -720,12 +720,12 @@ enum {
 	HANDLE_NONCE_STEP_INVALID,
 };
 
-static void signTxGovernanceVotingRegistration_handleNonce_ui_runStep()
+static void signTxCVoteRegistration_handleNonce_ui_runStep()
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleNonce_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxCVoteRegistration_handleNonce_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -744,15 +744,15 @@ static void signTxGovernanceVotingRegistration_handleNonce_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleNonceAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCVoteRegistration_handleNonceAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		// sanity checks
-		CHECK_STATE(STATE_GOVERNANCE_VOTING_REGISTRATION_NONCE);
+		CHECK_STATE(STATE_CVOTE_REGISTRATION_NONCE);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 	}
@@ -761,16 +761,16 @@ static void signTxGovernanceVotingRegistration_handleNonceAPDU(const uint8_t* wi
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
 		subctx->stateData.nonce = u8be_read(wireDataBuffer);
-		TRACE("Governance voting registration nonce:");
+		TRACE("CIP-36 voting registration nonce:");
 		TRACE_UINT64(subctx->stateData.nonce);
 	}
 
-	security_policy_t policy = policyForGovernanceVotingRegistrationNonce();
+	security_policy_t policy = policyForCVoteRegistrationNonce();
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	{
-		auxDataHashBuilder_governanceVotingRegistration_addNonce(&AUX_DATA_CTX->auxDataHashBuilder, subctx->stateData.nonce);
+		auxDataHashBuilder_cVoteRegistration_addNonce(&AUX_DATA_CTX->auxDataHashBuilder, subctx->stateData.nonce);
 	}
 
 	{
@@ -785,7 +785,7 @@ static void signTxGovernanceVotingRegistration_handleNonceAPDU(const uint8_t* wi
 		}
 	}
 
-	signTxGovernanceVotingRegistration_handleNonce_ui_runStep();
+	signTxCVoteRegistration_handleNonce_ui_runStep();
 }
 
 // ============================== VOTING PURPOSE ==============================
@@ -796,12 +796,12 @@ enum {
 	HANDLE_VOTING_PURPOSE_STEP_INVALID,
 };
 
-static void signTxGovernanceVotingRegistration_handleVotingPurpose_ui_runStep()
+static void signTxCVoteRegistration_handleVotingPurpose_ui_runStep()
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleVotingPurpose_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxCVoteRegistration_handleVotingPurpose_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
@@ -822,14 +822,14 @@ static void signTxGovernanceVotingRegistration_handleVotingPurpose_ui_runStep()
 #define DEFAULT_VOTING_PURPOSE (0)
 
 __noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleVotingPurposeAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTxCVoteRegistration_handleVotingPurposeAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
-		CHECK_STATE(STATE_GOVERNANCE_VOTING_REGISTRATION_VOTING_PURPOSE);
+		CHECK_STATE(STATE_CVOTE_REGISTRATION_VOTING_PURPOSE);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 	}
@@ -865,12 +865,12 @@ static void signTxGovernanceVotingRegistration_handleVotingPurposeAPDU(const uin
 		return;
 	}
 
-	security_policy_t policy = policyForGovernanceVotingRegistrationVotingPurpose();
+	security_policy_t policy = policyForCVoteRegistrationVotingPurpose();
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	{
-		auxDataHashBuilder_governanceVotingRegistration_addVotingPurpose(
+		auxDataHashBuilder_cVoteRegistration_addVotingPurpose(
 		        &AUX_DATA_CTX->auxDataHashBuilder,
 		        subctx->stateData.votingPurpose
 		);
@@ -887,7 +887,7 @@ static void signTxGovernanceVotingRegistration_handleVotingPurposeAPDU(const uin
 		}
 	}
 
-	signTxGovernanceVotingRegistration_handleVotingPurpose_ui_runStep();
+	signTxCVoteRegistration_handleVotingPurpose_ui_runStep();
 }
 
 
@@ -900,12 +900,12 @@ enum {
 	HANDLE_CONFIRM_STEP_INVALID,
 };
 
-static void signTxGovernanceVotingRegistration_handleConfirm_ui_runStep()
+static void signTxCVoteRegistration_handleConfirm_ui_runStep()
 {
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	TRACE("UI step %d", subctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxGovernanceVotingRegistration_handleConfirm_ui_runStep;
+	ui_callback_fn_t* this_fn = signTxCVoteRegistration_handleConfirm_ui_runStep;
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
@@ -938,7 +938,7 @@ static void signTxGovernanceVotingRegistration_handleConfirm_ui_runStep()
 		STATIC_ASSERT(SIZEOF(subctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong aux data hash length");
 		memmove(wireResponse.auxDataHash, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 
-		STATIC_ASSERT(SIZEOF(subctx->stateData.registrationSignature) == ED25519_SIGNATURE_LENGTH, "Wrong governance voting registration signature length");
+		STATIC_ASSERT(SIZEOF(subctx->stateData.registrationSignature) == ED25519_SIGNATURE_LENGTH, "Wrong CIP-36 voting registration signature length");
 		memmove(wireResponse.signature, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
 
 		io_send_buf(SUCCESS, (uint8_t*) &wireResponse, SIZEOF(wireResponse));
@@ -948,15 +948,15 @@ static void signTxGovernanceVotingRegistration_handleConfirm_ui_runStep()
 }
 
 __noinline_due_to_stack__
-static void signTxGovernanceVotingRegistration_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
+static void signTxCVoteRegistration_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	{
 		//sanity checks
-		CHECK_STATE(STATE_GOVERNANCE_VOTING_REGISTRATION_CONFIRM);
+		CHECK_STATE(STATE_CVOTE_REGISTRATION_CONFIRM);
 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
-	governance_voting_registration_context_t* subctx = accessSubContext();
+	cvote_registration_context_t* subctx = accessSubContext();
 	{
 		explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));
 	}
@@ -966,23 +966,23 @@ static void signTxGovernanceVotingRegistration_handleConfirmAPDU(const uint8_t* 
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForGovernanceVotingRegistrationConfirm();
+	security_policy_t policy = policyForCVoteRegistrationConfirm();
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	{
 		aux_data_hash_builder_t* auxDataHashBuilder = &AUX_DATA_CTX->auxDataHashBuilder;
 		{
-			uint8_t votingPayloadHashBuffer[GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_HASH_LENGTH] = {0};
-			auxDataHashBuilder_governanceVotingRegistration_finalizePayload(auxDataHashBuilder, votingPayloadHashBuffer, AUX_DATA_HASH_LENGTH);
-			getGovernanceVotingRegistrationSignature(
+			uint8_t payloadHashBuffer[CVOTE_REGISTRATION_PAYLOAD_HASH_LENGTH] = {0};
+			auxDataHashBuilder_cVoteRegistration_finalizePayload(auxDataHashBuilder, payloadHashBuffer, AUX_DATA_HASH_LENGTH);
+			getCVoteRegistrationSignature(
 			        &subctx->stakingKeyPath,
-			        votingPayloadHashBuffer, GOVERNANCE_VOTING_REGISTRATION_PAYLOAD_HASH_LENGTH,
+			        payloadHashBuffer, CVOTE_REGISTRATION_PAYLOAD_HASH_LENGTH,
 			        subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH
 			);
 		}
-		auxDataHashBuilder_governanceVotingRegistration_addSignature(auxDataHashBuilder, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
-		auxDataHashBuilder_governanceVotingRegistration_addAuxiliaryScripts(auxDataHashBuilder);
+		auxDataHashBuilder_cVoteRegistration_addSignature(auxDataHashBuilder, subctx->stateData.registrationSignature, ED25519_SIGNATURE_LENGTH);
+		auxDataHashBuilder_cVoteRegistration_addAuxiliaryScripts(auxDataHashBuilder);
 
 		auxDataHashBuilder_finalize(auxDataHashBuilder, subctx->auxDataHash, AUX_DATA_HASH_LENGTH);
 	}
@@ -999,7 +999,7 @@ static void signTxGovernanceVotingRegistration_handleConfirmAPDU(const uint8_t* 
 		}
 	}
 
-	signTxGovernanceVotingRegistration_handleConfirm_ui_runStep();
+	signTxCVoteRegistration_handleConfirm_ui_runStep();
 }
 
 
@@ -1007,23 +1007,23 @@ static void signTxGovernanceVotingRegistration_handleConfirmAPDU(const uint8_t* 
 
 enum {
 	APDU_INSTRUCTION_INIT = 0x36,
-	APDU_INSTRUCTION_VOTING_KEY = 0x30,
+	APDU_INSTRUCTION_VOTE_KEY = 0x30,
 	APDU_INSTRUCTION_DELEGATION = 0x37,
 	APDU_INSTRUCTION_STAKING_KEY = 0x31,
-	APDU_INSTRUCTION_VOTING_REWARDS_ADDRESS = 0x32,
+	APDU_INSTRUCTION_PAYMENT_ADDRESS = 0x32,
 	APDU_INSTRUCTION_NONCE = 0x33,
 	APDU_INSTRUCTION_VOTING_PURPOSE = 0x35,
 	APDU_INSTRUCTION_CONFIRM = 0x34
 };
 
-bool signTxGovernanceVotingRegistration_isValidInstruction(uint8_t p2)
+bool signTxCVoteRegistration_isValidInstruction(uint8_t p2)
 {
 	switch (p2) {
 	case APDU_INSTRUCTION_INIT:
-	case APDU_INSTRUCTION_VOTING_KEY:
+	case APDU_INSTRUCTION_VOTE_KEY:
 	case APDU_INSTRUCTION_DELEGATION:
 	case APDU_INSTRUCTION_STAKING_KEY:
-	case APDU_INSTRUCTION_VOTING_REWARDS_ADDRESS:
+	case APDU_INSTRUCTION_PAYMENT_ADDRESS:
 	case APDU_INSTRUCTION_NONCE:
 	case APDU_INSTRUCTION_VOTING_PURPOSE:
 	case APDU_INSTRUCTION_CONFIRM:
@@ -1034,41 +1034,41 @@ bool signTxGovernanceVotingRegistration_isValidInstruction(uint8_t p2)
 	}
 }
 
-void signTxGovernanceVotingRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+void signTxCVoteRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	switch (p2) {
 	case APDU_INSTRUCTION_INIT:
-		signTxGovernanceVotingRegistration_handleInitAPDU(wireDataBuffer, wireDataSize);
+		signTxCVoteRegistration_handleInitAPDU(wireDataBuffer, wireDataSize);
 		break;
 
-	case APDU_INSTRUCTION_VOTING_KEY:
-		signTxGovernanceVotingRegistration_handleVotingKeyAPDU(wireDataBuffer, wireDataSize);
+	case APDU_INSTRUCTION_VOTE_KEY:
+		signTxCVoteRegistration_handleVoteKeyAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_DELEGATION:
-		signTxGovernanceVotingRegistration_handleDelegationAPDU(wireDataBuffer, wireDataSize);
+		signTxCVoteRegistration_handleDelegationAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_STAKING_KEY:
-		signTxGovernanceVotingRegistration_handleStakingKeyAPDU(wireDataBuffer, wireDataSize);
+		signTxCVoteRegistration_handleStakingKeyAPDU(wireDataBuffer, wireDataSize);
 		break;
 
-	case APDU_INSTRUCTION_VOTING_REWARDS_ADDRESS:
-		signTxGovernanceVotingRegistration_handleVotingRewardsAddressAPDU(wireDataBuffer, wireDataSize);
+	case APDU_INSTRUCTION_PAYMENT_ADDRESS:
+		signTxCVoteRegistration_handlePaymentAddressAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_NONCE:
-		signTxGovernanceVotingRegistration_handleNonceAPDU(wireDataBuffer, wireDataSize);
+		signTxCVoteRegistration_handleNonceAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_VOTING_PURPOSE:
-		signTxGovernanceVotingRegistration_handleVotingPurposeAPDU(wireDataBuffer, wireDataSize);
+		signTxCVoteRegistration_handleVotingPurposeAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	case APDU_INSTRUCTION_CONFIRM:
-		signTxGovernanceVotingRegistration_handleConfirmAPDU(wireDataBuffer, wireDataSize);
+		signTxCVoteRegistration_handleConfirmAPDU(wireDataBuffer, wireDataSize);
 		break;
 
 	default:

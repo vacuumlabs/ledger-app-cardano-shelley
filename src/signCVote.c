@@ -1,15 +1,15 @@
 #include "messageSigning.h"
 #include "securityPolicy.h"
-#include "signGovernanceVote.h"
+#include "signCVote.h"
 #include "signTxUtils.h"
 #include "state.h"
 #include "uiScreens.h"
 
-static ins_sign_governance_vote_context_t* ctx = &(instructionState.signGovernanceVoteContext);
+static ins_sign_cvote_context_t* ctx = &(instructionState.signCVoteContext);
 
 static void advanceStage()
 {
-	TRACE("Advancing governance voting stage from: %d", ctx->stage);
+	TRACE("Advancing cip36 voting stage from: %d", ctx->stage);
 
 	switch (ctx->stage) {
 	case VOTECAST_STAGE_INIT:
@@ -43,11 +43,11 @@ static void advanceStage()
 
 	}
 
-	TRACE("Advancing governance voting stage to: %d", ctx->stage);
+	TRACE("Advancing cip36 voting stage to: %d", ctx->stage);
 }
 
 // this is supposed to be called at the beginning of each APDU handler
-static inline void CHECK_STAGE(sign_governance_vote_stage_t expected)
+static inline void CHECK_STAGE(sign_cvote_stage_t expected)
 {
 	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
 	VALIDATE(ctx->stage == expected, ERR_INVALID_STATE);
@@ -73,7 +73,7 @@ static void handleInit_ui_runStep()
 	UI_STEP(HANDLE_INIT_CONFIRM_START) {
 		ui_displayPrompt(
 		        "Start new",
-		        "governance vote?",
+		        "vote? (CIP-36)",
 		        this_fn,
 		        respond_with_user_reject
 		);
@@ -107,7 +107,7 @@ static void handleInit_ui_runStep()
 }
 
 __noinline_due_to_stack__
-void signGovernanceVote_handleInitAPDU(
+void signCVote_handleInitAPDU(
         const uint8_t* wireDataBuffer, size_t wireDataSize
 )
 {
@@ -141,7 +141,7 @@ void signGovernanceVote_handleInitAPDU(
 	}
 
 	// Check security policy
-	security_policy_t policy = policyForSignGovernanceVoteInit();
+	security_policy_t policy = policyForSignCVoteInit();
 	ENSURE_NOT_DENIED(policy);
 
 	{
@@ -174,7 +174,7 @@ void signGovernanceVote_handleInitAPDU(
 // ============================== VOTECAST CHUNK ==============================
 
 __noinline_due_to_stack__
-void signGovernanceVote_handleVotecastChunkAPDU(
+void signCVote_handleVotecastChunkAPDU(
         const uint8_t* wireDataBuffer, size_t wireDataSize
 )
 {
@@ -237,7 +237,7 @@ static void handleConfirm_ui_runStep()
 }
 
 __noinline_due_to_stack__
-void signGovernanceVote_handleConfirmAPDU(
+void signCVote_handleConfirmAPDU(
         const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize
 )
 {
@@ -252,7 +252,7 @@ void signGovernanceVote_handleConfirmAPDU(
 		VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
 	}
 
-	security_policy_t policy = policyForSignGovernanceVoteConfirm();
+	security_policy_t policy = policyForSignCVoteConfirm();
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
@@ -335,7 +335,7 @@ static void handleWitness_ui_runStep()
 }
 
 __noinline_due_to_stack__
-void signGovernanceVote_handleWitnessAPDU(
+void signCVote_handleWitnessAPDU(
         const uint8_t* wireDataBuffer, size_t wireDataSize
 )
 {
@@ -358,13 +358,13 @@ void signGovernanceVote_handleWitnessAPDU(
 		PRINTF("\n");
 	}
 
-	security_policy_t policy = policyForSignGovernanceVoteWitness(&ctx->witnessData.path);
+	security_policy_t policy = policyForSignCVoteWitness(&ctx->witnessData.path);
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
 	{
 		// compute witness
-		TRACE("getGovernanceVoteWitness");
+		TRACE("getCVoteWitness");
 		TRACE("votecast hash:");
 		TRACE_BUFFER(ctx->votecastHash, SIZEOF(ctx->votecastHash));
 
@@ -400,17 +400,17 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 	switch (p1) {
 #define  CASE(P1, HANDLER) case P1: return HANDLER;
 #define  DEFAULT(HANDLER)  default: return HANDLER;
-		CASE(0x01, signGovernanceVote_handleInitAPDU);
-		CASE(0x02, signGovernanceVote_handleVotecastChunkAPDU);
-		CASE(0x03, signGovernanceVote_handleConfirmAPDU);
-		CASE(0x04, signGovernanceVote_handleWitnessAPDU);
+		CASE(0x01, signCVote_handleInitAPDU);
+		CASE(0x02, signCVote_handleVotecastChunkAPDU);
+		CASE(0x03, signCVote_handleConfirmAPDU);
+		CASE(0x04, signCVote_handleWitnessAPDU);
 		DEFAULT(NULL)
 #undef   CASE
 #undef   DEFAULT
 	}
 }
 
-void signGovernanceVote_handleAPDU(
+void signCVote_handleAPDU(
         uint8_t p1,
         uint8_t p2,
         const uint8_t* wireDataBuffer,

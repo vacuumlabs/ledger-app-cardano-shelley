@@ -36,12 +36,14 @@ void run_bech32_test()
 		const char* inputBytesHex;
 		const char* expectedHex;
 	} testVectors[] = {
+		/* cspell:disable */
 		{"a", "", "a12uel5l"},
 		{"an83characterlonghumanreadablepartthatcontainsthenumber1andtheexcludedcharactersbio", "", "an83characterlonghumanreadablepartthatcontainsthenumber1andtheexcludedcharactersbio1tt5tgs"},
 		{"abcdef", "00443214c74254b635cf84653a56d7c675be77df", "abcdef1qpzry9x8gf2tvdw0s3jn54khce6mua7lmqqqxw"},
 		{"1", "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000", "11qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqc8247j"},
 		{"split", "c5f38b70305f519bf66d85fb6cf03058f3dde463ecd7918f2dc743918f2d", "split1checkupstagehandshakeupstreamerranterredcaperred2y9e3w"},
 		{"addr", "009493315cd92eb5d8c4304e67b7e16ae36d61d34502694657811a2c8e32c728d3861e164cab28cb8f006448139c8f1740ffb8e7aa9e5232dc", "addr1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwqcyl47r"}
+		/* cspell:enable */
 	};
 	ITERATE(it, testVectors) {
 		testcase_bech32(PTR_PIC(it->hrp), PTR_PIC(it->inputBytesHex), PTR_PIC(it->expectedHex));

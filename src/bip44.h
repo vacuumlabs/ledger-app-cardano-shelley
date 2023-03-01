@@ -22,7 +22,7 @@ static const uint32_t PURPOSE_MINT = 1855;
 
 static const uint32_t PURPOSE_POOL_COLD_KEY = 1853;
 
-static const uint32_t PURPOSE_GOVERNANCE_VOTING_KEY = 1694;
+static const uint32_t PURPOSE_CVOTE_KEY = 1694;
 
 static const uint32_t ADA_COIN_TYPE = 1815;
 
@@ -42,7 +42,7 @@ enum {
 	// wallet keys:
 	// ordinary https://cips.cardano.org/cips/cip1852/
 	// multisig https://cips.cardano.org/cips/cip1854/
-	// governance voting keys:
+	// cip36 vote keys:
 	// https://cips.cardano.org/cips/cip36/
 	BIP44_I_PURPOSE = 0,
 	BIP44_I_COIN_TYPE = 1,
@@ -66,7 +66,7 @@ bool bip44_hasOrdinaryWalletKeyPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasMultisigWalletKeyPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasMintKeyPrefix(const bip44_path_t* pathSpec);
 bool bip44_hasPoolColdKeyPrefix(const bip44_path_t* pathSpec);
-bool bip44_hasGovernanceVotingKeyPrefix(const bip44_path_t* pathSpec);
+bool bip44_hasCVoteKeyPrefix(const bip44_path_t* pathSpec);
 
 bool bip44_containsAccount(const bip44_path_t* pathSpec);
 uint32_t bip44_getAccount(const bip44_path_t* pathSpec);
@@ -82,7 +82,7 @@ bool bip44_isMintKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_isPoolColdKeyPath(const bip44_path_t* pathSpec);
 
-bool bip44_isGovernanceVotingKeyPath(const bip44_path_t* pathSpec);
+bool bip44_isCVoteKeyPath(const bip44_path_t* pathSpec);
 
 size_t bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
 
@@ -96,7 +96,7 @@ typedef enum {
 	PATH_ORDINARY_SPENDING_KEY,
 	PATH_MULTISIG_SPENDING_KEY,
 
-	// hd wallet reward adress, withdrawal witness, pool owner
+	// hd wallet reward address, withdrawal witness, pool owner
 	PATH_ORDINARY_STAKING_KEY,
 	PATH_MULTISIG_STAKING_KEY,
 
@@ -106,9 +106,9 @@ typedef enum {
 	// pool cold key in pool registrations and retirements
 	PATH_POOL_COLD_KEY,
 
-	// governance voting, incl. Catalyst
-	PATH_GOVERNANCE_VOTING_ACCOUNT,
-	PATH_GOVERNANCE_VOTING_KEY,
+	// cip36 voting, incl. Catalyst
+	PATH_CVOTE_ACCOUNT,
+	PATH_CVOTE_KEY,
 
 	// none of the above
 	PATH_INVALID,

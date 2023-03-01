@@ -1276,7 +1276,7 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(const uint8_t* wireDat
 		{
 			md->urlSize = view_remainingSize(&view);
 			VALIDATE(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX, ERR_INVALID_DATA);
-			STATIC_ASSERT(SIZEOF(md->url) >= POOL_METADATA_URL_LENGTH_MAX, "wrong pool metada url size");
+			STATIC_ASSERT(SIZEOF(md->url) >= POOL_METADATA_URL_LENGTH_MAX, "wrong pool metadata url size");
 			view_parseBuffer(md->url, &view, md->urlSize);
 
 			// whitespace not allowed
@@ -1334,7 +1334,7 @@ static void signTxPoolRegistration_handleConfirm_ui_runStep()
 
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
-	// we display potencially suspicious facts about the certificate
+	// we display potentially suspicious facts about the certificate
 	// that have not been explicitly shown to the user before:
 	// missing owners or relays
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS) {

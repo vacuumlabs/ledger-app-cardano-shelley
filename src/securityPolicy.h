@@ -187,24 +187,24 @@ security_policy_t policyForSignTxConfirm();
 
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec);
 
-security_policy_t policyForGovernanceVotingRegistrationVotingKey();
-security_policy_t policyForGovernanceVotingRegistrationVotingKeyPath(
+security_policy_t policyForCVoteRegistrationVoteKey();
+security_policy_t policyForCVoteRegistrationVoteKeyPath(
         bip44_path_t* path,
-        governance_voting_registration_format_t format
+        cvote_registration_format_t format
 );
-security_policy_t policyForGovernanceVotingRegistrationStakingKey(
+security_policy_t policyForCVoteRegistrationStakingKey(
         const bip44_path_t* stakingKeyPath
 );
-security_policy_t policyForGovernanceVotingRegistrationVotingRewardsDestination(
+security_policy_t policyForCVoteRegistrationPaymentDestination(
         const tx_output_destination_storage_t* destination,
         const uint8_t networkId
 );
-security_policy_t policyForGovernanceVotingRegistrationNonce();
-security_policy_t policyForGovernanceVotingRegistrationVotingPurpose();
-security_policy_t policyForGovernanceVotingRegistrationConfirm();
+security_policy_t policyForCVoteRegistrationNonce();
+security_policy_t policyForCVoteRegistrationVotingPurpose();
+security_policy_t policyForCVoteRegistrationConfirm();
 
-security_policy_t policyForSignGovernanceVoteInit();
-security_policy_t policyForSignGovernanceVoteConfirm();
-security_policy_t policyForSignGovernanceVoteWitness(bip44_path_t* path);
+security_policy_t policyForSignCVoteInit();
+security_policy_t policyForSignCVoteConfirm();
+security_policy_t policyForSignCVoteWitness(bip44_path_t* path);
 
 #endif // H_CARDANO_APP_SECURITY_POLICY

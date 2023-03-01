@@ -7,7 +7,7 @@
 #include "deriveNativeScriptHash.h"
 #include "signTx.h"
 #include "signOpCert.h"
-#include "signGovernanceVote.h"
+#include "signCVote.h"
 
 
 typedef union {
@@ -17,7 +17,7 @@ typedef union {
 	ins_derive_native_script_hash_context_t deriveNativeScriptHashContext;
 	ins_sign_tx_context_t signTxContext;
 	ins_sign_op_cert_context_t signOpCertContext;
-	ins_sign_governance_vote_context_t signGovernanceVoteContext;
+	ins_sign_cvote_context_t signCVoteContext;
 } instructionState_t;
 
 // Note(instructions are uint8_t but we have a special INS_NONE value

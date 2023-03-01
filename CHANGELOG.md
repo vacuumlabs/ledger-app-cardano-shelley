@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [6.0.2](TBD) - [TBD]
+## [6.0.3](TBD) - [TBD]
 
 Support for CIP-36 voting
 

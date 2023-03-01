@@ -365,15 +365,15 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
-	case SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE:
-		if (signTxGovernanceVotingRegistration_isFinished()) {
+	case SIGN_STAGE_AUX_DATA_CVOTE_REGISTRATION_SUBMACHINE:
+		if (signTxCVoteRegistration_isFinished()) {
 			TRACE();
 			ctx->stage = SIGN_STAGE_AUX_DATA;
 			AUX_DATA_CTX->auxDataReceived = true;
 
 			STATIC_ASSERT(SIZEOF(ctx->auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
-			STATIC_ASSERT(SIZEOF(AUX_DATA_CTX->stageContext.governance_voting_registration_subctx.auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
-			memmove(ctx->auxDataHash, AUX_DATA_CTX->stageContext.governance_voting_registration_subctx.auxDataHash, AUX_DATA_HASH_LENGTH);
+			STATIC_ASSERT(SIZEOF(AUX_DATA_CTX->stageContext.cvote_registration_subctx.auxDataHash) == AUX_DATA_HASH_LENGTH, "Wrong auxiliary data hash length");
+			memmove(ctx->auxDataHash, AUX_DATA_CTX->stageContext.cvote_registration_subctx.auxDataHash, AUX_DATA_HASH_LENGTH);
 
 			advanceStage();
 		}
@@ -482,7 +482,7 @@ static void signTx_handleInit_ui_runStep()
 			// technically, no pool reg. certificate as well, but the UI message would be too long
 			ui_displayPaginatedText(
 			        "Warning:",
-			        "cannot verify network id: no outputs or withrawals",
+			        "cannot verify network id: no outputs or withdrawals",
 			        this_fn
 			);
 		}
@@ -726,33 +726,33 @@ static void signTx_handleAuxDataArbitraryHash_ui_runStep()
 
 
 enum {
-	HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_DISPLAY = 850,
-	HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_RESPOND,
-	HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_INVALID,
+	HANDLE_AUX_DATA_CVOTE_REGISTRATION_STEP_DISPLAY = 850,
+	HANDLE_AUX_DATA_CVOTE_REGISTRATION_STEP_RESPOND,
+	HANDLE_AUX_DATA_CVOTE_REGISTRATION_STEP_INVALID,
 };
 
-static void signTx_handleAuxDataGovernanceVotingRegistration_ui_runStep()
+static void signTx_handleAuxDataCVoteRegistration_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTx_handleAuxDataGovernanceVotingRegistration_ui_runStep;
+	ui_callback_fn_t* this_fn = signTx_handleAuxDataCVoteRegistration_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_DISPLAY) {
+	UI_STEP(HANDLE_AUX_DATA_CVOTE_REGISTRATION_STEP_DISPLAY) {
 		ui_displayPrompt(
-		        "Register governance",
-		        "vote key?",
+		        "Register vote",
+		        "key (CIP-36)?",
 		        this_fn,
 		        respond_with_user_reject
 		);
 	}
-	UI_STEP(HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_RESPOND) {
+	UI_STEP(HANDLE_AUX_DATA_CVOTE_REGISTRATION_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-		signTxGovernanceVotingRegistration_init();
-		ctx->stage = SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE;
+		signTxCVoteRegistration_init();
+		ctx->stage = SIGN_STAGE_AUX_DATA_CVOTE_REGISTRATION_SUBMACHINE;
 	}
-	UI_STEP_END(HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_INVALID);
+	UI_STEP_END(HANDLE_AUX_DATA_CVOTE_REGISTRATION_STEP_INVALID);
 }
 
 __noinline_due_to_stack__
@@ -763,14 +763,14 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 		ASSERT(ctx->includeAuxData == true);
 
-		// delegate to state sub-machine for governance voting registration data
-		if (signTxGovernanceVotingRegistration_isValidInstruction(p2)) {
+		// delegate to state sub-machine for CIP-36 voting registration data
+		if (signTxCVoteRegistration_isValidInstruction(p2)) {
 			TRACE();
-			CHECK_STAGE(SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE);
+			CHECK_STAGE(SIGN_STAGE_AUX_DATA_CVOTE_REGISTRATION_SUBMACHINE);
 
 			TRACE_STACK_USAGE();
 
-			signTxGovernanceVotingRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
+			signTxCVoteRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
 			return;
 		}
 
@@ -794,7 +794,7 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 			break;
 		}
 
-		case AUX_DATA_TYPE_CIP36_REGISTRATION:
+		case AUX_DATA_TYPE_CVOTE_REGISTRATION:
 			break;
 
 		default:
@@ -823,18 +823,18 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 		signTx_handleAuxDataArbitraryHash_ui_runStep();
 		break;
 	}
-	case AUX_DATA_TYPE_CIP36_REGISTRATION:
+	case AUX_DATA_TYPE_CVOTE_REGISTRATION:
 		// select UI step
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_AUX_DATA_CVOTE_REGISTRATION_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_AUX_DATA_CVOTE_REGISTRATION_STEP_RESPOND);
 #undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
 		}
 
-		signTx_handleAuxDataGovernanceVotingRegistration_ui_runStep();
+		signTx_handleAuxDataCVoteRegistration_ui_runStep();
 		break;
 	default:
 		ASSERT(false);
@@ -901,7 +901,7 @@ static void constructInputLabel(const char* prefix, uint16_t index)
 	char* label = BODY_CTX->stageData.input.label;
 	const size_t labelSize = SIZEOF(BODY_CTX->stageData.input.label);
 	explicit_bzero(label, labelSize);
-	// indexed from 0 as agreed with IOHK on Slack
+	// indexed from 0 as agreed with IOG on Slack
 	snprintf(label, labelSize, "%s #%u", prefix, index);
 	// make sure all the information is displayed to the user
 	ASSERT(strlen(label) + 1 < labelSize);
@@ -2572,7 +2572,7 @@ ins_sign_tx_aux_data_context_t* accessAuxDataContext()
 	switch (ctx->stage) {
 
 	case SIGN_STAGE_AUX_DATA:
-	case SIGN_STAGE_AUX_DATA_GOVERNANCE_VOTING_REGISTRATION_SUBMACHINE:
+	case SIGN_STAGE_AUX_DATA_CVOTE_REGISTRATION_SUBMACHINE:
 		return &(ctx->txPartCtx.aux_data_ctx);
 
 	default:

@@ -18,7 +18,7 @@
 APPNAME      = "Cardano ADA"
 APPVERSION_M = 6
 APPVERSION_N = 0
-APPVERSION_P = 2
+APPVERSION_P = 3
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 ifeq ($(BOLOS_SDK),)
@@ -176,7 +176,7 @@ seed:
 ##############
 
 format:
-	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c
+	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c --ignore-exclude-errors
 
 
 ##############

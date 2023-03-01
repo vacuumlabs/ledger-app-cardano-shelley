@@ -432,7 +432,7 @@ static void addTokenGroup(
 	{
 		// Bytes[policyId]
 		// Map(numTokens)[
-		//   // entries added later { * asset_name => auint }
+		//   // entries added later { * asset_name => uint }
 		// ]
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, policyIdSize);
@@ -474,7 +474,7 @@ static void addToken(
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 	{
 		// add a map entry:
-		// Bytes[assetname]
+		// Bytes[asset_name]
 		// Unsigned[Amount]
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, assetNameSize);

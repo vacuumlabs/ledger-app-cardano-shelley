@@ -119,11 +119,11 @@ bool bip44_hasPoolColdKeyPrefix(const bip44_path_t* pathSpec)
 }
 
 // /1694'/1815'
-bool bip44_hasGovernanceVotingKeyPrefix(const bip44_path_t* pathSpec)
+bool bip44_hasCVoteKeyPrefix(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(pathSpec->length > BIP44_I_COIN_TYPE);
-	CHECK(pathSpec->path[BIP44_I_PURPOSE] == harden(PURPOSE_GOVERNANCE_VOTING_KEY));
+	CHECK(pathSpec->path[BIP44_I_PURPOSE] == harden(PURPOSE_CVOTE_KEY));
 	CHECK(pathSpec->path[BIP44_I_COIN_TYPE] == harden(ADA_COIN_TYPE));
 	return true;
 #undef CHECK
@@ -267,11 +267,11 @@ bool bip44_isPoolColdKeyPath(const bip44_path_t* pathSpec)
 #undef CHECK
 }
 
-bool bip44_isGovernanceVotingKeyPath(const bip44_path_t* pathSpec)
+bool bip44_isCVoteKeyPath(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
 	CHECK(pathSpec->length == BIP44_I_ADDRESS + 1);
-	CHECK(bip44_hasGovernanceVotingKeyPrefix(pathSpec));
+	CHECK(bip44_hasCVoteKeyPrefix(pathSpec));
 	CHECK(bip44_getAccount(pathSpec) >= HARDENED_BIP32);
 	CHECK(pathSpec->path[BIP44_I_CHAIN] == 0); // in the future, more might be allowed
 	CHECK(!isHardened(bip44_getAddressValue(pathSpec)));
@@ -411,9 +411,9 @@ static bip44_path_type_t bip44_classifyMultisigWalletPath(const bip44_path_t* pa
 	}
 }
 
-static bip44_path_type_t bip44_classifyGovernanceVotingPath(const bip44_path_t* pathSpec)
+static bip44_path_type_t bip44_classifyCVotePath(const bip44_path_t* pathSpec)
 {
-	ASSERT(bip44_hasGovernanceVotingKeyPrefix(pathSpec));
+	ASSERT(bip44_hasCVoteKeyPrefix(pathSpec));
 
 	// account must be hardened
 	if (!bip44_containsAccount(pathSpec)) {
@@ -425,11 +425,11 @@ static bip44_path_type_t bip44_classifyGovernanceVotingPath(const bip44_path_t* 
 
 	switch (pathSpec->length) {
 	case 3: {
-		return PATH_GOVERNANCE_VOTING_ACCOUNT;
+		return PATH_CVOTE_ACCOUNT;
 	}
 	case 5: {
-		return bip44_isGovernanceVotingKeyPath(pathSpec) ?
-		       PATH_GOVERNANCE_VOTING_KEY :
+		return bip44_isCVoteKeyPath(pathSpec) ?
+		       PATH_CVOTE_KEY :
 		       PATH_INVALID;
 	}
 	default:
@@ -463,8 +463,8 @@ bip44_path_type_t bip44_classifyPath(const bip44_path_t* pathSpec)
 		}
 	}
 
-	if (bip44_hasGovernanceVotingKeyPrefix(pathSpec)) {
-		return bip44_classifyGovernanceVotingPath(pathSpec);
+	if (bip44_hasCVoteKeyPrefix(pathSpec)) {
+		return bip44_classifyCVotePath(pathSpec);
 	}
 
 	return PATH_INVALID;
@@ -494,10 +494,10 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 	case PATH_POOL_COLD_KEY:
 		return bip44_hasReasonablePoolColdKeyIndex(pathSpec);
 
-	case PATH_GOVERNANCE_VOTING_ACCOUNT:
+	case PATH_CVOTE_ACCOUNT:
 		return bip44_hasReasonableAccount(pathSpec);
 
-	case PATH_GOVERNANCE_VOTING_KEY:
+	case PATH_CVOTE_KEY:
 		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
 
 	default:

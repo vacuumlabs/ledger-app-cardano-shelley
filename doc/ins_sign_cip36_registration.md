@@ -1,4 +1,4 @@
-# CIP36 Voting Key Registration
+# CIP36 Vote Key Registration
 
 ## Description
 
@@ -34,7 +34,7 @@ P2 = `0x36`
 
 ---
 
-**Voting key**
+**Vote key**
 
 A single APDU with voting key is sent if the number of delegations specified in the init APDU is 0 (otherwise no such APDU is allowed).
 
@@ -45,7 +45,7 @@ P2 = `0x30`
 |Field| Length | Comments|
 |-----|--------|---------|
 |Key type                                               |   1 | 0x01 or 0x02 if a 32-byte key or its derivation path follows |
-|Voting public key: bytestring or BIP44 derivation path |     | (depends on previous line) |
+|Vote public key: bytestring or BIP44 derivation path   |     | (depends on previous line) |
 
 
 **Delegation**
@@ -59,7 +59,7 @@ P2 = `0x37`
 |Field| Length | Comments|
 |-----|--------|---------|
 |Key type                                               |   1 | 0x01 or 0x02 if a 32-byte key or its derivation path follows |
-|Voting public key: bytestring or BIP44 derivation path |     | (depends on previous line) |
+|Vote public key: bytestring or BIP44 derivation path   |     | (depends on previous line) |
 |Weight                                                 |   4 | big endian |
 
 ---
@@ -76,7 +76,7 @@ P2 = `0x31`
 
 ---
 
-**Voting rewards address**
+**Voting rewards payment address**
 
 P2 = `0x32`
 

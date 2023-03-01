@@ -86,8 +86,8 @@ security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
 
 	case PATH_POOL_COLD_KEY:
 
-	case PATH_GOVERNANCE_VOTING_ACCOUNT:
-	case PATH_GOVERNANCE_VOTING_KEY:
+	case PATH_CVOTE_ACCOUNT:
+	case PATH_CVOTE_KEY:
 
 		ALLOW();
 		break;
@@ -146,7 +146,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 		PROMPT();
 		break;
 
-	case PATH_GOVERNANCE_VOTING_ACCOUNT:
+	case PATH_CVOTE_ACCOUNT:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 
 		// in expert mode, do not export keys without permission
@@ -159,7 +159,7 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
-	case PATH_GOVERNANCE_VOTING_KEY:
+	case PATH_CVOTE_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 		// ask for permission (it is unusual if client asks this instead of the account key)
 		PROMPT();
@@ -185,8 +185,8 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_MINT_KEY:
-	case PATH_GOVERNANCE_VOTING_ACCOUNT:
-	case PATH_GOVERNANCE_VOTING_KEY:
+	case PATH_CVOTE_ACCOUNT:
+	case PATH_CVOTE_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 		// we do not show these paths since there may be many of them
 		ALLOW();
@@ -976,13 +976,13 @@ security_policy_t policyForSignTxCertificate(
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		// pool registration is allowed only in POOL_REGISTRATION signging modes
+		// pool registration is allowed only in POOL_REGISTRATION signing modes
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		// pool registration is allowed only in POOL_REGISTRATION signging modes
+		// pool registration is allowed only in POOL_REGISTRATION signing modes
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		// pool retirement is impossible with multisig keys
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
@@ -1541,10 +1541,10 @@ security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType)
 		SHOW_IF(app_mode_expert());
 		ALLOW();
 
-	case AUX_DATA_TYPE_CIP36_REGISTRATION:
+	case AUX_DATA_TYPE_CVOTE_REGISTRATION:
 		// this is the policy for the initial prompt
 		// details of the registration are governed by separate policies
-		// (see policyForGovernanceVotingRegistration...)
+		// (see policyForCVoteRegistration...)
 		SHOW();
 		break;
 
@@ -1590,7 +1590,7 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t mintInitPolicy)
 		break;
 
 	case POLICY_SHOW_BEFORE_RESPONSE:
-		// all minted coins were shown, show a final cofirmation prompt as well
+		// all minted coins were shown, show a final confirmation prompt as well
 		PROMPT();
 		break;
 
@@ -1756,26 +1756,26 @@ security_policy_t policyForSignTxConfirm()
 	PROMPT();
 }
 
-security_policy_t policyForGovernanceVotingRegistrationVotingKey()
+security_policy_t policyForCVoteRegistrationVoteKey()
 {
 	SHOW();
 }
 
-security_policy_t policyForGovernanceVotingRegistrationVotingKeyPath(
+security_policy_t policyForCVoteRegistrationVoteKeyPath(
         bip44_path_t* path,
-        governance_voting_registration_format_t format
+        cvote_registration_format_t format
 )
 {
 	// encourages people to use the new format,
 	// so that we can drop support for CIP15 sooner
 	DENY_UNLESS(format == CIP36);
 
-	DENY_UNLESS(bip44_classifyPath(path) == PATH_GOVERNANCE_VOTING_KEY);
+	DENY_UNLESS(bip44_classifyPath(path) == PATH_CVOTE_KEY);
 	WARN_UNLESS(bip44_isPathReasonable(path));
 	SHOW();
 }
 
-security_policy_t policyForGovernanceVotingRegistrationStakingKey(
+security_policy_t policyForCVoteRegistrationStakingKey(
         const bip44_path_t* stakingKeyPath
 )
 {
@@ -1787,7 +1787,7 @@ security_policy_t policyForGovernanceVotingRegistrationStakingKey(
 
 // based on https://input-output-rnd.slack.com/archives/C036XSMFXE3/p1668185230182239
 // TODO make sure this is what we want
-security_policy_t policyForGovernanceVotingRegistrationVotingRewardsDestination(
+security_policy_t policyForCVoteRegistrationPaymentDestination(
         const tx_output_destination_storage_t* destination,
         const uint8_t networkId
 )
@@ -1832,19 +1832,19 @@ security_policy_t policyForGovernanceVotingRegistrationVotingRewardsDestination(
 
 }
 
-security_policy_t policyForGovernanceVotingRegistrationNonce()
+security_policy_t policyForCVoteRegistrationNonce()
 {
 	SHOW();
 }
 
-security_policy_t policyForGovernanceVotingRegistrationVotingPurpose()
+security_policy_t policyForCVoteRegistrationVotingPurpose()
 {
 	// since it will only be used for Catalyst, we don't show this value to non-experts
 	SHOW_IF(app_mode_expert());
 	ALLOW();
 }
 
-security_policy_t policyForGovernanceVotingRegistrationConfirm()
+security_policy_t policyForCVoteRegistrationConfirm()
 {
 	PROMPT();
 }
@@ -1869,20 +1869,20 @@ security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 	DENY(); // should not be reached
 }
 
-security_policy_t policyForSignGovernanceVoteInit()
+security_policy_t policyForSignCVoteInit()
 {
 	PROMPT();
 }
 
-security_policy_t policyForSignGovernanceVoteConfirm()
+security_policy_t policyForSignCVoteConfirm()
 {
 	PROMPT();
 }
 
-security_policy_t policyForSignGovernanceVoteWitness(bip44_path_t* path)
+security_policy_t policyForSignCVoteWitness(bip44_path_t* path)
 {
 	switch (bip44_classifyPath(path)) {
-	case PATH_GOVERNANCE_VOTING_KEY:
+	case PATH_CVOTE_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(path));
 		SHOW();
 		break;

@@ -86,7 +86,7 @@ size_t cborEncodePubkeyAddressInner(
 			if (protocolMagic == MAINNET_PROTOCOL_MAGIC) {
 				view_appendToken(&out, CBOR_TYPE_MAP, 0 /* addrAttributes is empty */);
 			} else {
-				/* addrAddtributes contains protocol magic for non-mainnet Byron addresses */
+				/* addrAttributes contains protocol magic for non-mainnet Byron addresses */
 				view_appendToken(&out, CBOR_TYPE_MAP, 1);
 				{
 					view_appendToken(&out, CBOR_TYPE_UNSIGNED, PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY); /* map key for protocol magic */
