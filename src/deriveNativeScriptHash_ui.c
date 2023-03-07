@@ -69,28 +69,29 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 
 	VALIDATE(uiPaginatedText_canFitStringIntoFullText(positionDescription), ERR_INVALID_DATA);
 
-#ifdef HAVE_BAGL
+	#ifdef HAVE_BAGL
 	ui_displayPaginatedText(
 	        HEADER,
 	        positionDescription,
 	        callback
 	);
-#elif defined(HAVE_NBGL)
-    set_light_confirmation(true);
-    fill_and_display_new_page(HEADER, positionDescription, callback, respond_with_user_reject);
-#endif // HAVE_BAGL
+	#elif defined(HAVE_NBGL)
+	set_light_confirmation(true);
+	fill_and_display_new_page(HEADER, positionDescription, callback, respond_with_user_reject);
+	#endif // HAVE_BAGL
 }
 
 #ifdef HAVE_NBGL
-static void deriveScriptHash_display_ui_runStep_cb(void) {
-    // max possible length 85: "Requires n out of k signatures. Contains k nested scripts."
-    // where n and k is 2^32-1
-    char text[87] = {0};
-    explicit_bzero(text, SIZEOF(text));
-    snprintf(text, SIZEOF(text), "%u nested scripts", ctx->complexScripts[ctx->level].remainingScripts);
-    // make sure all the information is displayed to the user
-    ASSERT(strlen(text) + 1 < SIZEOF(text));
-    fill_and_display_if_required("Script contents", text, deriveScriptHash_display_ui_runStep, respond_with_user_reject);
+static void deriveScriptHash_display_ui_runStep_cb(void)
+{
+	// max possible length 85: "Requires n out of k signatures. Contains k nested scripts."
+	// where n and k is 2^32-1
+	char text[87] = {0};
+	explicit_bzero(text, SIZEOF(text));
+	snprintf(text, SIZEOF(text), "%u nested scripts", ctx->complexScripts[ctx->level].remainingScripts);
+	// make sure all the information is displayed to the user
+	ASSERT(strlen(text) + 1 < SIZEOF(text));
+	fill_and_display_if_required("Script contents", text, deriveScriptHash_display_ui_runStep, respond_with_user_reject);
 }
 #endif // HAVE_NBGL
 
@@ -113,63 +114,63 @@ void deriveScriptHash_display_ui_runStep()
 		}
 	}
 
-    UI_STEP(DISPLAY_UI_STEP_TITLE) {
-#ifdef HAVE_BAGL
-			UI_STEP_JUMP(DISPLAY_UI_STEP_SCRIPT_CONTENT);
-#elif defined(HAVE_NBGL)
-            display_prompt("Review Script", "", this_fn, respond_with_user_reject);
-#endif // HAVE_NBGL
-    }
-#ifdef HAVE_NBGL
+	UI_STEP(DISPLAY_UI_STEP_TITLE) {
+		#ifdef HAVE_BAGL
+		UI_STEP_JUMP(DISPLAY_UI_STEP_SCRIPT_CONTENT);
+		#elif defined(HAVE_NBGL)
+		display_prompt("Review Script", "", this_fn, respond_with_user_reject);
+		#endif // HAVE_NBGL
+	}
+	#ifdef HAVE_NBGL
 	UI_STEP(DISPLAY_UI_STEP_SCRIPT_TYPE) {
-        set_light_confirmation(true);
+		set_light_confirmation(true);
 		switch (ctx->ui_scriptType) {
-		case UI_SCRIPT_PUBKEY_PATH: 
-            fill_and_display_if_required("Script type", "Pubkey path", this_fn, respond_with_user_reject);
+		case UI_SCRIPT_PUBKEY_PATH:
+			fill_and_display_if_required("Script type", "Pubkey path", this_fn, respond_with_user_reject);
 			break;
-		case UI_SCRIPT_PUBKEY_HASH: 
-            fill_and_display_if_required("Script type", "Pubkey hash", this_fn, respond_with_user_reject);
+		case UI_SCRIPT_PUBKEY_HASH:
+			fill_and_display_if_required("Script type", "Pubkey hash", this_fn, respond_with_user_reject);
 			break;
 		case UI_SCRIPT_ALL:
-            fill_and_display_if_required("Script type", "ALL", this_fn, respond_with_user_reject);
+			fill_and_display_if_required("Script type", "ALL", this_fn, respond_with_user_reject);
 			break;
-		case UI_SCRIPT_ANY: 
-            fill_and_display_if_required("Script type", "ANY", this_fn, respond_with_user_reject);
+		case UI_SCRIPT_ANY:
+			fill_and_display_if_required("Script type", "ANY", this_fn, respond_with_user_reject);
 			break;
-		case UI_SCRIPT_N_OF_K: 
-            fill_and_display_if_required("Script type", "N out K", this_fn, respond_with_user_reject);
+		case UI_SCRIPT_N_OF_K:
+			fill_and_display_if_required("Script type", "N out K", this_fn, respond_with_user_reject);
 			break;
-		case UI_SCRIPT_INVALID_BEFORE: 
-            fill_and_display_if_required("Script type", "Invalid before", this_fn, respond_with_user_reject);
+		case UI_SCRIPT_INVALID_BEFORE:
+			fill_and_display_if_required("Script type", "Invalid before", this_fn, respond_with_user_reject);
 			break;
-		case UI_SCRIPT_INVALID_HEREAFTER: 
-            fill_and_display_if_required("Script type", "Invalid hereafter", this_fn, respond_with_user_reject);
+		case UI_SCRIPT_INVALID_HEREAFTER:
+			fill_and_display_if_required("Script type", "Invalid hereafter", this_fn, respond_with_user_reject);
 			break;
 		default:
 			THROW(ERR_INVALID_STATE);
 		}
-    }
-#endif // HAVE_NBGL
+	}
+	#endif // HAVE_NBGL
 
 	UI_STEP(DISPLAY_UI_STEP_SCRIPT_CONTENT) {
 		TRACE("ui_scriptType = %d", ctx->ui_scriptType);
 		switch (ctx->ui_scriptType) {
 		case UI_SCRIPT_PUBKEY_PATH: {
-#ifdef HAVE_BAGL
+			#ifdef HAVE_BAGL
 			ui_displayPathScreen(
 			        HEADER,
 			        &ctx->scriptContent.pubkeyPath,
 			        this_fn
 			);
-#elif defined(HAVE_NBGL)
-            char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
-            ui_getPathScreen(pathStr, SIZEOF(pathStr), &ctx->scriptContent.pubkeyPath);
-            fill_and_display_if_required("Pubkey path", pathStr, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+			#elif defined(HAVE_NBGL)
+			char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
+			ui_getPathScreen(pathStr, SIZEOF(pathStr), &ctx->scriptContent.pubkeyPath);
+			fill_and_display_if_required("Pubkey path", pathStr, this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
 			break;
 		}
 		case UI_SCRIPT_PUBKEY_HASH: {
-#ifdef HAVE_BAGL
+			#ifdef HAVE_BAGL
 			ui_displayBech32Screen(
 			        HEADER,
 			        "addr_shared_vkh",
@@ -177,11 +178,11 @@ void deriveScriptHash_display_ui_runStep()
 			        ADDRESS_KEY_HASH_LENGTH,
 			        this_fn
 			);
-#elif defined(HAVE_NBGL)
-            char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
-            ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "addr_shared_vkh", ctx->scriptContent.pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
-            fill_and_display_if_required("Pubkey hash", encodedStr, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+			#elif defined(HAVE_NBGL)
+			char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+			ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "addr_shared_vkh", ctx->scriptContent.pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
+			fill_and_display_if_required("Pubkey hash", encodedStr, this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
 			break;
 		}
 		case UI_SCRIPT_ALL:
@@ -192,7 +193,7 @@ void deriveScriptHash_display_ui_runStep()
 			explicit_bzero(text, SIZEOF(text));
 			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
 			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
-#ifdef HAVE_BAGL
+			#ifdef HAVE_BAGL
 			snprintf(text, SIZEOF(text), "Contains %u nested scripts.", ctx->complexScripts[ctx->level].remainingScripts);
 			// make sure all the information is displayed to the user
 			ASSERT(strlen(text) + 1 < SIZEOF(text));
@@ -202,12 +203,12 @@ void deriveScriptHash_display_ui_runStep()
 			        text,
 			        this_fn
 			);
-#elif defined(HAVE_NBGL)
+			#elif defined(HAVE_NBGL)
 			snprintf(text, SIZEOF(text), "%u nested scripts", ctx->complexScripts[ctx->level].remainingScripts);
 			// make sure all the information is displayed to the user
 			ASSERT(strlen(text) + 1 < SIZEOF(text));
-            fill_and_display_if_required("Content", text, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+			fill_and_display_if_required("Content", text, this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
 			break;
 		}
 		case UI_SCRIPT_N_OF_K: {
@@ -218,7 +219,7 @@ void deriveScriptHash_display_ui_runStep()
 			// max possible length 85: "Requires n out of k signatures. Contains k nested scripts."
 			// where n and k is 2^32-1
 			char text[87] = {0};
-#ifdef HAVE_BAGL
+			#ifdef HAVE_BAGL
 			explicit_bzero(text, SIZEOF(text));
 			snprintf(text, SIZEOF(text), "Requires %u out of %u signatures. Contains %u nested scripts", ctx->scriptContent.requiredScripts, ctx->complexScripts[ctx->level].remainingScripts, ctx->complexScripts[ctx->level].remainingScripts);
 			// make sure all the information is displayed to the user
@@ -229,50 +230,50 @@ void deriveScriptHash_display_ui_runStep()
 			        text,
 			        this_fn
 			);
-#elif defined(HAVE_NBGL)
+			#elif defined(HAVE_NBGL)
 			explicit_bzero(text, SIZEOF(text));
 			snprintf(text, SIZEOF(text), "%u out of %u signatures", ctx->scriptContent.requiredScripts, ctx->complexScripts[ctx->level].remainingScripts);
 			// make sure all the information is displayed to the user
 			ASSERT(strlen(text) + 1 < SIZEOF(text));
-            fill_and_display_if_required("Requirement", text, deriveScriptHash_display_ui_runStep_cb, respond_with_user_reject);
-#endif // HAVE_BAGL
+			fill_and_display_if_required("Requirement", text, deriveScriptHash_display_ui_runStep_cb, respond_with_user_reject);
+			#endif // HAVE_BAGL
 			break;
 		}
 		case UI_SCRIPT_INVALID_BEFORE: {
-#ifdef HAVE_BAGL
+			#ifdef HAVE_BAGL
 			ui_displayUint64Screen(
 			        HEADER,
 			        ctx->scriptContent.timelock,
 			        this_fn
 			);
-#elif defined(HAVE_NBGL)
-            char line[30];
-            ui_getUint64Screen(
-                    line,
-                    SIZEOF(line),
+			#elif defined(HAVE_NBGL)
+			char line[30];
+			ui_getUint64Screen(
+			        line,
+			        SIZEOF(line),
 			        ctx->scriptContent.timelock
-                    );
-            fill_and_display_if_required("Invalid before", line, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
-            break;
+			);
+			fill_and_display_if_required("Invalid before", line, this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
+			break;
 		}
 
 		case UI_SCRIPT_INVALID_HEREAFTER: {
-#ifdef HAVE_BAGL
+			#ifdef HAVE_BAGL
 			ui_displayUint64Screen(
 			        HEADER,
 			        ctx->scriptContent.timelock,
 			        this_fn
 			);
-#elif defined(HAVE_NBGL)
-            char line[30];
-            ui_getUint64Screen(
-                    line,
-                    SIZEOF(line),
+			#elif defined(HAVE_NBGL)
+			char line[30];
+			ui_getUint64Screen(
+			        line,
+			        SIZEOF(line),
 			        ctx->scriptContent.timelock
-                    );
-            fill_and_display_if_required("Invalid hereafter", line, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+			);
+			fill_and_display_if_required("Invalid hereafter", line, this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
 			break;
 		}
 		default:
@@ -282,9 +283,9 @@ void deriveScriptHash_display_ui_runStep()
 
 	UI_STEP(DISPLAY_UI_STEP_RESPOND) {
 		io_send_buf(SUCCESS, NULL, 0);
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
-#endif // HAVE_BAGL
+		#endif // HAVE_BAGL
 	}
 
 	UI_STEP_END(DISPLAY_UI_STEP_INVALID);
@@ -298,14 +299,15 @@ void deriveNativeScriptHash_displayNativeScriptHash_callback()
 }
 
 #ifdef HAVE_NBGL
-static void deriveNativeScriptHash_displayNativeScriptHash_finish(void) {
-        display_confirmation("Confirm script", "", "SCRIPT\nCONFIRMED", "Script\nrejected", deriveNativeScriptHash_displayNativeScriptHash_callback, respond_with_user_reject);
+static void deriveNativeScriptHash_displayNativeScriptHash_finish(void)
+{
+	display_confirmation("Confirm script", "", "SCRIPT\nCONFIRMED", "Script\nrejected", deriveNativeScriptHash_displayNativeScriptHash_callback, respond_with_user_reject);
 }
 #endif // HAVE_NBGL
 
 void deriveNativeScriptHash_displayNativeScriptHash_bech32()
 {
-#ifdef HAVE_BAGL
+	#ifdef HAVE_BAGL
 	ui_displayBech32Screen(
 	        "Script hash",
 	        "script",
@@ -313,25 +315,25 @@ void deriveNativeScriptHash_displayNativeScriptHash_bech32()
 	        SCRIPT_HASH_LENGTH,
 	        deriveNativeScriptHash_displayNativeScriptHash_callback
 	);
-#elif defined(HAVE_NBGL)
-        char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
-        ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "script", ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH);
-        fill_and_display_if_required("Script hash", encodedStr, deriveNativeScriptHash_displayNativeScriptHash_finish, respond_with_user_reject);
-#endif // HAVE_BAGL
+	#elif defined(HAVE_NBGL)
+	char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+	ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "script", ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH);
+	fill_and_display_if_required("Script hash", encodedStr, deriveNativeScriptHash_displayNativeScriptHash_finish, respond_with_user_reject);
+	#endif // HAVE_BAGL
 }
 
 void deriveNativeScriptHash_displayNativeScriptHash_policyId()
 {
-#ifdef HAVE_BAGL
+	#ifdef HAVE_BAGL
 	ui_displayHexBufferScreen(
 	        "Policy ID",
 	        ctx->scriptHashBuffer,
 	        SCRIPT_HASH_LENGTH,
 	        deriveNativeScriptHash_displayNativeScriptHash_callback
 	);
-#elif defined(HAVE_NBGL)
-    char bufferHex[2 * 32 + 1] = {0};
-    ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH);
-    fill_and_display_if_required("Policy ID", bufferHex, deriveNativeScriptHash_displayNativeScriptHash_finish, respond_with_user_reject);
-#endif // HAVE_BAGL
+	#elif defined(HAVE_NBGL)
+	char bufferHex[2 * 32 + 1] = {0};
+	ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH);
+	fill_and_display_if_required("Policy ID", bufferHex, deriveNativeScriptHash_displayNativeScriptHash_finish, respond_with_user_reject);
+	#endif // HAVE_BAGL
 }

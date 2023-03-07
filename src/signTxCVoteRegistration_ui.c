@@ -24,34 +24,34 @@ static void _displayVoteKey(ui_callback_fn_t callback)
 	switch (subctx->stateData.delegation.type) {
 	case DELEGATION_KEY: {
 		STATIC_ASSERT(SIZEOF(subctx->stateData.delegation.votePubKey) == CVOTE_PUBLIC_KEY_LENGTH, "wrong vote public key size");
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayBech32Screen(
 		        "Vote public key",
 		        "cvote_vk",
 		        subctx->stateData.delegation.votePubKey, CVOTE_PUBLIC_KEY_LENGTH,
 		        callback
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
-        ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "cvote_vk", subctx->stateData.delegation.votePubKey, CVOTE_PUBLIC_KEY_LENGTH);
-        fill_and_display_if_required("Vote public key", encodedStr, callback, respond_with_user_reject);
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "cvote_vk", subctx->stateData.delegation.votePubKey, CVOTE_PUBLIC_KEY_LENGTH);
+		fill_and_display_if_required("Vote public key", encodedStr, callback, respond_with_user_reject);
+		#endif // HAVE_BAGL
 		break;
 	}
 	case DELEGATION_PATH: {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPathScreen(
 		        "Vote public key",
 		        &subctx->stateData.delegation.votePubKeyPath,
 		        callback
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
-        ui_getPathScreen(pathStr, SIZEOF(pathStr), &subctx->stateData.delegation.votePubKeyPath);
-        fill_and_display_if_required("Vote public key", pathStr, callback, respond_with_user_reject);
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
+		ui_getPathScreen(pathStr, SIZEOF(pathStr), &subctx->stateData.delegation.votePubKeyPath);
+		fill_and_display_if_required("Vote public key", pathStr, callback, respond_with_user_reject);
+		#endif // HAVE_BAGL
 		break;
 	}
 	default:
@@ -69,23 +69,23 @@ void signTxCVoteRegistration_handleVoteKey_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_VOTE_KEY_STEP_WARNING) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "WARNING:",
 		        "unusual vote key",
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_warning("Unusual\nvote key", this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_warning("Unusual\nvote key", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_VOTE_KEY_STEP_DISPLAY) {
 		_displayVoteKey(this_fn);
 	}
 	UI_STEP(HANDLE_VOTE_KEY_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
-        voting_registration_advanceState();
+		voting_registration_advanceState();
 	}
 	UI_STEP_END(HANDLE_VOTE_KEY_STEP_INVALID);
 }
@@ -102,37 +102,37 @@ void signTxCVoteRegistration_handleDelegation_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_VOTE_KEY_STEP_WARNING) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "WARNING:",
 		        "unusual vote key",
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_warning("Unusual\nvote key", this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_warning("Unusual\nvote key", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_DELEGATION_STEP_VOTE_KEY) {
 		_displayVoteKey(this_fn);
 	}
 	UI_STEP(HANDLE_DELEGATION_STEP_WEIGHT) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayUint64Screen(
 		        "Weight",
 		        subctx->stateData.delegation.weight,
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        char line[30];
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		char line[30];
 		ui_getUint64Screen(
-                line,
-                SIZEOF(line),
+		        line,
+		        SIZEOF(line),
 		        subctx->stateData.delegation.weight
 		);
-        fill_and_display_if_required("Weight", line, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		fill_and_display_if_required("Weight", line, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_DELEGATION_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -147,16 +147,17 @@ void signTxCVoteRegistration_handleDelegation_ui_runStep()
 // ============================== STAKING KEY ==============================
 
 #ifdef HAVE_NBGL
-static void signTxCVoteRegistration_handleStakingKey_ui_cb(void) {
+static void signTxCVoteRegistration_handleStakingKey_ui_cb(void)
+{
 	cvote_registration_context_t* subctx = accessSubContext();
-    char line1[30] = {0};
-    char pathStr[MAX(160,BIP44_PATH_STRING_SIZE_MAX + 1)] = {0};
-    ui_getPublicKeyPathScreen(
-            line1, SIZEOF(line1),
-            pathStr, SIZEOF(pathStr),
-            &subctx->stakingKeyPath
-            );
-    fill_and_display_if_required(line1, pathStr, signTxCVoteRegistration_handleStakingKey_ui_runStep, respond_with_user_reject);
+	char line1[30] = {0};
+	char pathStr[MAX(160, BIP44_PATH_STRING_SIZE_MAX + 1)] = {0};
+	ui_getPublicKeyPathScreen(
+	        line1, SIZEOF(line1),
+	        pathStr, SIZEOF(pathStr),
+	        &subctx->stakingKeyPath
+	);
+	fill_and_display_if_required(line1, pathStr, signTxCVoteRegistration_handleStakingKey_ui_runStep, respond_with_user_reject);
 }
 #endif // HAVE_NBGL
 
@@ -170,39 +171,39 @@ void signTxCVoteRegistration_handleStakingKey_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_STAKING_KEY_STEP_WARNING) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "Unusual request",
 		        "Proceed with care",
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_warning("Unusual request\nProceed with care", this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_warning("Unusual request\nProceed with care", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_STAKING_KEY_STEP_DISPLAY) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayStakingKeyScreen(
 		        &subctx->stakingKeyPath,
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        bool showAccountDescription = bip44_isPathReasonable(&subctx->stakingKeyPath);
-        if (showAccountDescription) {
-            char line1[30];
-            char line2[30];
-            ui_getAccountScreeen(
-                    line1,
-                    SIZEOF(line1),
-                    line2,
-                    SIZEOF(line2),
-                    &subctx->stakingKeyPath
-            );
-            fill_and_display_if_required(line1, line2, signTxCVoteRegistration_handleStakingKey_ui_cb, respond_with_user_reject);
-        }
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		bool showAccountDescription = bip44_isPathReasonable(&subctx->stakingKeyPath);
+		if (showAccountDescription) {
+			char line1[30];
+			char line2[30];
+			ui_getAccountScreeen(
+			        line1,
+			        SIZEOF(line1),
+			        line2,
+			        SIZEOF(line2),
+			        &subctx->stakingKeyPath
+			);
+			fill_and_display_if_required(line1, line2, signTxCVoteRegistration_handleStakingKey_ui_cb, respond_with_user_reject);
+		}
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_STAKING_KEY_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -224,16 +225,16 @@ void signTxCVoteRegistration_handlePaymentAddress_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_WARNING) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "Unusual request",
 		        "Proceed with care",
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_warning("Unusual request\nProceed with care", this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_warning("Unusual request\nProceed with care", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_DISPLAY_ADDRESS) {
 		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
@@ -242,24 +243,24 @@ void signTxCVoteRegistration_handlePaymentAddress_ui_runStep()
 		                             addressBuffer, SIZEOF(addressBuffer)
 		                     );
 
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayAddressScreen(
 		        "Rewards go to",
 		        addressBuffer,
 		        addressSize,
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        char humanAddress[MAX_HUMAN_ADDRESS_SIZE] = {0};
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		char humanAddress[MAX_HUMAN_ADDRESS_SIZE] = {0};
 		ui_getAddressScreen(
-                humanAddress,
-                SIZEOF(humanAddress),
+		        humanAddress,
+		        SIZEOF(humanAddress),
 		        addressBuffer,
 		        addressSize
 		);
-        fill_and_display_if_required("Rewards go to", humanAddress, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		fill_and_display_if_required("Rewards go to", humanAddress, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_PAYMENT_ADDRESS_PARAMS_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -280,21 +281,21 @@ void signTxCVoteRegistration_handleNonce_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_NONCE_STEP_DISPLAY) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayUint64Screen(
 		        "Nonce",
 		        subctx->stateData.nonce,
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        char line[30];
+		#elif defined(HAVE_NBGL)
+		char line[30];
 		ui_getUint64Screen(
-                line,
-                SIZEOF(line),
+		        line,
+		        SIZEOF(line),
 		        subctx->stateData.nonce
 		);
-        fill_and_display_if_required("Nonce", line, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		fill_and_display_if_required("Nonce", line, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_NONCE_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -315,21 +316,21 @@ void signTxCVoteRegistration_handleVotingPurpose_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_VOTING_PURPOSE_STEP_DISPLAY) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayUint64Screen(
 		        "Voting purpose",
 		        subctx->stateData.votingPurpose,
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        char line[30];
+		#elif defined(HAVE_NBGL)
+		char line[30];
 		ui_getUint64Screen(
-                line,
-                SIZEOF(line),
+		        line,
+		        SIZEOF(line),
 		        subctx->stateData.votingPurpose
 		);
-        fill_and_display_if_required("Voting purpose", line, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		fill_and_display_if_required("Voting purpose", line, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_VOTING_PURPOSE_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -351,40 +352,40 @@ void signTxCVoteRegistration_handleConfirm_ui_runStep()
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
 		// confirming this means the signature being sent out of the device
 		// so we want to show it in non-expert mode too
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPrompt(
 		        "Confirm vote key",
 		        "registration?",
 		        this_fn,
 		        respond_with_user_reject
 		);
-#elif defined(HAVE_NBGL)
-        display_confirmation(
-                "Confirm vote key\nregistration",
-                "",
-                "VOTE KEY\nCONFIRMED",
-                "Vote key\nrejected",
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		display_confirmation(
+		        "Confirm vote key\nregistration",
+		        "",
+		        "VOTE KEY\nCONFIRMED",
+		        "Vote key\nrejected",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_DISPLAY_HASH) {
 		if (!app_mode_expert()) {
 			UI_STEP_JUMP(HANDLE_CONFIRM_STEP_RESPOND);
 		}
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayHexBufferScreen(
 		        "Auxiliary data hash",
 		        subctx->auxDataHash,
 		        SIZEOF(subctx->auxDataHash),
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        char bufferHex[2 * 32 + 1] = {0};
-        ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), subctx->auxDataHash, SIZEOF(subctx->auxDataHash));
-        fill_and_display_if_required("Auxiliary data hash", bufferHex, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		char bufferHex[2 * 32 + 1] = {0};
+		ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), subctx->auxDataHash, SIZEOF(subctx->auxDataHash));
+		fill_and_display_if_required("Auxiliary data hash", bufferHex, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
 		struct {

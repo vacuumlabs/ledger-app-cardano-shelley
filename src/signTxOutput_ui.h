@@ -42,7 +42,7 @@ enum {
 };
 
 void signTx_handleCollateralOutput_addressBytes_ui_runStep();
-    
+
 // ============================== TOKEN ==============================
 
 enum {

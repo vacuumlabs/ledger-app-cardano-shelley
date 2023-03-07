@@ -51,15 +51,16 @@ static void advanceStage()
 // ============================== derivation and UI state machine for one key ==============================
 
 #ifdef HAVE_NBGL
-static void getPublicKeys_respondOneKey_ui_cb(void) {
-    char line1[30] = {0};
-    char pathStr[MAX(160,BIP44_PATH_STRING_SIZE_MAX + 1)] = {0};
-    ui_getPublicKeyPathScreen(
-            line1, SIZEOF(line1),
-            pathStr, SIZEOF(pathStr),
-            &ctx->pathSpec
-            );
-    fill_and_display_if_required(line1, pathStr, getPublicKeys_respondOneKey_ui_runStep, respond_with_user_reject);
+static void getPublicKeys_respondOneKey_ui_cb(void)
+{
+	char line1[30] = {0};
+	char pathStr[MAX(160, BIP44_PATH_STRING_SIZE_MAX + 1)] = {0};
+	ui_getPublicKeyPathScreen(
+	        line1, SIZEOF(line1),
+	        pathStr, SIZEOF(pathStr),
+	        &ctx->pathSpec
+	);
+	fill_and_display_if_required(line1, pathStr, getPublicKeys_respondOneKey_ui_runStep, respond_with_user_reject);
 }
 #endif // HAVE_NBGL
 
@@ -70,83 +71,82 @@ void getPublicKeys_respondOneKey_ui_runStep()
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 	UI_STEP(GET_KEY_UI_STEP_WARNING) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "Unusual request",
 		        "Proceed with care",
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_warning(
-                "Unusual request",
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_warning(
+		        "Unusual request",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
-    UI_STEP(GET_KEY_UI_STEP_PROMPT) {
-#ifdef HAVE_BAGL
-        UI_STEP_JUMP(GET_KEY_UI_STEP_DISPLAY)
-#elif defined(HAVE_NBGL)
-        display_prompt(
-                "Export public key",
-                "",
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
-    }
+	UI_STEP(GET_KEY_UI_STEP_PROMPT) {
+		#ifdef HAVE_BAGL
+		UI_STEP_JUMP(GET_KEY_UI_STEP_DISPLAY)
+		#elif defined(HAVE_NBGL)
+		display_prompt(
+		        "Export public key",
+		        "",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
+	}
 	UI_STEP(GET_KEY_UI_STEP_DISPLAY) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayGetPublicKeyPathScreen(&ctx->pathSpec, this_fn);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        bool showAccountDescription = (bip44_classifyPath(&ctx->pathSpec) == PATH_ORDINARY_ACCOUNT);
-        if (showAccountDescription) {
-            char line1[30];
-            char line2[30];
-            ui_getAccountScreeen(
-                    line1,
-                    SIZEOF(line1),
-                    line2,
-                    SIZEOF(line2),
-                    &ctx->pathSpec
-            );
-            fill_and_display_if_required(line1, line2, getPublicKeys_respondOneKey_ui_cb, respond_with_user_reject);
-        }
-        else {
-            getPublicKeys_respondOneKey_ui_cb();
-        }
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		bool showAccountDescription = (bip44_classifyPath(&ctx->pathSpec) == PATH_ORDINARY_ACCOUNT);
+		if (showAccountDescription) {
+			char line1[30];
+			char line2[30];
+			ui_getAccountScreeen(
+			        line1,
+			        SIZEOF(line1),
+			        line2,
+			        SIZEOF(line2),
+			        &ctx->pathSpec
+			);
+			fill_and_display_if_required(line1, line2, getPublicKeys_respondOneKey_ui_cb, respond_with_user_reject);
+		} else {
+			getPublicKeys_respondOneKey_ui_cb();
+		}
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(GET_KEY_UI_STEP_CONFIRM) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPrompt(
 		        "Confirm export",
 		        "public key?",
 		        this_fn,
 		        respond_with_user_reject
 		);
-#elif defined(HAVE_NBGL)
-        display_confirmation(
-                "Confirm\npublic key export",
-                "",
-                "PUBLIC KEY\nEXPORTED",
-                "Public key\nrejected",
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		display_confirmation(
+		        "Confirm\npublic key export",
+		        "",
+		        "PUBLIC KEY\nEXPORTED",
+		        "Public key\nrejected",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(GET_KEY_UI_STEP_RESPOND) {
 		ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
 
 		io_send_buf(SUCCESS, (uint8_t*) &ctx->extPubKey, SIZEOF(ctx->extPubKey));
 		ctx->responseReadyMagic = 0; // just for safety
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayBusy(); // needs to happen after I/O
-#endif // HAVE_BAGL
+		#endif // HAVE_BAGL
 
 		ctx->currentPath++;
 		TRACE("Current path: %u / %u", ctx->currentPath, ctx->numPaths);
@@ -174,7 +174,7 @@ void getPublicKeys_handleInit_ui_runStep()
 		// make sure all the information is displayed to the user
 		ASSERT(strlen(secondLine) + 1 < SIZEOF(secondLine));
 
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPrompt(
 		        "Confirm export",
 		        secondLine,
@@ -182,15 +182,15 @@ void getPublicKeys_handleInit_ui_runStep()
 		        respond_with_user_reject
 		);
 
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_prompt(
-                "Review export",
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_prompt(
+		        "Review export",
 		        secondLine,
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_INIT_UI_STEP_RESPOND) {
 		ctx->ui_step = UI_STEP_NONE; // we are finished with this UI state machine

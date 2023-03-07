@@ -24,12 +24,13 @@ enum {
 };
 
 
-void deriveAddress_response(void) {
-		ctx->responseReadyMagic = 0;
-		ASSERT(ctx->address.size <= SIZEOF(ctx->address.buffer));
+void deriveAddress_response(void)
+{
+	ctx->responseReadyMagic = 0;
+	ASSERT(ctx->address.size <= SIZEOF(ctx->address.buffer));
 
-		io_send_buf(SUCCESS, ctx->address.buffer, ctx->address.size);
-		ui_idle();
+	io_send_buf(SUCCESS, ctx->address.buffer, ctx->address.size);
+	ui_idle();
 }
 static void prepareResponse()
 {
@@ -82,77 +83,77 @@ static void deriveAddress_return_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(RETURN_UI_STEP_WARNING) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "Unusual request",
 		        "Proceed with care",
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_warning(
-                "Unusual request",
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_warning(
+		        "Unusual request",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(RETURN_UI_STEP_BEGIN) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText("Export", "address", this_fn);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_prompt(
-                "Export address",
-                "",
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_prompt(
+		        "Export address",
+		        "",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(RETURN_UI_STEP_SPENDING_PATH) {
 		if (determineSpendingChoice(ctx->addressParams.type) == SPENDING_NONE) {
 			// reward address
 			UI_STEP_JUMP(RETURN_UI_STEP_STAKING_INFO);
 		}
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displaySpendingInfoScreen(&ctx->addressParams, this_fn);
-#elif defined(HAVE_NBGL)
+		#elif defined(HAVE_NBGL)
 #define SPENDING_INFO_SIZE MAX(11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX, 2 * BECH32_BUFFER_SIZE_MAX)
-        char line1[30];
-        char spendingInfo[SPENDING_INFO_SIZE] = {0};
+		char line1[30];
+		char spendingInfo[SPENDING_INFO_SIZE] = {0};
 		ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &ctx->addressParams);
-        fill_and_display_if_required(line1, spendingInfo, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		fill_and_display_if_required(line1, spendingInfo, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
-#elif defined(HAVE_NBGL)
-        char line1[30] = {0};
-        char stakingInfo[120] = {0};
+		#elif defined(HAVE_NBGL)
+		char line1[30] = {0};
+		char stakingInfo[120] = {0};
 		ui_getStakingInfoScreen(line1, SIZEOF(line1), stakingInfo, SIZEOF(stakingInfo), &ctx->addressParams);
-        fill_and_display_if_required(line1, stakingInfo, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		fill_and_display_if_required(line1, stakingInfo, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(RETURN_UI_STEP_CONFIRM) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPrompt(
 		        "Confirm",
 		        "export address?",
 		        this_fn,
 		        respond_with_user_reject
 		);
-#elif defined(HAVE_NBGL)
-        display_confirmation(
-                "Confirm\n address export",
-                "",
-                "ADDRESS\nEXPORTED",
-                "Address\nrejected",
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		display_confirmation(
+		        "Confirm\n address export",
+		        "",
+		        "ADDRESS\nEXPORTED",
+		        "Address\nrejected",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(RETURN_UI_STEP_RESPOND) {
 		ctx->responseReadyMagic = 0;
@@ -206,98 +207,98 @@ static void deriveAddress_display_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(DISPLAY_UI_STEP_WARNING) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "Unusual request",
 		        "Proceed with care",
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_warning(
-                "Unusual request",
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_warning(
+		        "Unusual request",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(DISPLAY_UI_STEP_INSTRUCTIONS) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "Verify address",
 		        "Make sure it agrees with your computer",
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        set_light_confirmation(true);
-        display_warning(
-                "Make sure address matches\nwith your computer", 
-                this_fn,
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_warning(
+		        "Make sure address matches\nwith your computer",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(DISPLAY_UI_STEP_SPENDING_INFO) {
 		if (determineSpendingChoice(ctx->addressParams.type) == SPENDING_NONE) {
 			// reward address
 			UI_STEP_JUMP(DISPLAY_UI_STEP_STAKING_INFO);
 		}
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displaySpendingInfoScreen(&ctx->addressParams, this_fn);
-#elif defined(HAVE_NBGL)
+		#elif defined(HAVE_NBGL)
 #define SPENDING_INFO_SIZE MAX(11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX, 2 * BECH32_BUFFER_SIZE_MAX)
-        char line1[30] = {0};
-        char spendingInfo[SPENDING_INFO_SIZE] = {0};
+		char line1[30] = {0};
+		char spendingInfo[SPENDING_INFO_SIZE] = {0};
 		ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &ctx->addressParams);
-        fill_address_data(line1, spendingInfo);
-        UI_STEP_JUMP(DISPLAY_UI_STEP_STAKING_INFO);
-#endif // HAVE_BAGL
+		fill_address_data(line1, spendingInfo);
+		UI_STEP_JUMP(DISPLAY_UI_STEP_STAKING_INFO);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(DISPLAY_UI_STEP_STAKING_INFO) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
-#elif defined(HAVE_NBGL)
-        char line1[30] = {0};
-        char stakingInfo[120] = {0};
+		#elif defined(HAVE_NBGL)
+		char line1[30] = {0};
+		char stakingInfo[120] = {0};
 		ui_getStakingInfoScreen(line1, SIZEOF(line1), stakingInfo, SIZEOF(stakingInfo), &ctx->addressParams);
-        fill_address_data(line1, stakingInfo);
-        UI_STEP_JUMP(DISPLAY_UI_STEP_ADDRESS);
-#endif // HAVE_BAGL
+		fill_address_data(line1, stakingInfo);
+		UI_STEP_JUMP(DISPLAY_UI_STEP_ADDRESS);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(DISPLAY_UI_STEP_ADDRESS) {
 		ASSERT(ctx->address.size <= SIZEOF(ctx->address.buffer));
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayAddressScreen(
 		        "Address",
 		        ctx->address.buffer, ctx->address.size,
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        char humanAddress[MAX_HUMAN_ADDRESS_SIZE] = {0};
+		#elif defined(HAVE_NBGL)
+		char humanAddress[MAX_HUMAN_ADDRESS_SIZE] = {0};
 		ui_getAddressScreen(
-                humanAddress,
-                SIZEOF(humanAddress),
+		        humanAddress,
+		        SIZEOF(humanAddress),
 		        ctx->address.buffer,
 		        ctx->address.size
 		);
-        fill_address_data((char*)"Address", humanAddress);
-        UI_STEP_JUMP(DISPLAY_UI_STEP_CONFIRM)
-#endif // HAVE_BAGL
+		fill_address_data((char*)"Address", humanAddress);
+		UI_STEP_JUMP(DISPLAY_UI_STEP_CONFIRM)
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(DISPLAY_UI_STEP_CONFIRM) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPrompt(
 		        "Confirm",
 		        "address?",
 		        this_fn,
 		        respond_with_user_reject
 		);
-#elif defined(HAVE_NBGL)
-        display_address(
-                this_fn, 
-                respond_with_user_reject
-        );
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		display_address(
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(DISPLAY_UI_STEP_RESPOND) {
 		io_send_buf(SUCCESS, NULL, 0);

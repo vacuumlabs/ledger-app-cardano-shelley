@@ -65,9 +65,9 @@ void ui_getAccountScreeen(
 
 __noinline_due_to_stack__
 void ui_getRewardAccountScreen(
-        char *firstLine, 
+        char* firstLine,
         const size_t firstLineSize,
-        char *secondLine,
+        char* secondLine,
         const size_t secondLineSize,
         const reward_account_t* rewardAccount,
         uint8_t networkId
@@ -75,25 +75,25 @@ void ui_getRewardAccountScreen(
 
 __noinline_due_to_stack__
 void ui_getSpendingInfoScreen(
-        char *line1, 
+        char* line1,
         const size_t line1Size,
-        char *line2,
+        char* line2,
         const size_t line2Size,
         const addressParams_t* addressParams
 );
 
 __noinline_due_to_stack__
 void ui_getStakingInfoScreen(
-        char* line1, 
+        char* line1,
         const size_t line1Size,
-        char* line2, 
+        char* line2,
         const size_t line2Size,
         const addressParams_t* addressParams
 );
 
 __noinline_due_to_stack__
 void ui_getAssetFingerprintScreen(
-        char* line, 
+        char* line,
         const size_t lineSize,
         const token_group_t* tokenGroup,
         const uint8_t* assetNameBytes, size_t assetNameSize
@@ -108,7 +108,7 @@ void ui_getAdaAmountScreen(
 
 __noinline_due_to_stack__
 void ui_getTokenAmountOutputScreen(
-        char* line, 
+        char* line,
         const size_t lineSize,
         const token_group_t* tokenGroup,
         const uint8_t* assetNameBytes, size_t assetNameSize,
@@ -161,13 +161,13 @@ void ui_getNetworkParamsScreen_2(
 
 __noinline_due_to_stack__
 void ui_getPoolMarginScreen(
-        char* line1, const size_t lineSize, 
+        char* line1, const size_t lineSize,
         uint64_t marginNumerator, uint64_t marginDenominator
 );
 
 __noinline_due_to_stack__
 void ui_getPoolOwnerScreen(
-        char* firstLine, 
+        char* firstLine,
         const size_t firstLineSize,
         char* secondLine,
         const size_t secondLineSize,

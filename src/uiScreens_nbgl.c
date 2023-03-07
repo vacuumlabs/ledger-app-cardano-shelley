@@ -97,14 +97,14 @@ void ui_getPublicKeyType(
 {
 	switch (bip44_classifyPath(path)) {
 	case PATH_POOL_COLD_KEY: {
-        strncpy(line, "Export\nCold public key", lineSize);
+		strncpy(line, "Export\nCold public key", lineSize);
 		return;
 	}
 
-	case PATH_ORDINARY_ACCOUNT: 
-    // Fallthrough
-	default: 
-        strncpy(line, "Export\nPublic key", lineSize);
+	case PATH_ORDINARY_ACCOUNT:
+	// Fallthrough
+	default:
+		strncpy(line, "Export\nPublic key", lineSize);
 		return;
 	}
 }
@@ -121,27 +121,27 @@ void ui_getPublicKeyPathScreen(
 {
 	switch (bip44_classifyPath(path)) {
 	case PATH_POOL_COLD_KEY: {
-        strncpy(line1, "Cold public key", line1Size);
+		strncpy(line1, "Cold public key", line1Size);
 
 		ui_getPathScreen(
-                line2, 
-                line2Size,
+		        line2,
+		        line2Size,
 		        path
 		);
 		return;
 	}
 
 	case PATH_ORDINARY_ACCOUNT: {
-        strncpy(line1, "Public key", line1Size);
+		strncpy(line1, "Public key", line1Size);
 		_ui_getAccountWithDescriptionScreen(line2, line2Size, path);
 		return;
 	}
 
 	default:
-        strncpy(line1, "Public key", line1Size);
+		strncpy(line1, "Public key", line1Size);
 		ui_getPathScreen(
-                line2, 
-                line2Size,
+		        line2,
+		        line2Size,
 		        path
 		);
 		return;
@@ -159,8 +159,8 @@ void ui_getStakingKeyScreen(
 	explicit_bzero(line, lineSize);
 
 	_ui_getAccountWithDescriptionScreen(
-            line,
-            lineSize,
+	        line,
+	        lineSize,
 	        stakingPath
 	);
 }
@@ -171,37 +171,37 @@ void ui_getAccountScreeen(
         char* line2,
         const size_t line2Size,
         const bip44_path_t* path
-) 
+)
 {
 	explicit_bzero(line1, line1Size);
 	explicit_bzero(line2, line2Size);
 
-    uint32_t account = unharden(bip44_getAccount(path));
-    STATIC_ASSERT(sizeof(account + 1) <= sizeof(unsigned), "oversized type for %u");
-    STATIC_ASSERT(!IS_SIGNED(account + 1), "signed type for %u");
-    if (bip44_hasByronPrefix(path)) {
-        snprintf(
-                line1, line1Size,
-                "Byron account"
-                );
-        snprintf(
-                line2, line2Size,
-                "#%u",
-                account + 1
-                );
-    } else if (bip44_hasShelleyPrefix(path)) {
-        snprintf(
-                line1, line1Size,
-                "Account"
-                );
-        snprintf(
-                line2, line2Size,
-                "#%u",
-                account + 1
-                );
-    } else {
-        ASSERT(false);
-    }
+	uint32_t account = unharden(bip44_getAccount(path));
+	STATIC_ASSERT(sizeof(account + 1) <= sizeof(unsigned), "oversized type for %u");
+	STATIC_ASSERT(!IS_SIGNED(account + 1), "signed type for %u");
+	if (bip44_hasByronPrefix(path)) {
+		snprintf(
+		        line1, line1Size,
+		        "Byron account"
+		);
+		snprintf(
+		        line2, line2Size,
+		        "#%u",
+		        account + 1
+		);
+	} else if (bip44_hasShelleyPrefix(path)) {
+		snprintf(
+		        line1, line1Size,
+		        "Account"
+		);
+		snprintf(
+		        line2, line2Size,
+		        "#%u",
+		        account + 1
+		);
+	} else {
+		ASSERT(false);
+	}
 }
 
 // bech32 for Shelley, base58 for Byron
@@ -264,9 +264,9 @@ static void _getRewardAccountWithDescriptionScreen(
 
 // displays bech32-encoded reward account preceded by path (if given)
 void ui_getRewardAccountScreen(
-        char *firstLine, 
+        char* firstLine,
         const size_t firstLineSize,
-        char *secondLine,
+        char* secondLine,
         const size_t secondLineSize,
         const reward_account_t* rewardAccount,
         uint8_t networkId
@@ -326,8 +326,8 @@ void ui_getRewardAccountScreen(
 	}
 
 	_getRewardAccountWithDescriptionScreen(
-            secondLine,
-            secondLineSize,
+	        secondLine,
+	        secondLineSize,
 	        rewardAccount->keyReferenceType,
 	        &rewardAccount->path,
 	        rewardAccountBuffer
@@ -335,9 +335,9 @@ void ui_getRewardAccountScreen(
 }
 
 void ui_getSpendingInfoScreen(
-        char *line1, 
+        char* line1,
         const size_t line1Size,
-        char *line2,
+        char* line2,
         const size_t line2Size,
         const addressParams_t* addressParams
 )
@@ -345,20 +345,20 @@ void ui_getSpendingInfoScreen(
 	switch (determineSpendingChoice(addressParams->type)) {
 
 	case SPENDING_PATH: {
-        snprintf(line1, line1Size, "Spending path");
+		snprintf(line1, line1Size, "Spending path");
 		ui_getPathScreen(
-                line2, 
-                line2Size,
+		        line2,
+		        line2Size,
 		        &addressParams->spendingKeyPath
 		);
 		return;
 	}
 
 	case SPENDING_SCRIPT_HASH: {
-        snprintf(line1, line1Size, "Spending script hash");
+		snprintf(line1, line1Size, "Spending script hash");
 		ui_getBech32Screen(
-                line2, 
-                line2Size,
+		        line2,
+		        line2Size,
 		        "script",
 		        addressParams->spendingScriptHash,
 		        SIZEOF(addressParams->spendingScriptHash)
@@ -380,9 +380,9 @@ static const char STAKING_HEADING_POINTER[]     = "Staking key pointer";
 static const char STAKING_HEADING_WARNING[]     = "WARNING:";
 
 void ui_getStakingInfoScreen(
-        char* line1, 
+        char* line1,
         const size_t line1Size,
-        char* line2, 
+        char* line2,
         const size_t line2Size,
         const addressParams_t* addressParams
 )
@@ -412,13 +412,13 @@ void ui_getStakingInfoScreen(
 	}
 
 	case STAKING_KEY_PATH: {
-        strncpy(line1, STAKING_HEADING_PATH, line1Size);
+		strncpy(line1, STAKING_HEADING_PATH, line1Size);
 		bip44_printToStr(&addressParams->stakingKeyPath, line2, line2Size);
 		break;
 	}
 
 	case STAKING_KEY_HASH: {
-        strncpy(line1, STAKING_HEADING_KEY_HASH, line1Size);
+		strncpy(line1, STAKING_HEADING_KEY_HASH, line1Size);
 		bech32_encode(
 		        "stake_vkh", // shared keys never go into address directly
 		        addressParams->stakingKeyHash, SIZEOF(addressParams->stakingKeyHash),
@@ -428,7 +428,7 @@ void ui_getStakingInfoScreen(
 	}
 
 	case STAKING_SCRIPT_HASH: {
-        strncpy(line1, STAKING_HEADING_SCRIPT_HASH, line1Size);
+		strncpy(line1, STAKING_HEADING_SCRIPT_HASH, line1Size);
 		bech32_encode(
 		        "script",
 		        addressParams->stakingScriptHash, SIZEOF(addressParams->stakingScriptHash),
@@ -438,7 +438,7 @@ void ui_getStakingInfoScreen(
 	}
 
 	case BLOCKCHAIN_POINTER:
-        strncpy(line1, STAKING_HEADING_POINTER, line1Size);
+		strncpy(line1, STAKING_HEADING_POINTER, line1Size);
 		printBlockchainPointerToStr(addressParams->stakingKeyBlockchainPointer, line2, line2Size);
 		break;
 
@@ -453,7 +453,7 @@ void ui_getStakingInfoScreen(
 }
 
 void ui_getAssetFingerprintScreen(
-        char* line, 
+        char* line,
         const size_t lineSize,
         const token_group_t* tokenGroup,
         const uint8_t* assetNameBytes, size_t assetNameSize
@@ -482,7 +482,7 @@ void ui_getAdaAmountScreen(
 }
 
 void ui_getTokenAmountOutputScreen(
-        char* line, 
+        char* line,
         const size_t lineSize,
         const token_group_t* tokenGroup,
         const uint8_t* assetNameBytes, size_t assetNameSize,
@@ -549,7 +549,7 @@ void ui_getValidityBoundaryScreen(
 	} else {
 		ui_getUint64Screen(
 		        line,
-                lineSize,
+		        lineSize,
 		        boundary
 		);
 	}
@@ -594,7 +594,7 @@ void ui_getNetworkParamsScreen_2(
 }
 
 void ui_getPoolMarginScreen(
-        char* line1, size_t lineSize, 
+        char* line1, size_t lineSize,
         uint64_t marginNumerator, uint64_t marginDenominator
 )
 {
@@ -622,7 +622,7 @@ void ui_getPoolMarginScreen(
 }
 
 void ui_getPoolOwnerScreen(
-        char* firstLine, 
+        char* firstLine,
         const size_t firstLineSize,
         char* secondLine,
         const size_t secondLineSize,
@@ -670,8 +670,8 @@ void ui_getPoolOwnerScreen(
 		ASSERT(strlen(firstLine) + 1 < firstLineSize);
 
 		_getRewardAccountWithDescriptionScreen(
-                secondLine,
-                secondLineSize,
+		        secondLine,
+		        secondLineSize,
 		        owner->keyReferenceType,
 		        &owner->path,
 		        rewardAddress

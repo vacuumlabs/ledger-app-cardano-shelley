@@ -84,15 +84,15 @@ void signTxMint_handleTopLevelData_ui_runStep()
 		snprintf(secondLine, SIZEOF(secondLine), "%u asset groups", subctx->numAssetGroups);
 		ASSERT(strlen(secondLine) + 1 < SIZEOF(secondLine));
 
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPaginatedText(
 		        "Mint",
 		        secondLine,
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        display_prompt("Mint", secondLine, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		display_prompt("Mint", secondLine, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -127,42 +127,42 @@ void signTxMint_handleToken_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_NAME) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayAssetFingerprintScreen(
 		        &subctx->stateData.tokenGroup,
 		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        char fingerprint[200] = {0};
+		#elif defined(HAVE_NBGL)
+		char fingerprint[200] = {0};
 		ui_getAssetFingerprintScreen(
-                fingerprint, 
-                SIZEOF(fingerprint),
+		        fingerprint,
+		        SIZEOF(fingerprint),
 		        &subctx->stateData.tokenGroup,
 		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize
 		);
-        fill_and_display_if_required("Asset fingerprint", fingerprint, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		fill_and_display_if_required("Asset fingerprint", fingerprint, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_TOKEN_STEP_DISPLAY_AMOUNT) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayTokenAmountMintScreen(
 		        &subctx->stateData.tokenGroup,
 		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
 		        subctx->stateData.token.amount,
 		        this_fn
 		);
-#elif defined(HAVE_NBGL)
-        char tokenAmountStr[70] = {0};
+		#elif defined(HAVE_NBGL)
+		char tokenAmountStr[70] = {0};
 		ui_getTokenAmountMintScreen(
-                tokenAmountStr,
-                SIZEOF(tokenAmountStr),
+		        tokenAmountStr,
+		        SIZEOF(tokenAmountStr),
 		        &subctx->stateData.tokenGroup,
 		        subctx->stateData.token.assetNameBytes, subctx->stateData.token.assetNameSize,
 		        subctx->stateData.token.amount
 		);
-        fill_and_display_if_required("Token amount", tokenAmountStr, this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		fill_and_display_if_required("Token amount", tokenAmountStr, this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_TOKEN_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
@@ -186,16 +186,16 @@ void signTxMint_handleConfirm_ui_runStep()
 	UI_STEP_BEGIN(subctx->ui_step, this_fn);
 
 	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		ui_displayPrompt(
 		        "Confirm",
 		        "mint?",
 		        this_fn,
 		        respond_with_user_reject
 		);
-#elif defined(HAVE_NBGL)
-        display_confirmation("Confirm mint", "",  "MINT\nCONFIRMED", "Mint\nrejected", this_fn, respond_with_user_reject);
-#endif // HAVE_BAGL
+		#elif defined(HAVE_NBGL)
+		display_confirmation("Confirm mint", "",  "MINT\nCONFIRMED", "Mint\nrejected", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
 		respondSuccessEmptyMsg();

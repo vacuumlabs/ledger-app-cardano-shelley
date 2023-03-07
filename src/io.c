@@ -84,14 +84,11 @@ unsigned char io_event(unsigned char channel MARK_UNUSED)
 {
 	// can't have more than one tag in the reply, not supported yet.
 	switch (G_io_seproxyhal_spi_buffer[0]) {
-	case SEPROXYHAL_TAG_FINGER_EVENT:
-		UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
-		break;
 
 	case SEPROXYHAL_TAG_BUTTON_PUSH_EVENT:
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		UX_BUTTON_PUSH_EVENT(G_io_seproxyhal_spi_buffer);
-#endif
+		#endif
 		break;
 
 	case SEPROXYHAL_TAG_STATUS_EVENT:
@@ -100,17 +97,20 @@ unsigned char io_event(unsigned char channel MARK_UNUSED)
 		      SEPROXYHAL_TAG_STATUS_EVENT_FLAG_USB_POWERED)) {
 			THROW(EXCEPTION_IO_RESET);
 		}
-		UX_DEFAULT_EVENT();
-		break;
 
 	case SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT:
-#ifdef HAVE_BAGL
+		#ifdef HAVE_BAGL
 		UX_DISPLAYED_EVENT({});
-#endif
-#ifdef HAVE_NBGL
-        UX_DEFAULT_EVENT();
-#endif
+		#endif
+		#ifdef HAVE_NBGL
+		UX_DEFAULT_EVENT();
+		#endif
 		break;
+#ifdef HAVE_NBGL
+	case SEPROXYHAL_TAG_FINGER_EVENT:
+		UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
+		break;
+#endif  // HAVE_NBGL
 
 	case SEPROXYHAL_TAG_TICKER_EVENT:
 		UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer, {

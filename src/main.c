@@ -157,12 +157,12 @@ static void cardano_main(void)
 				if (e >= _ERR_AUTORESPOND_START && e < _ERR_AUTORESPOND_END) {
 					io_send_buf(e, NULL, 0);
 					flags = IO_ASYNCH_REPLY;
-#ifdef HAVE_NBGL
+					#ifdef HAVE_NBGL
 					if (e != ERR_REJECTED_BY_USER) {
-					    ui_idle();
-					    display_error();
+						ui_idle();
+						display_error();
 					}
-#endif
+					#endif
 				} else {
 					PRINTF("Uncaught error 0x%x", (unsigned) e);
 					#ifdef RESET_ON_CRASH
@@ -204,9 +204,7 @@ __attribute__((section(".boot"))) int main(void)
 	__asm volatile("cpsie i");
 
 	for (;;) {
-#ifdef HAVE_BAGL
 		UX_INIT();
-#endif // HAVE_BAGL
 		os_boot();
 		BEGIN_TRY {
 			TRY {
