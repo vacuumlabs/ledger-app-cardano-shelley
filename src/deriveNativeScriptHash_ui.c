@@ -13,7 +13,7 @@
 static ins_derive_native_script_hash_context_t* ctx = &(instructionState.deriveNativeScriptHashContext);
 
 // UI
-typedef char* charPtr;
+typedef const char* charPtr;
 const charPtr ui_native_script_header[7] = {"Script - key path", "Script - key", "Script - ALL", "Script - ANY", "Script - N of K", "Script - invalid before", "Script - invalid hereafter"};
 
 #define ASSERT_UI_SCRIPT_TYPE_SANITY() ASSERT(ctx->ui_scriptType >= UI_SCRIPT_PUBKEY_PATH && ctx->ui_scriptType <= UI_SCRIPT_INVALID_HEREAFTER)
