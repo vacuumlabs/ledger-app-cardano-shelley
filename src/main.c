@@ -162,6 +162,8 @@ static void cardano_main(void)
 						ui_idle();
 						display_error();
 					}
+					#else
+					ui_idle();
 					#endif
 				} else {
 					PRINTF("Uncaught error 0x%x", (unsigned) e);
