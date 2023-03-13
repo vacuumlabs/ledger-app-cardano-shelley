@@ -124,7 +124,7 @@ void signTx_handleOutput_addressParams_ui_runStep()
 		#ifdef HAVE_BAGL
 		ui_displaySpendingInfoScreen(&subctx->stateData.destination.params, this_fn);
 		#elif defined(HAVE_NBGL)
-#define SPENDING_INFO_SIZE MAX(11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX, 2 * BECH32_BUFFER_SIZE_MAX)
+#define SPENDING_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
 		char line1[30];
 		char spendingInfo[SPENDING_INFO_SIZE] = {0};
 		ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &subctx->stateData.destination.params);
@@ -327,7 +327,7 @@ void signTxOutput_handleDatumHash_ui_runStep()
 		);
 		#elif defined(HAVE_NBGL)
 		set_light_confirmation(true);
-		char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "datum", subctx->stateData.datumHash, OUTPUT_DATUM_HASH_LENGTH);
 		fill_and_display_if_required("Datum hash", encodedStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL

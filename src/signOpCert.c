@@ -147,7 +147,7 @@ static void signOpCert_ui_runStep()
 		);
 		#elif defined(HAVE_NBGL)
 		display_prompt(
-		        "Start new\noperational certificate",
+		        "Start new\noperational certificate?",
 		        "",
 		        this_fn,
 		        respond_with_user_reject
@@ -175,7 +175,7 @@ static void signOpCert_ui_runStep()
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
-		char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", poolKeyHash, SIZEOF(poolKeyHash));
 		fill_and_display_if_required("Pool ID", encodedStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
@@ -189,7 +189,7 @@ static void signOpCert_ui_runStep()
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
-		char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "kes_vk", ctx->kesPublicKey, SIZEOF(ctx->kesPublicKey));
 		fill_and_display_if_required("KES public key", encodedStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL

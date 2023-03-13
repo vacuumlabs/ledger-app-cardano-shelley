@@ -63,7 +63,7 @@ static void _displaySpendingInfo_returnAddr(ui_callback_fn_t* this_fn)
 	#ifdef HAVE_BAGL
 	ui_displaySpendingInfoScreen(&ctx->addressParams, this_fn);
 	#elif defined(HAVE_NBGL)
-#define SPENDING_INFO_SIZE MAX(11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX, 2 * BECH32_BUFFER_SIZE_MAX)
+#define SPENDING_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
 	char line1[30] = {0};
 	char spendingInfo[SPENDING_INFO_SIZE] = {0};
 	ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &ctx->addressParams);
@@ -198,7 +198,7 @@ static void _displaySpendingInfo_displayAddr(ui_callback_fn_t* this_fn)
 	#ifdef HAVE_BAGL
 	ui_displaySpendingInfoScreen(&ctx->addressParams, this_fn);
 	#elif defined(HAVE_NBGL)
-#define SPENDING_INFO_SIZE MAX(11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX, 2 * BECH32_BUFFER_SIZE_MAX)
+#define SPENDING_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
 	char line1[30] = {0};
 	char spendingInfo[SPENDING_INFO_SIZE] = {0};
 	ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &ctx->addressParams);

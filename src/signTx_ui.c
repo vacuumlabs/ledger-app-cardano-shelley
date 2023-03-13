@@ -373,7 +373,7 @@ static inline void advanceCertificatesStateIfAppropriate()
 #ifdef HAVE_NBGL
 static void signTx_handleCertificate_ui_delegation_cb(void)
 {
-	char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+	char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 	ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", BODY_CTX->stageData.certificate.poolKeyHash, SIZEOF(BODY_CTX->stageData.certificate.poolKeyHash));
 	fill_and_display_if_required("Pool", encodedStr, signTx_handleCertificate_ui_runStep, respond_with_user_reject);
 }
@@ -463,7 +463,7 @@ void signTx_handleCertificate_ui_runStep()
 			);
 			#elif defined(HAVE_NBGL)
 			{
-				char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+				char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 				ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "stake_vkh", BODY_CTX->stageData.certificate.stakeCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.keyHash));
 				fill_and_display_if_required("Staking key hash", encodedStr, this_fn, respond_with_user_reject);
 			}
@@ -480,7 +480,7 @@ void signTx_handleCertificate_ui_runStep()
 			);
 			#elif defined(HAVE_NBGL)
 			{
-				char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+				char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 				ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "script", BODY_CTX->stageData.certificate.stakeCredential.scriptHash, SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.scriptHash));
 				fill_and_display_if_required("Staking script hash", encodedStr, this_fn, respond_with_user_reject);
 			}
@@ -563,7 +563,7 @@ void signTx_handleCertificatePoolRetirement_ui_runStep()
 		);
 		#elif defined(HAVE_NBGL)
 		set_light_confirmation(true);
-		char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", BODY_CTX->stageData.certificate.poolKeyHash, SIZEOF(BODY_CTX->stageData.certificate.poolKeyHash));
 		fill_and_display_if_required("Retire stake pool", encodedStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
@@ -731,7 +731,7 @@ void signTx_handleScriptDataHash_ui_runStep()
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
-		char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "script_data", BODY_CTX->stageData.scriptDataHash, SIZEOF(BODY_CTX->stageData.scriptDataHash));
 		fill_and_display_if_required("Script data hash", encodedStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
@@ -773,7 +773,7 @@ void signTx_handleRequiredSigner_ui_runStep()
 			        this_fn
 			);
 			#elif defined(HAVE_NBGL)
-			char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+			char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 			ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "req_signer_vfk", BODY_CTX->stageData.requiredSigner.keyHash, SIZEOF(BODY_CTX->stageData.requiredSigner.keyHash));
 			fill_and_display_if_required("Required signer", encodedStr, this_fn, respond_with_user_reject);
 			#endif // HAVE_BAGL

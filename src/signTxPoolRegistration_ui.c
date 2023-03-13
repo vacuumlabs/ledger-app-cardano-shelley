@@ -188,7 +188,7 @@ void handlePoolKey_ui_runStep()
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
-		char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 		ui_getBech32Screen(
 		        encodedStr, SIZEOF(encodedStr),
 		        "pool",
@@ -229,7 +229,7 @@ void handlePoolVrfKey_ui_runStep()
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
-		char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 		ui_getBech32Screen(
 		        encodedStr, SIZEOF(encodedStr),
 		        "vrf_vk",

@@ -179,7 +179,7 @@ void deriveScriptHash_display_ui_runStep()
 			        this_fn
 			);
 			#elif defined(HAVE_NBGL)
-			char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+			char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 			ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "addr_shared_vkh", ctx->scriptContent.pubkeyHash, ADDRESS_KEY_HASH_LENGTH);
 			fill_and_display_if_required("Pubkey hash", encodedStr, this_fn, respond_with_user_reject);
 			#endif // HAVE_BAGL
@@ -316,7 +316,7 @@ void deriveNativeScriptHash_displayNativeScriptHash_bech32()
 	        deriveNativeScriptHash_displayNativeScriptHash_callback
 	);
 	#elif defined(HAVE_NBGL)
-	char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+	char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 	ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "script", ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH);
 	fill_and_display_if_required("Script hash", encodedStr, deriveNativeScriptHash_displayNativeScriptHash_finish, respond_with_user_reject);
 	#endif // HAVE_BAGL

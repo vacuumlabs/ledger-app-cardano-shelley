@@ -33,7 +33,7 @@ static void _displayVoteKey(ui_callback_fn_t callback)
 		);
 		#elif defined(HAVE_NBGL)
 		set_light_confirmation(true);
-		char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "cvote_vk", subctx->stateData.delegation.votePubKey, CVOTE_PUBLIC_KEY_LENGTH);
 		fill_and_display_if_required("Vote public key", encodedStr, callback, respond_with_user_reject);
 		#endif // HAVE_BAGL

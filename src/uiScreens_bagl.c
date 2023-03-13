@@ -56,7 +56,7 @@ void ui_displayBech32Screen(
 	}
 
 	// rough upper bound on required size is used
-	char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+	char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 	explicit_bzero(encodedStr, SIZEOF(encodedStr));
 
 	{
