@@ -218,7 +218,25 @@ void ui_displayPaginatedText(
 	}
 	#endif // HEADLESS
 }
-#endif
+#endif // HAVE_BAGL
+
+void ui_displayUnusualWarning(ui_callback_fn_t* cb)
+{
+	#ifdef HAVE_BAGL
+	ui_displayPaginatedText(
+	        "Unusual request",
+	        "Proceed with care",
+	        cb
+	);
+	#elif defined(HAVE_NBGL)
+	set_light_confirmation(true);
+	display_warning(
+	        "Unusual request\nProceed with care",
+	        cb,
+	        respond_with_user_reject
+	);
+	#endif // HAVE_BAGL
+}
 
 void respond_with_user_reject()
 {

@@ -124,6 +124,8 @@ void ui_displayPrompt(
         ui_callback_fn_t* reject
 );
 
+void ui_displayUnusualWarning(ui_callback_fn_t* cb);
+
 void ui_displayBusy();
 void ui_displayPrompt_run();
 void ui_displayPaginatedText_run();

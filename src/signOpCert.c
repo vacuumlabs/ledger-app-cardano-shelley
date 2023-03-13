@@ -135,19 +135,7 @@ static void signOpCert_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(UI_STEP_WARNING) {
-		#ifdef HAVE_BAGL
-		ui_displayPaginatedText(
-		        "Unusual request",
-		        "Proceed with care",
-		        this_fn
-		);
-		#elif defined(HAVE_NBGL)
-		display_warning(
-		        "Unusual request",
-		        this_fn,
-		        respond_with_user_reject
-		);
-		#endif // HAVE_BAGL
+		ui_displayUnusualWarning(this_fn);
 	}
 	UI_STEP(UI_STEP_CONFIRM_START) {
 		#ifdef HAVE_BAGL

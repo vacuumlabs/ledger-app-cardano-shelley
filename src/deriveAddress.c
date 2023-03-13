@@ -43,24 +43,6 @@ static void prepareResponse()
 
 /* ========================== RETURN ADDRESS ========================== */
 
-static void _displayUnusualRequestWarning(ui_callback_fn_t* this_fn)
-{
-	#ifdef HAVE_BAGL
-	ui_displayPaginatedText(
-	        "Unusual request",
-	        "Proceed with care",
-	        this_fn
-	);
-	#elif defined(HAVE_NBGL)
-	set_light_confirmation(true);
-	display_warning(
-	        "Unusual request",
-	        this_fn,
-	        respond_with_user_reject
-	);
-	#endif // HAVE_BAGL
-}
-
 static void _displayExportAddress(ui_callback_fn_t* this_fn)
 {
 	#ifdef HAVE_BAGL
@@ -163,7 +145,7 @@ static void deriveAddress_return_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(RETURN_UI_STEP_WARNING) {
-		_displayUnusualRequestWarning(this_fn);
+		ui_displayUnusualWarning(this_fn);
 	}
 	UI_STEP(RETURN_UI_STEP_BEGIN) {
 		_displayExportAddress(this_fn);
@@ -314,7 +296,7 @@ static void deriveAddress_display_ui_runStep()
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
 	UI_STEP(DISPLAY_UI_STEP_WARNING) {
-		_displayUnusualRequestWarning(this_fn);
+		ui_displayUnusualWarning(this_fn);
 	}
 	UI_STEP(DISPLAY_UI_STEP_INSTRUCTIONS) {
 		_displayVerifyAddressMsg(this_fn);
