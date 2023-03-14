@@ -429,30 +429,6 @@ void fill_and_display_if_required(const char *line1, const char *line2,
   }
 }
 
-void fill_and_display_new_page(const char *line1, const char *line2,
-                               callback_t userAcceptCallback,
-                               callback_t userRejectCallback) {
-
-  ASSERT(strlen(line1) <= MAX_TAG_TITLE_LINE_LENGTH);
-  ASSERT(strlen(line2) <= MAX_TAG_CONTENT_LENGTH);
-
-  if (uiContext.pendingElement) {
-      handle_pending_element();
-  }
-
-  if (uiContext.currentLineCount > 0) {
-    TRACE("Display page and add pending element");
-    fill_pending_element(line1, line2);
-
-    display_page(userAcceptCallback, userRejectCallback);
-  } else {
-    TRACE("Add element to page");
-    fill_current_element(line1, line2);
-    uiContext.currentLineCount += get_element_line_count(line2);
-    display_continue(userAcceptCallback);
-  }
-}
-
 void fill_address_data(char *text, char *content, callback_t callback) {
   fill_current_element(text, content);
   trigger_callback(callback);

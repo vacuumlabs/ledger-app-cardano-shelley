@@ -77,7 +77,7 @@ static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t
 	);
 	#elif defined(HAVE_NBGL)
 	set_light_confirmation(true);
-	fill_and_display_new_page(HEADER, positionDescription, callback, respond_with_user_reject);
+	display_prompt("Review Script", positionDescription, callback, respond_with_user_reject);
 	#endif // HAVE_BAGL
 }
 
@@ -107,20 +107,17 @@ void deriveScriptHash_display_ui_runStep()
 		uint8_t level = _getScriptLevelForPosition();
 		if (level == 0) {
 			TRACE("Skip showing position");
+			#ifdef HAVE_BAGL
 			UI_STEP_JUMP(DISPLAY_UI_STEP_SCRIPT_CONTENT);
+			#elif defined(HAVE_NBGL)
+			display_prompt("Review Script", "", this_fn, respond_with_user_reject);
+			#endif // HAVE_NBGL
 		}
         else {
 			deriveScriptHash_display_ui_position(level, this_fn);
 		}
 	}
 
-	UI_STEP(DISPLAY_UI_STEP_TITLE) {
-		#ifdef HAVE_BAGL
-		UI_STEP_JUMP(DISPLAY_UI_STEP_SCRIPT_CONTENT);
-		#elif defined(HAVE_NBGL)
-		display_prompt("Review Script", "", this_fn, respond_with_user_reject);
-		#endif // HAVE_NBGL
-	}
 	#ifdef HAVE_NBGL
 	UI_STEP(DISPLAY_UI_STEP_SCRIPT_TYPE) {
 		set_light_confirmation(true);
