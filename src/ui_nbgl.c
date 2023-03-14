@@ -453,8 +453,9 @@ void fill_and_display_new_page(const char *line1, const char *line2,
   }
 }
 
-void fill_address_data(char *text, char *content) {
+void fill_address_data(char *text, char *content, callback_t callback) {
   fill_current_element(text, content);
+  trigger_callback(callback);
 }
 
 void display_confirmation(const char *text1, const char *text2,

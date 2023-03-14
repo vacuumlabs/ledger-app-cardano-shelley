@@ -9,7 +9,7 @@ typedef void (*callback_t)(void);
 
 void set_light_confirmation(bool needed);
 void display_address(callback_t user_accept_cb, callback_t user_reject_cb);
-void fill_address_data(char* text, char* content);
+void fill_address_data(char* text, char* content, callback_t callback);
 void fill_and_display_if_required(const char* line1, const char* line2, callback_t user_accept_cb, callback_t user_reject_cb);
 void fill_and_display_new_page(const char* line1, const char* line2, callback_t user_accept_cb, callback_t user_reject_cb);
 void force_display(callback_t user_accept_cb, callback_t user_reject_cb);

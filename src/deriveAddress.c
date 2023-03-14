@@ -202,7 +202,7 @@ static void _displaySpendingInfo_displayAddr(ui_callback_fn_t* this_fn)
 	char line1[30] = {0};
 	char spendingInfo[SPENDING_INFO_SIZE] = {0};
 	ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &ctx->addressParams);
-	fill_address_data(line1, spendingInfo);
+	fill_address_data(line1, spendingInfo, this_fn);
 	#endif // HAVE_BAGL
 }
 
@@ -214,7 +214,7 @@ static void _displayStakingInfo_displayAddr(ui_callback_fn_t* this_fn)
 	char line1[30] = {0};
 	char stakingInfo[120] = {0};
 	ui_getStakingInfoScreen(line1, SIZEOF(line1), stakingInfo, SIZEOF(stakingInfo), &ctx->addressParams);
-	fill_address_data(line1, stakingInfo);
+	fill_address_data(line1, stakingInfo, this_fn);
 	#endif // HAVE_BAGL
 }
 
@@ -235,7 +235,7 @@ static void _displayAddress(ui_callback_fn_t* this_fn)
 	        ctx->address.buffer,
 	        ctx->address.size
 	);
-	fill_address_data((char*)"Address", humanAddress);
+	fill_address_data((char*)"Address", humanAddress, this_fn);
 	#endif // HAVE_BAGL
 }
 
