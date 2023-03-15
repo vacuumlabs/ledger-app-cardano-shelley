@@ -67,8 +67,6 @@ extern bolos_ux_params_t G_ux_params;
 			return; \
 		}
 
-// *INDENT-ON*
-
 typedef enum {
 	CALLBACK_NOT_RUN,
 	CALLBACK_RUN,
