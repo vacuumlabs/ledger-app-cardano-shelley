@@ -1,17 +1,23 @@
 #include "signTx.h"
+#include "signTxPoolRegistration_ui.h"
 #include "state.h"
 #include "cardano.h"
 #include "addressUtilsShelley.h"
 #include "keyDerivation.h"
 #include "uiHelpers.h"
 #include "signTxUtils.h"
-#include "uiScreens.h"
 #include "txHashBuilder.h"
 #include "textUtils.h"
 #include "hexUtils.h"
 #include "bufView.h"
 #include "securityPolicy.h"
 #include "signTxPoolRegistration.h"
+
+#ifdef HAVE_BAGL
+#include "uiScreens_bagl.h"
+#elif defined(HAVE_NBGL)
+#include "uiScreens_nbgl.h"
+#endif
 
 static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
@@ -58,103 +64,7 @@ static inline void CHECK_STATE(sign_tx_pool_registration_state_t expected)
 	VALIDATE(subctx->state == expected, ERR_INVALID_STATE);
 }
 
-static inline void advanceState()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("Advancing pool registration certificate state from: %d", subctx->state);
-
-	switch (subctx->state) {
-
-	case STAKE_POOL_REGISTRATION_INIT:
-		subctx->state = STAKE_POOL_REGISTRATION_POOL_KEY;
-		break;
-
-	case STAKE_POOL_REGISTRATION_POOL_KEY:
-		subctx->state = STAKE_POOL_REGISTRATION_VRF_KEY;
-		break;
-
-	case STAKE_POOL_REGISTRATION_VRF_KEY:
-		subctx->state = STAKE_POOL_REGISTRATION_FINANCIALS;
-		break;
-
-	case STAKE_POOL_REGISTRATION_FINANCIALS:
-		subctx->state = STAKE_POOL_REGISTRATION_REWARD_ACCOUNT;
-		break;
-
-	case STAKE_POOL_REGISTRATION_REWARD_ACCOUNT:
-		txHashBuilder_addPoolRegistrationCertificate_enterOwners(&BODY_CTX->txHashBuilder);
-		subctx->state = STAKE_POOL_REGISTRATION_OWNERS;
-
-		if (subctx->numOwners > 0) {
-			break;
-		}
-
-	// intentional fallthrough
-
-	case STAKE_POOL_REGISTRATION_OWNERS:
-		ASSERT(subctx->currentOwner == subctx->numOwners);
-
-		txHashBuilder_addPoolRegistrationCertificate_enterRelays(&BODY_CTX->txHashBuilder);
-		subctx->state = STAKE_POOL_REGISTRATION_RELAYS;
-
-		if (subctx->numRelays > 0) {
-			break;
-		}
-
-	// intentional fallthrough
-
-	case STAKE_POOL_REGISTRATION_RELAYS:
-		ASSERT(subctx->currentRelay == subctx->numRelays);
-
-		subctx->state = STAKE_POOL_REGISTRATION_METADATA;
-		break;
-
-	case STAKE_POOL_REGISTRATION_METADATA:
-		subctx->state = STAKE_POOL_REGISTRATION_CONFIRM;
-		break;
-
-	case STAKE_POOL_REGISTRATION_CONFIRM:
-		subctx->state = STAKE_POOL_REGISTRATION_FINISHED;
-		break;
-
-	default:
-		ASSERT(false);
-	}
-
-	TRACE("Advancing pool registration certificate state to: %d", subctx->state);
-}
-
-
 // ============================== INIT ==============================
-
-enum {
-	HANDLE_POOL_INIT_STEP_DISPLAY = 6100,
-	HANDLE_POOL_INIT_STEP_RESPOND,
-	HANDLE_POOL_INIT_STEP_INVALID,
-} ;
-
-static void handlePoolInit_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handlePoolInit_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_POOL_INIT_STEP_DISPLAY) {
-		ui_displayPaginatedText(
-		        "Pool registration",
-		        "certificate",
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOL_INIT_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_POOL_INIT_STEP_INVALID);
-}
 
 __noinline_due_to_stack__
 static void signTxPoolRegistration_handleInitAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -237,47 +147,6 @@ static void _toPoolKeyHash(const pool_id_t* poolId, uint8_t* poolKeyHash)
 	default:
 		ASSERT(false);
 	}
-}
-
-enum {
-	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH = 6200,
-	HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID,
-	HANDLE_POOL_KEY_STEP_RESPOND,
-	HANDLE_POOL_KEY_STEP_INVALID,
-} ;
-
-static void handlePoolKey_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handlePoolKey_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_PATH) {
-		ui_displayPathScreen(
-		        "Pool ID path",
-		        &subctx->stateData.poolId.path,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOL_KEY_STEP_DISPLAY_POOL_ID) {
-		uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH] = {0};
-		_toPoolKeyHash(&subctx->stateData.poolId, poolKeyHash);
-
-		ui_displayBech32Screen(
-		        "Pool ID",
-		        "pool",
-		        poolKeyHash, SIZEOF(poolKeyHash),
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOL_KEY_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_POOL_KEY_STEP_INVALID);
 }
 
 static void _parsePoolId(read_view_t* view)
@@ -380,36 +249,6 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(const uint8_t* wireDataBuff
 
 // ============================== VRF KEY HASH ==============================
 
-enum {
-	HANDLE_POOL_VRF_KEY_STEP_DISPLAY = 6300,
-	HANDLE_POOL_VRF_KEY_STEP_RESPOND,
-	HANDLE_POOL_VRF_KEY_STEP_INVALID,
-} ;
-
-static void handlePoolVrfKey_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handlePoolVrfKey_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_POOL_VRF_KEY_STEP_DISPLAY) {
-		ui_displayBech32Screen(
-		        "VRF key hash",
-		        "vrf_vk",
-		        subctx->stateData.vrfKeyHash, SIZEOF(subctx->stateData.vrfKeyHash),
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOL_VRF_KEY_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_POOL_VRF_KEY_STEP_INVALID);
-}
-
 __noinline_due_to_stack__
 static void signTxPoolRegistration_handleVrfKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
@@ -464,51 +303,6 @@ static void signTxPoolRegistration_handleVrfKeyAPDU(const uint8_t* wireDataBuffe
 }
 
 // ============================== POOL FINANCIALS ==============================
-
-enum {
-	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE = 6400,
-	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_COST,
-	HANDLE_POOL_FINANCIALS_STEP_DISPLAY_MARGIN,
-	HANDLE_POOL_FINANCIALS_STEP_RESPOND,
-	HANDLE_POOL_FINANCIALS_STEP_INVALID,
-} ;
-
-static void handlePoolFinancials_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handlePoolFinancials_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_PLEDGE) {
-		ui_displayAdaAmountScreen(
-		        "Pledge",
-		        subctx->stateData.pledge,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_COST) {
-		ui_displayAdaAmountScreen(
-		        "Cost",
-		        subctx->stateData.cost,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_DISPLAY_MARGIN) {
-		ui_displayPoolMarginScreen(
-		        subctx->stateData.marginNumerator,
-		        subctx->stateData.marginDenominator,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOL_FINANCIALS_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_POOL_FINANCIALS_STEP_INVALID);
-}
 
 __noinline_due_to_stack__
 static void signTxPoolRegistration_handlePoolFinancialsAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -572,35 +366,6 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(const uint8_t* wireD
 }
 
 // ============================== POOL REWARD ACCOUNT ==============================
-
-enum {
-	HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY = 6500,
-	HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND,
-	HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID,
-};
-
-static void handlePoolRewardAccount_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handlePoolRewardAccount_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_DISPLAY) {
-		ui_displayRewardAccountScreen(
-		        &subctx->stateData.poolRewardAccount,
-		        commonTxData->networkId,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_POOL_REWARD_ACCOUNT_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_POOL_REWARD_ACCOUNT_STEP_INVALID);
-}
 
 static void _parsePoolRewardAccount(read_view_t* view)
 {
@@ -689,35 +454,6 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(const uint8_t* wireDa
 }
 
 // ============================== OWNER ==============================
-
-enum {
-	HANDLE_OWNER_STEP_DISPLAY = 6600,
-	HANDLE_OWNER_STEP_RESPOND,
-	HANDLE_OWNER_STEP_INVALID,
-};
-
-static void handleOwner_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handleOwner_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_OWNER_STEP_DISPLAY) {
-		ui_displayPoolOwnerScreen(&subctx->stateData.owner, subctx->currentOwner, commonTxData->networkId, this_fn);
-	}
-	UI_STEP(HANDLE_OWNER_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-
-		subctx->currentOwner++;
-		if (subctx->currentOwner == subctx->numOwners) {
-			advanceState();
-		}
-	}
-	UI_STEP_END(HANDLE_OWNER_STEP_INVALID);
-}
 
 __noinline_due_to_stack__
 static void _addOwnerToTxHash()
@@ -825,128 +561,6 @@ static void signTxPoolRegistration_handleOwnerAPDU(const uint8_t* wireDataBuffer
 
 
 // ============================== RELAY ==============================
-
-enum {
-	HANDLE_RELAY_IP_STEP_DISPLAY_NUMBER = 6700,
-	HANDLE_RELAY_IP_STEP_DISPLAY_IPV4,
-	HANDLE_RELAY_IP_STEP_DISPLAY_IPV6,
-	HANDLE_RELAY_IP_STEP_DISPLAY_PORT,
-	HANDLE_RELAY_IP_STEP_RESPOND,
-	HANDLE_RELAY_IP_STEP_INVALID,
-};
-
-static void handleRelay_ip_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handleRelay_ip_ui_runStep;
-
-	pool_relay_t* relay = &subctx->stateData.relay;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_NUMBER) {
-		ui_displayPoolRelayScreen(
-		        relay,
-		        subctx->currentRelay,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_IPV4) {
-		ui_displayIpv4Screen(
-		        &relay->ipv4,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_IPV6) {
-		ui_displayIpv6Screen(
-		        &relay->ipv6,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_RELAY_IP_STEP_DISPLAY_PORT) {
-		ui_displayIpPortScreen(
-		        &relay->port,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_RELAY_IP_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-
-		subctx->currentRelay++;
-		TRACE("current relay %d", subctx->currentRelay);
-
-		if (subctx->currentRelay == subctx->numRelays) {
-			advanceState();
-		}
-	}
-	UI_STEP_END(HANDLE_RELAY_IP_STEP_INVALID);
-}
-
-enum {
-	HANDLE_RELAY_DNS_STEP_DISPLAY_NUMBER = 6800,
-	HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME,
-	HANDLE_RELAY_DNS_STEP_DISPLAY_PORT,
-	HANDLE_RELAY_DNS_STEP_RESPOND,
-	HANDLE_RELAY_DNS_STEP_INVALID,
-};
-
-static void handleRelay_dns_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handleRelay_dns_ui_runStep;
-
-	pool_relay_t* relay = &subctx->stateData.relay;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_NUMBER) {
-		ui_displayPoolRelayScreen(
-		        relay,
-		        subctx->currentRelay,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_DNSNAME) {
-		char dnsNameStr[1 + DNS_NAME_SIZE_MAX] = {0};
-		explicit_bzero(dnsNameStr, SIZEOF(dnsNameStr));
-		ASSERT(relay->dnsNameSize <= DNS_NAME_SIZE_MAX);
-		memmove(dnsNameStr, relay->dnsName, relay->dnsNameSize);
-		dnsNameStr[relay->dnsNameSize] = '\0';
-		ASSERT(strlen(dnsNameStr) == relay->dnsNameSize);
-
-		ui_displayPaginatedText(
-		        "DNS name",
-		        dnsNameStr,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_RELAY_DNS_STEP_DISPLAY_PORT) {
-		if (relay->format == RELAY_MULTIPLE_HOST_NAME) {
-			// nothing to display in this step, so we skip it
-			UI_STEP_JUMP(HANDLE_RELAY_DNS_STEP_RESPOND);
-		}
-
-		ui_displayIpPortScreen(
-		        &relay->port,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_RELAY_DNS_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-
-		subctx->currentRelay++;
-		TRACE("current relay %d", subctx->currentRelay);
-
-		if (subctx->currentRelay == subctx->numRelays) {
-			advanceState();
-		}
-	}
-	UI_STEP_END(HANDLE_RELAY_DNS_STEP_INVALID);
-}
 
 static void _parsePort(ipport_t* port, read_view_t* view)
 {
@@ -1126,89 +740,6 @@ static void signTxPoolRegistration_handleRelayAPDU(const uint8_t* wireDataBuffer
 
 // ============================== METADATA ==============================
 
-enum {
-	HANDLE_NULL_METADATA_STEP_DISPLAY = 6900,
-	HANDLE_NULL_METADATA_STEP_RESPOND,
-	HANDLE_NULL_METADATA_STEP_INVALID,
-};
-
-static void handleNullMetadata_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handleNullMetadata_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_NULL_METADATA_STEP_DISPLAY) {
-		ui_displayPaginatedText(
-		        "No metadata",
-		        "(anonymous pool)",
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_NULL_METADATA_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_NULL_METADATA_STEP_INVALID);
-}
-
-enum {
-	HANDLE_METADATA_STEP_DISPLAY_URL = 7000,
-	HANDLE_METADATA_STEP_DISPLAY_HASH,
-	HANDLE_METADATA_STEP_RESPOND,
-	HANDLE_METADATA_STEP_INVALID,
-};
-
-static void handleMetadata_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handleMetadata_ui_runStep;
-
-	pool_metadata_t* md = &subctx->stateData.metadata;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_URL) {
-		char metadataUrlStr[1 + POOL_METADATA_URL_LENGTH_MAX] = {0};
-		explicit_bzero(metadataUrlStr, SIZEOF(metadataUrlStr));
-		ASSERT(md->urlSize <= POOL_METADATA_URL_LENGTH_MAX);
-		memmove(metadataUrlStr, md->url, md->urlSize);
-		metadataUrlStr[md->urlSize] = '\0';
-		ASSERT(strlen(metadataUrlStr) == md->urlSize);
-
-		ui_displayPaginatedText(
-		        "Pool metadata url",
-		        metadataUrlStr,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_HASH) {
-		char metadataHashHex[1 + 2 * POOL_METADATA_HASH_LENGTH] = {0};
-		explicit_bzero(metadataHashHex, SIZEOF(metadataHashHex));
-		size_t len = str_formatMetadata(
-		                     md->hash, SIZEOF(md->hash),
-		                     metadataHashHex, SIZEOF(metadataHashHex)
-		             );
-		ASSERT(len + 1 == SIZEOF(metadataHashHex));
-
-		ui_displayPaginatedText(
-		        "Pool metadata hash",
-		        metadataHashHex,
-		        this_fn
-		);
-	}
-	UI_STEP(HANDLE_METADATA_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_METADATA_STEP_INVALID);
-}
-
 static void handleNullMetadata()
 {
 	security_policy_t policy = policyForSignTxStakePoolRegistrationNoMetadata();
@@ -1316,64 +847,6 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(const uint8_t* wireDat
 }
 
 // ============================== CONFIRM ==============================
-
-enum {
-	HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS = 7100,
-	HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS,
-	HANDLE_CONFIRM_STEP_FINAL_CONFIRM,
-	HANDLE_CONFIRM_STEP_RESPOND,
-	HANDLE_CONFIRM_STEP_INVALID,
-};
-
-static void signTxPoolRegistration_handleConfirm_ui_runStep()
-{
-	pool_registration_context_t* subctx = accessSubcontext();
-	TRACE("UI step %d", subctx->ui_step);
-	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = signTxPoolRegistration_handleConfirm_ui_runStep;
-
-	UI_STEP_BEGIN(subctx->ui_step, this_fn);
-
-	// we display potentially suspicious facts about the certificate
-	// that have not been explicitly shown to the user before:
-	// missing owners or relays
-	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_OWNERS) {
-		if (subctx->numOwners == 0) {
-			ui_displayPaginatedText(
-			        "No",
-			        "pool owners",
-			        this_fn
-			);
-		} else {
-			UI_STEP_JUMP(HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS);
-		}
-	}
-	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_NO_RELAYS) {
-		bool isOperator = commonTxData->txSigningMode == SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR;
-		if ((subctx->numRelays == 0) && isOperator) {
-			ui_displayPaginatedText(
-			        "No",
-			        "pool relays",
-			        this_fn
-			);
-		} else {
-			UI_STEP_JUMP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM);
-		}
-	}
-	UI_STEP(HANDLE_CONFIRM_STEP_FINAL_CONFIRM) {
-		ui_displayPrompt(
-		        "Confirm stake",
-		        "pool registration?",
-		        this_fn,
-		        respond_with_user_reject
-		);
-	}
-	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
-		respondSuccessEmptyMsg();
-		advanceState();
-	}
-	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
-}
 
 __noinline_due_to_stack__
 static void signTxPoolRegistration_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)

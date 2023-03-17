@@ -23,7 +23,11 @@ void assert(
 		{
 			PRINTF("Assertion failed %s\n", msgStr);
 			#ifndef FUZZING
+			#ifdef HAVE_BAGL
 			ui_displayPaginatedText("Assertion failed", msgStr, NULL);
+			#elif defined(HAVE_NBGL)
+			display_prompt("Assertion failed", msgStr, NULL, NULL);
+			#endif
 			#endif
 			THROW(ERR_ASSERT);
 		}

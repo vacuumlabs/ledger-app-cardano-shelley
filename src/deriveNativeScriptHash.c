@@ -1,7 +1,13 @@
 #include "deriveNativeScriptHash.h"
+#include "deriveNativeScriptHash_ui.h"
 #include "state.h"
 #include "textUtils.h"
-#include "uiScreens.h"
+
+#ifdef HAVE_BAGL
+#include "uiScreens_bagl.h"
+#elif defined(HAVE_NBGL)
+#include "uiScreens_nbgl.h"
+#endif
 
 static ins_derive_native_script_hash_context_t* ctx = &(instructionState.deriveNativeScriptHashContext);
 
@@ -48,177 +54,6 @@ static inline void simpleScriptFinished()
 }
 
 // UI
-typedef const char* charPtr;
-const charPtr ui_native_script_header[7] = {"Script - key path", "Script - key", "Script - ALL", "Script - ANY", "Script - N of K", "Script - invalid before", "Script - invalid hereafter"};
-
-#define ASSERT_UI_SCRIPT_TYPE_SANITY() ASSERT(ctx->ui_scriptType >= UI_SCRIPT_PUBKEY_PATH && ctx->ui_scriptType <= UI_SCRIPT_INVALID_HEREAFTER)
-#define HEADER ((const char*)PIC(ui_native_script_header[ctx->ui_scriptType]))
-
-static uint8_t _getScriptLevelForPosition()
-{
-	// For complex scripts we reduce the current level by 1
-	// Because they already have the level increased by 1
-	uint8_t levelOffset = ctx->ui_scriptType == UI_SCRIPT_ALL
-	                      || ctx->ui_scriptType == UI_SCRIPT_ANY
-	                      || ctx->ui_scriptType == UI_SCRIPT_N_OF_K
-	                      ? 1 : 0;
-	ASSERT(levelOffset == 0 || ctx->level > 0);
-	return ctx->level - levelOffset;
-}
-
-static void deriveScriptHash_display_ui_position(uint8_t level, ui_callback_fn_t* callback)
-{
-	ASSERT_UI_SCRIPT_TYPE_SANITY();
-	ASSERT(level > 0);
-	TRACE();
-
-	// 10 - length of the leading prefix: "Position: "
-	// 11 - max length for the position information for one level: "x."
-	//      where x is 2^32-1
-	// 2  - the ending null byte + 1B for checking if all text has been printed
-	char positionDescription[10 + 11 * (MAX_SCRIPT_DEPTH - 1) + 2] = {0};
-	explicit_bzero(positionDescription, SIZEOF(positionDescription));
-	char* ptr = BEGIN(positionDescription);
-	char* end = END(positionDescription);
-
-	snprintf(ptr, (end - ptr), "Position: ");
-	// snprintf returns 0, https://github.com/LedgerHQ/nanos-secure-sdk/issues/28
-	// so we need to check the number of written characters by `strlen`
-	ptr += strlen(ptr);
-
-	for (size_t i = 1; i <= level; i++) {
-		ASSERT(i < MAX_SCRIPT_DEPTH);
-		uint32_t position = ctx->complexScripts[i].totalScripts - ctx->complexScripts[i].remainingScripts + 1;
-		STATIC_ASSERT(sizeof(position) <= sizeof(unsigned), "oversized type for %u");
-		STATIC_ASSERT(!IS_SIGNED(position), "signed type for %u");
-		snprintf(ptr, (end - ptr), "%u.", position);
-		ASSERT(strlen(positionDescription) + 1 < SIZEOF(positionDescription));
-		ptr += strlen(ptr);
-	}
-
-	// remove any trailing '.'
-	ASSERT(ptr > BEGIN(positionDescription));
-	*(ptr - 1) = '\0';
-
-	ASSERT(strlen(positionDescription) + 1 < SIZEOF(positionDescription));
-
-	VALIDATE(uiPaginatedText_canFitStringIntoFullText(positionDescription), ERR_INVALID_DATA);
-
-	ui_displayPaginatedText(
-	        HEADER,
-	        positionDescription,
-	        callback
-	);
-}
-
-enum {
-	DISPLAY_UI_STEP_POSITION = 200,
-	DISPLAY_UI_STEP_SCRIPT_CONTENT,
-	DISPLAY_UI_STEP_RESPOND,
-	DISPLAY_UI_STEP_INVALID
-};
-
-static void deriveScriptHash_display_ui_runStep()
-{
-	TRACE("ui_step = %d", ctx->ui_step);
-	ASSERT_UI_SCRIPT_TYPE_SANITY();
-
-	ui_callback_fn_t* this_fn = deriveScriptHash_display_ui_runStep;
-	UI_STEP_BEGIN(ctx->ui_step, this_fn);
-
-	UI_STEP(DISPLAY_UI_STEP_POSITION) {
-		uint8_t level = _getScriptLevelForPosition();
-		if (level == 0) {
-			TRACE("Skip showing position");
-			UI_STEP_JUMP(DISPLAY_UI_STEP_SCRIPT_CONTENT);
-		}
-		deriveScriptHash_display_ui_position(level, this_fn);
-	}
-
-	UI_STEP(DISPLAY_UI_STEP_SCRIPT_CONTENT) {
-		TRACE("ui_scriptType = %d", ctx->ui_scriptType);
-		switch (ctx->ui_scriptType) {
-		case UI_SCRIPT_PUBKEY_PATH: {
-			ui_displayPathScreen(
-			        HEADER,
-			        &ctx->scriptContent.pubkeyPath,
-			        this_fn
-			);
-			break;
-		}
-		case UI_SCRIPT_PUBKEY_HASH: {
-			ui_displayBech32Screen(
-			        HEADER,
-			        "addr_shared_vkh",
-			        ctx->scriptContent.pubkeyHash,
-			        ADDRESS_KEY_HASH_LENGTH,
-			        this_fn
-			);
-			break;
-		}
-		case UI_SCRIPT_ALL:
-		case UI_SCRIPT_ANY: {
-			// max possible length 35: "Contains n nested scripts."
-			// where n is 2^32-1
-			char text[37] = {0};
-			explicit_bzero(text, SIZEOF(text));
-			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
-			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
-			snprintf(text, SIZEOF(text), "Contains %u nested scripts.", ctx->complexScripts[ctx->level].remainingScripts);
-			// make sure all the information is displayed to the user
-			ASSERT(strlen(text) + 1 < SIZEOF(text));
-
-			ui_displayPaginatedText(
-			        HEADER,
-			        text,
-			        this_fn
-			);
-			break;
-		}
-		case UI_SCRIPT_N_OF_K: {
-			// max possible length 85: "Requires n out of k signatures. Contains k nested scripts."
-			// where n and k is 2^32-1
-			char text[87] = {0};
-			explicit_bzero(text, SIZEOF(text));
-			STATIC_ASSERT(sizeof(ctx->scriptContent.requiredScripts) <= sizeof(unsigned), "oversized type for %u");
-			STATIC_ASSERT(!IS_SIGNED(ctx->scriptContent.requiredScripts), "signed type for %u");
-			STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
-			STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
-			snprintf(text, SIZEOF(text), "Requires %u out of %u signatures. Contains %u nested scripts", ctx->scriptContent.requiredScripts, ctx->complexScripts[ctx->level].remainingScripts, ctx->complexScripts[ctx->level].remainingScripts);
-			// make sure all the information is displayed to the user
-			ASSERT(strlen(text) + 1 < SIZEOF(text));
-
-			ui_displayPaginatedText(
-			        HEADER,
-			        text,
-			        this_fn
-			);
-			break;
-		}
-		case UI_SCRIPT_INVALID_BEFORE:
-		case UI_SCRIPT_INVALID_HEREAFTER: {
-			ui_displayUint64Screen(
-			        HEADER,
-			        ctx->scriptContent.timelock,
-			        this_fn
-			);
-			break;
-		}
-		default:
-			THROW(ERR_INVALID_STATE);
-		}
-	}
-
-	UI_STEP(DISPLAY_UI_STEP_RESPOND) {
-		io_send_buf(SUCCESS, NULL, 0);
-		ui_displayBusy(); // displays dots, called only after I/O to avoid freezing
-	}
-
-	UI_STEP_END(DISPLAY_UI_STEP_INVALID);
-}
-#undef HEADER
-#undef ASSERT_UI_SCRIPT_TYPE_SANITY
-
 #define UI_DISPLAY_SCRIPT(UI_TYPE) {\
 		ctx->ui_scriptType = UI_TYPE;\
 		ctx->ui_step = DISPLAY_UI_STEP_POSITION;\
@@ -398,33 +233,6 @@ typedef enum {
 	DISPLAY_NATIVE_SCRIPT_HASH_BECH32 = 1,
 	DISPLAY_NATIVE_SCRIPT_HASH_POLICY_ID = 2,
 } display_format;
-
-static void deriveNativeScriptHash_displayNativeScriptHash_callback()
-{
-	io_send_buf(SUCCESS, ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH);
-	ui_idle();
-}
-
-static void deriveNativeScriptHash_displayNativeScriptHash_bech32()
-{
-	ui_displayBech32Screen(
-	        "Script hash",
-	        "script",
-	        ctx->scriptHashBuffer,
-	        SCRIPT_HASH_LENGTH,
-	        deriveNativeScriptHash_displayNativeScriptHash_callback
-	);
-}
-
-static void deriveNativeScriptHash_displayNativeScriptHash_policyId()
-{
-	ui_displayHexBufferScreen(
-	        "Policy ID",
-	        ctx->scriptHashBuffer,
-	        SCRIPT_HASH_LENGTH,
-	        deriveNativeScriptHash_displayNativeScriptHash_callback
-	);
-}
 
 static void deriveNativeScriptHash_handleWholeNativeScriptFinish(read_view_t* view)
 {

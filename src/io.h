@@ -43,7 +43,9 @@ typedef enum {
 extern io_state_t io_state;
 
 // Everything below this point is Ledger magic
+#ifdef HAVE_BAGL
 void io_seproxyhal_display(const bagl_element_t* element);
+#endif
 #ifndef FUZZING
 unsigned char io_event(unsigned char channel);
 
