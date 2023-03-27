@@ -338,7 +338,7 @@ void handlePoolFinancials_ui_runStep()
 #ifdef HAVE_NBGL
 static void handlePoolRewardAccount_ui_runStep_cb(void)
 {
-    force_display(handlePoolRewardAccount_ui_runStep, respond_with_user_reject);
+	force_display(handlePoolRewardAccount_ui_runStep, respond_with_user_reject);
 }
 #endif
 
