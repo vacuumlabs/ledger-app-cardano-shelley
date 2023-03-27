@@ -112,8 +112,7 @@ void deriveScriptHash_display_ui_runStep()
 			#elif defined(HAVE_NBGL)
 			display_prompt("Review Script", "", this_fn, respond_with_user_reject);
 			#endif // HAVE_NBGL
-		}
-        else {
+		} else {
 			deriveScriptHash_display_ui_position(level, this_fn);
 		}
 	}

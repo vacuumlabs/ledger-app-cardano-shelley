@@ -30,69 +30,78 @@
 #define NB_SETTINGS_SWITCHES 1
 
 enum {
-  SWITCH_APP_MODE_TOKEN = FIRST_USER_TOKEN,
+	SWITCH_APP_MODE_TOKEN = FIRST_USER_TOKEN,
 };
 
 static nbgl_layoutSwitch_t switches[NB_SETTINGS_SWITCHES];
 
-static const char *const infoTypes[] = {"Version", "Developer", "Copyright"};
-static const char *const infoContents[] = {APPVERSION, "Vacuumlabs",
-                                           "(c) 2022 Ledger"};
+static const char* const infoTypes[] = {"Version", "Developer", "Copyright"};
+static const char* const infoContents[] = {APPVERSION, "Vacuumlabs",
+                                           "(c) 2022 Ledger"
+                                          };
 static const int INS_NONE = -1;
 
 // Settings
-static void exit(void) { os_sched_exit(-1); }
-
-static bool settings_navigation_callback(uint8_t page, nbgl_pageContent_t *content) {
-  if (page == 0) {
-    switches[0].text = (char *)"Enable expert mode";
-    switches[0].subText = (char *)"Select application mode";
-    switches[0].token = SWITCH_APP_MODE_TOKEN;
-    switches[0].tuneId = TUNE_TAP_CASUAL;
-    switches[0].initState = app_mode_expert();
-
-    content->type = SWITCHES_LIST;
-    content->switchesList.nbSwitches = NB_SETTINGS_SWITCHES;
-    content->switchesList.switches = (nbgl_layoutSwitch_t *)switches;
-  } else if (page == 1) {
-    content->type = INFOS_LIST;
-    content->infosList.nbInfos = NB_INFO_FIELDS;
-    content->infosList.infoTypes = (const char **)infoTypes;
-    content->infosList.infoContents = (const char **)infoContents;
-  } else {
-    return false;
-  }
-  return true;
+static void exit(void)
+{
+	os_sched_exit(-1);
 }
 
-static void settings_control_callback(int token, uint8_t index) {
-  UNUSED(index);
-  switch (token) {
-  case SWITCH_APP_MODE_TOKEN:
-    app_mode_set_expert(index);
-    break;
+static bool settings_navigation_callback(uint8_t page, nbgl_pageContent_t* content)
+{
+	if (page == 0) {
+		switches[0].text = (char*)"Enable expert mode";
+		switches[0].subText = (char*)"Select application mode";
+		switches[0].token = SWITCH_APP_MODE_TOKEN;
+		switches[0].tuneId = TUNE_TAP_CASUAL;
+		switches[0].initState = app_mode_expert();
 
-  default:
-    PRINTF("Should not happen !");
-    break;
-  }
+		content->type = SWITCHES_LIST;
+		content->switchesList.nbSwitches = NB_SETTINGS_SWITCHES;
+		content->switchesList.switches = (nbgl_layoutSwitch_t*)switches;
+	} else if (page == 1) {
+		content->type = INFOS_LIST;
+		content->infosList.nbInfos = NB_INFO_FIELDS;
+		content->infosList.infoTypes = (const char**)infoTypes;
+		content->infosList.infoContents = (const char**)infoContents;
+	} else {
+		return false;
+	}
+	return true;
 }
 
-static void ui_menu_settings(void) {
-  nbgl_useCaseSettings((char *)"Cardano settings", PAGE_START, NB_PAGE_SETTING,
-                       IS_TOUCHABLE, ui_idle_flow, settings_navigation_callback,
-                       settings_control_callback);
+static void settings_control_callback(int token, uint8_t index)
+{
+	UNUSED(index);
+	switch (token) {
+	case SWITCH_APP_MODE_TOKEN:
+		app_mode_set_expert(index);
+		break;
+
+	default:
+		PRINTF("Should not happen !");
+		break;
+	}
 }
 
-void ui_idle_flow(void) {
-  TRACE("RESETTING\n\n");
-  // We need to make sure the ui context is reset even if the app restarts
-  nbgl_reset_transaction_full_context();
-  nbgl_useCaseHome((char *)"Cardano", &C_cardano_64, NULL, true,
-                   ui_menu_settings, exit);
+static void ui_menu_settings(void)
+{
+	nbgl_useCaseSettings((char*)"Cardano settings", PAGE_START, NB_PAGE_SETTING,
+	                     IS_TOUCHABLE, ui_idle_flow, settings_navigation_callback,
+	                     settings_control_callback);
 }
 
-void ui_idle(void) { 
-    currentInstruction = INS_NONE; 
+void ui_idle_flow(void)
+{
+	TRACE("RESETTING\n\n");
+	// We need to make sure the ui context is reset even if the app restarts
+	nbgl_reset_transaction_full_context();
+	nbgl_useCaseHome((char*)"Cardano", &C_cardano_64, NULL, true,
+	                 ui_menu_settings, exit);
+}
+
+void ui_idle(void)
+{
+	currentInstruction = INS_NONE;
 }
 #endif // HAVE_NBGL
