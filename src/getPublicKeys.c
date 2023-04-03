@@ -61,7 +61,7 @@ void runGetOnePublicKeyUIFlow()
 	switch (policy) {
 #define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,    GET_KEY_UI_STEP_WARNING);
-		CASE(POLICY_PROMPT_BEFORE_RESPONSE, GET_KEY_UI_STEP_DISPLAY);
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, GET_KEY_UI_STEP_PROMPT);
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   GET_KEY_UI_STEP_RESPOND);
 #undef   CASE
 	default:
