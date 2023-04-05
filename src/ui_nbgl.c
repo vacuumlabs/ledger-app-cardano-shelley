@@ -21,13 +21,12 @@
 #include "uiHelpers.h"
 #include "uiScreens_nbgl.h"
 
-#define MAX_LINE_PER_PAGE_COUNT 10
+#define MAX_LINE_PER_PAGE_COUNT NB_MAX_LINES_IN_REVIEW
 #define MAX_TAG_CONTENT_CHAR_PER_LINE 18
-#define MAX_TAG_PER_PAGE_COUNT 4
 #define MAX_TAG_TITLE_LINE_LENGTH 30
 #define MAX_TAG_CONTENT_LENGTH 200
 #define MAX_TEXT_STRING 50
-#define PENDING_ELEMENT_INDEX MAX_TAG_PER_PAGE_COUNT
+#define PENDING_ELEMENT_INDEX NB_MAX_DISPLAYED_PAIRS_IN_REVIEW
 enum {
 	CANCEL_PROMPT_TOKEN = 1,
 	ACCEPT_PAGE_TOKEN,
@@ -43,8 +42,8 @@ typedef struct {
 	bool pendingElement;
 	uint8_t currentLineCount;
 	uint8_t currentElementCount;
-	char tagTitle[MAX_TAG_PER_PAGE_COUNT + 1][MAX_TAG_TITLE_LINE_LENGTH];
-	char tagContent[MAX_TAG_PER_PAGE_COUNT + 1][MAX_TAG_CONTENT_LENGTH];
+	char tagTitle[NB_MAX_DISPLAYED_PAIRS_IN_REVIEW + 1][MAX_TAG_TITLE_LINE_LENGTH];
+	char tagContent[NB_MAX_DISPLAYED_PAIRS_IN_REVIEW + 1][MAX_TAG_CONTENT_LENGTH];
 	char pageText[2][MAX_TEXT_STRING];
 	bool lightConfirmation;
 	nbgl_layoutTagValueList_t pairList;
