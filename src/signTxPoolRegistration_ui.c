@@ -58,8 +58,7 @@ static inline void advanceState()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case STAKE_POOL_REGISTRATION_OWNERS:
 		ASSERT(subctx->currentOwner == subctx->numOwners);
 
@@ -70,8 +69,7 @@ static inline void advanceState()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case STAKE_POOL_REGISTRATION_RELAYS:
 		ASSERT(subctx->currentRelay == subctx->numRelays);
 

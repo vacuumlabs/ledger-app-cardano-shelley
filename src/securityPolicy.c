@@ -1339,6 +1339,7 @@ security_policy_t policyForSignTxWithdrawal(
 			break;
 		}
 
+		__attribute__((fallthrough));
 	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:

@@ -34,8 +34,7 @@ static void advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case GET_KEYS_STAGE_GET_KEYS:
 		ASSERT(ctx->currentPath == ctx->numPaths);
 		ctx->stage = GET_KEYS_STAGE_NONE;

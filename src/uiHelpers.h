@@ -42,6 +42,7 @@ extern bolos_ux_params_t G_ux_params;
 #define UI_STEP(NEXT_STEP) \
 				*__ui_step_ptr = NEXT_STEP; \
 			} \
+            __attribute__((fallthrough));
 			case NEXT_STEP: {
 #else
 #define UI_STEP(NEXT_STEP) \

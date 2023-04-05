@@ -98,6 +98,7 @@ unsigned char io_event(unsigned char channel MARK_UNUSED)
 			THROW(EXCEPTION_IO_RESET);
 		}
 
+		__attribute__((fallthrough));
 	case SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT:
 		#ifdef HAVE_BAGL
 		UX_DISPLAYED_EVENT({});
