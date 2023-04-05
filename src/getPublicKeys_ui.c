@@ -116,10 +116,9 @@ void getPublicKeys_respondOneKey_ui_runStep()
 		        respond_with_user_reject
 		);
 		#elif defined(HAVE_NBGL)
-		display_confirmation(
+		display_confirmation_no_approved_status(
 		        "Confirm\npublic key export",
 		        "",
-		        "PUBLIC KEY\nEXPORTED",
 		        "Public key\nrejected",
 		        this_fn,
 		        respond_with_user_reject
@@ -139,6 +138,11 @@ void getPublicKeys_respondOneKey_ui_runStep()
 		TRACE("Current path: %u / %u", ctx->currentPath, ctx->numPaths);
 
 		if (ctx->currentPath == ctx->numPaths) {
+			#ifdef HAVE_NBGL
+			if (!ctx->silent_export) {
+				nbgl_useCaseStatus("PUBLIC KEY\nEXPORTED", true, ui_idle_flow);
+			}
+			#endif // HAVE_NBGL
 			advanceStage();
 		} else if (ctx->currentPath == 1) {
 			#ifdef HAVE_NBGL

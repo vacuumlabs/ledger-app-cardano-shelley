@@ -49,6 +49,10 @@ void runGetOnePublicKeyUIFlow()
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
+	if (policy > POLICY_ALLOW_WITHOUT_PROMPT) {
+		ctx->silent_export = false;
+	}
+
 	{
 		// Calculation
 		deriveExtendedPublicKey(
@@ -121,6 +125,11 @@ static void getPublicKeys_handleInitAPDU(const uint8_t* wireDataBuffer, size_t w
 	// we ask for confirmation for export of the given number of public keys
 	security_policy_t policy = policyForGetPublicKeysInit(ctx->numPaths);
 	TRACE("Policy: %d", (int) policy);
+	if (policy == POLICY_PROMPT_BEFORE_RESPONSE) {
+		ctx->silent_export = false;
+	} else {
+		ctx->silent_export = true;
+	}
 	ENSURE_NOT_DENIED(policy);
 	{
 		// select UI steps
