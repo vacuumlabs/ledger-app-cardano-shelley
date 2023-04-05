@@ -48,6 +48,7 @@ typedef struct {
 	char pageText[2][MAX_TEXT_STRING];
 	bool lightConfirmation;
 	nbgl_layoutTagValueList_t pairList;
+	bool no_approved_status;
 } UiContext_t;
 
 static nbgl_page_t* pageContext;
@@ -59,6 +60,7 @@ static UiContext_t uiContext = {
 	.currentElementCount = 0,
 	.pendingElement = false,
 	.lightConfirmation = 0,
+	.no_approved_status = false,
 };
 
 // Forward declaration
@@ -119,6 +121,7 @@ void nbgl_reset_transaction_full_context(void)
 	uiContext.approvedCallback = NULL;
 	uiContext.rejectedCallback = NULL;
 	uiContext.pendingDisplayPageFn = NULL;
+	uiContext.no_approved_status = false;
 }
 
 void set_light_confirmation(bool needed)
@@ -322,7 +325,9 @@ static void display_confirmation_status(void)
 		uiContext.approvedCallback();
 	}
 
-	trigger_callback(&confirmation_status_callback);
+	if (!uiContext.no_approved_status) {
+		trigger_callback(&confirmation_status_callback);
+	}
 }
 
 static void display_address_callback(void)
@@ -484,6 +489,15 @@ void display_confirmation(const char* text1, const char* text2,
 	} else {
 		_display_page_or_call_function(&_display_confirmation);
 	}
+}
+
+void display_confirmation_no_approved_status(const char* text1, const char* text2,
+        const char* rejectText,
+        callback_t userAcceptCallback,
+        callback_t userRejectCallback)
+{
+	uiContext.no_approved_status = true;
+	display_confirmation(text1, text2, NULL, rejectText, userAcceptCallback, userRejectCallback);
 }
 
 void display_prompt(const char* text1, const char* text2,
