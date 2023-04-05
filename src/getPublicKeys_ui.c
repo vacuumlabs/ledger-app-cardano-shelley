@@ -138,8 +138,14 @@ void getPublicKeys_respondOneKey_ui_runStep()
 		ctx->currentPath++;
 		TRACE("Current path: %u / %u", ctx->currentPath, ctx->numPaths);
 
-		if (ctx->currentPath == 1 || ctx->currentPath == ctx->numPaths)
+		if (ctx->currentPath == ctx->numPaths) {
 			advanceStage();
+		} else if (ctx->currentPath == 1) {
+			#ifdef HAVE_NBGL
+			nbgl_useCaseSpinner("Processing");
+			#endif
+			advanceStage();
+		}
 	}
 	UI_STEP_END(UI_STEP_NONE);
 }
