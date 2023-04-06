@@ -26,6 +26,7 @@ typedef struct {
 	uint16_t responseReadyMagic;
 
 	int ui_step;
+	bool silent_export;
 } ins_get_keys_context_t;
 
 handler_fn_t getPublicKeys_handleAPDU;

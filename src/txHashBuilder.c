@@ -1214,15 +1214,13 @@ static void addPoolMetadata_updateState(tx_hash_builder_t* builder)
 		ASSERT(builder->poolCertificateData.remainingOwners == 0);
 		txHashBuilder_addPoolRegistrationCertificate_enterOwners(builder);
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS:
 		// skipping relays is only possible if none were expected
 		ASSERT(builder->poolCertificateData.remainingRelays == 0);
 		txHashBuilder_addPoolRegistrationCertificate_enterRelays(builder);
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS:
 		// all relays should have been received
 		ASSERT(builder->poolCertificateData.remainingRelays == 0);

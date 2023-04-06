@@ -74,8 +74,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_AUX_DATA:
 		if (ctx->includeAuxData) {
 			ASSERT(AUX_DATA_CTX->auxDataReceived);
@@ -120,8 +119,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_OUTPUTS:
 		// we should have received all outputs
 		ASSERT(BODY_CTX->currentOutput == ctx->numOutputs);
@@ -138,8 +136,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_TTL:
 		if (ctx->includeTtl) {
 			ASSERT(BODY_CTX->ttlReceived);
@@ -152,8 +149,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_CERTIFICATES:
 		// we should have received all certificates
 		ASSERT(BODY_CTX->currentCertificate == ctx->numCertificates);
@@ -165,8 +161,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_WITHDRAWALS:
 		// we should have received all withdrawals
 		ASSERT(BODY_CTX->currentWithdrawal == ctx->numWithdrawals);
@@ -186,8 +181,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 		if (ctx->includeValidityIntervalStart) {
 			ASSERT(BODY_CTX->validityIntervalStartReceived);
@@ -200,8 +194,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_MINT:
 		if (ctx->includeMint) {
 			ASSERT(BODY_CTX->mintReceived);
@@ -211,8 +204,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 		if (ctx->includeScriptDataHash) {
 			ASSERT(BODY_CTX->scriptDataHashReceived);
@@ -223,8 +215,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 		ASSERT(BODY_CTX->currentCollateral == ctx->numCollateralInputs);
 		ctx->stage = SIGN_STAGE_BODY_REQUIRED_SIGNERS;
@@ -233,8 +224,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
 		ASSERT(BODY_CTX->currentRequiredSigner == ctx->numRequiredSigners);
 		if (ctx->includeNetworkId) {
@@ -246,8 +236,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT:
 		if (ctx->includeCollateralOutput) {
 			ASSERT(BODY_CTX->collateralOutputReceived);
@@ -257,8 +246,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 		if (ctx->includeTotalCollateral) {
 			ASSERT(BODY_CTX->totalCollateralReceived);
@@ -269,8 +257,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
 		ASSERT(BODY_CTX->currentReferenceInput == ctx->numReferenceInputs);
 		ctx->stage = SIGN_STAGE_CONFIRM;
@@ -284,8 +271,7 @@ void tx_advanceStage()
 			break;
 		}
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case SIGN_STAGE_WITNESSES:
 		ctx->stage = SIGN_STAGE_NONE;
 		ui_idle(); // we are done with this tx
@@ -295,6 +281,7 @@ void tx_advanceStage()
 		// tx_advanceStage() not supposed to be called after tx processing is finished
 		ASSERT(false);
 
+		__attribute__((fallthrough));
 	default:
 		ASSERT(false);
 	}
@@ -387,6 +374,7 @@ static inline void checkForFinishedSubmachines()
 			tx_advanceStage();
 		}
 
+		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
 		if (isCurrentOutputFinished()) {
 			TRACE();

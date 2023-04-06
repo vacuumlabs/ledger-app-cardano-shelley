@@ -49,6 +49,10 @@ void runGetOnePublicKeyUIFlow()
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
 
+	if (policy > POLICY_ALLOW_WITHOUT_PROMPT) {
+		ctx->silent_export = false;
+	}
+
 	{
 		// Calculation
 		deriveExtendedPublicKey(
@@ -61,7 +65,7 @@ void runGetOnePublicKeyUIFlow()
 	switch (policy) {
 #define  CASE(policy, step) case policy: {ctx->ui_step = step; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,    GET_KEY_UI_STEP_WARNING);
-		CASE(POLICY_PROMPT_BEFORE_RESPONSE, GET_KEY_UI_STEP_DISPLAY);
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, GET_KEY_UI_STEP_PROMPT);
 		CASE(POLICY_ALLOW_WITHOUT_PROMPT,   GET_KEY_UI_STEP_RESPOND);
 #undef   CASE
 	default:
@@ -121,6 +125,11 @@ static void getPublicKeys_handleInitAPDU(const uint8_t* wireDataBuffer, size_t w
 	// we ask for confirmation for export of the given number of public keys
 	security_policy_t policy = policyForGetPublicKeysInit(ctx->numPaths);
 	TRACE("Policy: %d", (int) policy);
+	if (policy == POLICY_PROMPT_BEFORE_RESPONSE) {
+		ctx->silent_export = false;
+	} else {
+		ctx->silent_export = true;
+	}
 	ENSURE_NOT_DENIED(policy);
 	{
 		// select UI steps

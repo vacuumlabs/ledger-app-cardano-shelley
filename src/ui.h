@@ -13,6 +13,7 @@ void fill_address_data(char* text, char* content, callback_t callback);
 void fill_and_display_if_required(const char* line1, const char* line2, callback_t user_accept_cb, callback_t user_reject_cb);
 void force_display(callback_t user_accept_cb, callback_t user_reject_cb);
 void display_confirmation(const char* text1, const char* text2, const char* confirmText, const char* rejectText, callback_t user_accept_cb, callback_t user_reject_cb);
+void display_confirmation_no_approved_status(const char* text1, const char* text2, const char* rejectText, callback_t user_accept_cb, callback_t user_reject_cb);
 void display_page(callback_t user_accept_cb, callback_t user_reject_cb);
 void display_prompt(const char* text1, const char* text2, callback_t user_accept_cb, callback_t user_reject_cb);
 void display_warning(const char* text, callback_t user_accept_cb, callback_t user_reject_cb);

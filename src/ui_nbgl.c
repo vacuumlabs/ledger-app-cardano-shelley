@@ -21,13 +21,12 @@
 #include "uiHelpers.h"
 #include "uiScreens_nbgl.h"
 
-#define MAX_LINE_PER_PAGE_COUNT 10
+#define MAX_LINE_PER_PAGE_COUNT NB_MAX_LINES_IN_REVIEW
 #define MAX_TAG_CONTENT_CHAR_PER_LINE 18
-#define MAX_TAG_PER_PAGE_COUNT 4
 #define MAX_TAG_TITLE_LINE_LENGTH 30
 #define MAX_TAG_CONTENT_LENGTH 200
 #define MAX_TEXT_STRING 50
-#define PENDING_ELEMENT_INDEX MAX_TAG_PER_PAGE_COUNT
+#define PENDING_ELEMENT_INDEX NB_MAX_DISPLAYED_PAIRS_IN_REVIEW
 enum {
 	CANCEL_PROMPT_TOKEN = 1,
 	ACCEPT_PAGE_TOKEN,
@@ -35,19 +34,20 @@ enum {
 };
 
 typedef struct {
-	char* confirmedStatus; // text displayed in confirmation page (after long press)
-	char* rejectedStatus;  // text displayed in rejection page (after reject confirmed)
+	const char* confirmedStatus; // text displayed in confirmation page (after long press)
+	const char* rejectedStatus;  // text displayed in rejection page (after reject confirmed)
 	callback_t approvedCallback;
 	callback_t rejectedCallback;
 	callback_t pendingDisplayPageFn;
 	bool pendingElement;
 	uint8_t currentLineCount;
 	uint8_t currentElementCount;
-	char tagTitle[MAX_TAG_PER_PAGE_COUNT + 1][MAX_TAG_TITLE_LINE_LENGTH];
-	char tagContent[MAX_TAG_PER_PAGE_COUNT + 1][MAX_TAG_CONTENT_LENGTH];
+	char tagTitle[NB_MAX_DISPLAYED_PAIRS_IN_REVIEW + 1][MAX_TAG_TITLE_LINE_LENGTH];
+	char tagContent[NB_MAX_DISPLAYED_PAIRS_IN_REVIEW + 1][MAX_TAG_CONTENT_LENGTH];
 	char pageText[2][MAX_TEXT_STRING];
 	bool lightConfirmation;
 	nbgl_layoutTagValueList_t pairList;
+	bool no_approved_status;
 } UiContext_t;
 
 static nbgl_page_t* pageContext;
@@ -59,6 +59,7 @@ static UiContext_t uiContext = {
 	.currentElementCount = 0,
 	.pendingElement = false,
 	.lightConfirmation = 0,
+	.no_approved_status = false,
 };
 
 // Forward declaration
@@ -119,6 +120,7 @@ void nbgl_reset_transaction_full_context(void)
 	uiContext.approvedCallback = NULL;
 	uiContext.rejectedCallback = NULL;
 	uiContext.pendingDisplayPageFn = NULL;
+	uiContext.no_approved_status = false;
 }
 
 void set_light_confirmation(bool needed)
@@ -178,7 +180,7 @@ static void _display_confirmation(void)
 		.type = INFO_LONG_PRESS,
 		.infoLongPress.icon = &C_cardano_64,
 		.infoLongPress.text = uiContext.pageText[0],
-		.infoLongPress.longPressText = (char*)"Hold to approve",
+		.infoLongPress.longPressText = "Hold to approve",
 		.infoLongPress.longPressToken = CONFIRMATION_STATUS_TOKEN,
 		.infoLongPress.tuneId = TUNE_TAP_NEXT
 	};
@@ -204,8 +206,8 @@ static void _display_light_confirmation(void)
 {
 	TRACE("_light_confirmation");
 
-	nbgl_useCaseChoice(&C_cardano_64, uiContext.pageText[0], (char*)"",
-	                   (char*)"Confirm", (char*)"Cancel", light_confirm_callback);
+	nbgl_useCaseChoice(&C_cardano_64, uiContext.pageText[0], "",
+	                   "Confirm", "Cancel", light_confirm_callback);
 
 	#ifdef HEADLESS
 	trigger_callback(uiContext.approvedCallback);
@@ -217,8 +219,8 @@ static void display_cancel(void)
 	if (uiContext.lightConfirmation) {
 		display_cancel_status();
 	} else {
-		nbgl_useCaseConfirm((char*)"Reject ?", NULL, (char*)"Yes, Reject",
-		                    (char*)"Go back", display_cancel_status);
+		nbgl_useCaseConfirm("Reject ?", NULL, "Yes, Reject",
+		                    "Go back", display_cancel_status);
 	}
 }
 
@@ -237,7 +239,7 @@ static void display_cancel_status(void)
 	if (uiContext.rejectedStatus) {
 		nbgl_useCaseStatus(uiContext.rejectedStatus, false, cancellation_status_callback);
 	} else {
-		nbgl_useCaseStatus((char*)"Action rejected", false, cancellation_status_callback);
+		nbgl_useCaseStatus("Action rejected", false, cancellation_status_callback);
 	}
 }
 
@@ -258,9 +260,9 @@ static void _display_page(void)
 		.navType = NAV_WITH_TAP,
 		.progressIndicator = true,
 		.navWithTap.backButton = false,
-		.navWithTap.nextPageText = (char*)"Tap to continue",
+		.navWithTap.nextPageText = "Tap to continue",
 		.navWithTap.nextPageToken = ACCEPT_PAGE_TOKEN,
-		.navWithTap.quitText = (char*)"Cancel",
+		.navWithTap.quitText = "Cancel",
 		.quitToken = CANCEL_PROMPT_TOKEN,
 		.tuneId = TUNE_TAP_CASUAL
 	};
@@ -285,7 +287,7 @@ static void _display_prompt(void)
 	TRACE("_prompt");
 
 	nbgl_useCaseReviewStart(&C_cardano_64, uiContext.pageText[0],
-	                        uiContext.pageText[1], (char*)"Reject if not sure",
+	                        uiContext.pageText[1], "Reject if not sure",
 	                        uiContext.approvedCallback, &display_cancel);
 	#ifdef HEADLESS
 	nbgl_refresh();
@@ -297,8 +299,8 @@ static void _display_warning(void)
 {
 	TRACE("_warning");
 
-	nbgl_useCaseReviewStart(&C_warning64px, (char*)"WARNING",
-	                        uiContext.pageText[0], (char*)"Reject if not sure",
+	nbgl_useCaseReviewStart(&C_warning64px, "WARNING",
+	                        uiContext.pageText[0], "Reject if not sure",
 	                        uiContext.approvedCallback, &display_cancel);
 	#ifdef HEADLESS
 	nbgl_refresh();
@@ -311,7 +313,7 @@ static void confirmation_status_callback(void)
 	if (uiContext.confirmedStatus) {
 		nbgl_useCaseStatus(uiContext.confirmedStatus, true, ui_idle_flow);
 	} else {
-		nbgl_useCaseStatus((char*)"ACTION\nCONFIRMED", true, ui_idle_flow);
+		nbgl_useCaseStatus("ACTION\nCONFIRMED", true, ui_idle_flow);
 	}
 
 }
@@ -322,7 +324,9 @@ static void display_confirmation_status(void)
 		uiContext.approvedCallback();
 	}
 
-	trigger_callback(&confirmation_status_callback);
+	if (!uiContext.no_approved_status) {
+		trigger_callback(&confirmation_status_callback);
+	}
 }
 
 static void display_address_callback(void)
@@ -333,8 +337,8 @@ static void display_address_callback(void)
 	uiContext.pairList.nbPairs = uiContext.currentElementCount - 1;
 	uiContext.pairList.pairs = tagValues;
 
-	uiContext.confirmedStatus = (char*)"ADDRESS\nVERIFIED";
-	uiContext.rejectedStatus = (char*)"Address rejected";
+	uiContext.confirmedStatus = "ADDRESS\nVERIFIED";
+	uiContext.rejectedStatus = "Address rejected";
 
 	for (uint8_t i = 0; i < uiContext.currentElementCount; i++) {
 		if (strcmp(uiContext.tagTitle[i], "Address")) {
@@ -374,7 +378,7 @@ static void trigger_callback(callback_t userAcceptCallback)
 	layoutDescription.withLeftBorder = true;
 
 	layoutDescription.onActionCallback = NULL;
-	layoutDescription.tapActionText = (char*)"";
+	layoutDescription.tapActionText = "";
 	layoutDescription.tapActionToken = 0;
 	layoutDescription.tapTuneId = TUNE_TAP_CASUAL;
 
@@ -471,8 +475,8 @@ void display_confirmation(const char* text1, const char* text2,
 {
 	TRACE("Displaying confirmation");
 
-	uiContext.confirmedStatus = (char*)confirmText;
-	uiContext.rejectedStatus = (char*)rejectText;
+	uiContext.confirmedStatus = confirmText;
+	uiContext.rejectedStatus = rejectText;
 
 	set_callbacks(userAcceptCallback, userRejectCallback);
 
@@ -484,6 +488,15 @@ void display_confirmation(const char* text1, const char* text2,
 	} else {
 		_display_page_or_call_function(&_display_confirmation);
 	}
+}
+
+void display_confirmation_no_approved_status(const char* text1, const char* text2,
+        const char* rejectText,
+        callback_t userAcceptCallback,
+        callback_t userRejectCallback)
+{
+	uiContext.no_approved_status = true;
+	display_confirmation(text1, text2, NULL, rejectText, userAcceptCallback, userRejectCallback);
 }
 
 void display_prompt(const char* text1, const char* text2,
@@ -514,8 +527,8 @@ void display_address(callback_t userAcceptCallback, callback_t userRejectCallbac
 	TRACE("Displaying Address");
 
 	set_callbacks(userAcceptCallback, userRejectCallback);
-	nbgl_useCaseReviewStart(&C_cardano_64, (char*)"Verify Cardano\naddress",
-	                        NULL, (char*)"Cancel", display_address_callback,
+	nbgl_useCaseReviewStart(&C_cardano_64, "Verify Cardano\naddress",
+	                        NULL, "Cancel", display_address_callback,
 	                        display_cancel_status);
 	#ifdef HEADLESS
 	nbgl_refresh();
@@ -528,7 +541,7 @@ void display_error(void)
 	TRACE("Displaying Error");
 
 	nbgl_reset_transaction_full_context();
-	nbgl_useCaseStatus((char*)"An error has occurred", false, ui_idle_flow);
+	nbgl_useCaseStatus("An error has occurred", false, ui_idle_flow);
 }
 
 #endif // HAVE_NBGL

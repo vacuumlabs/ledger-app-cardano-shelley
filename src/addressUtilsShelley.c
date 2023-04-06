@@ -111,6 +111,7 @@ bool isStakingInfoConsistentWithAddressType(const addressParams_t* addressParams
 	case REWARD_SCRIPT:
 		CONSISTENT_WITH(STAKING_SCRIPT_HASH);
 
+		__attribute__((fallthrough));
 	case POINTER_KEY:
 	case POINTER_SCRIPT:
 		CONSISTENT_WITH(BLOCKCHAIN_POINTER);
@@ -507,6 +508,7 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 	case BYRON:
 		ASSERT(false);
 
+		__attribute__((fallthrough));
 	case REWARD_KEY:
 	case REWARD_SCRIPT:
 		if (networkId == TESTNET_NETWORK_ID)
@@ -724,7 +726,7 @@ spending_choice_t determineSpendingChoice(address_type_t addressType)
 
 	default:
 		ASSERT(false);
-	// intentional fallthrough
+		__attribute__((fallthrough));
 	case REWARD_KEY:
 	case REWARD_SCRIPT:
 		return SPENDING_NONE;

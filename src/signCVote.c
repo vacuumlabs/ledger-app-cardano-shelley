@@ -38,6 +38,7 @@ void vote_advanceStage()
 		// vote_advanceStage() not supposed to be called after votecast processing is finished
 		ASSERT(false);
 
+		__attribute__((fallthrough));
 	default:
 		ASSERT(false);
 
