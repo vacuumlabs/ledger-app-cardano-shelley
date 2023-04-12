@@ -373,8 +373,8 @@ static inline void checkForFinishedSubmachines()
 			BODY_CTX->mintReceived = true;
 			tx_advanceStage();
 		}
+		break;
 
-		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
 		if (isCurrentOutputFinished()) {
 			TRACE();
