@@ -14,15 +14,43 @@ static int16_t RESPONSE_READY_MAGIC = 23456;
 
 static ins_get_keys_context_t* ctx = &(instructionState.getKeysContext);
 
-// ctx->ui_state is shared between the intertwined UI state machines below
-// it should be set to this value at the beginning and after a UI state machine is finished
-static int UI_STEP_NONE = 0;
-
 // this is supposed to be called at the beginning of each APDU handler
 static inline void CHECK_STAGE(get_keys_stage_t expected)
 {
 	TRACE("Checking stage... current one is %d, expected %d", ctx->stage, expected);
 	VALIDATE(ctx->stage == expected, ERR_INVALID_STATE);
+}
+
+void keys_advanceStage()
+{
+	TRACE("Advancing from stage: %d", ctx->stage);
+
+	switch (ctx->stage) {
+
+	case GET_KEYS_STAGE_INIT:
+		ctx->stage = GET_KEYS_STAGE_GET_KEYS;
+
+		if (ctx->numPaths > 1) {
+			// there are more paths to be received
+			// so we don't want to advance beyond GET_KEYS_STAGE_GET_KEYS
+			break;
+		}
+
+		__attribute__((fallthrough));
+	case GET_KEYS_STAGE_GET_KEYS:
+		ASSERT(ctx->currentPath == ctx->numPaths);
+		ctx->stage = GET_KEYS_STAGE_NONE;
+		ui_idle(); // we are done with this key export
+		break;
+
+	case GET_KEYS_STAGE_NONE:
+		// vote_advanceStage() not supposed to be called after votecast processing is finished
+		ASSERT(false);
+		break;
+
+	default:
+		ASSERT(false);
+	}
 }
 
 // read a path from view into ctx->pathSpec
@@ -33,7 +61,7 @@ static void parsePath(read_view_t* view)
 	PRINTF("\n");
 }
 
-// ============================== derivation and UI state machine for one key ==============================
+// ============================== derivation for one key ==============================
 
 // derive the key described by ctx->pathSpec and run the ui state machine accordingly
 void runGetOnePublicKeyUIFlow()

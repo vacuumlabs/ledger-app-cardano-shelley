@@ -280,8 +280,8 @@ void tx_advanceStage()
 	case SIGN_STAGE_NONE:
 		// tx_advanceStage() not supposed to be called after tx processing is finished
 		ASSERT(false);
+		break;
 
-		__attribute__((fallthrough));
 	default:
 		ASSERT(false);
 	}

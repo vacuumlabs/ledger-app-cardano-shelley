@@ -15,38 +15,6 @@ static int16_t RESPONSE_READY_MAGIC = 23456;
 
 static ins_get_keys_context_t* ctx = &(instructionState.getKeysContext);
 
-// ctx->ui_state is shared between the intertwined UI state machines below
-// it should be set to this value at the beginning and after a UI state machine is finished
-static int UI_STEP_NONE = 0;
-
-static void advanceStage()
-{
-	TRACE("Advancing from stage: %d", ctx->stage);
-
-	switch (ctx->stage) {
-
-	case GET_KEYS_STAGE_INIT:
-		ctx->stage = GET_KEYS_STAGE_GET_KEYS;
-
-		if (ctx->numPaths > 1) {
-			// there are more paths to be received
-			// so we don't want to advance beyond GET_KEYS_STAGE_GET_KEYS
-			break;
-		}
-
-		__attribute__((fallthrough));
-	case GET_KEYS_STAGE_GET_KEYS:
-		ASSERT(ctx->currentPath == ctx->numPaths);
-		ctx->stage = GET_KEYS_STAGE_NONE;
-		ui_idle(); // we are done with this key export
-		break;
-
-	case SIGN_STAGE_NONE:
-	default:
-		ASSERT(false);
-	}
-}
-
 // ============================== derivation and UI state machine for one key ==============================
 
 #ifdef HAVE_NBGL
@@ -142,12 +110,12 @@ void getPublicKeys_respondOneKey_ui_runStep()
 				nbgl_useCaseStatus("PUBLIC KEY\nEXPORTED", true, ui_idle_flow);
 			}
 			#endif // HAVE_NBGL
-			advanceStage();
+			keys_advanceStage();
 		} else if (ctx->currentPath == 1) {
 			#ifdef HAVE_NBGL
 			nbgl_useCaseSpinner("Processing");
 			#endif
-			advanceStage();
+			keys_advanceStage();
 		}
 	}
 	UI_STEP_END(UI_STEP_NONE);

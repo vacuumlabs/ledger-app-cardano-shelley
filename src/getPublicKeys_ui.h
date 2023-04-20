@@ -1,6 +1,10 @@
 #ifndef H_CARDANO_APP_GET_PUBLIC_KEYS_UI
 #define H_CARDANO_APP_GET_PUBLIC_KEYS_UI
 
+// ctx->ui_state is shared between the intertwined UI state machines
+// it should be set to this value at the beginning and after a UI state machine is finished
+static int UI_STEP_NONE = 0;
+
 // ============================== derivation and UI state machine for one key ==============================
 
 enum {
