@@ -213,7 +213,7 @@ void signTx_handleAuxDataArbitraryHash_ui_runStep()
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
-		char bufferHex[2 * 32 + 1] = {0};
+		char bufferHex[2 * AUX_DATA_HASH_LENGTH + 1] = {0};
 		ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), ctx->auxDataHash, SIZEOF(ctx->auxDataHash));
 		fill_and_display_if_required("Auxiliary data hash", bufferHex, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
@@ -844,7 +844,7 @@ void signTx_handleConfirm_ui_runStep()
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
-		char bufferHex[2 * 32 + 1] = {0};
+		char bufferHex[2 * TX_HASH_LENGTH + 1] = {0};
 		ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), ctx->txHash, SIZEOF(ctx->txHash));
 		fill_and_display_if_required("Transaction id", bufferHex, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL

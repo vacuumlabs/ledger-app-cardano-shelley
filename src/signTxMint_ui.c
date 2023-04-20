@@ -67,6 +67,7 @@ static inline void advanceState()
 
 	TRACE("Advancing mint state to: %d", subctx->state);
 }
+
 __noinline_due_to_stack__
 void signTxMint_handleTopLevelData_ui_runStep()
 {
@@ -96,7 +97,6 @@ void signTxMint_handleTopLevelData_ui_runStep()
 	}
 	UI_STEP(HANDLE_MINT_TOP_LEVEL_DATA_RESPOND) {
 		respondSuccessEmptyMsg();
-
 		advanceState();
 	}
 	UI_STEP_END(HANDLE_MINT_TOP_LEVEL_DATA_INVALID);

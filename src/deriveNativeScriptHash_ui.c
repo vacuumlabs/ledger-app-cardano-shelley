@@ -333,7 +333,7 @@ void deriveNativeScriptHash_displayNativeScriptHash_policyId()
 	        deriveNativeScriptHash_displayNativeScriptHash_callback
 	);
 	#elif defined(HAVE_NBGL)
-	char bufferHex[2 * 32 + 1] = {0};
+	char bufferHex[2 * SCRIPT_HASH_LENGTH + 1] = {0};
 	ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), ctx->scriptHashBuffer, SCRIPT_HASH_LENGTH);
 	fill_and_display_if_required("Policy ID", bufferHex, deriveNativeScriptHash_displayNativeScriptHash_finish, respond_with_user_reject);
 	#endif // HAVE_BAGL
