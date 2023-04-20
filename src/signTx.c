@@ -291,7 +291,7 @@ void tx_advanceStage()
 
 // called from main state machine when a pool registration certificate
 // sub-machine is finished, or when other type of certificate is processed
-static inline void advanceCertificatesStateIfAppropriate()
+void tx_advanceCertificatesStateIfAppropriate()
 {
 	TRACE("%u", ctx->stage);
 
@@ -348,7 +348,7 @@ static inline void checkForFinishedSubmachines()
 			ASSERT(BODY_CTX->currentCertificate < ctx->numCertificates);
 			ctx->stage = SIGN_STAGE_BODY_CERTIFICATES;
 
-			advanceCertificatesStateIfAppropriate();
+			tx_advanceCertificatesStateIfAppropriate();
 		}
 		break;
 

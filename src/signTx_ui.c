@@ -344,32 +344,6 @@ void signTx_handleTtl_ui_runStep()
 
 // ============================== CERTIFICATES ==============================
 
-// called from main state machine when a pool registration certificate
-// sub-machine is finished, or when other type of certificate is processed
-static inline void advanceCertificatesStateIfAppropriate()
-{
-	TRACE("%u", ctx->stage);
-
-	switch (ctx->stage) {
-
-	case SIGN_STAGE_BODY_CERTIFICATES: {
-		ASSERT(BODY_CTX->currentCertificate < ctx->numCertificates);
-
-		// Advance stage to the next certificate
-		ASSERT(BODY_CTX->currentCertificate < ctx->numCertificates);
-		BODY_CTX->currentCertificate++;
-
-		if (BODY_CTX->currentCertificate == ctx->numCertificates) {
-			tx_advanceStage();
-		}
-	}
-	break;
-
-	default:
-		ASSERT(ctx->stage == SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE);
-	}
-}
-
 #ifdef HAVE_NBGL
 static void signTx_handleCertificate_ui_delegation_cb(void)
 {
@@ -539,7 +513,7 @@ void signTx_handleCertificate_ui_runStep()
 	UI_STEP(HANDLE_CERTIFICATE_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 
-		advanceCertificatesStateIfAppropriate();
+		tx_advanceCertificatesStateIfAppropriate();
 	}
 	UI_STEP_END(HANDLE_CERTIFICATE_STEP_INVALID);
 }
@@ -600,7 +574,7 @@ void signTx_handleCertificatePoolRetirement_ui_runStep()
 	UI_STEP(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 
-		advanceCertificatesStateIfAppropriate();
+		tx_advanceCertificatesStateIfAppropriate();
 	}
 	UI_STEP_END(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_INVALID);
 }
