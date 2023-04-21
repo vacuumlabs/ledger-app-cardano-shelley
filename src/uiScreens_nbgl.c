@@ -165,7 +165,7 @@ void ui_getStakingKeyScreen(
 	);
 }
 
-void ui_getAccountScreeen(
+void ui_getAccountScreen(
         char* line1,
         const size_t line1Size,
         char* line2,

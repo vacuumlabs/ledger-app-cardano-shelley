@@ -748,7 +748,7 @@ void signTx_handleRequiredSigner_ui_runStep()
 			);
 			#elif defined(HAVE_NBGL)
 			char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
-			ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "req_signer_vfk", BODY_CTX->stageData.requiredSigner.keyHash, SIZEOF(BODY_CTX->stageData.requiredSigner.keyHash));
+			ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "req_signer_vkh", BODY_CTX->stageData.requiredSigner.keyHash, SIZEOF(BODY_CTX->stageData.requiredSigner.keyHash));
 			fill_and_display_if_required("Required signer", encodedStr, this_fn, respond_with_user_reject);
 			#endif // HAVE_BAGL
 			break;

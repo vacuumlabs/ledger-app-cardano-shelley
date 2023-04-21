@@ -61,7 +61,7 @@ void getPublicKeys_respondOneKey_ui_runStep()
 		if (showAccountDescription) {
 			char line1[30];
 			char line2[30];
-			ui_getAccountScreeen(
+			ui_getAccountScreen(
 			        line1,
 			        SIZEOF(line1),
 			        line2,
