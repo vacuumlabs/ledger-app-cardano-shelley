@@ -832,7 +832,8 @@ void signTx_handleConfirm_ui_runStep()
 		        respond_with_user_reject
 		);
 		#elif defined(HAVE_NBGL)
-		display_confirmation("Sign\ntransaction", "", "TRANSACTION\nSIGNED", "Transaction\nrejected", this_fn, respond_with_user_reject);
+		// we can't say that the tx is signed because the witnesses have not been processed yet
+		display_confirmation("Sign\ntransaction", "", "TRANSACTION\nCONFIRMED", "Transaction\nrejected", this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {

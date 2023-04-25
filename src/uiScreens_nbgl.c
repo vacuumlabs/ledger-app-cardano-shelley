@@ -25,7 +25,6 @@ void ui_getBech32Screen(
 		ASSERT(bufferSize <= BECH32_BUFFER_SIZE_MAX);
 	}
 
-	// rough upper bound on required size is used
 	explicit_bzero(line, lineSize);
 
 	{
