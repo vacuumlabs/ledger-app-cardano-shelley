@@ -218,7 +218,7 @@ static bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 	return (pathSpec->length > BIP44_I_ADDRESS + 1);
 }
 
-// staking keys (one per account, should end with /2/0 after account)
+// stake keys (one per account, should end with /2/0 after account)
 bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
@@ -232,7 +232,7 @@ bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec)
 #undef CHECK
 }
 
-// multisig staking keys
+// multisig stake keys
 bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec)
 {
 #define CHECK(cond) if (!(cond)) return false
@@ -485,7 +485,7 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 		// we are checking the 5th item too (to avoid breaking this code
-		// if more than 1 staking key per account is allowed in the future)
+		// if more than 1 stake key per account is allowed in the future)
 		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
 
 	case PATH_MINT_KEY:

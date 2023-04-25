@@ -366,12 +366,12 @@ void signTx_handleCertificate_ui_runStep()
 			#ifdef HAVE_BAGL
 			ui_displayPaginatedText(
 			        "Register",
-			        "staking key",
+			        "stake key",
 			        this_fn
 			);
 			#elif defined(HAVE_NBGL)
 			set_light_confirmation(true);
-			display_prompt("Register\nstaking key", "", this_fn, respond_with_user_reject);
+			display_prompt("Register\nstake key", "", this_fn, respond_with_user_reject);
 			#endif // HAVE_BAGL
 			break;
 
@@ -379,12 +379,12 @@ void signTx_handleCertificate_ui_runStep()
 			#ifdef HAVE_BAGL
 			ui_displayPaginatedText(
 			        "Deregister",
-			        "staking key",
+			        "stake key",
 			        this_fn
 			);
 			#elif defined(HAVE_NBGL)
 			set_light_confirmation(true);
-			display_prompt("Deregister\nstaking key", "", this_fn, respond_with_user_reject);
+			display_prompt("Deregister\nstake key", "", this_fn, respond_with_user_reject);
 			#endif // HAVE_BAGL
 			break;
 
@@ -414,7 +414,7 @@ void signTx_handleCertificate_ui_runStep()
 		case STAKE_CREDENTIAL_KEY_PATH:
 			#ifdef HAVE_BAGL
 			ui_displayPathScreen(
-			        "Staking key",
+			        "Stake key",
 			        &BODY_CTX->stageData.certificate.stakeCredential.keyPath,
 			        this_fn
 			);
@@ -422,14 +422,14 @@ void signTx_handleCertificate_ui_runStep()
 			{
 				char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
 				ui_getPathScreen(pathStr, SIZEOF(pathStr), &BODY_CTX->stageData.certificate.stakeCredential.keyPath);
-				fill_and_display_if_required("Staking key", pathStr, this_fn, respond_with_user_reject);
+				fill_and_display_if_required("Stake key", pathStr, this_fn, respond_with_user_reject);
 			}
 			#endif // HAVE_BAGL
 			break;
 		case STAKE_CREDENTIAL_KEY_HASH:
 			#ifdef HAVE_BAGL
 			ui_displayBech32Screen(
-			        "Staking key hash",
+			        "Stake key hash",
 			        "stake_vkh",
 			        BODY_CTX->stageData.certificate.stakeCredential.keyHash,
 			        SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.keyHash),
@@ -439,14 +439,14 @@ void signTx_handleCertificate_ui_runStep()
 			{
 				char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 				ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "stake_vkh", BODY_CTX->stageData.certificate.stakeCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.keyHash));
-				fill_and_display_if_required("Staking key hash", encodedStr, this_fn, respond_with_user_reject);
+				fill_and_display_if_required("Stake key hash", encodedStr, this_fn, respond_with_user_reject);
 			}
 			#endif // HAVE_BAGL
 			break;
 		case STAKE_CREDENTIAL_SCRIPT_HASH:
 			#ifdef HAVE_BAGL
 			ui_displayBech32Screen(
-			        "Staking script hash",
+			        "Stake script hash",
 			        "script",
 			        BODY_CTX->stageData.certificate.stakeCredential.scriptHash,
 			        SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.scriptHash),
@@ -456,7 +456,7 @@ void signTx_handleCertificate_ui_runStep()
 			{
 				char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 				ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "script", BODY_CTX->stageData.certificate.stakeCredential.scriptHash, SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.scriptHash));
-				fill_and_display_if_required("Staking script hash", encodedStr, this_fn, respond_with_user_reject);
+				fill_and_display_if_required("Stake script hash", encodedStr, this_fn, respond_with_user_reject);
 			}
 			#endif // HAVE_BAGL
 			break;

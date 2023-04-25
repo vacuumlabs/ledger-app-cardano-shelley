@@ -205,7 +205,7 @@ d- Support bulk public key export: https://github.com/LedgerHQ/app-cardano/pull/
 
 ### Fixed
 
-- Serialize reward address instead of staking key into the withdrawals within the transaction body: https://github.com/LedgerHQ/app-cardano/pull/2
+- Serialize reward address instead of stake key into the withdrawals within the transaction body: https://github.com/LedgerHQ/app-cardano/pull/2
 
 
 

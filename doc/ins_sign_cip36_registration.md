@@ -2,7 +2,7 @@
 
 ## Description
 
-Cardano uses a sidechain for voting (initially used only for Catalyst, but CIP-36 allows other voting purposes). One needs to "register" to participate on this sidechain by submitting a registration transaction on the Cardano blockchain. This is done by submitting a transaction with specific auxiliary data attached to the transaction body. These auxiliary data contain a signature by user's staking key, hence serialization of the it by Ledger is required which after confirming by the user returns that signature for the client software to be able to assemble the full serialized transaction.
+Cardano uses a sidechain for voting (initially used only for Catalyst, but CIP-36 allows other voting purposes). One needs to "register" to participate on this sidechain by submitting a registration transaction on the Cardano blockchain. This is done by submitting a transaction with specific auxiliary data attached to the transaction body. These auxiliary data contain a signature by user's stake key, hence serialization of the it by Ledger is required which after confirming by the user returns that signature for the client software to be able to assemble the full serialized transaction.
 
 For more details about voting registration see [CIP-0036](https://cips.cardano.org/cips/cip36/).
 
@@ -64,7 +64,7 @@ P2 = `0x37`
 
 ---
 
-**Staking key**
+**Stake key**
 
 P2 = `0x31`
 
@@ -72,7 +72,7 @@ P2 = `0x31`
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|staking key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_extended_public_key.md) for a format example |
+|stake key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_extended_public_key.md) for a format example |
 
 ---
 
@@ -140,6 +140,6 @@ Data must be empty.
 |Field|Length| Comments|
 |-----|-----|-----|
 | Auxiliary data hash | 32 | Hash of the registration auxiliary data|
-| Signature |64| Voting registration signature by the staking key that has been supplied|
+| Signature |64| Voting registration signature by the stake key that has been supplied|
 
 Note: voting registration auxiliary data is serialized in the [Mary-era format](https://github.com/input-output-hk/cardano-ledger-specs/blob/dcdbc38eb9caea16485827bd095d5adcdcca0aba/shelley-ma/shelley-ma-test/cddl-files/shelley-ma.cddl#L214), where the array of auxiliary scripts is fixed to an empty array.

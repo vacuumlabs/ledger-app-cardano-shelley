@@ -224,7 +224,7 @@ void ui_getAddressScreen(
 	ASSERT(strlen(line) == length);
 }
 
-// display bech32-encoded reward account preceded by staking key derivation path (if given)
+// display bech32-encoded reward account preceded by stake key derivation path (if given)
 static void _getRewardAccountWithDescriptionScreen(
         char* line,
         const size_t lineSize,
@@ -373,10 +373,10 @@ void ui_getSpendingInfoScreen(
 	}
 }
 
-static const char STAKING_HEADING_PATH[]        = "Staking key path";
-static const char STAKING_HEADING_KEY_HASH[]    = "Staking key hash";
-static const char STAKING_HEADING_SCRIPT_HASH[] = "Staking script hash";
-static const char STAKING_HEADING_POINTER[]     = "Staking key pointer";
+static const char STAKING_HEADING_PATH[]        = "Stake key path";
+static const char STAKING_HEADING_KEY_HASH[]    = "Stake key hash";
+static const char STAKING_HEADING_SCRIPT_HASH[] = "Stake script hash";
+static const char STAKING_HEADING_POINTER[]     = "Stake key pointer";
 static const char STAKING_HEADING_WARNING[]     = "WARNING:";
 
 void ui_getStakingInfoScreen(

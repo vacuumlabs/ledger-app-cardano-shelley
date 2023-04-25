@@ -144,7 +144,7 @@ void signTxCVoteRegistration_handleDelegation_ui_runStep()
 	UI_STEP_END(HANDLE_DELEGATION_STEP_INVALID);
 }
 
-// ============================== STAKING KEY ==============================
+// ============================== STAKE KEY ==============================
 
 #ifdef HAVE_NBGL
 static void signTxCVoteRegistration_handleStakingKey_ui_cb(void)

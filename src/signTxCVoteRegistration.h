@@ -37,8 +37,8 @@ typedef struct {
 	uint16_t numDelegations; // if 0, only a single key expected, no delegations
 	uint16_t currentDelegation;
 	/*
-	* Staking key path kept outside of stateData to produce the CIP-36 voting registration
-	* signature at the end of the flow without re-requesting the staking key path
+	* Stake key path kept outside of stateData to produce the CIP-36 voting registration
+	* signature at the end of the flow without re-requesting the stake key path
 	* (with the undesired side-effect of allowing signing with a different key than included
 	* in the registration payload)
 	*/

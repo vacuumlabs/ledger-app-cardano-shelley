@@ -13,7 +13,7 @@ Due to Ledger constraints and potential security implications (parsing errors), 
 **SignTx Limitations**
 
 - Output address size is limited to 128 bytes (single APDU). (Note: IOHK is fine with address size limit of 100 bytes)
-- Addresses that are not shown to the user are base addresses with spending path `m/1852'/1815'/account'/{0,1}/changeIndex` and the standard staking key `m/1852'/1815'/account'/2/0`, where values of `account` and `changeIndex` are limited (for now, `0 <= account <= 100` and `0 <= changeIndex <= 1 000 000`). This makes it feasible to brute-force all change addresses in case an attacker manages to modify change address(es). (As the user does not confirm change addresses, it is relatively easy to perform MITM attack).
+- Addresses that are not shown to the user are base addresses with spending path `m/1852'/1815'/account'/{0,1}/changeIndex` and the standard stake key `m/1852'/1815'/account'/2/0`, where values of `account` and `changeIndex` are limited (for now, `0 <= account <= 100` and `0 <= changeIndex <= 1 000 000`). This makes it feasible to brute-force all change addresses in case an attacker manages to modify change address(es). (As the user does not confirm change addresses, it is relatively easy to perform MITM attack).
 - Only transactions with at least one input will be signed (this provides protection against certificate replays and transaction replays on different networks).
 
 **Communication protocol non-goals:**
@@ -277,7 +277,7 @@ This only describes the initial certificate message. All the data for this certi
 |Field| Length | Comments|
 |-----|--------|---------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT=0x04`|
-|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
+|Stake key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 |Pool key hash| 28 | Hash of staking pool public key|
 
 ### Reward withdrawal
