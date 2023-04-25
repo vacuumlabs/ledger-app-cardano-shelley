@@ -391,14 +391,14 @@ void signTx_handleCertificate_ui_runStep()
 		case CERTIFICATE_TYPE_STAKE_DELEGATION:
 			#ifdef HAVE_BAGL
 			ui_displayBech32Screen(
-			        "Delegate stake to",
-			        "pool",
+			        "Delegate stake",
+			        "to pool",
 			        BODY_CTX->stageData.certificate.poolKeyHash, SIZEOF(BODY_CTX->stageData.certificate.poolKeyHash),
 			        this_fn
 			);
 			#elif defined(HAVE_NBGL)
 			set_light_confirmation(true);
-			display_prompt("Delegate staking\nconfirmation key", "", signTx_handleCertificate_ui_delegation_cb, respond_with_user_reject);
+			display_prompt("Delegate stake", "", signTx_handleCertificate_ui_delegation_cb, respond_with_user_reject);
 			#endif // HAVE_BAGL
 			break;
 

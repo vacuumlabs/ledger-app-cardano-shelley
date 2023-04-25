@@ -634,7 +634,7 @@ void handleNullMetadata_ui_runStep()
 		#elif defined(HAVE_NBGL)
 		fill_and_display_if_required(
 		        "Metadata",
-		        "None: anymous pool",
+		        "none (anonymous pool)",
 		        this_fn,
 		        respond_with_user_reject
 		);
