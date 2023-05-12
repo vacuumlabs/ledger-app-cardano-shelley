@@ -22,7 +22,6 @@
 #include "uiScreens_nbgl.h"
 
 #define MAX_LINE_PER_PAGE_COUNT NB_MAX_LINES_IN_REVIEW
-#define MAX_TAG_CONTENT_CHAR_PER_LINE 18
 #define MAX_TAG_TITLE_LINE_LENGTH 30
 #define MAX_TAG_CONTENT_LENGTH 200
 #define MAX_TEXT_STRING 50
@@ -76,9 +75,14 @@ static void release_context(void)
 	}
 }
 
-static inline uint8_t get_element_line_count(const char* line)
+static inline uint16_t get_element_line_count(const char* line)
 {
-	return strlen(line) / MAX_TAG_CONTENT_CHAR_PER_LINE + 2;
+	uint16_t nbLines = nbgl_getTextNbLinesInWidth(BAGL_FONT_INTER_MEDIUM_32px,
+	                   line,
+	                   SCREEN_WIDTH - 2 * BORDER_MARGIN,
+	                   false);
+
+	return nbLines + 1; // For title
 }
 
 static void set_callbacks(callback_t approvedCallback, callback_t rejectedCallback)
