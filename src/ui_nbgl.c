@@ -318,6 +318,28 @@ static void _display_warning(void)
 	#endif
 }
 
+static void display_choice_callback(bool choice)
+{
+	if (choice) {
+		ui_callback();
+	} else {
+		display_cancel();
+	}
+}
+
+static void _display_choice(void)
+{
+	TRACE("_choice");
+
+	nbgl_useCaseChoice(&C_round_warning_64px, uiContext.pageText[0],
+	                   uiContext.pageText[1], "Allow", "Don't Allow",
+	                   display_choice_callback);
+	#ifdef HEADLESS
+	nbgl_refresh();
+	trigger_callback(ui_callback);
+	#endif
+}
+
 static void confirmation_status_callback(void)
 {
 	if (uiContext.confirmedStatus) {
@@ -504,6 +526,17 @@ void display_warning(const char* text, callback_t userAcceptCallback,
 	set_callbacks(userAcceptCallback, userRejectCallback);
 	strncpy(uiContext.pageText[0], text, MAX_TEXT_STRING);
 	_display_page_or_call_function(&_display_warning);
+}
+
+void display_choice(const char* text1, const char* text2, callback_t userAcceptCallback,
+                  callback_t userRejectCallback)
+{
+	TRACE("Displaying choice");
+
+	set_callbacks(userAcceptCallback, userRejectCallback);
+	strncpy(uiContext.pageText[0], text1, MAX_TEXT_STRING);
+	strncpy(uiContext.pageText[1], text2, MAX_TEXT_STRING);
+	_display_page_or_call_function(&_display_choice);
 }
 
 void display_address(callback_t userAcceptCallback, callback_t userRejectCallback)

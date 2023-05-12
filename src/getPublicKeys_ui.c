@@ -147,9 +147,8 @@ void getPublicKeys_handleInit_ui_runStep()
 		);
 
 		#elif defined(HAVE_NBGL)
-		set_light_confirmation(true);
-		display_prompt(
-		        "Review export",
+		display_choice(
+		        "Export Public key ?",
 		        secondLine,
 		        this_fn,
 		        respond_with_user_reject
