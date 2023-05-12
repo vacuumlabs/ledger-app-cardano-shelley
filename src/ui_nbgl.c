@@ -370,34 +370,8 @@ static void display_address_callback(void)
 
 static void trigger_callback(callback_t userAcceptCallback)
 {
-	// Hack to trigger a callback from NBGL while leaving the screen untouched
-	nbgl_layoutDescription_t layoutDescription;
-	nbgl_layout_t* layout = NULL;
-	nbgl_layoutCenteredInfo_t centeredInfo = {
-		.text1 = NULL,
-		.text2 = NULL,
-		.text3 = NULL,
-		.style = 0,
-		.icon = NULL,
-		.offsetY = 0
-	};
-
-	release_context();
-
-	layoutDescription.modal = false;
-	layoutDescription.withLeftBorder = true;
-
-	layoutDescription.onActionCallback = NULL;
-	layoutDescription.tapActionText = "";
-	layoutDescription.tapActionToken = 0;
-	layoutDescription.tapTuneId = TUNE_TAP_CASUAL;
-
-	layoutDescription.ticker.tickerCallback = userAcceptCallback;
-	layoutDescription.ticker.tickerIntervale = 0;
-	layoutDescription.ticker.tickerValue = 100;
-	pageContext = nbgl_layoutGet(&layoutDescription);
-
-	nbgl_layoutAddCenteredInfo(layout, &centeredInfo);
+	set_app_callback(userAcceptCallback);
+	nbgl_useCaseSpinner("Processing");
 }
 
 static void handle_pending_element(void)
