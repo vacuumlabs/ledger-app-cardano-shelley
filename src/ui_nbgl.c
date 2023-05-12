@@ -143,8 +143,6 @@ static void display_callback(int token, unsigned char index)
 	(void)index;
 	callback_t callback;
 
-	release_context();
-
 	switch (token) {
 	case CANCEL_PROMPT_TOKEN:
 		display_cancel();

@@ -93,7 +93,6 @@ static void ui_menu_settings(void)
 
 void ui_idle_flow(void)
 {
-	TRACE("RESETTING\n\n");
 	// We need to make sure the ui context is reset even if the app restarts
 	nbgl_reset_transaction_full_context();
 	nbgl_useCaseHome("Cardano", &C_cardano_64, NULL, true,
