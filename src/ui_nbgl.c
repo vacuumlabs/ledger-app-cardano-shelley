@@ -85,6 +85,12 @@ static inline uint16_t get_element_line_count(const char* line)
 	return nbLines + 1; // For title
 }
 
+static void ui_callback(void)
+{
+	nbgl_useCaseSpinner("Processing");
+	uiContext.approvedCallback();
+}
+
 static void set_callbacks(callback_t approvedCallback, callback_t rejectedCallback)
 {
 	uiContext.approvedCallback = approvedCallback;
@@ -150,7 +156,7 @@ static void display_callback(int token, unsigned char index)
 			callback = uiContext.pendingDisplayPageFn;
 			uiContext.pendingDisplayPageFn = NULL;
 		} else {
-			callback = uiContext.approvedCallback;
+			callback = ui_callback;
 		}
 		callback();
 		break;
@@ -193,7 +199,7 @@ static void _display_confirmation(void)
 
 	#ifdef HEADLESS
 	nbgl_refresh();
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -214,7 +220,7 @@ static void _display_light_confirmation(void)
 	                   "Confirm", "Reject Transaction", light_confirm_callback);
 
 	#ifdef HEADLESS
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -282,7 +288,7 @@ static void _display_page(void)
 
 	#ifdef HEADLESS
 	nbgl_refresh();
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -291,11 +297,11 @@ static void _display_prompt(void)
 	TRACE("_prompt");
 
 	nbgl_useCaseReviewStart(&C_cardano_64, uiContext.pageText[0],
-	                        uiContext.approvedCallback, &display_cancel);
 	                        uiContext.pageText[1], "Reject transaction",
+	                        ui_callback, &display_cancel);
 	#ifdef HEADLESS
 	nbgl_refresh();
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -305,10 +311,10 @@ static void _display_warning(void)
 
 	nbgl_useCaseReviewStart(&C_warning64px, "WARNING",
 	                        uiContext.pageText[0], "Reject if not sure",
-	                        uiContext.approvedCallback, &display_cancel);
+	                        ui_callback, &display_cancel);
 	#ifdef HEADLESS
 	nbgl_refresh();
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -325,7 +331,7 @@ static void confirmation_status_callback(void)
 static void display_confirmation_status(void)
 {
 	if (uiContext.approvedCallback) {
-		uiContext.approvedCallback();
+		ui_callback();
 	}
 
 	if (!uiContext.no_approved_status) {
