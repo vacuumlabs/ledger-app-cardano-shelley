@@ -35,35 +35,35 @@ static const char* _newTxLine1(sign_tx_signingmode_t txSigningMode)
 		#ifdef HAVE_BAGL
 		return "New ordinary";
 		#elif defined(HAVE_NBGL)
-		return "New ordinary\ntransaction";
+		return "Review transaction";
 		#endif // HAVE_BAGL
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		#ifdef HAVE_BAGL
 		return "New pool owner";
 		#elif defined(HAVE_NBGL)
-		return "New pool owner\ntransaction";
+		return "Review pool owner\ntransaction";
 		#endif // HAVE_BAGL
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		#ifdef HAVE_BAGL
 		return "New pool operator";
 		#elif defined(HAVE_NBGL)
-		return "New pool operator\ntransaction";
+		return "Review pool operator\ntransaction";
 		#endif // HAVE_BAGL
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		#ifdef HAVE_BAGL
 		return "New multisig";
 		#elif defined(HAVE_NBGL)
-		return "New multisig\ntransaction";
+		return "Review multisig\ntransaction";
 		#endif // HAVE_BAGL
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		#ifdef HAVE_BAGL
 		return "New Plutus";
 		#elif defined(HAVE_NBGL)
-		return "New Plutus\ntransaction";
+		return "Review Plutus\ntransaction";
 		#endif // HAVE_BAGL
 
 	default:
@@ -302,7 +302,7 @@ void signTx_handleFee_ui_runStep()
 		#elif defined(HAVE_NBGL)
 		char adaAmountStr[50] = {0};
 		ui_getAdaAmountScreen(adaAmountStr, SIZEOF(adaAmountStr), BODY_CTX->stageData.fee);
-		fill_and_display_if_required("Transaction fee", adaAmountStr, this_fn, respond_with_user_reject);
+		fill_and_display_if_required("Fees", adaAmountStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_FEE_STEP_RESPOND) {

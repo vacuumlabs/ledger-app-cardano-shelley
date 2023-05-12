@@ -50,8 +50,8 @@ static void exit(void)
 static bool settings_navigation_callback(uint8_t page, nbgl_pageContent_t* content)
 {
 	if (page == 0) {
-		switches[0].text = "Enable expert mode";
-		switches[0].subText = "Select application mode";
+		switches[0].text = "Expert mode";
+		switches[0].subText = "Enable expert mode";
 		switches[0].token = SWITCH_APP_MODE_TOKEN;
 		switches[0].tuneId = TUNE_TAP_CASUAL;
 		switches[0].initState = app_mode_expert();

@@ -171,7 +171,7 @@ static void _display_confirmation(void)
 		.progressIndicator = true,
 		.navWithTap.backButton = false,
 		.navWithTap.nextPageText = NULL,
-		.navWithTap.quitText = "Reject",
+		.navWithTap.quitText = "Reject transaction",
 		.quitToken = CANCEL_PROMPT_TOKEN,
 		.tuneId = TUNE_TAP_CASUAL
 	};
@@ -180,7 +180,7 @@ static void _display_confirmation(void)
 		.type = INFO_LONG_PRESS,
 		.infoLongPress.icon = &C_cardano_64,
 		.infoLongPress.text = uiContext.pageText[0],
-		.infoLongPress.longPressText = "Hold to approve",
+		.infoLongPress.longPressText = "Hold to sign",
 		.infoLongPress.longPressToken = CONFIRMATION_STATUS_TOKEN,
 		.infoLongPress.tuneId = TUNE_TAP_NEXT
 	};
@@ -207,7 +207,7 @@ static void _display_light_confirmation(void)
 	TRACE("_light_confirmation");
 
 	nbgl_useCaseChoice(&C_cardano_64, uiContext.pageText[0], "",
-	                   "Confirm", "Cancel", light_confirm_callback);
+	                   "Confirm", "Reject Transaction", light_confirm_callback);
 
 	#ifdef HEADLESS
 	trigger_callback(uiContext.approvedCallback);
@@ -220,7 +220,7 @@ static void display_cancel(void)
 		display_cancel_status();
 	} else {
 		nbgl_useCaseConfirm("Reject ?", NULL, "Yes, Reject",
-		                    "Go back", display_cancel_status);
+		                    "Go back to transaction", display_cancel_status);
 	}
 }
 
@@ -262,7 +262,7 @@ static void _display_page(void)
 		.navWithTap.backButton = false,
 		.navWithTap.nextPageText = "Tap to continue",
 		.navWithTap.nextPageToken = ACCEPT_PAGE_TOKEN,
-		.navWithTap.quitText = "Cancel",
+		.navWithTap.quitText = "Reject transaction",
 		.quitToken = CANCEL_PROMPT_TOKEN,
 		.tuneId = TUNE_TAP_CASUAL
 	};
@@ -287,8 +287,8 @@ static void _display_prompt(void)
 	TRACE("_prompt");
 
 	nbgl_useCaseReviewStart(&C_cardano_64, uiContext.pageText[0],
-	                        uiContext.pageText[1], "Reject if not sure",
 	                        uiContext.approvedCallback, &display_cancel);
+	                        uiContext.pageText[1], "Reject transaction",
 	#ifdef HEADLESS
 	nbgl_refresh();
 	trigger_callback(uiContext.approvedCallback);
@@ -338,7 +338,7 @@ static void display_address_callback(void)
 	uiContext.pairList.pairs = tagValues;
 
 	uiContext.confirmedStatus = "ADDRESS\nVERIFIED";
-	uiContext.rejectedStatus = "Address rejected";
+	uiContext.rejectedStatus = "Address verification\ncancelled";
 
 	for (uint8_t i = 0; i < uiContext.currentElementCount; i++) {
 		if (strcmp(uiContext.tagTitle[i], "Address")) {
