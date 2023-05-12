@@ -345,7 +345,7 @@ static void confirmation_status_callback(void)
 	if (uiContext.confirmedStatus) {
 		nbgl_useCaseStatus(uiContext.confirmedStatus, true, ui_idle_flow);
 	} else {
-		nbgl_useCaseStatus("ACTION\nCONFIRMED", true, ui_idle_flow);
+		nbgl_useCaseSpinner("Processing");
 	}
 
 }
@@ -542,6 +542,7 @@ void display_choice(const char* text1, const char* text2, callback_t userAcceptC
 void display_address(callback_t userAcceptCallback, callback_t userRejectCallback)
 {
 	TRACE("Displaying Address");
+	uiContext.rejectedStatus = "Address verification\ncancelled";
 
 	set_callbacks(userAcceptCallback, userRejectCallback);
 	nbgl_useCaseReviewStart(&C_cardano_64, "Verify Cardano\naddress",
@@ -561,4 +562,8 @@ void display_error(void)
 	nbgl_useCaseStatus("An error has occurred", false, ui_idle_flow);
 }
 
+void display_status(const char* text)
+{
+	nbgl_useCaseStatus(text, true, ui_idle_flow);
+}
 #endif // HAVE_NBGL

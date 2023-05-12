@@ -832,8 +832,7 @@ void signTx_handleConfirm_ui_runStep()
 		        respond_with_user_reject
 		);
 		#elif defined(HAVE_NBGL)
-		// we can't say that the tx is signed because the witnesses have not been processed yet
-		display_confirmation("Sign\ntransaction", "", "TRANSACTION\nCONFIRMED", "Transaction\nrejected", this_fn, respond_with_user_reject);
+		display_confirmation("Sign\ntransaction", "", NULL, "Transaction\nrejected", this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
@@ -895,7 +894,7 @@ void signTx_handleWitness_ui_runStep()
 		        _wipeWitnessSignature
 		);
 		#elif defined(HAVE_NBGL)
-		display_confirmation("Sign using witness", "", "SIGNATURE\nCONFIRMED", "Signature\nrejected", this_fn, _wipeWitnessSignature);
+		display_confirmation("Sign using witness", "", NULL, "Signature\nrejected", this_fn, _wipeWitnessSignature);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_RESPOND) {
@@ -912,4 +911,11 @@ void signTx_handleWitness_ui_runStep()
 		}
 	}
 	UI_STEP_END(HANDLE_WITNESS_STEP_INVALID);
+}
+
+void endTxStatus(void)
+{
+	#ifdef HAVE_NBGL
+	display_status("TRANSACTION\nCONFIRMED");
+	#endif // HAVE_NBGL
 }

@@ -160,4 +160,5 @@ enum {
 };
 
 void signTx_handleWitness_ui_runStep();
+void endTxStatus(void);
 #endif // H_CARDANO_APP_SIGN_TX_UI

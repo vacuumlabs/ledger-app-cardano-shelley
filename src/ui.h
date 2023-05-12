@@ -17,6 +17,8 @@ void display_confirmation_no_approved_status(const char* text1, const char* text
 void display_page(callback_t user_accept_cb, callback_t user_reject_cb);
 void display_prompt(const char* text1, const char* text2, callback_t user_accept_cb, callback_t user_reject_cb);
 void display_warning(const char* text, callback_t user_accept_cb, callback_t user_reject_cb);
+void display_choice(const char* text1, const char* text2, callback_t userAcceptCallback, callback_t userRejectCallback);
+void display_status(const char* text);
 void ui_idle(void);
 void ui_idle_flow(void);
 void display_cancel_message(void);
