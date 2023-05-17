@@ -19,7 +19,7 @@ The key derivation scheme for pool cold keys used by a pool operator is describe
 
 - Pool id must be given by cold key derivation path.
 
-- Pool owners must be given by hash (of the staking key).
+- Pool owners must be given by hash (of the stake key).
 
 ## Signing mode for pool owner
 
@@ -27,7 +27,7 @@ The key derivation scheme for pool cold keys used by a pool operator is describe
 
 - Transaction outputs must be given by addresses (not address params) and are not shown to the user (because he is not funding the transaction). The fee is not shown either.
 
-- Only a single witness is allowed (the key derivation path is the standard staking key path of the owner). 
+- Only a single witness is allowed (the key derivation path is the standard stake key path of the owner). 
 
 - It is necessary to include exactly one pool owner given by path in the certificate; all the other owners must be given by their respective key hashes.
 
@@ -113,7 +113,7 @@ P2 = `0x34`
 |Field| Length | Comments|
 |-----|--------|---------|
 |key reference type    |  1       | `KEY_REFERENCE_PATH=0x01` |
-|staking key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
+|stake key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 
 |Field| Length | Comments|
 |-----|--------|---------|
@@ -129,12 +129,12 @@ P2 = `0x35`
 |Field| Length | Comments|
 |-----|--------|---------|
 |key reference type    |  1       | `KEY_REFERENCE_PATH=0x01` |
-|staking key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
+|stake key path      | variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 
 |Field| Length | Comments|
 |-----|--------|---------|
 |key reference type |   1 | `KEY_REFERENCE_HASH=0x02` |
-|staking key hash   |  28 | |
+|stake key hash   |  28 | |
 
 ---
 

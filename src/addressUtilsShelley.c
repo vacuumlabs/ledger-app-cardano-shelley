@@ -218,8 +218,8 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 		ASSERT(false);
 	}
 
-	STATIC_ASSERT(SIZEOF(addressParams->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "bad staking key hash size");
-	STATIC_ASSERT(SIZEOF(addressParams->stakingScriptHash) == SCRIPT_HASH_LENGTH, "bad staking script hash size");
+	STATIC_ASSERT(SIZEOF(addressParams->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "bad stake key hash size");
+	STATIC_ASSERT(SIZEOF(addressParams->stakingScriptHash) == SCRIPT_HASH_LENGTH, "bad stake script hash size");
 	switch (addressParams->stakingDataSource) {
 	case STAKING_KEY_PATH: {
 		view_appendAddressPublicKeyHash(&out, &addressParams->stakingKeyPath);
@@ -370,7 +370,7 @@ static size_t deriveAddress_reward(
 	{
 		if (addressType == REWARD_KEY) {
 			const bip44_path_t* stakingKeyPath = &addressParams->stakingKeyPath;
-			// staking key path expected (corresponds to reward account)
+			// stake key path expected (corresponds to reward account)
 			BIP44_PRINTF(stakingKeyPath);
 			PRINTF("\n");
 			ASSERT(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
@@ -542,7 +542,7 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
  *     if STAKING_KEY_PATH:
  *         staking public key derivation path (1B for length + [0-10] x 4B)
  *     if STAKING_KEY_HASH:
- *         staking key hash 28B
+ *         stake key hash 28B
  *     if BLOCKCHAIN_POINTER:
  *         certificate blockchain pointer 3 x 4B
  *
@@ -617,7 +617,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case STAKING_KEY_HASH: {
 		STATIC_ASSERT(SIZEOF(params->stakingKeyHash) == ADDRESS_KEY_HASH_LENGTH, "Wrong address key hash length");
 		view_parseBuffer(params->stakingKeyHash, view, ADDRESS_KEY_HASH_LENGTH);
-		TRACE("Staking key hash: ");
+		TRACE("Stake key hash: ");
 		TRACE_BUFFER(params->stakingKeyHash, SIZEOF(params->stakingKeyHash));
 		break;
 	}
@@ -625,7 +625,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case STAKING_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(params->stakingScriptHash) == SCRIPT_HASH_LENGTH, "Wrong script hash length");
 		view_parseBuffer(params->stakingScriptHash, view, SCRIPT_HASH_LENGTH);
-		TRACE("Staking script hash: ");
+		TRACE("Stake script hash: ");
 		TRACE_BUFFER(params->stakingScriptHash, SIZEOF(params->stakingScriptHash));
 		break;
 	}
@@ -634,7 +634,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 		params->stakingKeyBlockchainPointer.blockIndex = parse_u4be(view);
 		params->stakingKeyBlockchainPointer.txIndex = parse_u4be(view);
 		params->stakingKeyBlockchainPointer.certificateIndex = parse_u4be(view);
-		TRACE("Staking pointer: [%d, %d, %d]\n",
+		TRACE("Stake key pointer: [%d, %d, %d]\n",
 		      params->stakingKeyBlockchainPointer.blockIndex,
 		      params->stakingKeyBlockchainPointer.txIndex,
 		      params->stakingKeyBlockchainPointer.certificateIndex

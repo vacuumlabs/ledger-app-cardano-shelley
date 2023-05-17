@@ -255,4 +255,6 @@ static inline bool signTx_parseIncluded(uint8_t value)
 // advances the stage of the main state machine
 void tx_advanceStage(void);
 
+void tx_advanceCertificatesStateIfAppropriate();
+
 #endif // H_CARDANO_APP_SIGN_TX

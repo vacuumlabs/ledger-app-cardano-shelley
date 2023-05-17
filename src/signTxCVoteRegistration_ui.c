@@ -144,7 +144,7 @@ void signTxCVoteRegistration_handleDelegation_ui_runStep()
 	UI_STEP_END(HANDLE_DELEGATION_STEP_INVALID);
 }
 
-// ============================== STAKING KEY ==============================
+// ============================== STAKE KEY ==============================
 
 #ifdef HAVE_NBGL
 static void signTxCVoteRegistration_handleStakingKey_ui_cb(void)
@@ -185,7 +185,7 @@ void signTxCVoteRegistration_handleStakingKey_ui_runStep()
 		if (showAccountDescription) {
 			char line1[30];
 			char line2[30];
-			ui_getAccountScreeen(
+			ui_getAccountScreen(
 			        line1,
 			        SIZEOF(line1),
 			        line2,
@@ -364,7 +364,7 @@ void signTxCVoteRegistration_handleConfirm_ui_runStep()
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
-		char bufferHex[2 * 32 + 1] = {0};
+		char bufferHex[2 * AUX_DATA_HASH_LENGTH + 1] = {0};
 		ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), subctx->auxDataHash, SIZEOF(subctx->auxDataHash));
 		fill_and_display_if_required("Auxiliary data hash", bufferHex, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL

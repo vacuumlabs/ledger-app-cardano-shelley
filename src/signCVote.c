@@ -37,11 +37,10 @@ void vote_advanceStage()
 	case VOTECAST_STAGE_NONE:
 		// vote_advanceStage() not supposed to be called after votecast processing is finished
 		ASSERT(false);
+		break;
 
-		__attribute__((fallthrough));
 	default:
 		ASSERT(false);
-
 	}
 
 	TRACE("Advancing cip36 voting stage to: %d", ctx->stage);

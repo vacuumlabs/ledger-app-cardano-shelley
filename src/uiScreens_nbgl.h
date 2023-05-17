@@ -55,7 +55,7 @@ void ui_getAddressScreen(
 );
 
 __noinline_due_to_stack__
-void ui_getAccountScreeen(
+void ui_getAccountScreen(
         char* line1,
         const size_t line1Size,
         char* line2,

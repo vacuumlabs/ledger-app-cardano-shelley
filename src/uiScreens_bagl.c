@@ -213,7 +213,7 @@ void ui_displayStakingKeyScreen(
 	bool showAccountDescription = bip44_isPathReasonable(stakingPath);
 
 	_ui_displayAccountWithDescriptionScreen(
-	        "Staking key",
+	        "Stake key",
 	        stakingPath,
 	        showAccountDescription,
 	        callback
@@ -249,7 +249,7 @@ void ui_displayAddressScreen(
 	);
 }
 
-// display bech32-encoded reward account preceded by staking key derivation path (if given)
+// display bech32-encoded reward account preceded by stake key derivation path (if given)
 static void _displayRewardAccountWithDescriptionScreen(
         const key_reference_type_t keyReferenceType,
         const bip44_path_t* path,
@@ -398,10 +398,10 @@ void ui_displaySpendingInfoScreen(
 	}
 }
 
-static const char STAKING_HEADING_PATH[]        = "Staking key path";
-static const char STAKING_HEADING_KEY_HASH[]    = "Staking key hash";
-static const char STAKING_HEADING_SCRIPT_HASH[] = "Staking script hash";
-static const char STAKING_HEADING_POINTER[]     = "Staking key pointer";
+static const char STAKING_HEADING_PATH[]        = "Stake key path";
+static const char STAKING_HEADING_KEY_HASH[]    = "Stake key hash";
+static const char STAKING_HEADING_SCRIPT_HASH[] = "Stake script hash";
+static const char STAKING_HEADING_POINTER[]     = "Stake key pointer";
 static const char STAKING_HEADING_WARNING[]     = "WARNING:";
 
 void ui_displayStakingInfoScreen(

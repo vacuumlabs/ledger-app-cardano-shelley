@@ -32,4 +32,6 @@ typedef struct {
 handler_fn_t getPublicKeys_handleAPDU;
 
 void runGetOnePublicKeyUIFlow();
+void keys_advanceStage();
+
 #endif // H_CARDANO_APP_GET_PUBLIC_KEYS

@@ -764,7 +764,7 @@ static uint32_t getStakeCredentialSource(const stake_credential_type_t stakeCred
 	}
 }
 
-// staking key certificate registration or deregistration
+// stake key certificate registration or deregistration
 void txHashBuilder_addCertificate_stakingHash(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,

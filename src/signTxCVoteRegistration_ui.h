@@ -30,7 +30,7 @@ enum {
 
 void signTxCVoteRegistration_handleDelegation_ui_runStep();
 
-// ============================== STAKING KEY ==============================
+// ============================== STAKE KEY ==============================
 
 enum {
 	HANDLE_STAKING_KEY_STEP_WARNING = 8400,

@@ -117,7 +117,11 @@ void signTx_handleOutput_addressParams_ui_runStep()
 		ui_displayPaginatedText(subctx->ui_text1, subctx->ui_text2, this_fn);
 		#elif defined(HAVE_NBGL)
 		set_light_confirmation(true);
-		display_prompt("Change output", "", this_fn, respond_with_user_reject);
+		// the ui msg depends on whether we are processing ordinary or collateral output
+		char msg[100] = {0};
+		snprintf(msg, SIZEOF(msg), "%s\n%s", subctx->ui_text1, subctx->ui_text2);
+		ASSERT(strlen(msg) + 1 < SIZEOF(msg));
+		display_prompt(msg, "", this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
@@ -161,7 +165,7 @@ void signTx_handleOutput_addressParams_ui_runStep()
 		        addressBuffer,
 		        addressSize
 		);
-		fill_and_display_if_required("Address", humanAddress, this_fn, respond_with_user_reject);
+		fill_and_display_if_required(subctx->ui_text3, humanAddress, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_AMOUNT) {
@@ -440,7 +444,11 @@ void signTxOutput_handleConfirm_ui_runStep()
 		);
 		#elif defined(HAVE_NBGL)
 		set_light_confirmation(true);
-		display_confirmation("Confirm output", "",  "OUTPUT\nCONFIRMED", "Output\nrejected", this_fn, respond_with_user_reject);
+		// the ui msg depends on whether we are processing ordinary or collateral output
+		char msg[100] = {0};
+		snprintf(msg, SIZEOF(msg), "%s\n%s", subctx->ui_text1, subctx->ui_text2);
+		ASSERT(strlen(msg) + 1 < SIZEOF(msg));
+		display_confirmation(msg, "",  "OUTPUT\nCONFIRMED", "Output\nrejected", this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {

@@ -370,7 +370,7 @@ static void signTxCVoteRegistration_handleDelegationAPDU(const uint8_t* wireData
 	signTxCVoteRegistration_handleDelegation_ui_runStep();
 }
 
-// ============================== STAKING KEY ==============================
+// ============================== STAKE KEY ==============================
 
 __noinline_due_to_stack__
 static void signTxCVoteRegistration_handleStakingKeyAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)

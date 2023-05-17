@@ -9,7 +9,7 @@
 
 // helper functions
 
-// staking key path has the same account as the spending key path
+// stake key path has the same account as the spending key path
 static inline bool is_standard_base_address(const addressParams_t* addressParams)
 {
 	ASSERT(isValidAddressParams(addressParams));
@@ -373,7 +373,7 @@ security_policy_t policyForSignTxInit(
 
 		// witnesses for owners and withdrawals are the same
 		// we forbid withdrawals so that users cannot be tricked into witnessing
-		// something unintentionally (e.g. an owner given by the staking key hash)
+		// something unintentionally (e.g. an owner given by the stake key hash)
 		DENY_UNLESS(numWithdrawals == 0);
 
 		// mint must not be combined with pool registration certificates
@@ -1003,7 +1003,7 @@ security_policy_t policyForSignTxCertificate(
 	DENY(); // should not be reached
 }
 
-// for certificates concerning staking keys and stake delegation
+// for certificates concerning stake keys and stake delegation
 security_policy_t policyForSignTxCertificateStaking(
         sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType,

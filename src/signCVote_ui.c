@@ -44,7 +44,7 @@ void handleInit_ui_runStep()
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
-		char bufferHex[2 * 32 + 1] = {0};
+		char bufferHex[2 * VOTE_PLAN_ID_SIZE + 1] = {0};
 		ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), ctx->votePlanId, SIZEOF(ctx->votePlanId));
 		fill_and_display_if_required("Vote plan id", bufferHex, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
