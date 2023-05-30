@@ -22,7 +22,6 @@
 #include "uiScreens_nbgl.h"
 
 #define MAX_LINE_PER_PAGE_COUNT NB_MAX_LINES_IN_REVIEW
-#define MAX_TAG_CONTENT_CHAR_PER_LINE 18
 #define MAX_TAG_TITLE_LINE_LENGTH 30
 #define MAX_TAG_CONTENT_LENGTH 200
 #define MAX_TEXT_STRING 50
@@ -76,9 +75,20 @@ static void release_context(void)
 	}
 }
 
-static inline uint8_t get_element_line_count(const char* line)
+static inline uint16_t get_element_line_count(const char* line)
 {
-	return strlen(line) / MAX_TAG_CONTENT_CHAR_PER_LINE + 2;
+	uint16_t nbLines = nbgl_getTextNbLinesInWidth(BAGL_FONT_INTER_MEDIUM_32px,
+	                   line,
+	                   SCREEN_WIDTH - 2 * BORDER_MARGIN,
+	                   false);
+
+	return nbLines + 1; // For title
+}
+
+static void ui_callback(void)
+{
+	nbgl_useCaseSpinner("Processing");
+	uiContext.approvedCallback();
 }
 
 static void set_callbacks(callback_t approvedCallback, callback_t rejectedCallback)
@@ -133,8 +143,6 @@ static void display_callback(int token, unsigned char index)
 	(void)index;
 	callback_t callback;
 
-	release_context();
-
 	switch (token) {
 	case CANCEL_PROMPT_TOKEN:
 		display_cancel();
@@ -146,7 +154,7 @@ static void display_callback(int token, unsigned char index)
 			callback = uiContext.pendingDisplayPageFn;
 			uiContext.pendingDisplayPageFn = NULL;
 		} else {
-			callback = uiContext.approvedCallback;
+			callback = ui_callback;
 		}
 		callback();
 		break;
@@ -171,7 +179,7 @@ static void _display_confirmation(void)
 		.progressIndicator = true,
 		.navWithTap.backButton = false,
 		.navWithTap.nextPageText = NULL,
-		.navWithTap.quitText = "Reject",
+		.navWithTap.quitText = "Reject transaction",
 		.quitToken = CANCEL_PROMPT_TOKEN,
 		.tuneId = TUNE_TAP_CASUAL
 	};
@@ -180,7 +188,7 @@ static void _display_confirmation(void)
 		.type = INFO_LONG_PRESS,
 		.infoLongPress.icon = &C_cardano_64,
 		.infoLongPress.text = uiContext.pageText[0],
-		.infoLongPress.longPressText = "Hold to approve",
+		.infoLongPress.longPressText = "Hold to sign",
 		.infoLongPress.longPressToken = CONFIRMATION_STATUS_TOKEN,
 		.infoLongPress.tuneId = TUNE_TAP_NEXT
 	};
@@ -189,7 +197,7 @@ static void _display_confirmation(void)
 
 	#ifdef HEADLESS
 	nbgl_refresh();
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -207,10 +215,10 @@ static void _display_light_confirmation(void)
 	TRACE("_light_confirmation");
 
 	nbgl_useCaseChoice(&C_cardano_64, uiContext.pageText[0], "",
-	                   "Confirm", "Cancel", light_confirm_callback);
+	                   "Confirm", "Reject Transaction", light_confirm_callback);
 
 	#ifdef HEADLESS
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -220,7 +228,7 @@ static void display_cancel(void)
 		display_cancel_status();
 	} else {
 		nbgl_useCaseConfirm("Reject ?", NULL, "Yes, Reject",
-		                    "Go back", display_cancel_status);
+		                    "Go back to transaction", display_cancel_status);
 	}
 }
 
@@ -262,7 +270,7 @@ static void _display_page(void)
 		.navWithTap.backButton = false,
 		.navWithTap.nextPageText = "Tap to continue",
 		.navWithTap.nextPageToken = ACCEPT_PAGE_TOKEN,
-		.navWithTap.quitText = "Cancel",
+		.navWithTap.quitText = "Reject transaction",
 		.quitToken = CANCEL_PROMPT_TOKEN,
 		.tuneId = TUNE_TAP_CASUAL
 	};
@@ -278,7 +286,7 @@ static void _display_page(void)
 
 	#ifdef HEADLESS
 	nbgl_refresh();
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -287,11 +295,11 @@ static void _display_prompt(void)
 	TRACE("_prompt");
 
 	nbgl_useCaseReviewStart(&C_cardano_64, uiContext.pageText[0],
-	                        uiContext.pageText[1], "Reject if not sure",
-	                        uiContext.approvedCallback, &display_cancel);
+	                        uiContext.pageText[1], "Reject transaction",
+	                        ui_callback, &display_cancel);
 	#ifdef HEADLESS
 	nbgl_refresh();
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -301,10 +309,32 @@ static void _display_warning(void)
 
 	nbgl_useCaseReviewStart(&C_warning64px, "WARNING",
 	                        uiContext.pageText[0], "Reject if not sure",
-	                        uiContext.approvedCallback, &display_cancel);
+	                        ui_callback, &display_cancel);
 	#ifdef HEADLESS
 	nbgl_refresh();
-	trigger_callback(uiContext.approvedCallback);
+	trigger_callback(ui_callback);
+	#endif
+}
+
+static void display_choice_callback(bool choice)
+{
+	if (choice) {
+		ui_callback();
+	} else {
+		display_cancel();
+	}
+}
+
+static void _display_choice(void)
+{
+	TRACE("_choice");
+
+	nbgl_useCaseChoice(&C_round_warning_64px, uiContext.pageText[0],
+	                   uiContext.pageText[1], "Allow", "Don't Allow",
+	                   display_choice_callback);
+	#ifdef HEADLESS
+	nbgl_refresh();
+	trigger_callback(ui_callback);
 	#endif
 }
 
@@ -313,7 +343,7 @@ static void confirmation_status_callback(void)
 	if (uiContext.confirmedStatus) {
 		nbgl_useCaseStatus(uiContext.confirmedStatus, true, ui_idle_flow);
 	} else {
-		nbgl_useCaseStatus("ACTION\nCONFIRMED", true, ui_idle_flow);
+		nbgl_useCaseSpinner("Processing");
 	}
 
 }
@@ -321,7 +351,7 @@ static void confirmation_status_callback(void)
 static void display_confirmation_status(void)
 {
 	if (uiContext.approvedCallback) {
-		uiContext.approvedCallback();
+		ui_callback();
 	}
 
 	if (!uiContext.no_approved_status) {
@@ -338,7 +368,7 @@ static void display_address_callback(void)
 	uiContext.pairList.pairs = tagValues;
 
 	uiContext.confirmedStatus = "ADDRESS\nVERIFIED";
-	uiContext.rejectedStatus = "Address rejected";
+	uiContext.rejectedStatus = "Address verification\ncancelled";
 
 	for (uint8_t i = 0; i < uiContext.currentElementCount; i++) {
 		if (strcmp(uiContext.tagTitle[i], "Address")) {
@@ -360,34 +390,8 @@ static void display_address_callback(void)
 
 static void trigger_callback(callback_t userAcceptCallback)
 {
-	// Hack to trigger a callback from NBGL while leaving the screen untouched
-	nbgl_layoutDescription_t layoutDescription;
-	nbgl_layout_t* layout = NULL;
-	nbgl_layoutCenteredInfo_t centeredInfo = {
-		.text1 = NULL,
-		.text2 = NULL,
-		.text3 = NULL,
-		.style = 0,
-		.icon = NULL,
-		.offsetY = 0
-	};
-
-	release_context();
-
-	layoutDescription.modal = false;
-	layoutDescription.withLeftBorder = true;
-
-	layoutDescription.onActionCallback = NULL;
-	layoutDescription.tapActionText = "";
-	layoutDescription.tapActionToken = 0;
-	layoutDescription.tapTuneId = TUNE_TAP_CASUAL;
-
-	layoutDescription.ticker.tickerCallback = userAcceptCallback;
-	layoutDescription.ticker.tickerIntervale = 0;
-	layoutDescription.ticker.tickerValue = 100;
-	pageContext = nbgl_layoutGet(&layoutDescription);
-
-	nbgl_layoutAddCenteredInfo(layout, &centeredInfo);
+	set_app_callback(userAcceptCallback);
+	nbgl_useCaseSpinner("Processing");
 }
 
 static void handle_pending_element(void)
@@ -522,9 +526,21 @@ void display_warning(const char* text, callback_t userAcceptCallback,
 	_display_page_or_call_function(&_display_warning);
 }
 
+void display_choice(const char* text1, const char* text2, callback_t userAcceptCallback,
+                  callback_t userRejectCallback)
+{
+	TRACE("Displaying choice");
+
+	set_callbacks(userAcceptCallback, userRejectCallback);
+	strncpy(uiContext.pageText[0], text1, MAX_TEXT_STRING);
+	strncpy(uiContext.pageText[1], text2, MAX_TEXT_STRING);
+	_display_page_or_call_function(&_display_choice);
+}
+
 void display_address(callback_t userAcceptCallback, callback_t userRejectCallback)
 {
 	TRACE("Displaying Address");
+	uiContext.rejectedStatus = "Address verification\ncancelled";
 
 	set_callbacks(userAcceptCallback, userRejectCallback);
 	nbgl_useCaseReviewStart(&C_cardano_64, "Verify Cardano\naddress",
@@ -544,4 +560,8 @@ void display_error(void)
 	nbgl_useCaseStatus("An error has occurred", false, ui_idle_flow);
 }
 
+void display_status(const char* text)
+{
+	nbgl_useCaseStatus(text, true, ui_idle_flow);
+}
 #endif // HAVE_NBGL

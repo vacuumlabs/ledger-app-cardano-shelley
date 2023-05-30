@@ -275,6 +275,7 @@ void tx_advanceStage()
 	case SIGN_STAGE_WITNESSES:
 		ctx->stage = SIGN_STAGE_NONE;
 		ui_idle(); // we are done with this tx
+		endTxStatus();
 		break;
 
 	case SIGN_STAGE_NONE:

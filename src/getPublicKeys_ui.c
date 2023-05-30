@@ -134,7 +134,7 @@ void getPublicKeys_handleInit_ui_runStep()
 		explicit_bzero(secondLine, SIZEOF(secondLine));
 		STATIC_ASSERT(sizeof(ctx->numPaths) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(ctx->numPaths), "signed type for %u");
-		snprintf(secondLine, SIZEOF(secondLine), "%u public keys?", ctx->numPaths);
+		snprintf(secondLine, SIZEOF(secondLine), "Allow the Cardano app to\nexport your %u public keys?", ctx->numPaths);
 		// make sure all the information is displayed to the user
 		ASSERT(strlen(secondLine) + 1 < SIZEOF(secondLine));
 
@@ -147,9 +147,8 @@ void getPublicKeys_handleInit_ui_runStep()
 		);
 
 		#elif defined(HAVE_NBGL)
-		set_light_confirmation(true);
-		display_prompt(
-		        "Review export",
+		display_choice(
+		        "Export Public key ?",
 		        secondLine,
 		        this_fn,
 		        respond_with_user_reject

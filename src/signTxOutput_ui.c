@@ -62,7 +62,7 @@ void signTx_handleOutput_address_bytes_ui_runStep()
 		        subctx->stateData.destination.address.buffer,
 		        subctx->stateData.destination.address.size
 		);
-		fill_and_display_if_required("Send to address", humanAddress, this_fn, respond_with_user_reject);
+		fill_and_display_if_required("To", humanAddress, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM) {
@@ -92,7 +92,7 @@ void signTx_handleOutput_address_bytes_ui_runStep()
 		#elif defined(HAVE_NBGL)
 		char adaAmountStr[50] = {0};
 		ui_getAdaAmountScreen(adaAmountStr, SIZEOF(adaAmountStr), subctx->stateData.adaAmount);
-		fill_and_display_if_required("Send", adaAmountStr, this_fn, respond_with_user_reject);
+		fill_and_display_if_required("Amount", adaAmountStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_RESPOND) {

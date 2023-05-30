@@ -50,8 +50,8 @@ static void exit(void)
 static bool settings_navigation_callback(uint8_t page, nbgl_pageContent_t* content)
 {
 	if (page == 0) {
-		switches[0].text = "Enable expert mode";
-		switches[0].subText = "Select application mode";
+		switches[0].text = "Expert mode";
+		switches[0].subText = "Enable expert mode";
 		switches[0].token = SWITCH_APP_MODE_TOKEN;
 		switches[0].tuneId = TUNE_TAP_CASUAL;
 		switches[0].initState = app_mode_expert();
@@ -93,7 +93,6 @@ static void ui_menu_settings(void)
 
 void ui_idle_flow(void)
 {
-	TRACE("RESETTING\n\n");
 	// We need to make sure the ui context is reset even if the app restarts
 	nbgl_reset_transaction_full_context();
 	nbgl_useCaseHome("Cardano", &C_cardano_64, NULL, true,

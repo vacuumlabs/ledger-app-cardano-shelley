@@ -1,7 +1,23 @@
 #include "io.h"
 #include "common.h"
+#include "ui.h"
 
 io_state_t io_state;
+
+#ifdef HAVE_NBGL
+static callback_t app_callback;
+static callback_t _callback;
+
+void set_app_callback(callback_t cb)
+{
+	app_callback = cb;
+}
+
+void reset_app_callback(void)
+{
+	app_callback = NULL;
+}
+#endif
 
 #if defined(TARGET_NANOS)
 static timeout_callback_fn_t* timeout_cb;
@@ -118,6 +134,14 @@ unsigned char io_event(unsigned char channel MARK_UNUSED)
 			TRACE("timer");
 			HANDLE_UX_TICKER_EVENT(UX_ALLOWED);
 		});
+		#ifdef HAVE_NBGL
+		if (app_callback) {
+			_callback = app_callback;
+			reset_app_callback();
+			_callback();
+		}
+		#endif
+
 		break;
 
 	default:
