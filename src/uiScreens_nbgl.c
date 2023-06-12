@@ -344,7 +344,7 @@ void ui_getSpendingInfoScreen(
 	switch (determineSpendingChoice(addressParams->type)) {
 
 	case SPENDING_PATH: {
-		snprintf(line1, line1Size, "Spending path");
+		snprintf(line1, line1Size, "Derivation path");
 		ui_getPathScreen(
 		        line2,
 		        line2Size,
@@ -372,7 +372,7 @@ void ui_getSpendingInfoScreen(
 	}
 }
 
-static const char STAKING_HEADING_PATH[]        = "Stake key path";
+static const char STAKING_HEADING_PATH[]        = "Staking path";
 static const char STAKING_HEADING_KEY_HASH[]    = "Stake key hash";
 static const char STAKING_HEADING_SCRIPT_HASH[] = "Stake script hash";
 static const char STAKING_HEADING_POINTER[]     = "Stake key pointer";
