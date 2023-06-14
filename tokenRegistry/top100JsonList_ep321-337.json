@@ -923,4 +923,10 @@
     "ticker": "C3",
     "decimals": 6
   },
+  {
+    "assetSubject": "f43a62fdc3965df486de8a0d32fe800963589c41b38946602a0dc53541474958",
+    "name": "SingularityNet AGIX Token",
+    "ticker": "AGIX",
+    "decimals": 8
+  }
 ]
