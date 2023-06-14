@@ -904,5 +904,11 @@
     "name": "CLAY",
     "ticker": "CLAY",
     "decimals": 4
+  },
+  {
+    "assetSubject": "5dac8536653edc12f6f5e1045d8164b9f59998d3bdc300fc928434894e4d4b52",
+    "name": "NMKR",
+    "ticker": "NMKR",
+    "decimals": 6
   }
 ]
