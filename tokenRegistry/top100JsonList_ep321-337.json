@@ -898,5 +898,11 @@
     "outUTXOs": 18339,
     "rank": 100,
     "comment": ""
+  },
+  {
+    "assetSubject": "38ad9dc3aec6a2f38e220142b9aa6ade63ebe71f65e7cc2b7d8a8535434c4159",
+    "name": "CLAY",
+    "ticker": "CLAY",
+    "decimals": 4
   }
 ]
