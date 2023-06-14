@@ -917,4 +917,10 @@
     "ticker": "WRT",
     "decimals": 6
   },
+  {
+    "assetSubject": "8e51398904a5d3fc129fbf4f1589701de23c7824d5c90fdb9490e15a434841524c4933",
+    "name": "CHARLI3",
+    "ticker": "C3",
+    "decimals": 6
+  },
 ]
