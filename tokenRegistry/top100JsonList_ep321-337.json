@@ -934,5 +934,11 @@
     "name": "Indigo DAO Token",
     "ticker": "INDY",
     "decimals": 6
+  },
+  {
+    "assetSubject": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61446a65644d6963726f555344",
+    "name": "Djed USD",
+    "ticker": "DJED",
+    "decimals": 6
   }
 ]
