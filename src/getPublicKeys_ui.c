@@ -107,7 +107,7 @@ void getPublicKeys_respondOneKey_ui_runStep()
 		if (ctx->currentPath == ctx->numPaths) {
 			#ifdef HAVE_NBGL
 			if (!ctx->silent_export) {
-				nbgl_useCaseStatus("PUBLIC KEY\nEXPORTED", true, ui_idle_flow);
+				display_status("PUBLIC KEY\nEXPORTED");
 			}
 			#endif // HAVE_NBGL
 			keys_advanceStage();

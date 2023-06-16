@@ -238,6 +238,7 @@ static void cancellation_status_callback(void)
 		uiContext.rejectedCallback();
 	}
 	ui_idle_flow();
+	nbgl_reset_transaction_full_context();
 }
 
 static void display_cancel_status(void)
@@ -342,6 +343,7 @@ static void confirmation_status_callback(void)
 {
 	if (uiContext.confirmedStatus) {
 		nbgl_useCaseStatus(uiContext.confirmedStatus, true, ui_idle_flow);
+		nbgl_reset_transaction_full_context();
 	} else {
 		nbgl_useCaseSpinner("Processing");
 	}
@@ -355,7 +357,7 @@ static void display_confirmation_status(void)
 	}
 
 	if (!uiContext.no_approved_status) {
-		trigger_callback(&confirmation_status_callback);
+		confirmation_status_callback();
 	}
 }
 
@@ -563,5 +565,6 @@ void display_error(void)
 void display_status(const char* text)
 {
 	nbgl_useCaseStatus(text, true, ui_idle_flow);
+	nbgl_reset_transaction_full_context();
 }
 #endif // HAVE_NBGL

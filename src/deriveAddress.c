@@ -175,24 +175,6 @@ static void deriveAddress_return_ui_runStep()
 
 /* ========================== DISPLAY ADDRESS ========================== */
 
-static void _displayVerifyAddressMsg(ui_callback_fn_t* this_fn)
-{
-	#ifdef HAVE_BAGL
-	ui_displayPaginatedText(
-	        "Verify address",
-	        "Make sure it agrees with your computer",
-	        this_fn
-	);
-	#elif defined(HAVE_NBGL)
-	set_light_confirmation(true);
-	display_warning(
-	        "Make sure address matches\nwith your computer",
-	        this_fn,
-	        respond_with_user_reject
-	);
-	#endif // HAVE_BAGL
-}
-
 static void _displaySpendingInfo_displayAddr(ui_callback_fn_t* this_fn)
 {
 	#ifdef HAVE_BAGL
@@ -259,7 +241,6 @@ static void _displayConfirmAddressPrompt(ui_callback_fn_t* this_fn)
 static void deriveAddress_display_ui_runStep();
 enum {
 	DISPLAY_UI_STEP_WARNING = 200,
-	DISPLAY_UI_STEP_INSTRUCTIONS,
 	DISPLAY_UI_STEP_SPENDING_INFO,
 	DISPLAY_UI_STEP_STAKING_INFO,
 	DISPLAY_UI_STEP_ADDRESS,
@@ -280,7 +261,7 @@ static void deriveAddress_handleDisplay()
 	switch (policy) {
 #define  CASE(policy, step) case policy: {ctx->ui_step=step; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,  DISPLAY_UI_STEP_WARNING);
-		CASE(POLICY_SHOW_BEFORE_RESPONSE, DISPLAY_UI_STEP_INSTRUCTIONS);
+		CASE(POLICY_SHOW_BEFORE_RESPONSE, DISPLAY_UI_STEP_SPENDING_INFO);
 #undef   CASE
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
@@ -297,9 +278,6 @@ static void deriveAddress_display_ui_runStep()
 
 	UI_STEP(DISPLAY_UI_STEP_WARNING) {
 		ui_displayUnusualWarning(this_fn);
-	}
-	UI_STEP(DISPLAY_UI_STEP_INSTRUCTIONS) {
-		_displayVerifyAddressMsg(this_fn);
 	}
 	UI_STEP(DISPLAY_UI_STEP_SPENDING_INFO) {
 		if (determineSpendingChoice(ctx->addressParams.type) == SPENDING_NONE) {
