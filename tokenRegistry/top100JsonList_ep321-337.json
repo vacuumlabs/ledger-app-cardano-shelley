@@ -522,15 +522,6 @@
     "comment": ""
   },
   {
-    "assetSubject": "14a3455f71c435a04ea1fdb50a3ef4c1cab0e79fb1565627ac66a57552415645",
-    "name": "Ravendex",
-    "ticker": "RAVE",
-    "decimals": 0,
-    "outUTXOs": 77688,
-    "rank": 62,
-    "comment": ""
-  },
-  {
     "assetSubject": "2b0a04a7b60132b1805b296c7fcb3b217ff14413991bf76f72663c3067696d62616c",
     "name": "gimbal",
     "ticker": "GMBL",
