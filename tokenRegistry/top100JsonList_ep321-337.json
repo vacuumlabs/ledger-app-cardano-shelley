@@ -477,15 +477,6 @@
     "comment": ""
   },
   {
-    "assetSubject": "df0172804f8418afc4e5b0a15b8fc78bdc3ca6d179405a7cd194f3b4464c49434b",
-    "name": "Flickto",
-    "ticker": "FLICK",
-    "decimals": 0,
-    "outUTXOs": 89392,
-    "rank": 56,
-    "comment": "no metadata-registry decimals entry, set to 0 because its optional"
-  },
-  {
     "assetSubject": "20cd68533b47565f3c61efb39c30fdace9963bfa4c0060b613448e3c50524f584945",
     "name": "PROXIE",
     "ticker": "PROXIE",
