@@ -603,15 +603,6 @@
     "comment": ""
   },
   {
-    "assetSubject": "57684adcb032c8dbc40179841bed987d8dee7472617a0e5c25ef414059617953776170",
-    "name": "YaySwap",
-    "ticker": "YAY",
-    "decimals": 0,
-    "outUTXOs": 40138,
-    "rank": 72,
-    "comment": "no metadata-registry decimals entry, set to 0 because its optional"
-  },
-  {
     "assetSubject": "c9f955eeffa84e42363b4992281d32dd2f9239153d6c66420a9acc154c4f47",
     "name": "Life Log Token",
     "ticker": "LOG",
