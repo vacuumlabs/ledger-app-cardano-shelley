@@ -468,15 +468,6 @@
     "comment": ""
   },
   {
-    "assetSubject": "ae2a0aa5a24b27d9868c4a73b7c08077ac21baade5eca0fa467a2bbd58524159",
-    "name": "XRAY",
-    "ticker": "XRAY",
-    "decimals": 0,
-    "outUTXOs": 102714,
-    "rank": 54,
-    "comment": "no metadata-registry decimals entry, set to 0 because its optional"
-  },
-  {
     "assetSubject": "0fd9819a9d7fb414880883f43a42d33458f12bc5f9841cec6457dc155669527553",
     "name": "Virus",
     "ticker": "virus",
