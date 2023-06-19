@@ -648,15 +648,6 @@
     "comment": ""
   },
   {
-    "assetSubject": "208a2ca888886921513cb777bb832a8dc685c04de990480151f1215053484942414441",
-    "name": "SHIBADA",
-    "ticker": "SHIBA",
-    "decimals": 0,
-    "outUTXOs": 32643,
-    "rank": 78,
-    "comment": "no metadata-registry decimals entry, set to 0 because its optional"
-  },
-  {
     "assetSubject": "c4c00fbd8fa227442a5e7cdecde33b24588494d05a2c50fda8938c6d4b49445a",
     "name": "Kidz Coin",
     "ticker": "KIDZ",
