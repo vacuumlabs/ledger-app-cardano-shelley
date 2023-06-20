@@ -16,6 +16,7 @@
 #*******************************************************************************
 
 APPNAME      = "Cardano ADA"
+
 APPVERSION_M = 6
 APPVERSION_N = 1
 APPVERSION_P = 2
@@ -62,8 +63,6 @@ endif
 DEFINES += HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 DEFINES += APPVERSION=\"$(APPVERSION)\"
 DEFINES += MAJOR_VERSION=$(APPVERSION_M) MINOR_VERSION=$(APPVERSION_N) PATCH_VERSION=$(APPVERSION_P)
-
-DEFINES   += UNUSED\(x\)=\(void\)x
 
 ## USB HID?
 DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
@@ -122,6 +121,29 @@ else
 	DEFINES += PRINTF\(...\)=
 endif
 
+# restricted features for Nano S
+# but not in DEVEL mode where we usually want to test all features with HEADLESS
+ifeq ($(TARGET_NAME), TARGET_NANOS)
+	ifneq ($(DEVEL), 1)
+		APP_XS = 1
+	endif
+else
+	APP_XS = 0
+endif
+
+ifeq ($(APP_XS), 1)
+	DEFINES += APP_XS
+else
+	# features not included in the Nano S app
+	DEFINES += APP_FEATURE_OPCERT
+	DEFINES += APP_FEATURE_NATIVE_SCRIPT_HASH
+	DEFINES += APP_FEATURE_POOL_REGISTRATION
+	DEFINES += APP_FEATURE_POOL_RETIREMENT
+	DEFINES += APP_FEATURE_BYRON_ADDRESS_DERIVATION
+	DEFINES += APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
+endif
+# always include this, it's important for Plutus users
+DEFINES += APP_FEATURE_TOKEN_MINTING
 
 ##################
 #  Dependencies  #
@@ -203,3 +225,19 @@ format:
 
 size: all
 	$(GCCPATH)arm-none-eabi-size --format=gnu bin/app.elf
+
+##############
+#   Device-specific builds
+##############
+
+nanos: clean
+	BOLOS_SDK=$(NANOS_SDK) make
+
+nanosp: clean
+	BOLOS_SDK=$(NANOSP_SDK) make
+
+nanox: clean
+	BOLOS_SDK=$(NANOX_SDK) make
+
+stax: clean
+	BOLOS_SDK=$(STAX_SDK) make

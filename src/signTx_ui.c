@@ -74,12 +74,17 @@ static const char* _newTxLine1(sign_tx_signingmode_t txSigningMode)
 #ifdef HAVE_NBGL
 static void signTx_handleInit_ui_runStep_cb(void)
 {
+	// if the protocol magic check is not enabled,
+	// displaying the protocol magic might be misleading,
+	// so we must not show it
+	#ifdef APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 	char networkParams[100] = {0};
 	ui_getNetworkParamsScreen_2(
 	        networkParams,
 	        SIZEOF(networkParams),
 	        ctx->commonTxData.protocolMagic);
 	fill_and_display_if_required("Protocol magic", networkParams, signTx_handleInit_ui_runStep, respond_with_user_reject);
+	#endif
 }
 #endif // HAVE_NBGL
 
@@ -118,7 +123,8 @@ void signTx_handleInit_ui_runStep()
 			#ifdef HAVE_BAGL
 			ui_displayNetworkParamsScreen(
 			        "Network details",
-			        ctx->commonTxData.networkId, ctx->commonTxData.protocolMagic,
+			        ctx->commonTxData.networkId,
+			        ctx->commonTxData.protocolMagic,
 			        this_fn
 			);
 			#elif defined(HAVE_NBGL)
@@ -518,6 +524,8 @@ void signTx_handleCertificate_ui_runStep()
 	UI_STEP_END(HANDLE_CERTIFICATE_STEP_INVALID);
 }
 
+#ifdef APP_FEATURE_POOL_RETIREMENT
+
 void signTx_handleCertificatePoolRetirement_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
@@ -578,6 +586,8 @@ void signTx_handleCertificatePoolRetirement_ui_runStep()
 	}
 	UI_STEP_END(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_INVALID);
 }
+
+#endif // APP_FEATURE_POOL_RETIREMENT
 
 // ============================== WITHDRAWALS ==============================
 

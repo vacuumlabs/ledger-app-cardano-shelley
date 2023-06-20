@@ -1,6 +1,8 @@
 #ifndef H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION
 #define H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION
 
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 #include "common.h"
 #include "cardano.h"
 #include "txHashBuilder.h"
@@ -82,5 +84,7 @@ bool signTxPoolRegistration_isValidInstruction(uint8_t p2);
 void signTxPoolRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
 bool signTxPoolRegistration_isFinished();
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 #endif // H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION
