@@ -1,6 +1,8 @@
 #ifndef H_CARDANO_APP_SIGN_TX_POOL_REGISATRATION_UI
 #define H_CARDANO_APP_SIGN_TX_POOL_REGISATRATION_UI
 
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 // ============================== INIT ==============================
 
 enum {
@@ -122,4 +124,7 @@ enum {
 };
 
 void signTxPoolRegistration_handleConfirm_ui_runStep();
+
+#endif // APP_FEATURE_POOL_REGISTRATION
+
 #endif // H_CARDANO_APP_SIGN_TX_POOL_REGISATRATION_UI

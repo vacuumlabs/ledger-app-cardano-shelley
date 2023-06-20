@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_NATIVE_SCRIPT_HASH
+
 #include "deriveNativeScriptHash.h"
 #include "deriveNativeScriptHash_ui.h"
 #include "state.h"
@@ -304,3 +306,5 @@ void deriveNativeScriptHash_handleAPDU(
 }
 
 #undef TRACE_WITH_CTX
+
+#endif // APP_FEATURE_NATIVE_SCRIPT_HASH

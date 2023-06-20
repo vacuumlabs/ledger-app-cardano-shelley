@@ -463,7 +463,7 @@ security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 
 static bool is_addressBytes_suitable_for_tx_output(
         const uint8_t* addressBuffer, size_t addressSize,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic __attribute__((unused))
 )
 {
 	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
@@ -482,7 +482,9 @@ static bool is_addressBytes_suitable_for_tx_output(
 			return false;
 
 		case BYRON:
+			#ifdef APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 			CHECK(extractProtocolMagic(addressBuffer, addressSize) == protocolMagic);
+			#endif // APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 			break;
 
 		default: {
@@ -1091,6 +1093,8 @@ security_policy_t policyForSignTxCertificateStaking(
 	DENY(); // should not be reached
 }
 
+#ifdef APP_FEATURE_POOL_RETIREMENT
+
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* poolIdPath,
@@ -1114,6 +1118,10 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 
 	DENY(); // should not be reached
 }
+
+#endif // APP_FEATURE_POOL_RETIREMENT
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 security_policy_t policyForSignTxStakePoolRegistrationInit(
         sign_tx_signingmode_t txSigningMode,
@@ -1284,6 +1292,8 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 
 	ALLOW();
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 // For each withdrawal
 security_policy_t policyForSignTxWithdrawal(
@@ -1461,6 +1471,8 @@ static inline security_policy_t _plutusWitnessPolicy(const bip44_path_t* path, b
 	}
 }
 
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* witnessPath, const bip44_path_t* poolOwnerPath)
 {
 	switch (bip44_classifyPath(witnessPath)) {
@@ -1504,6 +1516,8 @@ static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip
 	}
 }
 
+#endif // APP_FEATURE_POOL_REGISTRATION
+
 // For each transaction witness
 // Note: witnesses reveal public key of an address and Ledger *does not* check
 // whether they correspond to previously declared inputs and certificates
@@ -1511,7 +1525,7 @@ security_policy_t policyForSignTxWitness(
         sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* witnessPath,
         bool mintPresent,
-        const bip44_path_t* poolOwnerPath
+        const bip44_path_t* poolOwnerPath __attribute__((unused))
 )
 {
 	switch (txSigningMode) {
@@ -1524,11 +1538,15 @@ security_policy_t policyForSignTxWitness(
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		return _plutusWitnessPolicy(witnessPath, mintPresent);
 
+		#ifdef APP_FEATURE_POOL_REGISTRATION
+
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		return _poolRegistrationOwnerWitnessPolicy(witnessPath, poolOwnerPath);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		return _poolRegistrationOperatorWitnessPolicy(witnessPath);
+
+		#endif // APP_FEATURE_POOL_REGISTRATION
 
 	default:
 		ASSERT(false);
@@ -1853,6 +1871,7 @@ security_policy_t policyForCVoteRegistrationConfirm()
 	PROMPT();
 }
 
+#ifdef APP_FEATURE_OPCERT
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 {
 	switch (bip44_classifyPath(poolColdKeyPathSpec)) {
@@ -1872,6 +1891,7 @@ security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 
 	DENY(); // should not be reached
 }
+#endif // APP_FEATURE_OPCERT
 
 security_policy_t policyForSignCVoteInit()
 {

@@ -165,6 +165,8 @@ void ui_getPoolMarginScreen(
         uint64_t marginNumerator, uint64_t marginDenominator
 );
 
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 __noinline_due_to_stack__
 void ui_getPoolOwnerScreen(
         char* firstLine,
@@ -199,6 +201,8 @@ void ui_getIpPortScreen(
         char* portStr, const size_t portStrSize,
         const ipport_t* port
 );
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 __noinline_due_to_stack__
 void ui_getInputScreen(

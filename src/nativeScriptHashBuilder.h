@@ -1,6 +1,8 @@
 #ifndef H_CARDANO_APP_NATIVE_SCRIPT_HASH_BUILDER
 #define H_CARDANO_APP_NATIVE_SCRIPT_HASH_BUILDER
 
+#ifdef APP_FEATURE_NATIVE_SCRIPT_HASH
+
 #include "cardano.h"
 #include "hash.h"
 
@@ -58,5 +60,7 @@ void nativeScriptHashBuilder_finalize(
 /* #ifdef DEVEL */
 void run_nativeScriptHashBuilder_test();
 /* #endif // DEVEL */
+
+#endif // APP_FEATURE_NATIVE_SCRIPT_HASH
 
 #endif // H_CARDANO_APP_NATIVE_SCRIPT_HASH_BUILDER

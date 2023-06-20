@@ -1,4 +1,4 @@
-#ifdef DEVEL
+#if defined(DEVEL) && !defined(APP_XS)
 
 #include "txHashBuilder.h"
 #include "cardano.h"
