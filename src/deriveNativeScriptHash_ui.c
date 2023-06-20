@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_NATIVE_SCRIPT_HASH
+
 #include "deriveNativeScriptHash.h"
 #include "deriveNativeScriptHash_ui.h"
 #include "state.h"
@@ -338,3 +340,5 @@ void deriveNativeScriptHash_displayNativeScriptHash_policyId()
 	fill_and_display_if_required("Policy ID", bufferHex, deriveNativeScriptHash_displayNativeScriptHash_finish, respond_with_user_reject);
 	#endif // HAVE_BAGL
 }
+
+#endif // APP_FEATURE_NATIVE_SCRIPT_HASH

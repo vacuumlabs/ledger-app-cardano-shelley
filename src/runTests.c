@@ -50,7 +50,9 @@ void handleRunTests(
 		run_addressUtilsShelley_test();
 		run_txHashBuilder_test();
 		run_auxDataHashBuilder_test();
+		#if defined(APP_FEATURE_NATIVE_SCRIPT_HASH)
 		run_nativeScriptHashBuilder_test();
+		#endif
 		PRINTF("All tests done\n");
 
 	} END_ASSERT_NOEXCEPT;

@@ -41,6 +41,7 @@ DEFINES += APP_XS
 else
 # features not included in the Nano S app
 DEFINES += APP_FEATURE_OPCERT
+DEFINES += APP_FEATURE_NATIVE_SCRIPT_HASH
 endif
 
 ##############
