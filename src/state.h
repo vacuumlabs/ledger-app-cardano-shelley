@@ -16,7 +16,9 @@ typedef union {
 	ins_derive_address_context_t deriveAddressContext;
 	ins_derive_native_script_hash_context_t deriveNativeScriptHashContext;
 	ins_sign_tx_context_t signTxContext;
+	#ifdef APP_FEATURE_OPCERT
 	ins_sign_op_cert_context_t signOpCertContext;
+	#endif // APP_FEATURE_OPCERT
 	ins_sign_cvote_context_t signCVoteContext;
 } instructionState_t;
 

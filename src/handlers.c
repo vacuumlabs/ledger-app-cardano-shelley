@@ -33,7 +33,9 @@ handler_fn_t* lookupHandler(uint8_t ins)
 
 		// 0x2* -  signing related
 		CASE(0x21, signTx_handleAPDU);
+		#ifdef APP_FEATURE_OPCERT
 		CASE(0x22, signOpCert_handleAPDU);
+		#endif // APP_FEATURE_OPCERT
 		CASE(0x23, signCVote_handleAPDU);
 
 		#ifdef DEVEL

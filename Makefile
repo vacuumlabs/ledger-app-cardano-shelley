@@ -40,6 +40,7 @@ ifeq ($(TARGET_NAME),TARGET_NANOS)
 DEFINES += APP_XS
 else
 # features not included in the Nano S app
+DEFINES += APP_FEATURE_OPCERT
 endif
 
 ##############

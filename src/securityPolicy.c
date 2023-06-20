@@ -1853,6 +1853,7 @@ security_policy_t policyForCVoteRegistrationConfirm()
 	PROMPT();
 }
 
+#ifdef APP_FEATURE_OPCERT
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 {
 	switch (bip44_classifyPath(poolColdKeyPathSpec)) {
@@ -1872,6 +1873,7 @@ security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 
 	DENY(); // should not be reached
 }
+#endif // APP_FEATURE_OPCERT
 
 security_policy_t policyForSignCVoteInit()
 {
