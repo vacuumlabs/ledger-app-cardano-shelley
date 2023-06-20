@@ -16,6 +16,7 @@
 #*******************************************************************************
 
 APPNAME      = "Cardano ADA"
+
 APPVERSION_M = 6
 APPVERSION_N = 1
 APPVERSION_P = 2
@@ -33,6 +34,12 @@ else ifeq ($(TARGET_NAME),TARGET_STAX)
 	ICONNAME=icon_ada_stax.gif
 else
 	ICONNAME=icon_ada_nanox.gif
+endif
+
+ifeq ($(TARGET_NAME),TARGET_NANOS)
+DEFINES += APP_XS
+else
+# features not included in the Nano S app
 endif
 
 ##############
