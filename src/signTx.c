@@ -188,10 +188,14 @@ void tx_advanceStage()
 		}
 		ctx->stage = SIGN_STAGE_BODY_MINT;
 		if (ctx->includeMint) {
+			#ifdef APP_FEATURE_TOKEN_MINTING
 			txHashBuilder_enterMint(&BODY_CTX->txHashBuilder);
 			signTxMint_init();
 			// wait for mint APDU
 			break;
+			#else
+			ASSERT(false);
+			#endif // APP_FEATURE_TOKEN_MINTING
 		}
 
 		__attribute__((fallthrough));
@@ -367,6 +371,8 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
+		#ifdef APP_FEATURE_TOKEN_MINTING
+
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
 		if (signTxMint_isFinished()) {
 			TRACE();
@@ -375,6 +381,8 @@ static inline void checkForFinishedSubmachines()
 			tx_advanceStage();
 		}
 		break;
+
+		#endif // APP_FEATURE_TOKEN_MINTING
 
 	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
 		if (isCurrentOutputFinished()) {
@@ -534,6 +542,13 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		ctx->poolOwnerByPath = false;
 		ctx->shouldDisplayTxid = false;
 	}
+
+	// minting not included in the XS app
+	#ifndef APP_FEATURE_TOKEN_MINTING
+	if (ctx->includeMint) {
+		THROW(ERR_INVALID_DATA);
+	}
+	#endif // APP_FEATURE_TOKEN_MINTING
 
 	security_policy_t policy = policyForSignTxInit(
 	                                   ctx->commonTxData.txSigningMode,
@@ -1305,6 +1320,8 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, const uint8_t* wi
 
 // ============================== MINT ==============================
 
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
@@ -1323,6 +1340,8 @@ static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 	VALIDATE(signTxMint_isValidInstruction(p2), ERR_INVALID_REQUEST_PARAMETERS);
 	signTxMint_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
+
+#endif // APP_FEATURE_TOKEN_MINTING
 
 // ========================= SCRIPT DATA HASH ==========================
 
@@ -1778,7 +1797,9 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x06, signTx_handleCertificateAPDU);
 		CASE(0x07, signTx_handleWithdrawalAPDU);
 		CASE(0x09, signTx_handleValidityIntervalStartAPDU);
+		#ifdef APP_FEATURE_TOKEN_MINTING
 		CASE(0x0b, signTx_handleMintAPDU);
+		#endif // APP_FEATURE_TOKEN_MINTING
 		CASE(0x0c, signTx_handleScriptDataHashAPDU);
 		CASE(0x0d, signTx_handleCollateralInputAPDU);
 		CASE(0x0e, signTx_handleRequiredSignerAPDU);
@@ -1823,7 +1844,9 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_WITHDRAWALS:
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
+		#ifdef APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
+		#endif // APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
@@ -1873,7 +1896,9 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_WITHDRAWALS:
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
+		#ifdef APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
+		#endif // APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:

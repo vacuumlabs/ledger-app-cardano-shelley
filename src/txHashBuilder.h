@@ -338,6 +338,8 @@ void txHashBuilder_addValidityIntervalStart(
         uint64_t validityIntervalStart
 );
 
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 void txHashBuilder_enterMint(tx_hash_builder_t* builder);
 
 void txHashBuilder_addMint_topLevelData(
@@ -355,6 +357,8 @@ void txHashBuilder_addMint_token(
         const uint8_t* assetNameBuffer, size_t assetNameSize,
         int64_t amount
 );
+
+#endif // APP_FEATURE_TOKEN_MINTING
 
 void txHashBuilder_addScriptDataHash(
         tx_hash_builder_t* builder,

@@ -48,7 +48,9 @@ void handleRunTests(
 		run_key_derivation_test();
 		run_addressUtilsByron_test();
 		run_addressUtilsShelley_test();
+		#if !defined(APP_XS)
 		run_txHashBuilder_test();
+		#endif
 		run_auxDataHashBuilder_test();
 		#if defined(APP_FEATURE_NATIVE_SCRIPT_HASH)
 		run_nativeScriptHashBuilder_test();

@@ -1430,6 +1430,8 @@ static void txHashBuilder_assertCanLeaveValidityIntervalStart(tx_hash_builder_t*
 
 // ============================== MINT ==============================
 
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 void txHashBuilder_enterMint(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d", builder->state);
@@ -1485,6 +1487,8 @@ void txHashBuilder_addMint_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         amount < 0 ? CBOR_TYPE_NEGATIVE : CBOR_TYPE_UNSIGNED);
 }
+
+#endif // APP_FEATURE_TOKEN_MINTING
 
 static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 {
