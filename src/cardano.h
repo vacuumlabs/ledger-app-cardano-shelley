@@ -160,6 +160,8 @@ typedef struct {
 
 // ==============================  NATIVE SCRIPTS  ==============================
 
+#ifdef APP_FEATURE_NATIVE_SCRIPT_HASH
+
 // depth of n means it can handle up to n-1 levels of nesting
 #define MAX_SCRIPT_DEPTH 11
 
@@ -171,5 +173,7 @@ typedef enum {
 	NATIVE_SCRIPT_INVALID_BEFORE = 4,
 	NATIVE_SCRIPT_INVALID_HEREAFTER = 5,
 } native_script_type;
+
+#endif // APP_FEATURE_NATIVE_SCRIPT_HASH
 
 #endif // H_CARDANO_APP_CARDANO
