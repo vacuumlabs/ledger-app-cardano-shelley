@@ -702,6 +702,8 @@ void ui_displayPoolMarginScreen(
 	);
 }
 
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 void ui_displayPoolOwnerScreen(
         const pool_owner_t* owner,
         uint32_t ownerIndex,
@@ -858,6 +860,8 @@ void ui_displayIpPortScreen(
 	        callback
 	);
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 void ui_displayInputScreen(
         const sign_tx_transaction_input_t* input,

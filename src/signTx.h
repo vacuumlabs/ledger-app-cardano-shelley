@@ -33,7 +33,9 @@ typedef enum {
 	SIGN_STAGE_BODY_FEE = 29,
 	SIGN_STAGE_BODY_TTL = 30,
 	SIGN_STAGE_BODY_CERTIFICATES = 31,
+	#ifdef APP_FEATURE_POOL_REGISTRATION
 	SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE = 32, // pool registration certificate sub-machine
+	#endif // APP_FEATURE_POOL_REGISTRATION
 	SIGN_STAGE_BODY_WITHDRAWALS = 33,
 	SIGN_STAGE_BODY_VALIDITY_INTERVAL = 34,
 	SIGN_STAGE_BODY_MINT = 35,
@@ -174,7 +176,9 @@ typedef struct {
 	} stageData;
 
 	union {
+		#ifdef APP_FEATURE_POOL_REGISTRATION
 		pool_registration_context_t pool_registration_subctx;
+		#endif // APP_FEATURE_POOL_REGISTRATION
 		output_context_t output_subctx;
 		#ifdef	APP_FEATURE_TOKEN_MINTING
 		mint_context_t mint_subctx;

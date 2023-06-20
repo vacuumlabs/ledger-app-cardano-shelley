@@ -518,6 +518,8 @@ void signTx_handleCertificate_ui_runStep()
 	UI_STEP_END(HANDLE_CERTIFICATE_STEP_INVALID);
 }
 
+#ifdef APP_FEATURE_POOL_RETIREMENT
+
 void signTx_handleCertificatePoolRetirement_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
@@ -578,6 +580,8 @@ void signTx_handleCertificatePoolRetirement_ui_runStep()
 	}
 	UI_STEP_END(HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_INVALID);
 }
+
+#endif // APP_FEATURE_POOL_RETIREMENT
 
 // ============================== WITHDRAWALS ==============================
 

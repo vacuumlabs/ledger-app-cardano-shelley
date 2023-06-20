@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 /*
  * Taken from glibc:
  * https://www.gnu.org/software/libc/sources.html
@@ -159,3 +161,5 @@ void inet_ntop6 (const uint8_t* src, char* dst, size_t dstSize)
 
 	strncpy(dst, tmp, dstSize);
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION

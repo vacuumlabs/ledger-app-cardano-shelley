@@ -850,6 +850,8 @@ void txHashBuilder_addCertificate_delegation(
 	}
 }
 
+#ifdef APP_FEATURE_POOL_RETIREMENT
+
 void txHashBuilder_addCertificate_poolRetirement(
         tx_hash_builder_t* builder,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize,
@@ -881,6 +883,10 @@ void txHashBuilder_addCertificate_poolRetirement(
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, epoch);
 	}
 }
+
+#endif // APP_FEATURE_POOL_RETIREMENT
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 void txHashBuilder_poolRegistrationCertificate_enter(
         tx_hash_builder_t* builder,
@@ -1275,6 +1281,8 @@ void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(
 	}
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES;
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 static void txHashBuilder_assertCanLeaveCertificates(tx_hash_builder_t* builder)
 {

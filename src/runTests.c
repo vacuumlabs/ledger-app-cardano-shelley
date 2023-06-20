@@ -41,7 +41,9 @@ void handleRunTests(
 		run_endian_test();
 		run_textUtils_test();
 		run_tokens_test();
+		#if defined(APP_FEATURE_POOL_REGISTRATION)
 		run_ipUtils_test();
+		#endif
 		run_hash_test();
 		run_cbor_test();
 		run_bip44_test();

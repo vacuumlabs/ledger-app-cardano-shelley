@@ -264,11 +264,17 @@ void txHashBuilder_addCertificate_delegation(
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
 );
 
+#ifdef APP_FEATURE_POOL_RETIREMENT
+
 void txHashBuilder_addCertificate_poolRetirement(
         tx_hash_builder_t* builder,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize,
         uint64_t epoch
 );
+
+#endif // APP_FEATURE_POOL_RETIREMENT
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 void txHashBuilder_poolRegistrationCertificate_enter(
         tx_hash_builder_t* builder,
@@ -319,6 +325,8 @@ void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata(
 void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(
         tx_hash_builder_t* builder
 );
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 void txHashBuilder_enterWithdrawals(tx_hash_builder_t* builder);
 
@@ -410,7 +418,7 @@ void txHashBuilder_finalize(
 );
 
 
-#ifdef DEVEL
+#if defined(DEVEL) && !defined(APP_XS)
 void run_txHashBuilder_test();
 #endif // DEVEL
 
