@@ -387,15 +387,6 @@
     "comment": ""
   },
   {
-    "assetSubject": "c88bbd1848db5ea665b1fffbefba86e8dcd723b5085348e8a8d2260f44414e41",
-    "name": "DANA",
-    "ticker": "DANA",
-    "decimals": 6,
-    "outUTXOs": 185329,
-    "rank": 44,
-    "comment": ""
-  },
-  {
     "assetSubject": "47959e79846b8bdcacb91f586408d97e2dff44f31a04f03902cba8185357454554",
     "name": "SWEET",
     "ticker": "SWEET",
@@ -477,15 +468,6 @@
     "comment": ""
   },
   {
-    "assetSubject": "ae2a0aa5a24b27d9868c4a73b7c08077ac21baade5eca0fa467a2bbd58524159",
-    "name": "XRAY",
-    "ticker": "XRAY",
-    "decimals": 0,
-    "outUTXOs": 102714,
-    "rank": 54,
-    "comment": "no metadata-registry decimals entry, set to 0 because its optional"
-  },
-  {
     "assetSubject": "0fd9819a9d7fb414880883f43a42d33458f12bc5f9841cec6457dc155669527553",
     "name": "Virus",
     "ticker": "virus",
@@ -493,15 +475,6 @@
     "outUTXOs": 99330,
     "rank": 55,
     "comment": ""
-  },
-  {
-    "assetSubject": "df0172804f8418afc4e5b0a15b8fc78bdc3ca6d179405a7cd194f3b4464c49434b",
-    "name": "Flickto",
-    "ticker": "FLICK",
-    "decimals": 0,
-    "outUTXOs": 89392,
-    "rank": 56,
-    "comment": "no metadata-registry decimals entry, set to 0 because its optional"
   },
   {
     "assetSubject": "20cd68533b47565f3c61efb39c30fdace9963bfa4c0060b613448e3c50524f584945",
@@ -546,15 +519,6 @@
     "decimals": 6,
     "outUTXOs": 82641,
     "rank": 61,
-    "comment": ""
-  },
-  {
-    "assetSubject": "14a3455f71c435a04ea1fdb50a3ef4c1cab0e79fb1565627ac66a57552415645",
-    "name": "Ravendex",
-    "ticker": "RAVE",
-    "decimals": 0,
-    "outUTXOs": 77688,
-    "rank": 62,
     "comment": ""
   },
   {
@@ -639,15 +603,6 @@
     "comment": ""
   },
   {
-    "assetSubject": "57684adcb032c8dbc40179841bed987d8dee7472617a0e5c25ef414059617953776170",
-    "name": "YaySwap",
-    "ticker": "YAY",
-    "decimals": 0,
-    "outUTXOs": 40138,
-    "rank": 72,
-    "comment": "no metadata-registry decimals entry, set to 0 because its optional"
-  },
-  {
     "assetSubject": "c9f955eeffa84e42363b4992281d32dd2f9239153d6c66420a9acc154c4f47",
     "name": "Life Log Token",
     "ticker": "LOG",
@@ -691,15 +646,6 @@
     "outUTXOs": 32843,
     "rank": 77,
     "comment": ""
-  },
-  {
-    "assetSubject": "208a2ca888886921513cb777bb832a8dc685c04de990480151f1215053484942414441",
-    "name": "SHIBADA",
-    "ticker": "SHIBA",
-    "decimals": 0,
-    "outUTXOs": 32643,
-    "rank": 78,
-    "comment": "no metadata-registry decimals entry, set to 0 because its optional"
   },
   {
     "assetSubject": "c4c00fbd8fa227442a5e7cdecde33b24588494d05a2c50fda8938c6d4b49445a",
@@ -891,12 +837,51 @@
     "comment": ""
   },
   {
-    "assetSubject": "0c92aabef5a8f91a36470d0762806c165c0d04aa992541e25d55486a424347",
-    "name": "Blockchaingames",
-    "ticker": "BCG",
-    "decimals": 6,
-    "outUTXOs": 18339,
-    "rank": 100,
-    "comment": ""
+    "assetSubject": "38ad9dc3aec6a2f38e220142b9aa6ade63ebe71f65e7cc2b7d8a8535434c4159",
+    "name": "CLAY",
+    "ticker": "CLAY",
+    "decimals": 4
+  },
+  {
+    "assetSubject": "5dac8536653edc12f6f5e1045d8164b9f59998d3bdc300fc928434894e4d4b52",
+    "name": "NMKR",
+    "ticker": "NMKR",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "c0ee29a85b13209423b10447d3c2e6a50641a15c57770e27cb9d507357696e67526964657273",
+    "name": "WingRiders Governance Token",
+    "ticker": "WRT",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "8e51398904a5d3fc129fbf4f1589701de23c7824d5c90fdb9490e15a434841524c4933",
+    "name": "CHARLI3",
+    "ticker": "C3",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "f43a62fdc3965df486de8a0d32fe800963589c41b38946602a0dc53541474958",
+    "name": "SingularityNet AGIX Token",
+    "ticker": "AGIX",
+    "decimals": 8
+  },
+  {
+    "assetSubject": "533bb94a8850ee3ccbe483106489399112b74c905342cb1792a797a0494e4459",
+    "name": "Indigo DAO Token",
+    "ticker": "INDY",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd61446a65644d6963726f555344",
+    "name": "Djed USD",
+    "ticker": "DJED",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b6988069555344",
+    "name": "iUSD",
+    "ticker": "iUSD",
+    "decimals": 6
   }
 ]
