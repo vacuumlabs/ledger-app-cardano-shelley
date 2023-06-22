@@ -833,7 +833,7 @@ void signTx_handleConfirm_ui_runStep()
 		);
 		#elif defined(HAVE_NBGL)
 		set_light_confirmation(false);
-		display_confirmation("Sign\ntransaction", "", NULL, "Transaction\nrejected", this_fn, respond_with_user_reject);
+		display_confirmation("Sign\ntransaction?", "", NULL, "Transaction\nrejected", this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {

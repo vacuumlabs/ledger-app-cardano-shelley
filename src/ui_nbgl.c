@@ -227,7 +227,7 @@ static void display_cancel(void)
 	if (uiContext.lightConfirmation) {
 		display_cancel_status();
 	} else {
-		nbgl_useCaseConfirm("Reject ?", NULL, "Yes, Reject",
+		nbgl_useCaseConfirm("Reject transaction?", NULL, "Yes, reject",
 		                    "Go back to transaction", display_cancel_status);
 	}
 }
@@ -248,7 +248,7 @@ static void display_cancel_status(void)
 	if (uiContext.rejectedStatus) {
 		nbgl_useCaseStatus(uiContext.rejectedStatus, false, cancellation_status_callback);
 	} else {
-		nbgl_useCaseStatus("Action rejected", false, cancellation_status_callback);
+		nbgl_useCaseStatus("Transaction rejected", false, cancellation_status_callback);
 	}
 }
 
