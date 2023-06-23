@@ -833,7 +833,7 @@ void signTx_handleConfirm_ui_runStep()
 		);
 		#elif defined(HAVE_NBGL)
 		set_light_confirmation(false);
-		display_confirmation("Sign\ntransaction?", "", NULL, "Transaction\nrejected", this_fn, respond_with_user_reject);
+		display_confirmation_no_approved_status("Sign\ntransaction?", "", "Transaction\nrejected", this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {
@@ -895,7 +895,7 @@ void signTx_handleWitness_ui_runStep()
 		        _wipeWitnessSignature
 		);
 		#elif defined(HAVE_NBGL)
-		display_confirmation("Sign using witness", "", NULL, "Signature\nrejected", this_fn, _wipeWitnessSignature);
+		display_confirmation_no_approved_status("Sign using witness", "", "Signature\nrejected", this_fn, _wipeWitnessSignature);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_WITNESS_STEP_RESPOND) {
