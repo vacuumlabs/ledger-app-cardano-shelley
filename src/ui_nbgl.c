@@ -565,6 +565,5 @@ void display_error(void)
 void display_status(const char* text)
 {
 	nbgl_useCaseStatus(text, true, ui_idle_flow);
-	nbgl_reset_transaction_full_context();
 }
 #endif // HAVE_NBGL
