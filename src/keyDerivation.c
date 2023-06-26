@@ -35,12 +35,17 @@ void derivePrivateKey(
 			STATIC_ASSERT(SIZEOF(privateKey->d) == 64, "bad private key length");
 			#ifndef FUZZING
 			io_seproxyhal_io_heartbeat();
-			os_perso_derive_node_bip32(
+			int r = os_derive_bip32_no_throw(
 			        CX_CURVE_Ed25519,
 			        pathSpec->path,
 			        pathSpec->length,
 			        privateKeyRawBuffer,
-			        chainCode->code);
+			        chainCode->code
+			);
+			if (r != CX_OK) {
+				PRINTF("error: %d", r);
+				ASSERT(false);
+			}
 			io_seproxyhal_io_heartbeat();
 			#endif
 			// We should do cx_ecfp_init_private_key here, but it does not work in SDK < 1.5.4,
@@ -65,13 +70,17 @@ void deriveRawPublicKey(
 	// We should do cx_ecfp_generate_pair here, but it does not work in SDK < 1.5.4,
 	// should work with the new SDK
 	io_seproxyhal_io_heartbeat();
-	cx_eddsa_get_public_key(
-	        // cx_eddsa has a special case struct for Cardano's private keys
-	        // but signature is standard
-	        (const struct cx_ecfp_256_private_key_s*) privateKey,
-	        CX_SHA512,
-	        publicKey,
-	        NULL, 0, NULL, 0);
+	int r = cx_eddsa_get_public_key_no_throw(
+	                // cx_eddsa has a special case struct for Cardano's private keys
+	                // but signature is standard
+	                (const struct cx_ecfp_256_private_key_s*) privateKey,
+	                CX_SHA512,
+	                publicKey,
+	                NULL, 0, NULL, 0);
+	if (r != CX_OK) {
+		PRINTF("error: %d", r);
+		ASSERT(false);
+	}
 	io_seproxyhal_io_heartbeat();
 	#endif
 }

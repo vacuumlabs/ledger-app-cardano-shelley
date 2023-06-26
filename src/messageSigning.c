@@ -9,7 +9,7 @@ static void signRawMessage(privateKey_t* privateKey,
                            const uint8_t* messageBuffer, size_t messageSize,
                            uint8_t* outBuffer, size_t outSize)
 {
-	uint8_t signature[64] = {0};
+	uint8_t signature[ED25519_SIGNATURE_LENGTH] = {0};
 	ASSERT(messageSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(outSize == SIZEOF(signature));
 
@@ -17,21 +17,21 @@ static void signRawMessage(privateKey_t* privateKey,
 	// Note(ppershing): this could be done without
 	// temporary copy
 	STATIC_ASSERT(sizeof(int) == sizeof(size_t), "bad sizing");
+
 	io_seproxyhal_io_heartbeat();
-	size_t signatureSize =
-	        (size_t) cx_eddsa_sign(
+	int r = cx_eddsa_sign_no_throw(
 	                (const struct cx_ecfp_256_private_key_s*) privateKey,
-	                0 /* mode */,
 	                CX_SHA512,
 	                messageBuffer, messageSize,
-	                NULL /* ctx */, 0 /* ctx len */,
-	                signature, SIZEOF(signature),
-	                0 /* info */
+	                signature, SIZEOF(signature)
 	        );
+	if (r != CX_OK) {
+		PRINTF("error: %d", r);
+		ASSERT(false);
+	}
 	io_seproxyhal_io_heartbeat();
 
-	ASSERT(signatureSize == ED25519_SIGNATURE_LENGTH);
-	memmove(outBuffer, signature, signatureSize);
+	memmove(outBuffer, signature, SIZEOF(signature));
 	#endif
 }
 
