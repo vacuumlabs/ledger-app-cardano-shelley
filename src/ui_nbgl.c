@@ -357,7 +357,7 @@ static void display_confirmation_status(void)
 	}
 
 	if (!uiContext.no_approved_status) {
-		confirmation_status_callback();
+		trigger_callback(&confirmation_status_callback);
 	}
 }
 
