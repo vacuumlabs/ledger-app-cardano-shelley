@@ -1,67 +1,44 @@
 #include <cx.h>
+#include <lib_standard_app/crypto_helpers.h>
 
 #include "messageSigning.h"
 #include "cardano.h"
-#include "keyDerivation.h"
 #include "bip44.h"
-
-static void signRawMessage(privateKey_t* privateKey,
-                           const uint8_t* messageBuffer, size_t messageSize,
-                           uint8_t* outBuffer, size_t outSize)
-{
-	uint8_t signature[64] = {0};
-	ASSERT(messageSize < BUFFER_SIZE_PARANOIA);
-	ASSERT(outSize == SIZEOF(signature));
-
-	#ifndef FUZZING
-	// Note(ppershing): this could be done without
-	// temporary copy
-	STATIC_ASSERT(sizeof(int) == sizeof(size_t), "bad sizing");
-	io_seproxyhal_io_heartbeat();
-	size_t signatureSize =
-	        (size_t) cx_eddsa_sign(
-	                (const struct cx_ecfp_256_private_key_s*) privateKey,
-	                0 /* mode */,
-	                CX_SHA512,
-	                messageBuffer, messageSize,
-	                NULL /* ctx */, 0 /* ctx len */,
-	                signature, SIZEOF(signature),
-	                0 /* info */
-	        );
-	io_seproxyhal_io_heartbeat();
-
-	ASSERT(signatureSize == ED25519_SIGNATURE_LENGTH);
-	memmove(outBuffer, signature, signatureSize);
-	#endif
-}
+#include "securityPolicy.h"
 
 static void signRawMessageWithPath(bip44_path_t* pathSpec,
                                    const uint8_t* messageBuffer, size_t messageSize,
                                    uint8_t* outBuffer, size_t outSize)
 {
+	size_t sigLen = outSize;
+	cx_err_t error;
+
 	ASSERT(messageSize < BUFFER_SIZE_PARANOIA);
-	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(sigLen == ED25519_SIGNATURE_LENGTH);
 
-	chain_code_t chainCode;
-	privateKey_t privateKey;
+	// Sanity check
+	ASSERT(pathSpec->length <= ARRAY_LEN(pathSpec->path));
 
-	TRACE("derive private key");
+	// if the path is invalid, it's a bug in previous validation
+	ASSERT(policyForDerivePrivateKey(pathSpec) != POLICY_DENY);
 
-	BEGIN_TRY {
-		TRY {
-			derivePrivateKey(pathSpec, &chainCode, &privateKey);
+	#ifndef FUZZING
+	error = bip32_derive_eddsa_sign_hash_256(CX_CURVE_256K1,
+	                                         pathSpec->path,
+	                                         pathSpec->length,
+	                                         CX_SHA512,
+	                                         messageBuffer,
+	                                         messageSize,
+	                                         outBuffer,
+	                                         &sigLen);
+	if (error != CX_OK) {
+		PRINTF("error: %d", r);
+	    ASSERT(false);
+	}
+	#endif
 
-			signRawMessage(
-			        &privateKey,
-			        messageBuffer, messageSize,
-			        outBuffer, outSize
-			);
-		}
-		FINALLY {
-			explicit_bzero(&privateKey, SIZEOF(privateKey));
-			explicit_bzero(&chainCode, SIZEOF(chainCode));
-		}
-	} END_TRY;
+	ASSERT(sigLen == ED25519_SIGNATURE_LENGTH);
+
 }
 
 // sign the given hash by the private key derived according to the given path

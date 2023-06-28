@@ -133,6 +133,8 @@ include $(BOLOS_SDK)/Makefile.glyphs
 APP_SOURCE_PATH  += src
 SDK_SOURCE_PATH  += lib_stusb lib_stusb_impl lib_u2f
 
+APP_SOURCE_FILES += ${BOLOS_SDK}/lib_standard_app/crypto_helpers.c
+
 ifneq ($(TARGET_NAME),TARGET_STAX)
 SDK_SOURCE_PATH  += lib_ux
 endif
