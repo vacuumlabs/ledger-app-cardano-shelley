@@ -24,7 +24,7 @@
 #define MAX_LINE_PER_PAGE_COUNT NB_MAX_LINES_IN_REVIEW
 #define MAX_TAG_TITLE_LINE_LENGTH 30
 #define MAX_TAG_CONTENT_LENGTH 200
-#define MAX_TEXT_STRING 50
+#define MAX_TEXT_STRING 60
 #define PENDING_ELEMENT_INDEX NB_MAX_DISPLAYED_PAIRS_IN_REVIEW
 enum {
 	CANCEL_PROMPT_TOKEN = 1,
@@ -227,7 +227,7 @@ static void display_cancel(void)
 	if (uiContext.lightConfirmation) {
 		display_cancel_status();
 	} else {
-		nbgl_useCaseConfirm("Reject ?", NULL, "Yes, Reject",
+		nbgl_useCaseConfirm("Reject transaction?", NULL, "Yes, reject",
 		                    "Go back to transaction", display_cancel_status);
 	}
 }
@@ -248,7 +248,7 @@ static void display_cancel_status(void)
 	if (uiContext.rejectedStatus) {
 		nbgl_useCaseStatus(uiContext.rejectedStatus, false, cancellation_status_callback);
 	} else {
-		nbgl_useCaseStatus("Action rejected", false, cancellation_status_callback);
+		nbgl_useCaseStatus("Transaction rejected", false, cancellation_status_callback);
 	}
 }
 
@@ -357,7 +357,7 @@ static void display_confirmation_status(void)
 	}
 
 	if (!uiContext.no_approved_status) {
-		confirmation_status_callback();
+		trigger_callback(&confirmation_status_callback);
 	}
 }
 
@@ -565,6 +565,5 @@ void display_error(void)
 void display_status(const char* text)
 {
 	nbgl_useCaseStatus(text, true, ui_idle_flow);
-	nbgl_reset_transaction_full_context();
 }
 #endif // HAVE_NBGL
