@@ -50,6 +50,11 @@ static void exit(void)
 static bool settings_navigation_callback(uint8_t page, nbgl_pageContent_t* content)
 {
 	if (page == 0) {
+		content->type = INFOS_LIST;
+		content->infosList.nbInfos = NB_INFO_FIELDS;
+		content->infosList.infoTypes = (const char**)infoTypes;
+		content->infosList.infoContents = (const char**)infoContents;
+	} else if (page == 1) {
 		switches[0].text = "Expert mode";
 		switches[0].subText = "Enable expert mode";
 		switches[0].token = SWITCH_APP_MODE_TOKEN;
@@ -59,11 +64,6 @@ static bool settings_navigation_callback(uint8_t page, nbgl_pageContent_t* conte
 		content->type = SWITCHES_LIST;
 		content->switchesList.nbSwitches = NB_SETTINGS_SWITCHES;
 		content->switchesList.switches = (nbgl_layoutSwitch_t*)switches;
-	} else if (page == 1) {
-		content->type = INFOS_LIST;
-		content->infosList.nbInfos = NB_INFO_FIELDS;
-		content->infosList.infoTypes = (const char**)infoTypes;
-		content->infosList.infoContents = (const char**)infoContents;
 	} else {
 		return false;
 	}
