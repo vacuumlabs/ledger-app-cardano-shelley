@@ -11,7 +11,6 @@ static void signRawMessageWithPath(bip44_path_t* pathSpec,
                                    uint8_t* outBuffer, size_t outSize)
 {
 	size_t sigLen = outSize;
-	cx_err_t error;
 
 	ASSERT(messageSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(sigLen == ED25519_SIGNATURE_LENGTH);
@@ -23,17 +22,20 @@ static void signRawMessageWithPath(bip44_path_t* pathSpec,
 	ASSERT(policyForDerivePrivateKey(pathSpec) != POLICY_DENY);
 
 	#ifndef FUZZING
-	error = bip32_derive_eddsa_sign_hash_256(CX_CURVE_256K1,
-	                                         pathSpec->path,
-	                                         pathSpec->length,
-	                                         CX_SHA512,
-	                                         messageBuffer,
-	                                         messageSize,
-	                                         outBuffer,
-	                                         &sigLen);
-	if (error != CX_OK) {
-		PRINTF("error: %d", r);
-	    ASSERT(false);
+	{
+		cx_err_t error = bip32_derive_eddsa_sign_hash_256(
+		                         CX_CURVE_256K1,
+		                         pathSpec->path,
+		                         pathSpec->length,
+		                         CX_SHA512,
+		                         messageBuffer,
+		                         messageSize,
+		                         outBuffer,
+		                         &sigLen);
+		if (error != CX_OK) {
+			PRINTF("error: %d", error);
+			ASSERT(false);
+		}
 	}
 	#endif
 

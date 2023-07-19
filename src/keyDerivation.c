@@ -38,7 +38,6 @@ void deriveExtendedPublicKey(
         extendedPublicKey_t* out
 )
 {
-	cx_err_t error;
 	uint8_t rawPubkey[65];
 	uint8_t chainCode[CHAIN_CODE_SIZE];
 
@@ -51,15 +50,18 @@ void deriveExtendedPublicKey(
 	ASSERT(policyForDerivePrivateKey(pathSpec) != POLICY_DENY);
 
 	#ifndef FUZZING
-	error = bip32_derive_get_pubkey_256(CX_CURVE_Ed25519,
-	                                    pathSpec->path,
-	                                    pathSpec->length,
-	                                    rawPubkey,
-	                                    chainCode,
-	                                    CX_SHA512);
-	if (error != CX_OK) {
-		PRINTF("error: %d", r);
-		ASSERT(false);
+	{
+		cx_err_t error = bip32_derive_get_pubkey_256(
+		                         CX_CURVE_Ed25519,
+		                         pathSpec->path,
+		                         pathSpec->length,
+		                         rawPubkey,
+		                         chainCode,
+		                         CX_SHA512);
+		if (error != CX_OK) {
+			PRINTF("error: %d", error);
+			ASSERT(false);
+		}
 	}
 	#endif
 

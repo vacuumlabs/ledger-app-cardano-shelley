@@ -34,11 +34,12 @@ enum {
 	                                                                         ) \
 	{ \
 		STATIC_ASSERT( bits == CIPHER##_##bits##_SIZE * 8, "bad cipher size"); \
-		int r = cx_##cipher##_init_no_throw( \
-		                                     & ctx->cx_ctx, \
-		                                     CIPHER##_##bits##_SIZE * 8 \
-		                                   );\
-		if (r != CX_OK) { \
+		cx_err_t error = cx_##cipher##_init_no_throw( \
+		                 & ctx->cx_ctx, \
+		                 CIPHER##_##bits##_SIZE * 8 \
+		                                            );\
+		if (error != CX_OK) { \
+			PRINTF("error: %d", error); \
 			ASSERT(false); \
 		} \
 		ctx->initialized_magic = HASH_CONTEXT_INITIALIZED_MAGIC; \
@@ -49,14 +50,15 @@ enum {
 	        const uint8_t* inBuffer, size_t inSize \
 	                                                                           ) { \
 		ASSERT(ctx->initialized_magic == HASH_CONTEXT_INITIALIZED_MAGIC); \
-		int r = cx_hash_no_throw( \
-		                          & ctx->cx_ctx.header, \
-		                          0, /* Do not output the hash, yet */ \
-		                          inBuffer, \
-		                          inSize, \
-		                          NULL, 0 \
-		                        ); \
-		if (r != CX_OK) { \
+		cx_err_t error = cx_hash_no_throw( \
+		                                   & ctx->cx_ctx.header, \
+		                                   0, /* Do not output the hash, yet */ \
+		                                   inBuffer, \
+		                                   inSize, \
+		                                   NULL, 0 \
+		                                 ); \
+		if (error != CX_OK) { \
+			PRINTF("error: %d", error); \
 			ASSERT(false); \
 		} \
 	} \
@@ -67,15 +69,16 @@ enum {
 	                                                                             ) { \
 		ASSERT(ctx->initialized_magic == HASH_CONTEXT_INITIALIZED_MAGIC); \
 		ASSERT(outSize == CIPHER##_##bits##_SIZE); \
-		int r = cx_hash_no_throw( \
-		                          & ctx->cx_ctx.header, \
-		                          CX_LAST, /* Output the hash */ \
-		                          NULL, \
-		                          0, \
-		                          outBuffer, \
-		                          CIPHER##_##bits##_SIZE \
-		                        ); \
-		if (r != CX_OK) { \
+		cx_err_t error = cx_hash_no_throw( \
+		                                   & ctx->cx_ctx.header, \
+		                                   CX_LAST, /* Output the hash */ \
+		                                   NULL, \
+		                                   0, \
+		                                   outBuffer, \
+		                                   CIPHER##_##bits##_SIZE \
+		                                 ); \
+		if (error != CX_OK) { \
+			PRINTF("error: %d", error); \
 			ASSERT(false); \
 		} \
 	} \
