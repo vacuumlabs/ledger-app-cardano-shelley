@@ -728,7 +728,7 @@ void signTx_handleRequiredSigner_ui_runStep()
 
 	UI_STEP(HANDLE_REQUIRED_SIGNERS_STEP_DISPLAY) {
 		switch (BODY_CTX->stageData.requiredSigner.type) {
-		case REQUIRED_SIGNER_WITH_PATH:
+		case REQUIRED_SIGNER_WITH_PATH: {
 			#ifdef HAVE_BAGL
 			ui_displayPathScreen("Required signer", &BODY_CTX->stageData.requiredSigner.keyPath, this_fn);
 			#elif defined(HAVE_NBGL)
@@ -737,7 +737,8 @@ void signTx_handleRequiredSigner_ui_runStep()
 			fill_and_display_if_required("Required signer", pathStr, this_fn, respond_with_user_reject);
 			#endif // HAVE_BAGL
 			break;
-		case REQUIRED_SIGNER_WITH_HASH:
+		}
+		case REQUIRED_SIGNER_WITH_HASH: {
 			#ifdef HAVE_BAGL
 			ui_displayBech32Screen(
 			        "Required signer",
@@ -752,6 +753,7 @@ void signTx_handleRequiredSigner_ui_runStep()
 			fill_and_display_if_required("Required signer", encodedStr, this_fn, respond_with_user_reject);
 			#endif // HAVE_BAGL
 			break;
+		}
 
 		default:
 			ASSERT(false);
