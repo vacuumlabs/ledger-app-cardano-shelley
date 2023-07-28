@@ -1,5 +1,4 @@
 #include <os_io_seproxyhal.h>
-#include <lib_standard_app/crypto_helpers.h>
 #include <stdint.h>
 
 #include "assert.h"
@@ -12,6 +11,7 @@
 #include "endian.h"
 #include "cardano.h"
 #include "securityPolicy.h"
+#include "crypto.h"
 
 static void extractRawPublicKey(
         uint8_t rawPubkey[static 65],
@@ -51,13 +51,10 @@ void deriveExtendedPublicKey(
 
 	#ifndef FUZZING
 	{
-		cx_err_t error = bip32_derive_get_pubkey_256(
-		                         CX_CURVE_Ed25519,
-		                         pathSpec->path,
-		                         pathSpec->length,
-		                         rawPubkey,
-		                         chainCode,
-		                         CX_SHA512);
+		cx_err_t error = crypto_get_pubkey(pathSpec->path,
+						   pathSpec->length,
+						   rawPubkey,
+						   chainCode);
 		if (error != CX_OK) {
 			PRINTF("error: %d", error);
 			ASSERT(false);

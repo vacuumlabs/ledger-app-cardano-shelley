@@ -1,10 +1,10 @@
 #include <cx.h>
-#include <lib_standard_app/crypto_helpers.h>
 
 #include "messageSigning.h"
 #include "cardano.h"
 #include "bip44.h"
 #include "securityPolicy.h"
+#include "crypto.h"
 
 static void signRawMessageWithPath(bip44_path_t* pathSpec,
                                    const uint8_t* messageBuffer, size_t messageSize,
@@ -23,15 +23,12 @@ static void signRawMessageWithPath(bip44_path_t* pathSpec,
 
 	#ifndef FUZZING
 	{
-		cx_err_t error = bip32_derive_eddsa_sign_hash_256(
-		                         CX_CURVE_256K1,
-		                         pathSpec->path,
-		                         pathSpec->length,
-		                         CX_SHA512,
-		                         messageBuffer,
-		                         messageSize,
-		                         outBuffer,
-		                         &sigLen);
+		cx_err_t error = crypto_eddsa_sign(pathSpec->path,
+										   pathSpec->length,
+										   messageBuffer,
+										   messageSize,
+										   outBuffer,
+										   &sigLen);
 		if (error != CX_OK) {
 			PRINTF("error: %d", error);
 			ASSERT(false);
