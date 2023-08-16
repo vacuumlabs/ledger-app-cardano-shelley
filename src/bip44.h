@@ -73,6 +73,7 @@ bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec);
 
 bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec);
 bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec);
+bool bip44_isMultidelegationStakingKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec);
 

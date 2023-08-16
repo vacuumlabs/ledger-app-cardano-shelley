@@ -219,7 +219,7 @@ bool bip44_isMultisigSpendingKeyPath(const bip44_path_t* pathSpec)
 	       bip44_containsAddress(pathSpec);
 }
 
-// staking keys (one per account, should end with /2/0 after account)
+// stake keys
 bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec)
 {
 	if (!bip44_containsAddress(pathSpec)) return false;
@@ -229,7 +229,7 @@ bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec)
 	const uint32_t chainType = bip44_getChainTypeValue(pathSpec);
 	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
 
-	return (bip44_getAddressValue(pathSpec) == 0);
+	return true;
 }
 
 // multisig staking keys
@@ -243,6 +243,12 @@ bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec)
 	if (chainType != CARDANO_CHAIN_STAKING_KEY) return false;
 
 	return true;
+}
+
+bool bip44_isMultidelegationStakingKeyPath(const bip44_path_t* pathSpec)
+{
+	return (bip44_isOrdinaryStakingKeyPath(pathSpec) || bip44_isMultisigStakingKeyPath(pathSpec))
+	       && (bip44_getAddressValue(pathSpec) > 0);
 }
 
 bool bip44_isMintKeyPath(const bip44_path_t* pathSpec)
@@ -446,8 +452,6 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
-		// we are checking the 5th item too (to avoid breaking this code
-		// if more than 1 staking key per account is allowed in the future)
 		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
 
 	case PATH_MINT_KEY:
