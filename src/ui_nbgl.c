@@ -529,7 +529,7 @@ void display_warning(const char* text, callback_t userAcceptCallback,
 }
 
 void display_choice(const char* text1, const char* text2, callback_t userAcceptCallback,
-                  callback_t userRejectCallback)
+                    callback_t userRejectCallback)
 {
 	TRACE("Displaying choice");
 
