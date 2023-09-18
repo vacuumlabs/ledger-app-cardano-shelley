@@ -23,6 +23,9 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 
 	CHECK(bip44_classifyPath(&addressParams->stakingKeyPath) == PATH_ORDINARY_STAKING_KEY);
 	CHECK(bip44_isPathReasonable(&addressParams->stakingKeyPath));
+	// most SW wallets do not use multidelegation,
+	// so outputs sending funds to such addresses should not be hidden
+	CHECK(!bip44_isMultidelegationStakingKeyPath(&addressParams->stakingKeyPath));
 
 	CHECK(
 	        bip44_getAccount(&addressParams->stakingKeyPath) ==

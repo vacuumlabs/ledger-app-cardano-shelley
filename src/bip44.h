@@ -77,6 +77,7 @@ bool bip44_containsAddress(const bip44_path_t* pathSpec);
 
 bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec);
 bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec);
+bool bip44_isMultidelegationStakingKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_isMintKeyPath(const bip44_path_t* pathSpec);
 
