@@ -604,11 +604,9 @@ static void signTxCVoteRegistration_handleVotingPurposeAPDU(const uint8_t* wireD
 				VALIDATE(subctx->format == CIP36, ERR_INVALID_DATA);
 			}
 
-			if (isVotingPurposeIncluded) {
-				subctx->stateData.votingPurpose = parse_u8be(&view);
-			} else {
-				subctx->stateData.votingPurpose = DEFAULT_VOTING_PURPOSE;
-			}
+			subctx->stateData.votingPurpose = (isVotingPurposeIncluded) ?
+			                                  parse_u8be(&view) :
+			                                  DEFAULT_VOTING_PURPOSE;
 			TRACE("votingPurpose = %u", subctx->stateData.votingPurpose);
 
 			VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
