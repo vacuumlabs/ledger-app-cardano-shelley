@@ -175,7 +175,7 @@ uint32_t extractProtocolMagic(
 
 	read_view_t view = make_read_view(addressBuffer, addressBuffer + addressSize);
 
-	uint32_t protocolMagic;
+	uint32_t protocolMagic = MAINNET_PROTOCOL_MAGIC; // mainnet addresses do not contain protocol magic
 	bool protocolMagicFound = false;
 	{
 		const uint8_t* unboxedAddressPayload;
@@ -245,6 +245,7 @@ uint32_t extractProtocolMagic(
 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
 	if (!protocolMagicFound) {
+		// mainnet addresses are not supposed to explicitly contain protocol magic at all
 		protocolMagic = MAINNET_PROTOCOL_MAGIC;
 	}
 

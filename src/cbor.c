@@ -46,7 +46,6 @@ cbor_token_t cbor_parseToken(const uint8_t* buf, size_t size)
 	if (val < 24) {
 		result.width = 0;
 		result.value = val;
-		// return result;
 	} else {
 		// shift buffer
 		// Holds minimum value for a given byte-width.
