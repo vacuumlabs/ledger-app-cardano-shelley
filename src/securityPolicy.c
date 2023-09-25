@@ -1790,7 +1790,6 @@ security_policy_t policyForCVoteRegistrationStakingKey(
 }
 
 // based on https://input-output-rnd.slack.com/archives/C036XSMFXE3/p1668185230182239
-// TODO make sure this is what we want
 security_policy_t policyForCVoteRegistrationPaymentDestination(
         const tx_output_destination_storage_t* destination,
         const uint8_t networkId
