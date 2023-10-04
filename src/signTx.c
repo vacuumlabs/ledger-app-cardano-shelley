@@ -1782,7 +1782,7 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x0c, signTx_handleScriptDataHashAPDU);
 		CASE(0x0d, signTx_handleCollateralInputAPDU);
 		CASE(0x0e, signTx_handleRequiredSignerAPDU);
-		CASE(0x12, signTx_handleCollateralOutputAPDU); // TODO perhaps change the numbers for the newly added items?
+		CASE(0x12, signTx_handleCollateralOutputAPDU);
 		CASE(0x10, signTx_handleTotalCollateralAPDU);
 		CASE(0x11, signTx_handleReferenceInputsAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);

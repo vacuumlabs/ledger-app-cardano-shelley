@@ -169,7 +169,7 @@ typedef struct {
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
 		sign_tx_required_signer_t requiredSigner;
 		uint64_t totalCollateral;
-	} stageData; // TODO rename to reflect single-APDU scope
+	} stageData;
 
 	union {
 		pool_registration_context_t pool_registration_subctx;
