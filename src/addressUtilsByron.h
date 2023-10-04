@@ -14,10 +14,14 @@ size_t deriveAddress_byron(
 
 #endif // APP_FEATURE_BYRON_ADDRESS_DERIVATION
 
+#ifdef APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
+
 // Note: validates the overall address structure at the same time
 uint32_t extractProtocolMagic(
         const uint8_t* addressBuffer, size_t addressSize
 );
+
+#endif // APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 
 
 #if defined(DEVEL) && !defined(APP_XS)

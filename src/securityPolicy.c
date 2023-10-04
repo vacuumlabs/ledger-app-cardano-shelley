@@ -463,7 +463,7 @@ security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 
 static bool is_addressBytes_suitable_for_tx_output(
         const uint8_t* addressBuffer, size_t addressSize,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic __attribute__((unused))
 )
 {
 	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
@@ -482,7 +482,9 @@ static bool is_addressBytes_suitable_for_tx_output(
 			return false;
 
 		case BYRON:
+			#ifdef APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 			CHECK(extractProtocolMagic(addressBuffer, addressSize) == protocolMagic);
+			#endif // APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 			break;
 
 		default: {

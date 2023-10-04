@@ -7,8 +7,12 @@
 #include "crc32.h"
 #include "bufView.h"
 
+#if defined(APP_FEATURE_BYRON_ADDRESS_DERIVATION) || defined(APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK)
+
 static const size_t ADDRESS_ROOT_SIZE = 28;
 static const size_t PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY = 2;
+
+#endif
 
 #ifdef APP_FEATURE_BYRON_ADDRESS_DERIVATION
 
@@ -186,6 +190,8 @@ size_t deriveAddress_byron(
 
 #endif // APP_FEATURE_BYRON_ADDRESS_DERIVATION
 
+#ifdef APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
+
 static uint64_t parseToken(read_view_t* view, uint8_t type)
 {
 	const cbor_token_t token = view_parseToken(view);
@@ -215,7 +221,6 @@ static size_t parseBytesSizeToken(read_view_t* view)
 
 	return parsedSizeDowncasted;
 }
-
 
 uint32_t extractProtocolMagic(
         const uint8_t* addressBuffer, size_t addressSize
@@ -302,3 +307,4 @@ uint32_t extractProtocolMagic(
 	return protocolMagic;
 }
 
+#endif // APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
