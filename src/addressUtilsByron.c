@@ -31,7 +31,7 @@ void addressRootFromExtPubKey(
 
 	{
 		// [0, [0, publicKey:chainCode], Map(0)]
-		// TODO(ppershing): what are the first two 0 constants?
+		// Note(ppershing): what are the first two 0 constants?
 		view_appendToken(&cbor, CBOR_TYPE_ARRAY, 3);
 		{
 			view_appendToken(&cbor, CBOR_TYPE_UNSIGNED, CARDANO_ADDRESS_TYPE_PUBKEY);

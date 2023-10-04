@@ -1493,7 +1493,8 @@ static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip
 	case PATH_POOL_COLD_KEY:
 		// only ordinary spending key paths (because of inputs) and pool cold key path are allowed
 		WARN_UNLESS(bip44_isPathReasonable(path));
-		// TODO is there a reason to show the witnesses?
+		// it might be safe to hide the witnesses, but txs related to stake pools
+		// are rare, so it would not help much and might introduce some unknown risk
 		SHOW();
 		break;
 

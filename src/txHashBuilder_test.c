@@ -262,7 +262,6 @@ static void collateralOutputTokenHandler(tx_hash_builder_t* builder,
 {
 	txHashBuilder_addCollateralOutput_token(builder, assetNameBuffer, assetNameSize, (int64_t)amount);
 }
-//TODO: more generic function to handle similar? or just merge to addCollRet?
 static void addMultiassetCollateralOutput(tx_hash_builder_t* builder, tx_output_serialization_format_t outputFormat)
 {
 	uint8_t tmp[70] = {0};

@@ -537,8 +537,6 @@ void txHashBuilder_addOutput_datum(
 		ASSERT(false);
 	}
 
-	//TODO: MAX_DATUM_SIZE??
-
 	// the babbage output format serializes some preliminary stuff
 	if (builder->outputData.serializationFormat == MAP_BABBAGE) {
 		//   datum_option = [ 0, $hash32 // 1, data ]
@@ -603,8 +601,6 @@ void txHashBuilder_addOutput_datum_inline_chunk(
 
 void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t scriptSize)
 {
-	// TODO: MAX_SCRIPT_SIZE?? maybe we don't need to limit it
-
 	ASSERT(builder->outputData.includeRefScript);
 
 	switch (builder->outputState) {
