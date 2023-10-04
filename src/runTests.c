@@ -48,7 +48,9 @@ void handleRunTests(
 		run_cbor_test();
 		run_bip44_test();
 		run_key_derivation_test();
+		#if !defined(APP_XS)
 		run_addressUtilsByron_test();
+		#endif
 		run_addressUtilsShelley_test();
 		#if !defined(APP_XS)
 		run_txHashBuilder_test();

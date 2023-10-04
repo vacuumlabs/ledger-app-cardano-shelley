@@ -4,11 +4,15 @@
 #include "common.h"
 #include "bip44.h"
 
+#ifdef APP_FEATURE_BYRON_ADDRESS_DERIVATION
+
 size_t deriveAddress_byron(
         const bip44_path_t* pathSpec,
         uint32_t protocolMagic,
         uint8_t* outBuffer, size_t outSize
 );
+
+#endif // APP_FEATURE_BYRON_ADDRESS_DERIVATION
 
 // Note: validates the overall address structure at the same time
 uint32_t extractProtocolMagic(
@@ -16,7 +20,7 @@ uint32_t extractProtocolMagic(
 );
 
 
-#ifdef DEVEL
+#if defined(DEVEL) && !defined(APP_XS)
 void run_addressUtilsByron_test();
 #endif // DEVEL
 

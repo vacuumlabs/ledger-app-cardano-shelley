@@ -439,8 +439,6 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(isValidAddressParams(addressParams));
 
-	const bip44_path_t* spendingPath = &addressParams->spendingKeyPath;
-
 	// shelley
 	switch (addressParams->type) {
 	case BASE_PAYMENT_KEY_STAKE_KEY:
@@ -458,8 +456,16 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 	case REWARD_KEY:
 	case REWARD_SCRIPT:
 		return deriveAddress_reward(addressParams, outBuffer, outSize);
+
+		#ifdef APP_FEATURE_BYRON_ADDRESS_DERIVATION
 	case BYRON:
-		return deriveAddress_byron(spendingPath, addressParams->protocolMagic, outBuffer, outSize);
+		return deriveAddress_byron(
+		               &addressParams->spendingKeyPath,
+		               addressParams->protocolMagic,
+		               outBuffer, outSize
+		       );
+		#endif // APP_FEATURE_BYRON_ADDRESS_DERIVATION
+
 	default:
 		ASSERT(false);
 	}
@@ -698,6 +704,12 @@ bool isValidAddressParams(const addressParams_t* params)
 #define CHECK(cond) if (!(cond)) return false
 	if (params->type != BYRON) {
 		CHECK(isValidNetworkId(params->networkId));
+	} else {
+		// code for Byron address derivation not available in XS app
+		// thus we cannot process address params
+		#ifndef APP_FEATURE_BYRON_ADDRESS_DERIVATION
+		return false;
+		#endif
 	}
 
 	CHECK(isValidStakingInfo(params));
