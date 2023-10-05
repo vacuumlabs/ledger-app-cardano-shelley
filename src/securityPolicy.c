@@ -85,6 +85,10 @@ security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+
 	case PATH_MINT_KEY:
 
 	case PATH_POOL_COLD_KEY:
@@ -162,6 +166,9 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
 	case PATH_CVOTE_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 		// ask for permission (it is unusual if client asks this instead of the account key)
@@ -187,6 +194,9 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	case PATH_MULTISIG_ACCOUNT:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
 	case PATH_MINT_KEY:
 	case PATH_CVOTE_ACCOUNT:
 	case PATH_CVOTE_KEY:
@@ -197,7 +207,7 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 
 	case PATH_POOL_COLD_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
-		// but ask for permission when pool cold key is requested
+		// but ask for permission
 		PROMPT();
 		break;
 
@@ -1391,15 +1401,30 @@ static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path,
 	switch (bip44_classifyPath(path)) {
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
+		// ordinary key paths can be hidden if they are not unusual
+		// (the user saw all outputs not belonging to him, withdrawals and certificates,
+		// those belong to him in an ORDINARY txs thanks to
+		// keys being displayed by paths instead of hashes)
 		DENY_IF(violatesSingleAccountOrStoreIt(path));
 		WARN_UNLESS(bip44_isPathReasonable(path));
 		SHOW_IF(app_mode_expert());
 		ALLOW();
 		break;
 
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+		// these have to be shown because the tx might contain
+		// an action proposal that cannot be fully shown on the device
+		// TODO what about violation of single account policy?
+		DENY_IF(violatesSingleAccountOrStoreIt(path));
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
 	case PATH_POOL_COLD_KEY:
-		// ordinary key paths and pool cold key paths can be hidden if they are not unusual
-		// (the user saw all outputs, withdrawals and pool certificates and they all belong to him)
+		// could be hidden perhaps, but it's safer to let the user to know
+		// the SW wallet wants to sign with the stake pool key
 		WARN_UNLESS(bip44_isPathReasonable(path));
 		SHOW();
 		break;
@@ -1439,6 +1464,7 @@ static inline security_policy_t _multisigWitnessPolicy(const bip44_path_t* path,
 
 	default:
 		// ordinary and pool cold keys forbidden
+		// DRep and committee keys forbidden
 		DENY();
 		break;
 	}
@@ -1707,6 +1733,12 @@ static bool is_required_signer_allowed(bip44_path_t* path)
 	case PATH_MULTISIG_ACCOUNT:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
+		return true;
+
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+		// no known use case, but also no reason to deny
 		return true;
 
 	case PATH_MINT_KEY:
