@@ -79,11 +79,16 @@ bool bip44_isOrdinaryStakingKeyPath(const bip44_path_t* pathSpec);
 bool bip44_isMultisigStakingKeyPath(const bip44_path_t* pathSpec);
 bool bip44_isMultidelegationStakingKeyPath(const bip44_path_t* pathSpec);
 
+bool bip44_isDRepKeyPath(const bip44_path_t* pathSpec);
+bool bip44_isCommitteeColdKeyPath(const bip44_path_t* pathSpec);
+bool bip44_isCommitteeHotKeyPath(const bip44_path_t* pathSpec);
+
 bool bip44_isMintKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_isPoolColdKeyPath(const bip44_path_t* pathSpec);
 
 bool bip44_isCVoteKeyPath(const bip44_path_t* pathSpec);
+
 
 size_t bip44_printToStr(const bip44_path_t*, char* out, size_t outSize);
 
@@ -100,6 +105,17 @@ typedef enum {
 	// hd wallet reward address, withdrawal witness, pool owner
 	PATH_ORDINARY_STAKING_KEY,
 	PATH_MULTISIG_STAKING_KEY,
+
+	// DRep key
+	// m / 1852' / 1815' / account' / 3 / address_index
+	PATH_DREP_KEY,
+
+	// constitutional committee hot key TODO not approved yet https://github.com/Ryun1/CIPs/blob/conway-keys/CIP-conway-keys/README.md
+	// m / 1852' / 1815' / account' / 4 / address_index
+	PATH_COMMITTEE_COLD_KEY,
+	// constitutional committee cold key TODO not approved yet
+	// m / 1852' / 1815' / account' / 5 / address_index
+	PATH_COMMITTEE_HOT_KEY,
 
 	// native token minting/burning
 	PATH_MINT_KEY,
