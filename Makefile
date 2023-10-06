@@ -217,3 +217,23 @@ format:
 
 size: all
 	$(GCCPATH)arm-none-eabi-size --format=gnu bin/app.elf
+
+##############
+#   Device-specific builds
+##############
+
+nanos: clean
+	rm -f src/glyphs.*
+	BOLOS_SDK=$(NANOS_SDK) make
+
+nanosp: clean
+	rm -f src/glyphs.*
+	BOLOS_SDK=$(NANOSP_SDK) make
+
+nanox: clean
+	rm -f src/glyphs.*
+	BOLOS_SDK=$(NANOX_SDK) make
+
+stax: clean
+	rm -f src/glyphs.*
+	BOLOS_SDK=$(STAX_SDK) make
