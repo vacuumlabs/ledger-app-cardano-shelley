@@ -15,7 +15,7 @@
  *  limitations under the License.
  *****************************************************************************/
 #include <stdint.h>   // uint*_t
-#include <string.h>   // memset, explicit_bzero
+#include <string.h>   // explicit_bzero
 #include <stdbool.h>  // bool
 
 #include "cx.h"
