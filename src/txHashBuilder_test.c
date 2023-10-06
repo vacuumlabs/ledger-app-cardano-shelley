@@ -402,7 +402,7 @@ static void addCertificates(tx_hash_builder_t* builder)
 		txHashBuilder_addCertificate_stakingHash(
 		        builder,
 		        CERTIFICATE_TYPE_STAKE_REGISTRATION,
-		        STAKE_CREDENTIAL_KEY_PATH,
+		        CREDENTIAL_KEY_PATH,
 		        tmp, tmpSize
 		);
 	}
@@ -413,7 +413,7 @@ static void addCertificates(tx_hash_builder_t* builder)
 		txHashBuilder_addCertificate_stakingHash(
 		        builder,
 		        CERTIFICATE_TYPE_STAKE_DEREGISTRATION,
-		        STAKE_CREDENTIAL_KEY_PATH,
+		        CREDENTIAL_KEY_PATH,
 		        tmp, tmpSize
 		);
 	}
@@ -431,7 +431,7 @@ static void addCertificates(tx_hash_builder_t* builder)
 		uint8_t tmp_pool[70] = {0};
 		size_t tmpSize_pool = decode_hex(PTR_PIC(it->poolKeyHash), tmp_pool, SIZEOF(tmp_pool));
 		txHashBuilder_addCertificate_delegation(
-		        builder, STAKE_CREDENTIAL_KEY_PATH,
+		        builder, CREDENTIAL_KEY_PATH,
 		        tmp_credential, tmpSize_credential,
 		        tmp_pool, tmpSize_pool
 		);
