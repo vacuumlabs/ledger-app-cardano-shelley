@@ -111,7 +111,7 @@ security_policy_t policyForSignTxCertificate(
 security_policy_t policyForSignTxCertificateStaking(
         sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType,
-        const stake_credential_t* stakeCredential
+        const credential_t* stakeCredential
 );
 #ifdef APP_FEATURE_POOL_RETIREMENT
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
@@ -153,7 +153,7 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 #endif // APP_FEATURE_POOL_REGISTRATION
 security_policy_t policyForSignTxWithdrawal(
         sign_tx_signingmode_t txSigningMode,
-        const stake_credential_t* stakeCredential
+        const credential_t* stakeCredential
 );
 
 security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType);

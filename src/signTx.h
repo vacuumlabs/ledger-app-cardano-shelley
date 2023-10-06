@@ -83,20 +83,20 @@ typedef struct {
 } common_tx_data_t;
 
 typedef struct {
-	stake_credential_type_t type;
+	credential_type_t type;
 	union {
 		bip44_path_t keyPath;
 		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
 		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
 	};
-} stake_credential_t;
+} credential_t;
 
 typedef struct {
 	certificate_type_t type;
 
 	union {
-		stake_credential_t stakeCredential;
 		bip44_path_t poolIdPath;
+		credential_t stakeCredential;
 	};
 	uint64_t epoch;
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
@@ -114,7 +114,7 @@ typedef struct {
 } sign_tx_witness_data_t;
 
 typedef struct {
-	stake_credential_t stakeCredential;
+	credential_t stakeCredential;
 	uint64_t amount;
 	uint8_t previousRewardAccount[REWARD_ACCOUNT_SIZE];
 } sign_tx_withdrawal_data_t;

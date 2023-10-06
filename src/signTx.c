@@ -907,19 +907,19 @@ static void _parsePathSpec(read_view_t* view, bip44_path_t* pathSpec)
 	PRINTF("\n");
 }
 
-static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCredential)
+static void _parseStakeCredential(read_view_t* view, credential_t* stakeCredential)
 {
 	stakeCredential->type = parse_u1be(view);
 	switch (stakeCredential->type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
+	case CREDENTIAL_KEY_PATH:
 		_parsePathSpec(view, &stakeCredential->keyPath);
 		break;
-	case STAKE_CREDENTIAL_KEY_HASH: {
+	case CREDENTIAL_KEY_HASH: {
 		STATIC_ASSERT(SIZEOF(stakeCredential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
 		view_parseBuffer(stakeCredential->keyHash, view, SIZEOF(stakeCredential->keyHash));
 		break;
 	}
-	case STAKE_CREDENTIAL_SCRIPT_HASH: {
+	case CREDENTIAL_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
 		view_parseBuffer(stakeCredential->scriptHash, view, SIZEOF(stakeCredential->scriptHash));
 		break;
@@ -991,21 +991,21 @@ static void _fillHashFromPath(const bip44_path_t* path,
 	);
 }
 
-static void _fillHashFromStakeCredential(const stake_credential_t* stakeCredential,
+static void _fillHashFromStakeCredential(const credential_t* stakeCredential,
         uint8_t* hash, size_t hashSize)
 {
 	ASSERT(hashSize < BUFFER_SIZE_PARANOIA);
 
 	switch (stakeCredential->type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
+	case CREDENTIAL_KEY_PATH:
 		_fillHashFromPath(&stakeCredential->keyPath, hash, hashSize);
 		break;
-	case STAKE_CREDENTIAL_KEY_HASH:
+	case CREDENTIAL_KEY_HASH:
 		ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
 		STATIC_ASSERT(SIZEOF(stakeCredential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
 		memmove(hash, stakeCredential->keyHash, SIZEOF(stakeCredential->keyHash));
 		break;
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
+	case CREDENTIAL_SCRIPT_HASH:
 		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
 		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
 		memmove(hash, stakeCredential->scriptHash, SIZEOF(stakeCredential->scriptHash));
@@ -1194,7 +1194,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE] = {0};
 
 	switch (BODY_CTX->stageData.withdrawal.stakeCredential.type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
+	case CREDENTIAL_KEY_PATH:
 		constructRewardAddressFromKeyPath(
 		        &BODY_CTX->stageData.withdrawal.stakeCredential.keyPath,
 		        ctx->commonTxData.networkId,
@@ -1202,7 +1202,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 		        SIZEOF(rewardAddress)
 		);
 		break;
-	case STAKE_CREDENTIAL_KEY_HASH:
+	case CREDENTIAL_KEY_HASH:
 		constructRewardAddressFromHash(
 		        ctx->commonTxData.networkId,
 		        REWARD_HASH_SOURCE_KEY,
@@ -1212,7 +1212,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 		        SIZEOF(rewardAddress)
 		);
 		break;
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
+	case CREDENTIAL_SCRIPT_HASH:
 		constructRewardAddressFromHash(
 		        ctx->commonTxData.networkId,
 		        REWARD_HASH_SOURCE_SCRIPT,

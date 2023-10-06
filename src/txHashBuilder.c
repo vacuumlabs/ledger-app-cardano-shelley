@@ -742,17 +742,17 @@ void txHashBuilder_enterCertificates(tx_hash_builder_t* builder)
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES;
 }
 
-static uint32_t getStakeCredentialSource(const stake_credential_type_t stakeCredentialType)
+static uint32_t getStakeCredentialSource(const credential_type_t credentialType)
 {
 	enum {
 		KEY = 0,
 		SCRIPT = 1
 	};
-	switch (stakeCredentialType) {
-	case STAKE_CREDENTIAL_KEY_PATH:
-	case STAKE_CREDENTIAL_KEY_HASH:
+	switch (credentialType) {
+	case CREDENTIAL_KEY_PATH:
+	case CREDENTIAL_KEY_HASH:
 		return KEY;
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
+	case CREDENTIAL_SCRIPT_HASH:
 		return SCRIPT;
 	default:
 		ASSERT(false);
@@ -764,7 +764,7 @@ static uint32_t getStakeCredentialSource(const stake_credential_type_t stakeCred
 void txHashBuilder_addCertificate_stakingHash(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
-        const stake_credential_type_t stakeCredentialType,
+        const credential_type_t credentialType,
         const uint8_t* stakingHash, size_t stakingHashSize
 )
 {
@@ -794,7 +794,7 @@ void txHashBuilder_addCertificate_stakingHash(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, getStakeCredentialSource(stakeCredentialType));
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, getStakeCredentialSource(credentialType));
 			}
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingHashSize);
@@ -806,7 +806,7 @@ void txHashBuilder_addCertificate_stakingHash(
 
 void txHashBuilder_addCertificate_delegation(
         tx_hash_builder_t* builder,
-        const stake_credential_type_t stakeCredentialType,
+        const credential_type_t credentialType,
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
 )
@@ -836,7 +836,7 @@ void txHashBuilder_addCertificate_delegation(
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, getStakeCredentialSource(stakeCredentialType));
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, getStakeCredentialSource(credentialType));
 			}
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, stakingKeyHashSize);
