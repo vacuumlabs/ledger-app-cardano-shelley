@@ -1012,7 +1012,7 @@ security_policy_t policyForSignTxCertificate(
 security_policy_t policyForSignTxCertificateStaking(
         sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType,
-        const stake_credential_t* stakeCredential
+        const credential_t* stakeCredential
 )
 {
 	switch (certificateType) {
@@ -1026,7 +1026,7 @@ security_policy_t policyForSignTxCertificateStaking(
 	}
 
 	switch (stakeCredential->type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
+	case CREDENTIAL_KEY_PATH:
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
 		switch (txSigningMode) {
@@ -1047,7 +1047,7 @@ security_policy_t policyForSignTxCertificateStaking(
 		}
 		break;
 
-	case STAKE_CREDENTIAL_KEY_HASH:
+	case CREDENTIAL_KEY_HASH:
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 			PROMPT();
@@ -1066,7 +1066,7 @@ security_policy_t policyForSignTxCertificateStaking(
 		}
 		break;
 
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
+	case CREDENTIAL_SCRIPT_HASH:
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
@@ -1298,11 +1298,11 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 // For each withdrawal
 security_policy_t policyForSignTxWithdrawal(
         sign_tx_signingmode_t txSigningMode,
-        const stake_credential_t* stakeCredential
+        const credential_t* stakeCredential
 )
 {
 	switch (stakeCredential->type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
+	case CREDENTIAL_KEY_PATH:
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
 		switch (txSigningMode) {
@@ -1325,7 +1325,7 @@ security_policy_t policyForSignTxWithdrawal(
 		}
 		break;
 
-	case STAKE_CREDENTIAL_KEY_HASH:
+	case CREDENTIAL_KEY_HASH:
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 			SHOW_IF(app_mode_expert());
@@ -1353,7 +1353,7 @@ security_policy_t policyForSignTxWithdrawal(
 		}
 		break;
 
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
+	case CREDENTIAL_SCRIPT_HASH:
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
