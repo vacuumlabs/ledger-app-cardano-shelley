@@ -417,7 +417,7 @@ void signTx_handleCertificate_ui_runStep()
 	}
 	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_STAKING_KEY) {
 		switch (BODY_CTX->stageData.certificate.stakeCredential.type) {
-		case STAKE_CREDENTIAL_KEY_PATH:
+		case CREDENTIAL_KEY_PATH:
 			#ifdef HAVE_BAGL
 			ui_displayPathScreen(
 			        "Stake key",
@@ -432,7 +432,7 @@ void signTx_handleCertificate_ui_runStep()
 			}
 			#endif // HAVE_BAGL
 			break;
-		case STAKE_CREDENTIAL_KEY_HASH:
+		case CREDENTIAL_KEY_HASH:
 			#ifdef HAVE_BAGL
 			ui_displayBech32Screen(
 			        "Stake key hash",
@@ -449,7 +449,7 @@ void signTx_handleCertificate_ui_runStep()
 			}
 			#endif // HAVE_BAGL
 			break;
-		case STAKE_CREDENTIAL_SCRIPT_HASH:
+		case CREDENTIAL_SCRIPT_HASH:
 			#ifdef HAVE_BAGL
 			ui_displayBech32Screen(
 			        "Stake script hash",
@@ -611,12 +611,12 @@ void signTx_handleWithdrawal_ui_runStep()
 	UI_STEP(HANDLE_WITHDRAWAL_STEP_DISPLAY_PATH) {
 		reward_account_t rewardAccount;
 		switch (BODY_CTX->stageData.withdrawal.stakeCredential.type) {
-		case STAKE_CREDENTIAL_KEY_PATH: {
+		case CREDENTIAL_KEY_PATH: {
 			rewardAccount.keyReferenceType = KEY_REFERENCE_PATH;
 			rewardAccount.path = BODY_CTX->stageData.withdrawal.stakeCredential.keyPath;
 			break;
 		}
-		case STAKE_CREDENTIAL_KEY_HASH: {
+		case CREDENTIAL_KEY_HASH: {
 			rewardAccount.keyReferenceType = KEY_REFERENCE_HASH;
 			constructRewardAddressFromHash(
 			        ctx->commonTxData.networkId,
@@ -628,7 +628,7 @@ void signTx_handleWithdrawal_ui_runStep()
 			);
 			break;
 		}
-		case STAKE_CREDENTIAL_SCRIPT_HASH: {
+		case CREDENTIAL_SCRIPT_HASH: {
 			rewardAccount.keyReferenceType = KEY_REFERENCE_HASH;
 			constructRewardAddressFromHash(
 			        ctx->commonTxData.networkId,

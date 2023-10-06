@@ -120,10 +120,10 @@ typedef enum {
 
 typedef enum {
 	// enum values are affected by backwards-compatibility
-	STAKE_CREDENTIAL_KEY_PATH = 0,
-	STAKE_CREDENTIAL_KEY_HASH = 2,
-	STAKE_CREDENTIAL_SCRIPT_HASH = 1,
-} stake_credential_type_t;
+	CREDENTIAL_KEY_PATH = 0,
+	CREDENTIAL_KEY_HASH = 2,
+	CREDENTIAL_SCRIPT_HASH = 1,
+} credential_type_t;
 
 typedef enum {
 	RELAY_SINGLE_HOST_IP = 0,
