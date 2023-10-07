@@ -354,7 +354,7 @@ void signTx_handleTtl_ui_runStep()
 static void signTx_handleCertificate_ui_delegation_cb(void)
 {
 	char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
-	ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", BODY_CTX->stageData.certificate.poolKeyHash, SIZEOF(BODY_CTX->stageData.certificate.poolKeyHash));
+	ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", BODY_CTX->stageData.certificate.poolCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.poolCredential.keyHash));
 	fill_and_display_if_required("Pool", encodedStr, signTx_handleCertificate_ui_runStep, respond_with_user_reject);
 }
 #endif
@@ -399,7 +399,7 @@ void signTx_handleCertificate_ui_runStep()
 			ui_displayBech32Screen(
 			        "Delegate stake",
 			        "to pool",
-			        BODY_CTX->stageData.certificate.poolKeyHash, SIZEOF(BODY_CTX->stageData.certificate.poolKeyHash),
+			        BODY_CTX->stageData.certificate.poolCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.poolCredential.keyHash),
 			        this_fn
 			);
 			#elif defined(HAVE_NBGL)
@@ -540,13 +540,13 @@ void signTx_handleCertificatePoolRetirement_ui_runStep()
 		ui_displayBech32Screen(
 		        "Retire stake pool",
 		        "pool",
-		        BODY_CTX->stageData.certificate.poolKeyHash, SIZEOF(BODY_CTX->stageData.certificate.poolKeyHash),
+		        BODY_CTX->stageData.certificate.poolCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.poolCredential.keyHash),
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
 		set_light_confirmation(true);
 		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
-		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", BODY_CTX->stageData.certificate.poolKeyHash, SIZEOF(BODY_CTX->stageData.certificate.poolKeyHash));
+		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", BODY_CTX->stageData.certificate.poolCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.poolCredential.keyHash));
 		fill_and_display_if_required("Retire stake pool", encodedStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
