@@ -1029,25 +1029,25 @@ static void _addCertificateDataToTx(
 	TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
 
 	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "incompatible hash sizes");
-	uint8_t stakingHash[ADDRESS_KEY_HASH_LENGTH] = {0};
+	uint8_t hash[ADDRESS_KEY_HASH_LENGTH] = {0};
 
 	switch (BODY_CTX->stageData.certificate.type) {
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		_fillHashFromStakeCredential(&BODY_CTX->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
+		_fillHashFromStakeCredential(&BODY_CTX->stageData.certificate.stakeCredential, hash, SIZEOF(hash));
 		txHashBuilder_addCertificate_stakingHash(
 		        txHashBuilder, certificateData->type, certificateData->stakeCredential.type,
-		        stakingHash, SIZEOF(stakingHash)
+		        hash, SIZEOF(hash)
 		);
 		break;
 	}
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		_fillHashFromStakeCredential(&BODY_CTX->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
+		_fillHashFromStakeCredential(&BODY_CTX->stageData.certificate.stakeCredential, hash, SIZEOF(hash));
 		txHashBuilder_addCertificate_delegation(
 		        txHashBuilder, certificateData->stakeCredential.type,
-		        stakingHash, SIZEOF(stakingHash),
+		        hash, SIZEOF(hash),
 		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
 		);
 		break;
@@ -1056,10 +1056,10 @@ static void _addCertificateDataToTx(
 	#ifdef APP_FEATURE_POOL_RETIREMENT
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		_fillHashFromPath(&BODY_CTX->stageData.certificate.poolIdPath, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
+		_fillHashFromPath(&BODY_CTX->stageData.certificate.poolIdPath, hash, SIZEOF(hash));
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
-		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash),
+		        hash, SIZEOF(hash),
 		        certificateData->epoch
 		);
 		break;
