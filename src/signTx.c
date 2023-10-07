@@ -907,19 +907,19 @@ static void _parsePathSpec(read_view_t* view, bip44_path_t* pathSpec)
 	PRINTF("\n");
 }
 
-static void _parseCredential(read_view_t* view, credential_t* credential)
+static void _parseCredential(read_view_t* view, ext_credential_t* credential)
 {
 	credential->type = parse_u1be(view);
 	switch (credential->type) {
-	case CREDENTIAL_KEY_PATH:
+	case EXT_CREDENTIAL_KEY_PATH:
 		_parsePathSpec(view, &credential->keyPath);
 		break;
-	case CREDENTIAL_KEY_HASH: {
+	case EXT_CREDENTIAL_KEY_HASH: {
 		STATIC_ASSERT(SIZEOF(credential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
 		view_parseBuffer(credential->keyHash, view, SIZEOF(credential->keyHash));
 		break;
 	}
-	case CREDENTIAL_SCRIPT_HASH: {
+	case EXT_CREDENTIAL_SCRIPT_HASH: {
 		STATIC_ASSERT(SIZEOF(credential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
 		view_parseBuffer(credential->scriptHash, view, SIZEOF(credential->scriptHash));
 		break;
@@ -951,6 +951,7 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 	case CERTIFICATE_TYPE_STAKE_DELEGATION:
 		_parseCredential(&view, &certificateData->stakeCredential);
 		// TODO change APDU to parse credential
+		certificateData->poolCredential.type = EXT_CREDENTIAL_KEY_HASH;
 		STATIC_ASSERT(SIZEOF(certificateData->poolCredential.keyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
 		view_parseBuffer(certificateData->poolCredential.keyHash, &view, POOL_KEY_HASH_LENGTH);
 		break;
@@ -968,7 +969,7 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
 		// TODO refactor APDU serialization to parse credential
-		certificateData->poolCredential.type = CREDENTIAL_KEY_PATH;
+		certificateData->poolCredential.type = EXT_CREDENTIAL_KEY_PATH;
 		_parsePathSpec(&view, &certificateData->poolCredential.keyPath);
 		certificateData->epoch = parse_u8be(&view);
 		break;
@@ -994,33 +995,35 @@ static void _fillHashFromPath(const bip44_path_t* path,
 	);
 }
 
-static void _fillHashFromCredential(
-        const credential_t* credential,
-        uint8_t* hash, size_t hashSize
+static void _setCredential(
+        credential_t* credential,
+        const ext_credential_t* extCredential
 )
 {
-	ASSERT(hashSize < BUFFER_SIZE_PARANOIA);
+	switch (extCredential->type) {
 
-	switch (credential->type) {
-	case CREDENTIAL_KEY_PATH:
-		_fillHashFromPath(&credential->keyPath, hash, hashSize);
+	case EXT_CREDENTIAL_KEY_PATH:
+		credential->type = CREDENTIAL_KEY_HASH;
+		_fillHashFromPath(&extCredential->keyPath, credential->keyHash, SIZEOF(credential->keyHash));
 		break;
-	case CREDENTIAL_KEY_HASH:
-		ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
-		STATIC_ASSERT(SIZEOF(credential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
-		memmove(hash, credential->keyHash, SIZEOF(credential->keyHash));
+
+	case EXT_CREDENTIAL_KEY_HASH:
+		credential->type = CREDENTIAL_KEY_HASH;
+		STATIC_ASSERT(SIZEOF(credential->keyHash) == SIZEOF(extCredential->keyHash), "bad script hash container size");
+		memmove(credential->keyHash, extCredential->keyHash, SIZEOF(extCredential->keyHash));
 		break;
-	case CREDENTIAL_SCRIPT_HASH:
-		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
-		STATIC_ASSERT(SIZEOF(credential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		memmove(hash, credential->scriptHash, SIZEOF(credential->scriptHash));
+
+	case EXT_CREDENTIAL_SCRIPT_HASH:
+		credential->type = CREDENTIAL_SCRIPT_HASH;
+		STATIC_ASSERT(SIZEOF(credential->scriptHash) == SIZEOF(extCredential->scriptHash), "bad script hash container size");
+		memmove(credential->scriptHash, extCredential->scriptHash, SIZEOF(extCredential->scriptHash));
 		break;
+
 	default:
 		ASSERT(false);
 		break;
 	}
 }
-
 
 __noinline_due_to_stack__
 static void _addCertificateDataToTx(
@@ -1034,26 +1037,27 @@ static void _addCertificateDataToTx(
 	TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
 
 	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "incompatible hash sizes");
-	uint8_t hash[ADDRESS_KEY_HASH_LENGTH] = {0};
+	credential_t stakeCredential;
 
 	switch (BODY_CTX->stageData.certificate.type) {
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		_fillHashFromCredential(&BODY_CTX->stageData.certificate.stakeCredential, hash, SIZEOF(hash));
+		_setCredential(&stakeCredential, &certificateData->stakeCredential);
 		txHashBuilder_addCertificate_stakingHash(
-		        txHashBuilder, certificateData->type, certificateData->stakeCredential.type,
-		        hash, SIZEOF(hash)
+		        txHashBuilder,
+		        certificateData->type,
+		        &stakeCredential
 		);
 		break;
 	}
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		_fillHashFromCredential(&BODY_CTX->stageData.certificate.stakeCredential, hash, SIZEOF(hash));
+		_setCredential(&stakeCredential, &certificateData->stakeCredential);
+		ASSERT(certificateData->poolCredential.type == EXT_CREDENTIAL_KEY_HASH);
 		txHashBuilder_addCertificate_delegation(
-		        txHashBuilder, certificateData->stakeCredential.type,
-		        hash, SIZEOF(hash),
-		        // TODO make sure credential is key hash
+		        txHashBuilder,
+		        &stakeCredential,
 		        certificateData->poolCredential.keyHash, SIZEOF(certificateData->poolCredential.keyHash)
 		);
 		break;
@@ -1062,8 +1066,10 @@ static void _addCertificateDataToTx(
 	#ifdef APP_FEATURE_POOL_RETIREMENT
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		// TODO rename  to _fillHashFromCredential
-		_fillHashFromCredential(&BODY_CTX->stageData.certificate.poolCredential, hash, SIZEOF(hash));
+		uint8_t hash[ADDRESS_KEY_HASH_LENGTH] = {0};
+		ext_credential_t* credential = &BODY_CTX->stageData.certificate.poolCredential;
+		ASSERT(credential->type == EXT_CREDENTIAL_KEY_PATH);
+		_fillHashFromPath(&credential->keyPath, hash, SIZEOF(hash));
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
 		        hash, SIZEOF(hash),
@@ -1202,7 +1208,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE] = {0};
 
 	switch (BODY_CTX->stageData.withdrawal.stakeCredential.type) {
-	case CREDENTIAL_KEY_PATH:
+	case EXT_CREDENTIAL_KEY_PATH:
 		constructRewardAddressFromKeyPath(
 		        &BODY_CTX->stageData.withdrawal.stakeCredential.keyPath,
 		        ctx->commonTxData.networkId,
@@ -1210,7 +1216,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 		        SIZEOF(rewardAddress)
 		);
 		break;
-	case CREDENTIAL_KEY_HASH:
+	case EXT_CREDENTIAL_KEY_HASH:
 		constructRewardAddressFromHash(
 		        ctx->commonTxData.networkId,
 		        REWARD_HASH_SOURCE_KEY,
@@ -1220,7 +1226,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 		        SIZEOF(rewardAddress)
 		);
 		break;
-	case CREDENTIAL_SCRIPT_HASH:
+	case EXT_CREDENTIAL_SCRIPT_HASH:
 		constructRewardAddressFromHash(
 		        ctx->commonTxData.networkId,
 		        REWARD_HASH_SOURCE_SCRIPT,
