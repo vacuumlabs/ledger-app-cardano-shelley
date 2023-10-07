@@ -907,21 +907,21 @@ static void _parsePathSpec(read_view_t* view, bip44_path_t* pathSpec)
 	PRINTF("\n");
 }
 
-static void _parseStakeCredential(read_view_t* view, credential_t* stakeCredential)
+static void _parseCredential(read_view_t* view, credential_t* credential)
 {
-	stakeCredential->type = parse_u1be(view);
-	switch (stakeCredential->type) {
+	credential->type = parse_u1be(view);
+	switch (credential->type) {
 	case CREDENTIAL_KEY_PATH:
-		_parsePathSpec(view, &stakeCredential->keyPath);
+		_parsePathSpec(view, &credential->keyPath);
 		break;
 	case CREDENTIAL_KEY_HASH: {
-		STATIC_ASSERT(SIZEOF(stakeCredential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
-		view_parseBuffer(stakeCredential->keyHash, view, SIZEOF(stakeCredential->keyHash));
+		STATIC_ASSERT(SIZEOF(credential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
+		view_parseBuffer(credential->keyHash, view, SIZEOF(credential->keyHash));
 		break;
 	}
 	case CREDENTIAL_SCRIPT_HASH: {
-		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		view_parseBuffer(stakeCredential->scriptHash, view, SIZEOF(stakeCredential->scriptHash));
+		STATIC_ASSERT(SIZEOF(credential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		view_parseBuffer(credential->scriptHash, view, SIZEOF(credential->scriptHash));
 		break;
 	}
 	default:
@@ -941,15 +941,15 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 
 	switch (certificateData->type) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
-		_parseStakeCredential(&view, &certificateData->stakeCredential);
+		_parseCredential(&view, &certificateData->stakeCredential);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
-		_parseStakeCredential(&view, &certificateData->stakeCredential);
+		_parseCredential(&view, &certificateData->stakeCredential);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION:
-		_parseStakeCredential(&view, &certificateData->stakeCredential);
+		_parseCredential(&view, &certificateData->stakeCredential);
 		// TODO change APDU to parse credential
 		STATIC_ASSERT(SIZEOF(certificateData->poolCredential.keyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
 		view_parseBuffer(certificateData->poolCredential.keyHash, &view, POOL_KEY_HASH_LENGTH);
@@ -1281,7 +1281,7 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, const uint8_t* wireDataBuffe
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 		BODY_CTX->stageData.withdrawal.amount = parse_u8be(&view);
 
-		_parseStakeCredential(&view, &BODY_CTX->stageData.withdrawal.stakeCredential);
+		_parseCredential(&view, &BODY_CTX->stageData.withdrawal.stakeCredential);
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
