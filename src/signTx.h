@@ -95,8 +95,13 @@ typedef struct {
 	certificate_type_t type;
 
 	union {
-		bip44_path_t poolIdPath;
 		credential_t stakeCredential;
+		// TODO credential_t committeeColdCredential;
+	};
+	union {
+		credential_t poolCredential;
+		// TODO credential_t drepCredential;
+		// TODO credential_t committeeHotCredential;
 	};
 	uint64_t epoch;
 	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
