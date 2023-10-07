@@ -104,8 +104,6 @@ typedef struct {
 		// TODO credential_t committeeHotCredential;
 	};
 	uint64_t epoch;
-	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
-
 } sign_tx_certificate_data_t;
 
 typedef struct {
