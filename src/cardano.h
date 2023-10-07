@@ -119,13 +119,6 @@ typedef enum {
 } certificate_type_t;
 
 typedef enum {
-	// enum values are affected by backwards-compatibility
-	CREDENTIAL_KEY_PATH = 0,
-	CREDENTIAL_KEY_HASH = 2,
-	CREDENTIAL_SCRIPT_HASH = 1,
-} credential_type_t;
-
-typedef enum {
 	RELAY_SINGLE_HOST_IP = 0,
 	RELAY_SINGLE_HOST_NAME = 1,
 	RELAY_MULTIPLE_HOST_NAME = 2

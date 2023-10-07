@@ -397,24 +397,26 @@ static void addCertificates(tx_hash_builder_t* builder)
 	txHashBuilder_enterCertificates(builder);
 
 	ITERATE(it, registrationCertificates) {
-		uint8_t tmp[70] = {0};
-		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
+		credential_t credential = {
+			.type = CREDENTIAL_KEY_HASH
+		};
+		decode_hex(PTR_PIC(it->stakingKeyHash), credential.keyHash, SIZEOF(credential.keyHash));
 		txHashBuilder_addCertificate_stakingHash(
 		        builder,
 		        CERTIFICATE_TYPE_STAKE_REGISTRATION,
-		        CREDENTIAL_KEY_PATH,
-		        tmp, tmpSize
+		        &credential
 		);
 	}
 
 	ITERATE(it, deregistrationCertificates) {
-		uint8_t tmp[70] = {0};
-		size_t tmpSize = decode_hex(PTR_PIC(it->stakingKeyHash), tmp, SIZEOF(tmp));
+		credential_t credential = {
+			.type = CREDENTIAL_KEY_HASH
+		};
+		decode_hex(PTR_PIC(it->stakingKeyHash), credential.keyHash, SIZEOF(credential.keyHash));
 		txHashBuilder_addCertificate_stakingHash(
 		        builder,
 		        CERTIFICATE_TYPE_STAKE_DEREGISTRATION,
-		        CREDENTIAL_KEY_PATH,
-		        tmp, tmpSize
+		        &credential
 		);
 	}
 
@@ -423,16 +425,15 @@ static void addCertificates(tx_hash_builder_t* builder)
 	addPoolRetirementCertificate(builder);
 
 	ITERATE(it, delegationCertificates) {
-		uint8_t tmp_credential[70] = {0};
-		size_t tmpSize_credential = decode_hex(
-		                                    PTR_PIC(it->stakingKeyHash),
-		                                    tmp_credential, SIZEOF(tmp_credential)
-		                            );
+		credential_t credential = {
+			.type = CREDENTIAL_KEY_HASH
+		};
+		decode_hex(PTR_PIC(it->stakingKeyHash), credential.keyHash, SIZEOF(credential.keyHash));
 		uint8_t tmp_pool[70] = {0};
 		size_t tmpSize_pool = decode_hex(PTR_PIC(it->poolKeyHash), tmp_pool, SIZEOF(tmp_pool));
 		txHashBuilder_addCertificate_delegation(
-		        builder, CREDENTIAL_KEY_PATH,
-		        tmp_credential, tmpSize_credential,
+		        builder,
+		        &credential,
 		        tmp_pool, tmpSize_pool
 		);
 	}
