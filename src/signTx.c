@@ -966,7 +966,9 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 		#ifdef APP_FEATURE_POOL_RETIREMENT
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
-		_parsePathSpec(&view, &certificateData->poolIdPath);
+		// TODO refactor APDU serialization to parse credential
+		certificateData->poolCredential.type = CREDENTIAL_KEY_PATH;
+		_parsePathSpec(&view, &certificateData->poolCredential.keyPath);
 		certificateData->epoch = parse_u8be(&view);
 		break;
 
@@ -991,24 +993,26 @@ static void _fillHashFromPath(const bip44_path_t* path,
 	);
 }
 
-static void _fillHashFromStakeCredential(const credential_t* stakeCredential,
-        uint8_t* hash, size_t hashSize)
+static void _fillHashFromCredential(
+        const credential_t* credential,
+        uint8_t* hash, size_t hashSize
+)
 {
 	ASSERT(hashSize < BUFFER_SIZE_PARANOIA);
 
-	switch (stakeCredential->type) {
+	switch (credential->type) {
 	case CREDENTIAL_KEY_PATH:
-		_fillHashFromPath(&stakeCredential->keyPath, hash, hashSize);
+		_fillHashFromPath(&credential->keyPath, hash, hashSize);
 		break;
 	case CREDENTIAL_KEY_HASH:
 		ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
-		STATIC_ASSERT(SIZEOF(stakeCredential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
-		memmove(hash, stakeCredential->keyHash, SIZEOF(stakeCredential->keyHash));
+		STATIC_ASSERT(SIZEOF(credential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
+		memmove(hash, credential->keyHash, SIZEOF(credential->keyHash));
 		break;
 	case CREDENTIAL_SCRIPT_HASH:
 		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
-		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		memmove(hash, stakeCredential->scriptHash, SIZEOF(stakeCredential->scriptHash));
+		STATIC_ASSERT(SIZEOF(credential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		memmove(hash, credential->scriptHash, SIZEOF(credential->scriptHash));
 		break;
 	default:
 		ASSERT(false);
@@ -1035,7 +1039,7 @@ static void _addCertificateDataToTx(
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		_fillHashFromStakeCredential(&BODY_CTX->stageData.certificate.stakeCredential, hash, SIZEOF(hash));
+		_fillHashFromCredential(&BODY_CTX->stageData.certificate.stakeCredential, hash, SIZEOF(hash));
 		txHashBuilder_addCertificate_stakingHash(
 		        txHashBuilder, certificateData->type, certificateData->stakeCredential.type,
 		        hash, SIZEOF(hash)
@@ -1044,7 +1048,7 @@ static void _addCertificateDataToTx(
 	}
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		_fillHashFromStakeCredential(&BODY_CTX->stageData.certificate.stakeCredential, hash, SIZEOF(hash));
+		_fillHashFromCredential(&BODY_CTX->stageData.certificate.stakeCredential, hash, SIZEOF(hash));
 		txHashBuilder_addCertificate_delegation(
 		        txHashBuilder, certificateData->stakeCredential.type,
 		        hash, SIZEOF(hash),
@@ -1056,7 +1060,8 @@ static void _addCertificateDataToTx(
 	#ifdef APP_FEATURE_POOL_RETIREMENT
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		_fillHashFromPath(&BODY_CTX->stageData.certificate.poolIdPath, hash, SIZEOF(hash));
+		// TODO rename  to _fillHashFromCredential
+		_fillHashFromCredential(&BODY_CTX->stageData.certificate.poolCredential, hash, SIZEOF(hash));
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
 		        hash, SIZEOF(hash),
@@ -1157,9 +1162,10 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 	#ifdef APP_FEATURE_POOL_RETIREMENT
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
+		// TODO refactor to use credential instead of path directly
 		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
 		                                   ctx->commonTxData.txSigningMode,
-		                                   &BODY_CTX->stageData.certificate.poolIdPath,
+		                                   &BODY_CTX->stageData.certificate.poolCredential,
 		                                   BODY_CTX->stageData.certificate.epoch
 		                           );
 		TRACE("Policy: %d", (int) policy);
