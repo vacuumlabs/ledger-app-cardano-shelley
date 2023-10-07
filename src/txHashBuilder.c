@@ -760,6 +760,15 @@ static uint32_t getStakeCredentialSource(const credential_type_t credentialType)
 	}
 }
 
+static void _initNewCertificate(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d, remainingCertificates = %u", builder->state, builder->remainingCertificates);
+
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES);
+	ASSERT(builder->remainingCertificates > 0);
+	builder->remainingCertificates--;
+}
+
 // stake key certificate registration or deregistration
 void txHashBuilder_addCertificate_stakingHash(
         tx_hash_builder_t* builder,
@@ -768,16 +777,13 @@ void txHashBuilder_addCertificate_stakingHash(
         const uint8_t* stakingHash, size_t stakingHashSize
 )
 {
-	_TRACE("state = %d, remainingCertificates = %u", builder->state, builder->remainingCertificates);
-
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES);
-	ASSERT(builder->remainingCertificates > 0);
-	builder->remainingCertificates--;
+	_initNewCertificate(builder);
 
 	ASSERT((certificateType == CERTIFICATE_TYPE_STAKE_REGISTRATION)
 	       || (certificateType == CERTIFICATE_TYPE_STAKE_DEREGISTRATION));
 
 	ASSERT(stakingHashSize == ADDRESS_KEY_HASH_LENGTH);
+
 
 	// Array(2)[
 	//   Unsigned[certificateType]
@@ -806,16 +812,12 @@ void txHashBuilder_addCertificate_stakingHash(
 
 void txHashBuilder_addCertificate_delegation(
         tx_hash_builder_t* builder,
-        const credential_type_t credentialType,
+        const ext_credential_type_t credentialType,
         const uint8_t* stakingKeyHash, size_t stakingKeyHashSize,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
 )
 {
-	_TRACE("state = %d, remainingCertificates = %u", builder->state, builder->remainingCertificates);
-
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES);
-	ASSERT(builder->remainingCertificates > 0);
-	builder->remainingCertificates--;
+	_initNewCertificate(builder);
 
 	ASSERT(stakingKeyHashSize == ADDRESS_KEY_HASH_LENGTH);
 	ASSERT(poolKeyHashSize == POOL_KEY_HASH_LENGTH);
@@ -858,11 +860,7 @@ void txHashBuilder_addCertificate_poolRetirement(
         uint64_t epoch
 )
 {
-	_TRACE("state = %d", builder->state);
-
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES);
-	ASSERT(builder->remainingCertificates > 0);
-	builder->remainingCertificates--;
+	_initNewCertificate(builder);
 
 	ASSERT(poolKeyHashSize == POOL_KEY_HASH_LENGTH);
 
@@ -893,11 +891,7 @@ void txHashBuilder_poolRegistrationCertificate_enter(
         uint16_t numOwners, uint16_t numRelays
 )
 {
-	_TRACE("state = %d, remainingCertificates = %u", builder->state, builder->remainingCertificates);
-
-	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES);
-	ASSERT(builder->remainingCertificates > 0);
-	builder->remainingCertificates--;
+	_initNewCertificate(builder);
 
 	ASSERT(builder->poolCertificateData.remainingOwners == 0);
 	builder->poolCertificateData.remainingOwners = numOwners;
