@@ -1097,7 +1097,7 @@ security_policy_t policyForSignTxCertificateStaking(
 
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_signingmode_t txSigningMode,
-        const bip44_path_t* poolIdPath,
+        const credential_t* poolCredential,
         uint64_t epoch MARK_UNUSED
 )
 {
@@ -1106,7 +1106,8 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		// pool retirement may only be present in ORDINARY_TX signing mode
 		// the path hash should be a valid pool cold key path
-		DENY_UNLESS(bip44_isPoolColdKeyPath(poolIdPath));
+		DENY_UNLESS(poolCredential->type == CREDENTIAL_KEY_PATH);
+		DENY_UNLESS(bip44_isPoolColdKeyPath(&poolCredential->keyPath));
 		PROMPT();
 		break;
 

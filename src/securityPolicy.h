@@ -116,7 +116,7 @@ security_policy_t policyForSignTxCertificateStaking(
 #ifdef APP_FEATURE_POOL_RETIREMENT
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_signingmode_t txSigningMode,
-        const bip44_path_t* stakeCredential,
+        const credential_t* poolCredential,
         uint64_t epoch
 );
 #endif // APP_FEATURE_POOL_RETIREMENT
