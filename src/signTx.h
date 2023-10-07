@@ -82,26 +82,34 @@ typedef struct {
 	single_account_data_t singleAccountData;
 } common_tx_data_t;
 
+// credentials are extended to allow key derivation paths
+typedef enum {
+	// enum values are affected by backwards-compatibility
+	EXT_CREDENTIAL_KEY_PATH = 0,
+	EXT_CREDENTIAL_KEY_HASH = 2,
+	EXT_CREDENTIAL_SCRIPT_HASH = 1,
+} ext_credential_type_t;
+
 typedef struct {
-	credential_type_t type;
+	ext_credential_type_t type;
 	union {
 		bip44_path_t keyPath;
 		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
 		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
 	};
-} credential_t;
+} ext_credential_t;
 
 typedef struct {
 	certificate_type_t type;
 
 	union {
-		credential_t stakeCredential;
-		// TODO credential_t committeeColdCredential;
+		ext_credential_t stakeCredential;
+		// TODO ext_credential_t committeeColdCredential;
 	};
 	union {
-		credential_t poolCredential;
-		// TODO credential_t drepCredential;
-		// TODO credential_t committeeHotCredential;
+		ext_credential_t poolCredential;
+		// TODO ext_credential_t drepCredential;
+		// TODO ext_credential_t committeeHotCredential;
 	};
 	uint64_t epoch;
 } sign_tx_certificate_data_t;
@@ -117,7 +125,7 @@ typedef struct {
 } sign_tx_witness_data_t;
 
 typedef struct {
-	credential_t stakeCredential;
+	ext_credential_t stakeCredential;
 	uint64_t amount;
 	uint8_t previousRewardAccount[REWARD_ACCOUNT_SIZE];
 } sign_tx_withdrawal_data_t;

@@ -6,6 +6,19 @@
 #include "addressUtilsShelley.h"
 
 typedef enum {
+	CREDENTIAL_KEY_HASH = 0,
+	CREDENTIAL_SCRIPT_HASH = 1,
+} credential_type_t;
+
+typedef struct {
+	credential_type_t type;
+	union {
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} credential_t;
+
+typedef enum {
 	ARRAY_LEGACY = 0,   // legacy_transaction_output
 	MAP_BABBAGE = 1     // post_alonzo_transaction_output
 } tx_output_serialization_format_t;
@@ -253,14 +266,12 @@ void txHashBuilder_enterCertificates(tx_hash_builder_t* builder);
 void txHashBuilder_addCertificate_stakingHash(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
-        const credential_type_t credentialType,
-        const uint8_t* stakingHash, size_t stakingHashSize
+        const credential_t* stakingCredential
 );
 
 void txHashBuilder_addCertificate_delegation(
         tx_hash_builder_t* builder,
-        const credential_type_t credentialType,
-        const uint8_t* stakingKeyHash, size_t stakingKeyHashSize,
+        const credential_t* stakeCredential,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
 );
 
