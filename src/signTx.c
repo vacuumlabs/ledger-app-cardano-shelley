@@ -950,8 +950,9 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION:
 		_parseStakeCredential(&view, &certificateData->stakeCredential);
-		STATIC_ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
-		view_parseBuffer(certificateData->poolKeyHash, &view, POOL_KEY_HASH_LENGTH);
+		// TODO change APDU to parse credential
+		STATIC_ASSERT(SIZEOF(certificateData->poolCredential.keyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
+		view_parseBuffer(certificateData->poolCredential.keyHash, &view, POOL_KEY_HASH_LENGTH);
 		break;
 
 		#ifdef APP_FEATURE_POOL_REGISTRATION
@@ -1052,7 +1053,8 @@ static void _addCertificateDataToTx(
 		txHashBuilder_addCertificate_delegation(
 		        txHashBuilder, certificateData->stakeCredential.type,
 		        hash, SIZEOF(hash),
-		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
+		        // TODO make sure credential is key hash
+		        certificateData->poolCredential.keyHash, SIZEOF(certificateData->poolCredential.keyHash)
 		);
 		break;
 	}
