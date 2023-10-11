@@ -109,8 +109,6 @@ static void getPublicKeys_handleInitAPDU(const uint8_t* wireDataBuffer, size_t w
 {
 	{
 		CHECK_STAGE(GET_KEYS_STAGE_INIT);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -185,8 +183,6 @@ void getPublicKeys_handleGetNextKeyAPDU(
 )
 {
 	CHECK_STAGE(GET_KEYS_STAGE_GET_KEYS);
-
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	VALIDATE(ctx->currentPath < ctx->numPaths, ERR_INVALID_STATE);
 

@@ -307,8 +307,6 @@ static void parseTopLevelData(const uint8_t* wireDataBuffer, size_t wireDataSize
 	{
 		// safety checks
 		CHECK_STATE(STATE_OUTPUT_TOP_LEVEL_DATA);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	output_context_t* subctx = accessSubcontext();
@@ -398,7 +396,6 @@ static void handleCollateralOutput_addressBytes()
 		.includeRefScript = subctx->includeRefScript,
 	};
 
-	// TODO maybe restrict to specific address types? we don't support datum in coll ret outputs
 	security_policy_t policy = policyForSignTxCollateralOutputAddressBytes(
 	                                   &output,
 	                                   commonTxData->txSigningMode,
@@ -545,8 +542,6 @@ static void handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_ASSET_GROUP);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -621,8 +616,6 @@ static void handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_TOKEN);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -797,7 +790,6 @@ static void handleDatumAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_DATUM);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -829,7 +821,6 @@ static void handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_DATUM_INLINE_CHUNKS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -871,7 +862,6 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_REFERENCE_SCRIPT);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -935,7 +925,6 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{

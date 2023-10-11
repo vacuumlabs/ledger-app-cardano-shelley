@@ -75,8 +75,6 @@ static void signTxPoolRegistration_handleInitAPDU(const uint8_t* wireDataBuffer,
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_INIT);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	pool_registration_context_t* subctx = accessSubcontext();
 	{
@@ -185,8 +183,6 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(const uint8_t* wireDataBuff
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_POOL_KEY);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -258,8 +254,6 @@ static void signTxPoolRegistration_handleVrfKeyAPDU(const uint8_t* wireDataBuffe
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_VRF_KEY);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	pool_registration_context_t* subctx = accessSubcontext();
 	{
@@ -313,8 +307,6 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(const uint8_t* wireD
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_FINANCIALS);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	pool_registration_context_t* subctx = accessSubcontext();
 	{
@@ -407,8 +399,6 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(const uint8_t* wireDa
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_REWARD_ACCOUNT);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -494,8 +484,6 @@ static void signTxPoolRegistration_handleOwnerAPDU(const uint8_t* wireDataBuffer
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_OWNERS);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	pool_registration_context_t* subctx = accessSubcontext();
@@ -638,8 +626,6 @@ static void signTxPoolRegistration_handleRelayAPDU(const uint8_t* wireDataBuffer
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_RELAYS);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	pool_relay_t* relay = &accessSubcontext()->stateData.relay;
@@ -776,8 +762,6 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(const uint8_t* wireDat
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_METADATA);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	pool_registration_context_t* subctx = accessSubcontext();
@@ -857,8 +841,6 @@ static void signTxPoolRegistration_handleConfirmAPDU(const uint8_t* wireDataBuff
 	{
 		//sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_CONFIRM);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	{

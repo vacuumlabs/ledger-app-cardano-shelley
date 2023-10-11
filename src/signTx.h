@@ -49,8 +49,11 @@ typedef enum {
 	SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE = 41,
 	SIGN_STAGE_BODY_TOTAL_COLLATERAL = 42,
 	SIGN_STAGE_BODY_REFERENCE_INPUTS = 43,
-	SIGN_STAGE_CONFIRM = 44,
-	SIGN_STAGE_WITNESSES = 45,
+	SIGN_STAGE_BODY_VOTING_PROCEDURES = 44,
+	SIGN_STAGE_BODY_TREASURY = 45,
+	SIGN_STAGE_BODY_DONATION = 46,
+	SIGN_STAGE_CONFIRM = 47,
+	SIGN_STAGE_WITNESSES = 48,
 } sign_tx_stage_t;
 
 enum {
@@ -61,7 +64,7 @@ enum {
 	SIGN_MAX_COLLATERAL_INPUTS = UINT16_MAX,
 	SIGN_MAX_REQUIRED_SIGNERS = UINT16_MAX,
 	SIGN_MAX_REFERENCE_INPUTS = UINT16_MAX,
-	SIGN_MAX_WITNESSES = SIGN_MAX_INPUTS + SIGN_MAX_OUTPUTS + SIGN_MAX_CERTIFICATES + SIGN_MAX_REWARD_WITHDRAWALS,
+	SIGN_MAX_VOTING_PROCEDURES = 1, // we only support a single vote per tx
 };
 
 #define UI_INPUT_LABEL_SIZE 20
@@ -99,19 +102,42 @@ typedef struct {
 	};
 } ext_credential_t;
 
+// DReps are extended to allow key derivation paths
+typedef enum {
+	EXT_DREP_KEY_HASH = 0,
+	EXT_DREP_KEY_PATH = 0 + 100,
+	EXT_DREP_SCRIPT_HASH = 1,
+	EXT_DREP_ABSTAIN = 2,
+	EXT_DREP_NO_CONFIDENCE = 3,
+} ext_drep_type_t;
+
+typedef struct {
+	ext_drep_type_t type;
+	union {
+		bip44_path_t keyPath;
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} ext_drep_t;
+
 typedef struct {
 	certificate_type_t type;
 
 	union {
 		ext_credential_t stakeCredential;
-		// TODO ext_credential_t committeeColdCredential;
+		ext_credential_t committeeColdCredential;
+		ext_credential_t dRepCredential;
 	};
 	union {
 		ext_credential_t poolCredential;
-		// TODO ext_credential_t drepCredential;
-		// TODO ext_credential_t committeeHotCredential;
+		ext_credential_t committeeHotCredential;
+		ext_drep_t drep;
+		anchor_t anchor;
 	};
-	uint64_t epoch;
+	union {
+		uint64_t epoch; // in pool retirement
+		uint64_t deposit; // not in pool retirement
+	};
 } sign_tx_certificate_data_t;
 
 typedef struct {
@@ -153,7 +179,37 @@ typedef struct {
 	};
 } sign_tx_required_signer_t;
 
+// voters are extended to allow key derivation paths
+typedef enum {
+	EXT_VOTER_COMMITTEE_HOT_KEY_HASH = 0,
+	EXT_VOTER_COMMITTEE_HOT_KEY_PATH = 0 + 100,
+	EXT_VOTER_COMMITTEE_HOT_SCRIPT_HASH = 1,
+	EXT_VOTER_DREP_KEY_HASH = 2,
+	EXT_VOTER_DREP_KEY_PATH = 2 + 100,
+	EXT_VOTER_DREP_SCRIPT_HASH = 3,
+	EXT_VOTER_STAKE_POOL_KEY_HASH = 4,
+	EXT_VOTER_STAKE_POOL_KEY_PATH = 4 + 100,
+} ext_voter_type_t;
+
 typedef struct {
+	ext_voter_type_t type;
+	union {
+		bip44_path_t keyPath;
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} ext_voter_t;
+
+typedef struct {
+	ext_voter_t voter;
+	gov_action_id_t govActionId;
+	voting_procedure_t votingProcedure;
+} sign_tx_voting_procedure_t;
+
+
+typedef struct {
+	tx_hash_builder_t txHashBuilder;
+
 	uint16_t currentInput;
 	uint16_t currentOutput;
 	uint16_t currentCertificate;
@@ -161,6 +217,7 @@ typedef struct {
 	uint16_t currentCollateral;
 	uint16_t currentRequiredSigner;
 	uint16_t currentReferenceInput;
+	uint16_t currentVotingProcedure;
 
 	bool feeReceived;
 	bool ttlReceived;
@@ -169,9 +226,8 @@ typedef struct {
 	bool scriptDataHashReceived;
 	bool collateralOutputReceived;
 	bool totalCollateralReceived;
-
-	// TODO move these to commonTxData?
-	tx_hash_builder_t txHashBuilder;
+	bool treasuryReceived;
+	bool donationReceived;
 
 	// this holds data valid only through the processing of a single APDU
 	union {
@@ -184,6 +240,9 @@ typedef struct {
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
 		sign_tx_required_signer_t requiredSigner;
 		uint64_t totalCollateral;
+		sign_tx_voting_procedure_t votingProcedure;
+		uint64_t treasury;
+		uint64_t donation;
 	} stageData;
 
 	union {
@@ -225,6 +284,9 @@ typedef struct {
 	bool includeTotalCollateral;
 	uint64_t totalCollateral;
 	uint16_t numReferenceInputs;
+	uint16_t numVotingProcedures;
+	bool includeTreasury;
+	bool includeDonation;
 
 	uint16_t numWitnesses;
 

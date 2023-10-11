@@ -110,10 +110,10 @@ typedef enum {
 	// m / 1852' / 1815' / account' / 3 / address_index
 	PATH_DREP_KEY,
 
-	// constitutional committee hot key TODO not approved yet https://github.com/Ryun1/CIPs/blob/conway-keys/CIP-conway-keys/README.md
+	// constitutional committee hot key
 	// m / 1852' / 1815' / account' / 4 / address_index
 	PATH_COMMITTEE_COLD_KEY,
-	// constitutional committee cold key TODO not approved yet
+	// constitutional committee cold key
 	// m / 1852' / 1815' / account' / 5 / address_index
 	PATH_COMMITTEE_HOT_KEY,
 
