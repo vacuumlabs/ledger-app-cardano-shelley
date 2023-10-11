@@ -751,7 +751,7 @@ static void _initNewCertificate(tx_hash_builder_t* builder)
 	builder->remainingCertificates--;
 }
 
-static const uint8_t* getCredentialHashBuffer(const credential_t* credential)
+static const uint8_t* _getCredentialHashBuffer(const credential_t* credential)
 {
 	switch (credential->type) {
 	case CREDENTIAL_KEY_HASH:
@@ -763,7 +763,7 @@ static const uint8_t* getCredentialHashBuffer(const credential_t* credential)
 	}
 }
 
-static size_t getCredentialHashSize(const credential_t* credential)
+static size_t _getCredentialHashSize(const credential_t* credential)
 {
 	switch (credential->type) {
 	case CREDENTIAL_KEY_HASH:
@@ -775,8 +775,25 @@ static size_t getCredentialHashSize(const credential_t* credential)
 	}
 }
 
+static void _appendCredential(
+        tx_hash_builder_t* builder,
+        const credential_t* credential
+)
+{
+	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, credential->type);
+	}
+	{
+		const size_t size = _getCredentialHashSize(credential);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, size);
+		BUILDER_APPEND_DATA(_getCredentialHashBuffer(credential), size);
+	}
+}
+
 // stake key certificate registration or deregistration
-void txHashBuilder_addCertificate_stakingHash(
+// will be deprecated after Conway
+void txHashBuilder_addCertificate_stakingOld(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
         const credential_t* stakeCredential
@@ -800,15 +817,43 @@ void txHashBuilder_addCertificate_stakingHash(
 			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, certificateType);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
-			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredential->type);
-			}
-			{
-				const size_t size = getCredentialHashSize(stakeCredential);
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, size);
-				BUILDER_APPEND_DATA(getCredentialHashBuffer(stakeCredential), size);
-			}
+			_appendCredential(builder, stakeCredential);
+		}
+	}
+}
+
+// stake key certificate registration or deregistration
+// exists since Conway
+void txHashBuilder_addCertificate_staking(
+        tx_hash_builder_t* builder,
+        const certificate_type_t certificateType,
+        const credential_t* stakeCredential,
+        uint64_t coin
+)
+{
+	_initNewCertificate(builder);
+
+	ASSERT((certificateType == CERTIFICATE_TYPE_STAKE_REG)
+	       || (certificateType == CERTIFICATE_TYPE_STAKE_UNREG));
+
+	// Array(3)[
+	//   Unsigned[certificateType]
+	//   Array(2)[
+	//     Unsigned[0]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	//   Unsigned[coin]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, certificateType);
+		}
+		{
+			_appendCredential(builder, stakeCredential);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, coin);
 		}
 	}
 }
@@ -837,19 +882,255 @@ void txHashBuilder_addCertificate_delegation(
 			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 2);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
-			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredential->type);
-			}
-			{
-				const size_t size = getCredentialHashSize(stakeCredential);
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, size);
-				BUILDER_APPEND_DATA(getCredentialHashBuffer(stakeCredential), size);
-			}
+			_appendCredential(builder, stakeCredential);
 		}
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, poolKeyHashSize);
 			BUILDER_APPEND_DATA(poolKeyHash, poolKeyHashSize);
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_voteDeleg(
+        tx_hash_builder_t* builder,
+        const credential_t* stakeCredential,
+        const drep_t* drep
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[9]
+	//   Array(2)[
+	//     Unsigned[0]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	//   Array(1 or 2)[
+	//     Unsigned[drep_type]
+	//     ?Bytes[key/script hash] // optional
+	//   ]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 9);
+		}
+		{
+			_appendCredential(builder, stakeCredential);
+		}
+		{
+			// DRep
+			switch (drep->type) {
+			case DREP_KEY_HASH: {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, DREP_KEY_HASH);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(drep->keyHash));
+				BUILDER_APPEND_DATA(drep->keyHash, SIZEOF(drep->keyHash));
+				break;
+			}
+			case DREP_SCRIPT_HASH: {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, DREP_SCRIPT_HASH);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(drep->scriptHash));
+				BUILDER_APPEND_DATA(drep->scriptHash, SIZEOF(drep->scriptHash));
+				break;
+			}
+			case DREP_ALWAYS_ABSTAIN:
+			case DREP_ALWAYS_NO_CONFIDENCE: {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 1);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, drep->type);
+				break;
+			}
+			default:
+				ASSERT(false);
+			}
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_committeeAuth(
+        tx_hash_builder_t* builder,
+        const credential_t* coldCredential,
+        const credential_t* hotCredential
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[14]
+	//   Array(2)[
+	//     Unsigned[0 or 1]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	//   Array(2)[
+	//     Unsigned[0 or 1]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 14);
+		}
+		{
+			_appendCredential(builder, coldCredential);
+		}
+		{
+			_appendCredential(builder, hotCredential);
+		}
+	}
+}
+
+static void _appendAnchor(
+        tx_hash_builder_t* builder,
+        const anchor_t* anchor
+)
+{
+	if (anchor->isIncluded) {
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_TEXT, anchor->urlLength);
+			BUILDER_APPEND_DATA(anchor->url, anchor->urlLength);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(anchor->hash));
+			BUILDER_APPEND_DATA(anchor->hash, SIZEOF(anchor->hash));
+		}
+	} else {
+		BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+	}
+}
+
+void txHashBuilder_addCertificate_committeeResign(
+        tx_hash_builder_t* builder,
+        const credential_t* coldCredential,
+        const anchor_t* anchor
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[15]
+	//   Array(2)[
+	//     Unsigned[0 or 1]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	//   Array(2)[
+	//     Tstr[url]
+	//     Bytes[32]
+	//   ]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 15);
+		}
+		{
+			_appendCredential(builder, coldCredential);
+		}
+		{
+			_appendAnchor(builder, anchor);
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_dRepReg(
+        tx_hash_builder_t* builder,
+        const credential_t* drepCredential,
+        uint64_t coin,
+        const anchor_t* anchor
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(4)[
+	//   Unsigned[16]
+	//   Array(2)[
+	//     Unsigned[0/1]
+	//     Bytes[key/script hash]
+	//   ]
+	//   Unsigned[coin]
+	//   Array(2)[
+	//     Tstr[url]
+	//     Bytes[32]
+	//   ]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 16);
+		}
+		{
+			_appendCredential(builder, drepCredential);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, coin);
+		}
+		{
+			_appendAnchor(builder, anchor);
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_dRepUnreg(
+        tx_hash_builder_t* builder,
+        const credential_t* drepCredential,
+        uint64_t coin
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[16]
+	//   Array(2)[
+	//     Unsigned[0/1]
+	//     Bytes[key/script hash]
+	//   ]
+	//   Unsigned[coin]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 17);
+		}
+		{
+			_appendCredential(builder, drepCredential);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, coin);
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_dRepUpdate(
+        tx_hash_builder_t* builder,
+        const credential_t* drepCredential,
+        const anchor_t* anchor
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[16]
+	//   Array(2)[
+	//     Unsigned[0/1]
+	//     Bytes[key/script hash]
+	//   ]
+	//   Array(2)[
+	//     Tstr[url]
+	//     Bytes[32]
+	//   ]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 16);
+		}
+		{
+			_appendCredential(builder, drepCredential);
+		}
+		{
+			_appendAnchor(builder, anchor);
 		}
 	}
 }

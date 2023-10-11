@@ -99,19 +99,42 @@ typedef struct {
 	};
 } ext_credential_t;
 
+// DReps are extended to allow key derivation paths
+typedef enum {
+	EXT_DREP_KEY_HASH = 0,
+	EXT_DREP_SCRIPT_HASH = 1,
+	EXT_DREP_ALWAYS_ABSTAIN = 2,
+	EXT_DREP_ALWAYS_NO_CONFIDENCE = 3,
+	EXT_DREP_KEY_PATH = 4,
+} ext_drep_type_t;
+
+typedef struct {
+	ext_drep_type_t type;
+	union {
+		bip44_path_t keyPath;
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} ext_drep_t;
+
 typedef struct {
 	certificate_type_t type;
 
 	union {
 		ext_credential_t stakeCredential;
-		// TODO ext_credential_t committeeColdCredential;
+		ext_credential_t committeeColdCredential;
+		ext_credential_t drepCredential;
 	};
 	union {
 		ext_credential_t poolCredential;
-		// TODO ext_credential_t drepCredential;
-		// TODO ext_credential_t committeeHotCredential;
+		ext_credential_t committeeHotCredential;
+		ext_drep_t drep;
+		anchor_t anchor;
 	};
-	uint64_t epoch;
+	union {
+		uint64_t epoch; // in pool retirement
+		uint64_t coin; // not in pool retirement; represents deposit in certs
+	};
 } sign_tx_certificate_data_t;
 
 typedef struct {

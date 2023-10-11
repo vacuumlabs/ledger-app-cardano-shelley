@@ -929,6 +929,61 @@ static void _parseCredential(read_view_t* view, ext_credential_t* credential)
 	}
 }
 
+static void _parseDRep(read_view_t* view, ext_drep_t* drep)
+{
+	drep->type = parse_u1be(view);
+	switch (drep->type) {
+	case EXT_DREP_KEY_PATH:
+		_parsePathSpec(view, &drep->keyPath);
+		break;
+	case EXT_DREP_KEY_HASH: {
+		STATIC_ASSERT(SIZEOF(drep->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
+		view_parseBuffer(drep->keyHash, view, SIZEOF(drep->keyHash));
+		break;
+	}
+	case EXT_DREP_SCRIPT_HASH: {
+		STATIC_ASSERT(SIZEOF(drep->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		view_parseBuffer(drep->scriptHash, view, SIZEOF(drep->scriptHash));
+		break;
+	}
+	case EXT_DREP_ALWAYS_ABSTAIN:
+	case EXT_DREP_ALWAYS_NO_CONFIDENCE: {
+		// nothing more to parse
+		break;
+	}
+	default:
+		THROW(ERR_INVALID_DATA);
+	}
+}
+
+static void _parseAnchor(read_view_t* view, anchor_t* anchor)
+{
+	{
+		uint8_t includeAnchorByte = parse_u1be(view);
+		anchor->isIncluded = signTx_parseIncluded(includeAnchorByte);
+
+		if (!anchor->isIncluded) {
+			VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
+			return;
+		}
+	}
+	{
+		STATIC_ASSERT(SIZEOF(anchor->hash) == ANCHOR_HASH_LENGTH, "wrong anchor buffer size");
+		view_parseBuffer(anchor->hash, view, ANCHOR_HASH_LENGTH);
+	}
+	{
+		anchor->urlLength = view_remainingSize(view);
+		VALIDATE(anchor->urlLength <= ANCHOR_URL_LENGTH_MAX, ERR_INVALID_DATA);
+		STATIC_ASSERT(SIZEOF(anchor->url) >= ANCHOR_URL_LENGTH_MAX, "wrong anchor url length");
+		view_parseBuffer(anchor->url, view, anchor->urlLength);
+
+		// whitespace not allowed
+		VALIDATE(str_isPrintableAsciiWithoutSpaces(anchor->url, anchor->urlLength), ERR_INVALID_DATA);
+	}
+
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
+}
+
 static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireDataSize, sign_tx_certificate_data_t* certificateData)
 {
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
@@ -941,11 +996,14 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 
 	switch (certificateData->type) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
 		_parseCredential(&view, &certificateData->stakeCredential);
 		break;
 
-	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+	case CERTIFICATE_TYPE_STAKE_REG:
+	case CERTIFICATE_TYPE_STAKE_UNREG:
 		_parseCredential(&view, &certificateData->stakeCredential);
+		certificateData->coin = parse_u8be(&view);
 		break;
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION:
@@ -954,6 +1012,37 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 		certificateData->poolCredential.type = EXT_CREDENTIAL_KEY_HASH;
 		STATIC_ASSERT(SIZEOF(certificateData->poolCredential.keyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
 		view_parseBuffer(certificateData->poolCredential.keyHash, &view, POOL_KEY_HASH_LENGTH);
+		break;
+
+	case CERTIFICATE_TYPE_VOTE_DELEG:
+		_parseCredential(&view, &certificateData->stakeCredential);
+		_parseDRep(&view, &certificateData->drep);
+		break;
+
+	case CERTIFICATE_TYPE_COMMITTEE_AUTH:
+		_parseCredential(&view, &certificateData->committeeColdCredential);
+		_parseCredential(&view, &certificateData->committeeHotCredential);
+		break;
+
+	case CERTIFICATE_TYPE_COMMITTEE_RESIGN:
+		_parseCredential(&view, &certificateData->committeeColdCredential);
+		_parseAnchor(&view, &certificateData->anchor);
+		break;
+
+	case CERTIFICATE_TYPE_DREP_REG:
+		_parseCredential(&view, &certificateData->committeeColdCredential);
+		certificateData->coin = parse_u8be(&view);
+		_parseAnchor(&view, &certificateData->anchor);
+		break;
+
+	case CERTIFICATE_TYPE_DREP_UNREG:
+		_parseCredential(&view, &certificateData->committeeColdCredential);
+		certificateData->coin = parse_u8be(&view);
+		break;
+
+	case CERTIFICATE_TYPE_DREP_UPDATE:
+		_parseCredential(&view, &certificateData->committeeColdCredential);
+		_parseAnchor(&view, &certificateData->anchor);
 		break;
 
 		#ifdef APP_FEATURE_POOL_REGISTRATION
@@ -1016,6 +1105,47 @@ static void _setCredential(
 	}
 }
 
+static void _setDRep(
+        drep_t* drep,
+        const ext_drep_t* extDRep
+)
+{
+	switch (extDRep->type) {
+
+	case EXT_DREP_KEY_PATH:
+		drep->type = DREP_KEY_HASH;
+		bip44_pathToKeyHash(
+		        &extDRep->keyPath,
+		        drep->keyHash, SIZEOF(drep->keyHash)
+		);
+		break;
+
+	case EXT_DREP_KEY_HASH:
+		drep->type = DREP_KEY_HASH;
+		STATIC_ASSERT(SIZEOF(drep->keyHash) == SIZEOF(extDRep->keyHash), "bad script hash container size");
+		memmove(drep->keyHash, extDRep->keyHash, SIZEOF(extDRep->keyHash));
+		break;
+
+	case EXT_DREP_SCRIPT_HASH:
+		drep->type = DREP_SCRIPT_HASH;
+		STATIC_ASSERT(SIZEOF(drep->scriptHash) == SIZEOF(extDRep->scriptHash), "bad script hash container size");
+		memmove(drep->scriptHash, extDRep->scriptHash, SIZEOF(extDRep->scriptHash));
+		break;
+
+	case EXT_DREP_ALWAYS_ABSTAIN:
+		drep->type = DREP_ALWAYS_ABSTAIN;
+		break;
+
+	case EXT_DREP_ALWAYS_NO_CONFIDENCE:
+		drep->type = DREP_ALWAYS_NO_CONFIDENCE;
+		break;
+
+	default:
+		ASSERT(false);
+		break;
+	}
+}
+
 __noinline_due_to_stack__
 static void _addCertificateDataToTx(
         sign_tx_certificate_data_t* certificateData,
@@ -1024,28 +1154,106 @@ static void _addCertificateDataToTx(
 {
 	TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
 
-	credential_t stakeCredential;
+	// declared here to save the stack space compiler allocates for this function
+	credential_t tmpCredential;
 
 	switch (BODY_CTX->stageData.certificate.type) {
 
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		_setCredential(&stakeCredential, &certificateData->stakeCredential);
-		txHashBuilder_addCertificate_stakingHash(
+		_setCredential(&tmpCredential, &certificateData->stakeCredential);
+		txHashBuilder_addCertificate_stakingOld(
 		        txHashBuilder,
 		        certificateData->type,
-		        &stakeCredential
+		        &tmpCredential
+		);
+		break;
+	}
+
+	case CERTIFICATE_TYPE_STAKE_REG:
+	case CERTIFICATE_TYPE_STAKE_UNREG: {
+		_setCredential(&tmpCredential, &certificateData->stakeCredential);
+		txHashBuilder_addCertificate_staking(
+		        txHashBuilder,
+		        certificateData->type,
+		        &tmpCredential,
+		        certificateData->coin
 		);
 		break;
 	}
 
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		_setCredential(&stakeCredential, &certificateData->stakeCredential);
+		_setCredential(&tmpCredential, &certificateData->stakeCredential);
 		ASSERT(certificateData->poolCredential.type == EXT_CREDENTIAL_KEY_HASH);
 		txHashBuilder_addCertificate_delegation(
 		        txHashBuilder,
-		        &stakeCredential,
+		        &tmpCredential,
 		        certificateData->poolCredential.keyHash, SIZEOF(certificateData->poolCredential.keyHash)
+		);
+		break;
+	}
+
+	case CERTIFICATE_TYPE_VOTE_DELEG: {
+		drep_t drep;
+		_setCredential(&tmpCredential, &certificateData->stakeCredential);
+		_setDRep(&drep, &certificateData->drep);
+		txHashBuilder_addCertificate_voteDeleg(
+		        txHashBuilder,
+		        &tmpCredential,
+		        &drep
+		);
+		break;
+	}
+
+	case CERTIFICATE_TYPE_COMMITTEE_AUTH: {
+		credential_t hotCredential;
+		_setCredential(&tmpCredential, &certificateData->committeeColdCredential);
+		_setCredential(&hotCredential, &certificateData->committeeHotCredential);
+		txHashBuilder_addCertificate_committeeAuth(
+		        txHashBuilder,
+		        &tmpCredential,
+		        &hotCredential
+		);
+		break;
+	}
+
+	case CERTIFICATE_TYPE_COMMITTEE_RESIGN: {
+		_setCredential(&tmpCredential, &certificateData->committeeColdCredential);
+		txHashBuilder_addCertificate_committeeResign(
+		        txHashBuilder,
+		        &tmpCredential,
+		        &certificateData->anchor
+		);
+		break;
+	}
+
+	case CERTIFICATE_TYPE_DREP_REG: {
+		_setCredential(&tmpCredential, &certificateData->drepCredential);
+		txHashBuilder_addCertificate_dRepReg(
+		        txHashBuilder,
+		        &tmpCredential,
+		        certificateData->coin,
+		        &certificateData->anchor
+		);
+		break;
+	}
+
+	case CERTIFICATE_TYPE_DREP_UNREG: {
+		_setCredential(&tmpCredential, &certificateData->drepCredential);
+		txHashBuilder_addCertificate_dRepUnreg(
+		        txHashBuilder,
+		        &tmpCredential,
+		        certificateData->coin
+		);
+		break;
+	}
+
+	case CERTIFICATE_TYPE_DREP_UPDATE: {
+		_setCredential(&tmpCredential, &certificateData->drepCredential);
+		txHashBuilder_addCertificate_dRepUpdate(
+		        txHashBuilder,
+		        &tmpCredential,
+		        &certificateData->anchor
 		);
 		break;
 	}
@@ -1111,14 +1319,108 @@ static void _handleCertificateStaking()
 
 	switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION);
-		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_STEP_RESPOND);
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_STAKING_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_STAKING_STEP_RESPOND);
 #undef   CASE
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
 
-	signTx_handleCertificate_ui_runStep();
+	signTx_handleCertificateStaking_ui_runStep();
+}
+
+static void _handleCertificateVoteDeleg()
+{
+	security_policy_t policy = policyForSignTxCertificateVoteDelegation(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.stakeCredential,
+	                                   &BODY_CTX->stageData.certificate.drep
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_VOTE_DELEG_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_VOTE_DELEG_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificateVoteDeleg_ui_runStep();
+}
+
+static void _handleCertificateCommitteeAuth()
+{
+	security_policy_t policy = policyForSignTxCertificateCommitteeAuth(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.committeeColdCredential,
+	                                   &BODY_CTX->stageData.certificate.committeeHotCredential
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_COMM_AUTH_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_COMM_AUTH_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificateCommitteeAuth_ui_runStep();
+}
+
+static void _handleCertificateCommitteeResign()
+{
+	security_policy_t policy = policyForSignTxCertificateCommitteeResign(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.committeeColdCredential
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_COMM_RESIGN_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_COMM_RESIGN_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificateCommitteeResign_ui_runStep();
+}
+
+static void _handleCertificateDRep()
+{
+	security_policy_t policy = policyForSignTxCertificateDRep(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.drepCredential
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_DREP_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificateDRep_ui_runStep();
 }
 
 #ifdef APP_FEATURE_POOL_REGISTRATION
@@ -1198,8 +1500,32 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 	switch (BODY_CTX->stageData.certificate.type) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+	case CERTIFICATE_TYPE_STAKE_REG:
+	case CERTIFICATE_TYPE_STAKE_UNREG:
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
 		_handleCertificateStaking();
+		return;
+	}
+
+	case CERTIFICATE_TYPE_VOTE_DELEG: {
+		_handleCertificateVoteDeleg();
+		return;
+	}
+
+	case CERTIFICATE_TYPE_COMMITTEE_AUTH: {
+		_handleCertificateCommitteeAuth();
+		return;
+	}
+
+	case CERTIFICATE_TYPE_COMMITTEE_RESIGN: {
+		_handleCertificateCommitteeResign();
+		return;
+	}
+
+	case CERTIFICATE_TYPE_DREP_REG:
+	case CERTIFICATE_TYPE_DREP_UNREG:
+	case CERTIFICATE_TYPE_DREP_UPDATE: {
+		_handleCertificateDRep();
 		return;
 	}
 

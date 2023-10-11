@@ -19,6 +19,28 @@ typedef struct {
 } credential_t;
 
 typedef enum {
+	DREP_KEY_HASH = 0,
+	DREP_SCRIPT_HASH = 1,
+	DREP_ALWAYS_ABSTAIN = 2,
+	DREP_ALWAYS_NO_CONFIDENCE = 3,
+} drep_type_t;
+
+typedef struct {
+	drep_type_t type;
+	union {
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} drep_t;
+
+typedef struct {
+	bool isIncluded;
+	uint8_t url[ANCHOR_URL_LENGTH_MAX];
+	size_t urlLength;
+	uint8_t hash[ANCHOR_HASH_LENGTH];
+} anchor_t;
+
+typedef enum {
 	ARRAY_LEGACY = 0,   // legacy_transaction_output
 	MAP_BABBAGE = 1     // post_alonzo_transaction_output
 } tx_output_serialization_format_t;
@@ -263,16 +285,59 @@ void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl);
 
 void txHashBuilder_enterCertificates(tx_hash_builder_t* builder);
 
-void txHashBuilder_addCertificate_stakingHash(
+void txHashBuilder_addCertificate_stakingOld(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
         const credential_t* stakingCredential
+);
+void txHashBuilder_addCertificate_staking(
+        tx_hash_builder_t* builder,
+        const certificate_type_t certificateType,
+        const credential_t* stakeCredential,
+        uint64_t coin
 );
 
 void txHashBuilder_addCertificate_delegation(
         tx_hash_builder_t* builder,
         const credential_t* stakeCredential,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
+);
+
+void txHashBuilder_addCertificate_voteDeleg(
+        tx_hash_builder_t* builder,
+        const credential_t* stakeCredential,
+        const drep_t* drep
+);
+
+void txHashBuilder_addCertificate_committeeAuth(
+        tx_hash_builder_t* builder,
+        const credential_t* coldCredential,
+        const credential_t* hotCredential
+);
+
+void txHashBuilder_addCertificate_committeeResign(
+        tx_hash_builder_t* builder,
+        const credential_t* coldCredential,
+        const anchor_t* anchor
+);
+
+void txHashBuilder_addCertificate_dRepReg(
+        tx_hash_builder_t* builder,
+        const credential_t* drepCredential,
+        uint64_t coin,
+        const anchor_t* anchor
+);
+
+void txHashBuilder_addCertificate_dRepUnreg(
+        tx_hash_builder_t* builder,
+        const credential_t* drepCredential,
+        uint64_t coin
+);
+
+void txHashBuilder_addCertificate_dRepUpdate(
+        tx_hash_builder_t* builder,
+        const credential_t* drepCredential,
+        const anchor_t* anchor
 );
 
 #ifdef APP_FEATURE_POOL_RETIREMENT

@@ -353,22 +353,184 @@ void signTx_handleTtl_ui_runStep()
 #ifdef HAVE_NBGL
 static void signTx_handleCertificate_ui_delegation_cb(void)
 {
+	sign_tx_certificate_data_t* cert = &BODY_CTX->stageData.certificate;
+
 	char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
-	ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", BODY_CTX->stageData.certificate.poolCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.poolCredential.keyHash));
-	fill_and_display_if_required("Pool", encodedStr, signTx_handleCertificate_ui_runStep, respond_with_user_reject);
+	ASSERT(cert->poolCredential.type == EXT_CREDENTIAL_KEY_HASH);
+	ui_getBech32Screen(
+	        encodedStr, SIZEOF(encodedStr),
+	        "pool",
+	        cert->poolCredential.keyHash, SIZEOF(cert->poolCredential.keyHash)
+	);
+	fill_and_display_if_required("Pool", encodedStr, signTx_handleCertificateStaking_ui_runStep, respond_with_user_reject);
 }
 #endif
 
-void signTx_handleCertificate_ui_runStep()
+static void _displayCredential(
+        ui_callback_fn_t* callback,
+        ext_credential_t* credential,
+        const char* keyPathLabel,
+        const char* keyHashLabel,
+        const char* keyHashPrefix,
+        const char* scriptHashLabel,
+        const char* scriptHashPrefix
+)
+{
+	switch (credential->type) {
+	case EXT_CREDENTIAL_KEY_PATH:
+		#ifdef HAVE_BAGL
+		ui_displayPathScreen(
+		        keyPathLabel,
+		        &credential->keyPath,
+		        callback
+		);
+		#elif defined(HAVE_NBGL)
+		{
+			char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
+			ui_getPathScreen(pathStr, SIZEOF(pathStr), &credential->keyPath);
+			fill_and_display_if_required(keyPathLabel, pathStr, callback, respond_with_user_reject);
+		}
+		#endif // HAVE_BAGL
+		break;
+	case EXT_CREDENTIAL_KEY_HASH:
+		#ifdef HAVE_BAGL
+		ui_displayBech32Screen(
+		        keyHashLabel,
+		        keyHashPrefix,
+		        credential->keyHash,
+		        SIZEOF(credential->keyHash),
+		        callback
+		);
+		#elif defined(HAVE_NBGL)
+		{
+			char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
+			ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), keyHashPrefix, credential->keyHash, SIZEOF(credential->keyHash));
+			fill_and_display_if_required(keyHashLabel, encodedStr, callback, respond_with_user_reject);
+		}
+		#endif // HAVE_BAGL
+		break;
+	case EXT_CREDENTIAL_SCRIPT_HASH:
+		#ifdef HAVE_BAGL
+		ui_displayBech32Screen(
+		        scriptHashLabel,
+		        scriptHashPrefix,
+		        credential->scriptHash,
+		        SIZEOF(credential->scriptHash),
+		        callback
+		);
+		#elif defined(HAVE_NBGL)
+		{
+			char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
+			ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), scriptHashPrefix, credential->scriptHash, SIZEOF(credential->scriptHash));
+			fill_and_display_if_required(scriptHashLabel, encodedStr, callback, respond_with_user_reject);
+		}
+		#endif // HAVE_BAGL
+		break;
+	default:
+		ASSERT(false);
+		break;
+	}
+}
+
+static void _displayDeposit(
+        ui_callback_fn_t* callback,
+        uint64_t coin
+)
+{
+	#ifdef HAVE_BAGL
+	ui_displayAdaAmountScreen(
+	        "Deposit",
+	        coin,
+	        callback
+	);
+	#elif defined(HAVE_NBGL)
+	char adaAmountStr[50] = {0};
+	ui_getAdaAmountScreen(adaAmountStr, SIZEOF(adaAmountStr), coin);
+	fill_and_display_if_required("Deposit", adaAmountStr, callback, respond_with_user_reject);
+	#endif // HAVE_BAGL
+}
+
+static void _displayAnchorNull(ui_callback_fn_t* callback)
+{
+	#ifdef HAVE_BAGL
+	ui_displayPaginatedText(
+	        "Anchor",
+	        "null",
+	        callback
+	);
+	#elif defined(HAVE_NBGL)
+	fill_and_display_if_required(
+	        "Anchor",
+	        "null",
+	        callback,
+	        respond_with_user_reject
+	);
+	#endif // HAVE_BAGL
+}
+
+static void _displayAnchorUrl(ui_callback_fn_t* callback, anchor_t* anchor)
+{
+	char urlStr[1 + ANCHOR_URL_LENGTH_MAX] = {0};
+	explicit_bzero(urlStr, SIZEOF(urlStr));
+	ASSERT(anchor->urlLength <= ANCHOR_URL_LENGTH_MAX);
+	memmove(urlStr, anchor->url, anchor->urlLength);
+	urlStr[anchor->urlLength] = '\0';
+	ASSERT(strlen(urlStr) == anchor->urlLength);
+
+	#ifdef HAVE_BAGL
+	ui_displayPaginatedText(
+	        "Anchor url",
+	        urlStr,
+	        callback
+	);
+	#elif defined(HAVE_NBGL)
+	fill_and_display_if_required(
+	        "Anchor url",
+	        urlStr,
+	        callback,
+	        respond_with_user_reject
+	);
+	#endif // HAVE_BAGL
+}
+
+static void _displayAnchorHash(ui_callback_fn_t* callback, anchor_t* anchor)
+{
+	char hex[1 + 2 * ANCHOR_HASH_LENGTH] = {0};
+	explicit_bzero(hex, SIZEOF(hex));
+	size_t len = encode_hex(
+	                     anchor->hash, SIZEOF(anchor->hash),
+	                     hex, SIZEOF(hex)
+	             );
+	ASSERT(len + 1 == SIZEOF(hex));
+
+	#ifdef HAVE_BAGL
+	ui_displayPaginatedText(
+	        "Anchor data hash",
+	        hex,
+	        callback
+	);
+	#elif defined(HAVE_NBGL)
+	fill_and_display_if_required(
+	        "Anchor data hash",
+	        hex,
+	        callback,
+	        respond_with_user_reject
+	);
+	#endif // HAVE_BAGL
+}
+
+void signTx_handleCertificateStaking_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
-	ui_callback_fn_t* this_fn = signTx_handleCertificate_ui_runStep;
+	ui_callback_fn_t* this_fn = signTx_handleCertificateStaking_ui_runStep;
+	sign_tx_certificate_data_t* cert = &BODY_CTX->stageData.certificate;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
-	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION) {
-		switch (BODY_CTX->stageData.certificate.type) {
+	UI_STEP(HANDLE_CERTIFICATE_STAKING_STEP_DISPLAY_OPERATION) {
+		switch (cert->type) {
 		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_REG:
 			#ifdef HAVE_BAGL
 			ui_displayPaginatedText(
 			        "Register",
@@ -382,6 +544,7 @@ void signTx_handleCertificate_ui_runStep()
 			break;
 
 		case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_UNREG:
 			#ifdef HAVE_BAGL
 			ui_displayPaginatedText(
 			        "Deregister",
@@ -396,10 +559,11 @@ void signTx_handleCertificate_ui_runStep()
 
 		case CERTIFICATE_TYPE_STAKE_DELEGATION:
 			#ifdef HAVE_BAGL
+			ASSERT(cert->poolCredential.type == EXT_CREDENTIAL_KEY_HASH);
 			ui_displayBech32Screen(
 			        "Delegate stake",
 			        "to pool",
-			        BODY_CTX->stageData.certificate.poolCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.poolCredential.keyHash),
+			        cert->poolCredential.keyHash, SIZEOF(cert->poolCredential.keyHash),
 			        this_fn
 			);
 			#elif defined(HAVE_NBGL)
@@ -415,68 +579,42 @@ void signTx_handleCertificate_ui_runStep()
 			ASSERT(false);
 		}
 	}
-	UI_STEP(HANDLE_CERTIFICATE_STEP_DISPLAY_STAKING_KEY) {
-		switch (BODY_CTX->stageData.certificate.stakeCredential.type) {
-		case EXT_CREDENTIAL_KEY_PATH:
-			#ifdef HAVE_BAGL
-			ui_displayPathScreen(
-			        "Stake key",
-			        &BODY_CTX->stageData.certificate.stakeCredential.keyPath,
-			        this_fn
-			);
-			#elif defined(HAVE_NBGL)
-			{
-				char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
-				ui_getPathScreen(pathStr, SIZEOF(pathStr), &BODY_CTX->stageData.certificate.stakeCredential.keyPath);
-				fill_and_display_if_required("Stake key", pathStr, this_fn, respond_with_user_reject);
-			}
-			#endif // HAVE_BAGL
+	UI_STEP(HANDLE_CERTIFICATE_STAKING_STEP_DISPLAY_STAKE_CRED) {
+		_displayCredential(
+		        this_fn,
+		        &cert->stakeCredential,
+		        "Stake key",
+		        "Stake key hash",
+		        "stake_vkh",
+		        "Stake script hash",
+		        "script"
+		);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_STAKING_STEP_DISPLAY_DEPOSIT) {
+		switch (cert->type) {
+		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_DELEGATION:
+			// no deposit in these
+			UI_STEP_JUMP(HANDLE_CERTIFICATE_STAKING_STEP_CONFIRM);
 			break;
-		case EXT_CREDENTIAL_KEY_HASH:
-			#ifdef HAVE_BAGL
-			ui_displayBech32Screen(
-			        "Stake key hash",
-			        "stake_vkh",
-			        BODY_CTX->stageData.certificate.stakeCredential.keyHash,
-			        SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.keyHash),
-			        this_fn
-			);
-			#elif defined(HAVE_NBGL)
-			{
-				char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
-				ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "stake_vkh", BODY_CTX->stageData.certificate.stakeCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.keyHash));
-				fill_and_display_if_required("Stake key hash", encodedStr, this_fn, respond_with_user_reject);
-			}
-			#endif // HAVE_BAGL
+
+		case CERTIFICATE_TYPE_STAKE_REG:
+		case CERTIFICATE_TYPE_STAKE_UNREG:
+			_displayDeposit(this_fn, cert->coin);
 			break;
-		case EXT_CREDENTIAL_SCRIPT_HASH:
-			#ifdef HAVE_BAGL
-			ui_displayBech32Screen(
-			        "Stake script hash",
-			        "script",
-			        BODY_CTX->stageData.certificate.stakeCredential.scriptHash,
-			        SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.scriptHash),
-			        this_fn
-			);
-			#elif defined(HAVE_NBGL)
-			{
-				char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
-				ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "script", BODY_CTX->stageData.certificate.stakeCredential.scriptHash, SIZEOF(BODY_CTX->stageData.certificate.stakeCredential.scriptHash));
-				fill_and_display_if_required("Stake script hash", encodedStr, this_fn, respond_with_user_reject);
-			}
-			#endif // HAVE_BAGL
-			break;
+
 		default:
 			ASSERT(false);
-			break;
 		}
 	}
-	UI_STEP(HANDLE_CERTIFICATE_STEP_CONFIRM) {
+	UI_STEP(HANDLE_CERTIFICATE_STAKING_STEP_CONFIRM) {
 		char description[50] = {0};
 		explicit_bzero(description, SIZEOF(description));
 
-		switch (BODY_CTX->stageData.certificate.type) {
+		switch (cert->type) {
 		case CERTIFICATE_TYPE_STAKE_REGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_REG:
 			#ifdef HAVE_BAGL
 			snprintf(description, SIZEOF(description), "registration?");
 			#elif defined(HAVE_NBGL)
@@ -485,6 +623,7 @@ void signTx_handleCertificate_ui_runStep()
 			break;
 
 		case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
+		case CERTIFICATE_TYPE_STAKE_UNREG:
 			#ifdef HAVE_BAGL
 			snprintf(description, SIZEOF(description), "deregistration?");
 			#elif defined(HAVE_NBGL)
@@ -516,12 +655,424 @@ void signTx_handleCertificate_ui_runStep()
 		#elif defined(HAVE_NBGL)
 		#endif // HAVE_BAGL
 	}
-	UI_STEP(HANDLE_CERTIFICATE_STEP_RESPOND) {
+	UI_STEP(HANDLE_CERTIFICATE_STAKING_STEP_RESPOND) {
 		respondSuccessEmptyMsg();
 
 		tx_advanceCertificatesStateIfAppropriate();
 	}
-	UI_STEP_END(HANDLE_CERTIFICATE_STEP_INVALID);
+	UI_STEP_END(HANDLE_CERTIFICATE_STAKING_STEP_INVALID);
+}
+
+void signTx_handleCertificateVoteDeleg_ui_runStep()
+{
+	TRACE("UI step %d", ctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleCertificateVoteDeleg_ui_runStep;
+	sign_tx_certificate_data_t* cert = &BODY_CTX->stageData.certificate;
+
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_CERTIFICATE_VOTE_DELEG_STEP_DISPLAY_OPERATION) {
+		#ifdef HAVE_BAGL
+		ui_displayPaginatedText(
+		        "Delegate",
+		        "vote",
+		        this_fn
+		);
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_prompt("Delegate\nvote", "", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
+	}
+	UI_STEP(HANDLE_CERTIFICATE_VOTE_DELEG_STEP_DISPLAY_STAKE_CRED) {
+		_displayCredential(
+		        this_fn,
+		        &cert->stakeCredential,
+		        "Stake key",
+		        "Stake key hash",
+		        "stake_vkh",
+		        "Stake script hash",
+		        "script"
+		);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_VOTE_DELEG_STEP_DISPLAY_DREP) {
+		switch (cert->drep.type) {
+		case EXT_DREP_KEY_PATH:
+			#ifdef HAVE_BAGL
+			ui_displayPathScreen(
+			        "DRep key",
+			        &cert->drep.keyPath,
+			        this_fn
+			);
+			#elif defined(HAVE_NBGL)
+			{
+				char pathStr[BIP44_PATH_STRING_SIZE_MAX + 1] = {0};
+				ui_getPathScreen(pathStr, SIZEOF(pathStr), &cert->drep.keyPath);
+				fill_and_display_if_required("DRep key", pathStr, this_fn, respond_with_user_reject);
+			}
+			#endif // HAVE_BAGL
+			break;
+		case EXT_DREP_KEY_HASH:
+			#ifdef HAVE_BAGL
+			ui_displayBech32Screen(
+			        "DRep key hash",
+			        "drep",
+			        cert->drep.keyHash,
+			        SIZEOF(cert->drep.keyHash),
+			        this_fn
+			);
+			#elif defined(HAVE_NBGL)
+			{
+				char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
+				ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "drep", cert->drep.keyHash, SIZEOF(cert->drep.keyHash));
+				fill_and_display_if_required("DRep key hash", encodedStr, this_fn, respond_with_user_reject);
+			}
+			#endif // HAVE_BAGL
+			break;
+		case EXT_DREP_SCRIPT_HASH:
+			#ifdef HAVE_BAGL
+			ui_displayBech32Screen(
+			        "DRep script hash",
+			        "drep",
+			        cert->drep.scriptHash,
+			        SIZEOF(cert->drep.scriptHash),
+			        this_fn
+			);
+			#elif defined(HAVE_NBGL)
+			{
+				char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
+				ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "drep", cert->drep.scriptHash, SIZEOF(cert->drep.scriptHash));
+				fill_and_display_if_required("DRep script hash", encodedStr, this_fn, respond_with_user_reject);
+			}
+			#endif // HAVE_BAGL
+			break;
+		case DREP_ALWAYS_ABSTAIN:
+			#ifdef HAVE_BAGL
+			ui_displayPaginatedText(
+			        "Always",
+			        "abstain",
+			        this_fn
+			);
+			#elif defined(HAVE_NBGL)
+			set_light_confirmation(true);
+			display_prompt("Always\nabstain", "", this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
+			break;
+		case DREP_ALWAYS_NO_CONFIDENCE:
+			#ifdef HAVE_BAGL
+			ui_displayPaginatedText(
+			        "Always",
+			        "no confidence",
+			        this_fn
+			);
+			#elif defined(HAVE_NBGL)
+			set_light_confirmation(true);
+			display_prompt("Always\nno confidence", "", this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
+			break;
+		default:
+			ASSERT(false);
+			break;
+		}
+	}
+	UI_STEP(HANDLE_CERTIFICATE_VOTE_DELEG_STEP_CONFIRM) {
+		#ifdef HAVE_BAGL
+		ui_displayPrompt(
+		        "Confirm vote",
+		        "delegation",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#elif defined(HAVE_NBGL)
+		display_confirmation("Confirm vote\ndelegation", "", "DELEGATION\nACCEPTED", "Delegation\nrejected", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
+	}
+	UI_STEP(HANDLE_CERTIFICATE_VOTE_DELEG_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		tx_advanceCertificatesStateIfAppropriate();
+	}
+	UI_STEP_END(HANDLE_CERTIFICATE_VOTE_DELEG_STEP_INVALID);
+}
+
+void signTx_handleCertificateCommitteeAuth_ui_runStep()
+{
+	TRACE("UI step %d", ctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleCertificateCommitteeAuth_ui_runStep;
+	sign_tx_certificate_data_t* cert = &BODY_CTX->stageData.certificate;
+
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_CERTIFICATE_COMM_AUTH_STEP_DISPLAY_OPERATION) {
+		#ifdef HAVE_BAGL
+		ui_displayPaginatedText(
+		        "Authorize",
+		        "committee",
+		        this_fn
+		);
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_prompt("Authorize committee", "", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_AUTH_STEP_DISPLAY_COLD_CRED) {
+		_displayCredential(
+		        this_fn,
+		        &cert->committeeColdCredential,
+		        "Comm. cold key",
+		        "Comm. cold key hash",
+		        "cc_cold",
+		        "Comm. cold script",
+		        "cc_cold"
+		);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_AUTH_STEP_DISPLAY_HOT_CRED) {
+		_displayCredential(
+		        this_fn,
+		        &cert->committeeHotCredential,
+		        "Comm. hot key",
+		        "Comm. hot key hash",
+		        "cc_hot",
+		        "Comm. hot script",
+		        "cc_hot"
+		);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_AUTH_STEP_CONFIRM) {
+		#ifdef HAVE_BAGL
+		ui_displayPrompt(
+		        "Confirm",
+		        "authorization?",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#elif defined(HAVE_NBGL)
+		display_confirmation("Confirm\nauthorization", "", "AUTHORIZATION\nACCEPTED", "Authorization\nrejected", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_AUTH_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		tx_advanceCertificatesStateIfAppropriate();
+	}
+	UI_STEP_END(HANDLE_CERTIFICATE_COMM_AUTH_STEP_INVALID);
+}
+
+void signTx_handleCertificateCommitteeResign_ui_runStep()
+{
+	TRACE("UI step %d", ctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleCertificateCommitteeResign_ui_runStep;
+	sign_tx_certificate_data_t* cert = &BODY_CTX->stageData.certificate;
+
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_DISPLAY_OPERATION) {
+		#ifdef HAVE_BAGL
+		ui_displayPaginatedText(
+		        "Resign from",
+		        "committee",
+		        this_fn
+		);
+		#elif defined(HAVE_NBGL)
+		set_light_confirmation(true);
+		display_prompt("Resign from\ncommittee", "", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_DISPLAY_COLD_CRED) {
+		_displayCredential(
+		        this_fn,
+		        &cert->committeeColdCredential,
+		        "Comm. cold key",
+		        "Comm. cold key hash",
+		        "cc_cold",
+		        "Comm. cold script",
+		        "cc_cold"
+		);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_DISPLAY_ANCHOR_NULL) {
+		if (cert->anchor.isIncluded) {
+			UI_STEP_JUMP(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_DISPLAY_ANCHOR_URL);
+		}
+		_displayAnchorNull(this_fn);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_DISPLAY_ANCHOR_URL) {
+		if (!cert->anchor.isIncluded) {
+			UI_STEP_JUMP(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_CONFIRM);
+		}
+		_displayAnchorUrl(this_fn, &cert->anchor);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_DISPLAY_ANCHOR_HASH) {
+		_displayAnchorHash(this_fn, &cert->anchor);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_CONFIRM) {
+		#ifdef HAVE_BAGL
+		ui_displayPrompt(
+		        "Confirm",
+		        "resignation",
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#elif defined(HAVE_NBGL)
+		display_confirmation("Confirm\nresignation", "", "RESIGNATION\nACCEPTED", "Resignation\nrejected", this_fn, respond_with_user_reject);
+		#endif // HAVE_BAGL
+	}
+	UI_STEP(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		tx_advanceCertificatesStateIfAppropriate();
+	}
+	UI_STEP_END(HANDLE_CERTIFICATE_COMM_RESIGN_STEP_INVALID);
+}
+
+void signTx_handleCertificateDRep_ui_runStep()
+{
+	TRACE("UI step %d", ctx->ui_step);
+	ui_callback_fn_t* this_fn = signTx_handleCertificateDRep_ui_runStep;
+	sign_tx_certificate_data_t* cert = &BODY_CTX->stageData.certificate;
+
+	UI_STEP_BEGIN(ctx->ui_step, this_fn);
+
+	UI_STEP(HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_OPERATION) {
+		switch (cert->type) {
+		case CERTIFICATE_TYPE_DREP_REG:
+			#ifdef HAVE_BAGL
+			ui_displayPaginatedText(
+			        "Register",
+			        "DRep",
+			        this_fn
+			);
+			#elif defined(HAVE_NBGL)
+			set_light_confirmation(true);
+			display_prompt("Register\nDRep", "", this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
+			break;
+
+		case CERTIFICATE_TYPE_DREP_UNREG:
+		case CERTIFICATE_TYPE_STAKE_UNREG:
+			#ifdef HAVE_BAGL
+			ui_displayPaginatedText(
+			        "Deregister",
+			        "DRep",
+			        this_fn
+			);
+			#elif defined(HAVE_NBGL)
+			set_light_confirmation(true);
+			display_prompt("Deregister\nDRep", "", this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
+			break;
+
+		case CERTIFICATE_TYPE_DREP_UPDATE:
+			#ifdef HAVE_BAGL
+			ui_displayPaginatedText(
+			        "Update",
+			        "DRep",
+			        this_fn
+			);
+			#elif defined(HAVE_NBGL)
+			set_light_confirmation(true);
+			display_prompt("Update\nDRep", "", this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
+			break;
+
+		default:
+			ASSERT(false);
+		}
+	}
+	UI_STEP(HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_CREDENTIAL) {
+		_displayCredential(
+		        this_fn,
+		        &cert->drepCredential,
+		        "DRep key",
+		        "DRep key hash",
+		        "drep",
+		        "DRep script hash",
+		        "drep"
+		);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_DEPOSIT) {
+		switch (cert->type) {
+		case CERTIFICATE_TYPE_DREP_UPDATE:
+			// no deposit in these
+			UI_STEP_JUMP(HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_ANCHOR_NULL);
+			break;
+
+		case CERTIFICATE_TYPE_DREP_REG:
+		case CERTIFICATE_TYPE_DREP_UNREG:
+			_displayDeposit(this_fn, cert->coin);
+			break;
+
+		default:
+			ASSERT(false);
+		}
+	}
+	UI_STEP(HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_ANCHOR_NULL) {
+		if (cert->type == CERTIFICATE_TYPE_DREP_UNREG) {
+			// no anchor for this type
+			UI_STEP_JUMP(HANDLE_CERTIFICATE_DREP_STEP_CONFIRM);
+		}
+		if (cert->anchor.isIncluded) {
+			UI_STEP_JUMP(HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_ANCHOR_URL);
+		}
+		_displayAnchorNull(this_fn);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_ANCHOR_URL) {
+		if (!cert->anchor.isIncluded) {
+			UI_STEP_JUMP(HANDLE_CERTIFICATE_DREP_STEP_CONFIRM);
+		}
+		_displayAnchorUrl(this_fn, &cert->anchor);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_ANCHOR_HASH) {
+		_displayAnchorHash(this_fn, &cert->anchor);
+	}
+	UI_STEP(HANDLE_CERTIFICATE_DREP_STEP_CONFIRM) {
+		char description[50] = {0};
+		explicit_bzero(description, SIZEOF(description));
+
+		switch (cert->type) {
+		case CERTIFICATE_TYPE_DREP_REG:
+			#ifdef HAVE_BAGL
+			snprintf(description, SIZEOF(description), "registration?");
+			#elif defined(HAVE_NBGL)
+			display_confirmation("Confirm\nregistration", "", "REGISTRATION\nACCEPTED", "Registration\nrejected", this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
+			break;
+
+		case CERTIFICATE_TYPE_DREP_UNREG:
+			#ifdef HAVE_BAGL
+			snprintf(description, SIZEOF(description), "deregistration?");
+			#elif defined(HAVE_NBGL)
+			display_confirmation("Confirm\nderegistration", "", "DEREGISTRATION\nACCEPTED", "Deregistration\nrejected", this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
+			break;
+
+		case CERTIFICATE_TYPE_DREP_UPDATE:
+			#ifdef HAVE_BAGL
+			snprintf(description, SIZEOF(description), "update?");
+			#elif defined(HAVE_NBGL)
+			display_confirmation("Confirm\nupdate", "", "UPDATE\nACCEPTED", "Update\nrejected", this_fn, respond_with_user_reject);
+			#endif // HAVE_BAGL
+			break;
+
+		default:
+			ASSERT(false);
+		}
+		// make sure all the information is displayed to the user
+		ASSERT(strlen(description) + 1 < SIZEOF(description));
+
+		#ifdef HAVE_BAGL
+		ui_displayPrompt(
+		        "Confirm",
+		        description,
+		        this_fn,
+		        respond_with_user_reject
+		);
+		#elif defined(HAVE_NBGL)
+		#endif // HAVE_BAGL
+	}
+	UI_STEP(HANDLE_CERTIFICATE_DREP_STEP_RESPOND) {
+		respondSuccessEmptyMsg();
+
+		tx_advanceCertificatesStateIfAppropriate();
+	}
+	UI_STEP_END(HANDLE_CERTIFICATE_DREP_STEP_INVALID);
 }
 
 #ifdef APP_FEATURE_POOL_RETIREMENT
@@ -529,9 +1080,10 @@ void signTx_handleCertificate_ui_runStep()
 void signTx_handleCertificatePoolRetirement_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
-	ASSERT(BODY_CTX->stageData.certificate.type == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
 
 	ui_callback_fn_t* this_fn = signTx_handleCertificatePoolRetirement_ui_runStep;
+	sign_tx_certificate_data_t* cert = &BODY_CTX->stageData.certificate;
+	ASSERT(cert->type == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
@@ -540,13 +1092,13 @@ void signTx_handleCertificatePoolRetirement_ui_runStep()
 		ui_displayBech32Screen(
 		        "Retire stake pool",
 		        "pool",
-		        BODY_CTX->stageData.certificate.poolCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.poolCredential.keyHash),
+		        cert->poolCredential.keyHash, SIZEOF(cert->poolCredential.keyHash),
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
 		set_light_confirmation(true);
 		char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
-		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", BODY_CTX->stageData.certificate.poolCredential.keyHash, SIZEOF(BODY_CTX->stageData.certificate.poolCredential.keyHash));
+		ui_getBech32Screen(encodedStr, SIZEOF(encodedStr), "pool", cert->poolCredential.keyHash, SIZEOF(cert->poolCredential.keyHash));
 		fill_and_display_if_required("Retire stake pool", encodedStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
@@ -554,7 +1106,7 @@ void signTx_handleCertificatePoolRetirement_ui_runStep()
 		#ifdef HAVE_BAGL
 		ui_displayUint64Screen(
 		        "at the start of epoch",
-		        BODY_CTX->stageData.certificate.epoch,
+		        cert->epoch,
 		        this_fn
 		);
 		#elif defined(HAVE_NBGL)
@@ -562,7 +1114,7 @@ void signTx_handleCertificatePoolRetirement_ui_runStep()
 		ui_getUint64Screen(
 		        line,
 		        SIZEOF(line),
-		        BODY_CTX->stageData.certificate.epoch
+		        cert->epoch
 		);
 		fill_and_display_if_required("Start of epoch", line, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL

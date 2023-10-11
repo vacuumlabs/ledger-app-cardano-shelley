@@ -686,7 +686,7 @@ void handleMetadata_ui_runStep()
 	UI_STEP(HANDLE_METADATA_STEP_DISPLAY_HASH) {
 		char metadataHashHex[1 + 2 * POOL_METADATA_HASH_LENGTH] = {0};
 		explicit_bzero(metadataHashHex, SIZEOF(metadataHashHex));
-		size_t len = str_formatMetadata(
+		size_t len = encode_hex(
 		                     md->hash, SIZEOF(md->hash),
 		                     metadataHashHex, SIZEOF(metadataHashHex)
 		             );
