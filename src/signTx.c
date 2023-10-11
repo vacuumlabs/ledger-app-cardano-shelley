@@ -983,18 +983,6 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 }
 
-static void _fillHashFromPath(const bip44_path_t* path,
-                              uint8_t* hash, size_t hashSize)
-{
-	ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
-	ASSERT(hashSize < BUFFER_SIZE_PARANOIA);
-
-	bip44_pathToKeyHash(
-	        path,
-	        hash, hashSize
-	);
-}
-
 static void _setCredential(
         credential_t* credential,
         const ext_credential_t* extCredential
@@ -1004,7 +992,10 @@ static void _setCredential(
 
 	case EXT_CREDENTIAL_KEY_PATH:
 		credential->type = CREDENTIAL_KEY_HASH;
-		_fillHashFromPath(&extCredential->keyPath, credential->keyHash, SIZEOF(credential->keyHash));
+		bip44_pathToKeyHash(
+		        &extCredential->keyPath,
+		        credential->keyHash, SIZEOF(credential->keyHash)
+		);
 		break;
 
 	case EXT_CREDENTIAL_KEY_HASH:
@@ -1031,12 +1022,8 @@ static void _addCertificateDataToTx(
         tx_hash_builder_t* txHashBuilder
 )
 {
-	// data only added in the sub-machine, see signTxPoolRegistration.c
-	ASSERT(BODY_CTX->stageData.certificate.type != CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-
 	TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
 
-	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "incompatible hash sizes");
 	credential_t stakeCredential;
 
 	switch (BODY_CTX->stageData.certificate.type) {
@@ -1067,9 +1054,12 @@ static void _addCertificateDataToTx(
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		uint8_t hash[ADDRESS_KEY_HASH_LENGTH] = {0};
-		ext_credential_t* credential = &BODY_CTX->stageData.certificate.poolCredential;
-		ASSERT(credential->type == EXT_CREDENTIAL_KEY_PATH);
-		_fillHashFromPath(&credential->keyPath, hash, SIZEOF(hash));
+		ext_credential_t* extCredential = &BODY_CTX->stageData.certificate.poolCredential;
+		ASSERT(extCredential->type == EXT_CREDENTIAL_KEY_PATH);
+		bip44_pathToKeyHash(
+		        &extCredential->keyPath,
+		        hash, SIZEOF(hash)
+		);
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
 		        hash, SIZEOF(hash),
@@ -1081,18 +1071,16 @@ static void _addCertificateDataToTx(
 	#endif // APP_FEATURE_POOL_RETIREMENT
 
 	default:
+		// stake pool registration data only added in the sub-machine, not here
+		// see signTxPoolRegistration.c
 		ASSERT(false);
 	}
 }
 
-__noinline_due_to_stack__
-static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
-{
-	TRACE_STACK_USAGE();
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	ASSERT(BODY_CTX->currentCertificate < ctx->numCertificates);
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
-	#ifdef APP_FEATURE_POOL_REGISTRATION
+static bool _handlePoolRegistrationIfNeeded(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
 	// delegate to state sub-machine for stake pool registration certificate data
 	if (signTxPoolRegistration_isValidInstruction(p2)) {
 		TRACE();
@@ -1101,20 +1089,104 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 		TRACE_STACK_USAGE();
 
 		signTxPoolRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
+		return true;
+	}
+
+	return false;
+}
+
+#endif // APP_FEATURE_POOL_REGISTRATION
+
+static void _handleCertificateStaking()
+{
+	security_policy_t policy = policyForSignTxCertificateStaking(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   BODY_CTX->stageData.certificate.type,
+	                                   &BODY_CTX->stageData.certificate.stakeCredential
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificate_ui_runStep();
+}
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
+static void _handleCertificatePoolRegistration()
+{
+	// pool registration certificates have a separate sub-machine for handling APDU and UI
+	// nothing more to be done with them here, we just init the sub-machine
+	ctx->stage = SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE;
+	signTxPoolRegistration_init();
+
+	respondSuccessEmptyMsg();
+}
+
+#endif // APP_FEATURE_POOL_REGISTRATION
+
+
+#ifdef APP_FEATURE_POOL_RETIREMENT
+
+static void _handleCertificatePoolRetirement()
+{
+	security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.poolCredential,
+	                                   BODY_CTX->stageData.certificate.epoch
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+	signTx_handleCertificatePoolRetirement_ui_runStep();
+}
+
+#endif // APP_FEATURE_POOL_RETIREMENT
+
+// Note(JM): it is possible to treat every certificate separately,
+// which makes the code somewhat more readable if read per certificate,
+// but it increases code size and that creates problems for Nano S
+__noinline_due_to_stack__
+static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	TRACE_STACK_USAGE();
+	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+	ASSERT(BODY_CTX->currentCertificate < ctx->numCertificates);
+
+	#ifdef APP_FEATURE_POOL_REGISTRATION
+	// usage of P2 determines if we are in the pool registration submachine
+	if (_handlePoolRegistrationIfNeeded(p2, wireDataBuffer, wireDataSize)) {
 		return;
 	}
 	#endif // APP_FEATURE_POOL_REGISTRATION
-
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 	CHECK_STAGE(SIGN_STAGE_BODY_CERTIFICATES);
 
 	// a new certificate arrived
 	explicit_bzero(&BODY_CTX->stageData.certificate, SIZEOF(BODY_CTX->stageData.certificate));
-
 	_parseCertificateData(wireDataBuffer, wireDataSize, &BODY_CTX->stageData.certificate);
-
 	{
-		// basic policy that just decides if the certificate is allowed
+		// basic policy that just decides if the certificate type is allowed
 		security_policy_t policy = policyForSignTxCertificate(
 		                                   ctx->commonTxData.txSigningMode,
 		                                   BODY_CTX->stageData.certificate.type
@@ -1123,76 +1195,26 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 		ENSURE_NOT_DENIED(policy);
 	}
 
-	// TODO refactor --- does it make sense to process different certificate types entirely separately?
-	// or perhaps group registration with deregistration?
-	// notice that _parseCertificateData and _addCertificateDataToTx already do a big switch on cert type
 	switch (BODY_CTX->stageData.certificate.type) {
 	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
 	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		security_policy_t policy = policyForSignTxCertificateStaking(
-		                                   ctx->commonTxData.txSigningMode,
-		                                   BODY_CTX->stageData.certificate.type,
-		                                   &BODY_CTX->stageData.certificate.stakeCredential
-		                           );
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
-
-		_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
-
-		switch (policy) {
-#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_STEP_RESPOND);
-#undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
-
-		signTx_handleCertificate_ui_runStep();
+		_handleCertificateStaking();
 		return;
 	}
 
 	#ifdef APP_FEATURE_POOL_REGISTRATION
-
 	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION: {
-		// pool registration certificates have a separate sub-machine for handling APDU and UI
-		// nothing more to be done with them here, we just init the sub-machine
-		ctx->stage = SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE;
-		signTxPoolRegistration_init();
-
-		respondSuccessEmptyMsg();
+		_handleCertificatePoolRegistration();
 		return;
 	}
-
 	#endif // APP_FEATURE_POOL_REGISTRATION
 
 	#ifdef APP_FEATURE_POOL_RETIREMENT
-
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		// TODO refactor to use credential instead of path directly
-		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
-		                                   ctx->commonTxData.txSigningMode,
-		                                   &BODY_CTX->stageData.certificate.poolCredential,
-		                                   BODY_CTX->stageData.certificate.epoch
-		                           );
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
-
-		_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
-
-		switch (policy) {
-#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_RESPOND);
-#undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
-		signTx_handleCertificatePoolRetirement_ui_runStep();
+		_handleCertificatePoolRetirement();
 		return;
 	}
-
 	#endif // APP_FEATURE_POOL_RETIREMENT
 
 	default:
