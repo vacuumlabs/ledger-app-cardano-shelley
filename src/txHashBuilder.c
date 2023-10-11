@@ -176,7 +176,7 @@ static void processOutputTopLevel(tx_hash_builder_t* builder, const tx_output_de
 
 static void assertCanLeaveCurrentOutput(tx_hash_builder_t* builder)
 {
-	switch (builder->outputState) {
+	switch (builder->outputData.outputState) {
 	case TX_OUTPUT_INIT:
 	case TX_OUTPUT_TOP_LEVEL_DATA:
 		// no tokens
@@ -235,7 +235,10 @@ void txHashBuilder_init(
         bool includeNetworkId,
         bool includeCollateralOutput,
         bool includeTotalCollateral,
-        uint16_t numReferenceInputs
+        uint16_t numReferenceInputs,
+        uint16_t numVotingProcedures,
+        bool includeTreasury,
+        bool includeDonation
 )
 {
 	TRACE("numInputs = %u", numInputs);
@@ -253,6 +256,9 @@ void txHashBuilder_init(
 	TRACE("includeCollateralOutput = %u", includeCollateralOutput);
 	TRACE("includeTotalCollateral = %u", includeTotalCollateral);
 	TRACE("numReferenceInputs = %u", numReferenceInputs);
+	TRACE("numVotingProcedures = %u", numReferenceInputs);
+	TRACE("includeTreasury = %u", includeTreasury);
+	TRACE("includeDonation = %u", includeDonation);
 
 	blake2b_256_init(&builder->txHash);
 
@@ -307,7 +313,16 @@ void txHashBuilder_init(
 		builder->remainingReferenceInputs = numReferenceInputs;
 		if (numReferenceInputs > 0) numItems++;
 
-		ASSERT((3 <= numItems) && (numItems <= 16));
+		builder->remainingVotingProcedures = numVotingProcedures;
+		if (numVotingProcedures > 0) numItems++;
+
+		builder->includeTreasury = includeTreasury;
+		if (includeTreasury) numItems++;
+
+		builder->includeDonation = includeDonation;
+		if (includeDonation) numItems++;
+
+		ASSERT((3 <= numItems) && (numItems <= 19));
 
 		_TRACE("Serializing tx body with %u items", numItems);
 		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numItems);
@@ -371,7 +386,7 @@ void txHashBuilder_enterOutputs(tx_hash_builder_t* builder)
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingOutputs);
 	}
 	builder->state = TX_HASH_BUILDER_IN_OUTPUTS;
-	builder->outputState = TX_OUTPUT_INIT;
+	builder->outputData.outputState = TX_OUTPUT_INIT;
 }
 
 void txHashBuilder_addOutput_topLevelData(
@@ -381,7 +396,7 @@ void txHashBuilder_addOutput_topLevelData(
 {
 	_TRACE(
 	        "state = %d, outputState = %d, remainingOutputs = %u",
-	        builder->state, builder->outputState, builder->remainingOutputs
+	        builder->state, builder->outputData.outputState, builder->remainingOutputs
 	);
 
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_OUTPUTS);
@@ -392,7 +407,7 @@ void txHashBuilder_addOutput_topLevelData(
 
 	processOutputTopLevel(builder, output);
 
-	builder->outputState = TX_OUTPUT_TOP_LEVEL_DATA;
+	builder->outputData.outputState = TX_OUTPUT_TOP_LEVEL_DATA;
 }
 
 __noinline_due_to_stack__
@@ -404,10 +419,10 @@ static void addTokenGroup(
 {
 	_TRACE(
 	        "state = %d, outputState = %d, remainingAssetGroups = %u",
-	        builder->state, builder->outputState, builder->outputData.multiassetData.remainingAssetGroups
+	        builder->state, builder->outputData.outputState, builder->outputData.multiassetData.remainingAssetGroups
 	);
 
-	switch (builder->outputState) {
+	switch (builder->outputData.outputState) {
 	case TX_OUTPUT_ASSET_GROUP:
 		// we have been adding tokens into the previous asset group
 		ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
@@ -443,7 +458,7 @@ static void addTokenGroup(
 		}
 	}
 
-	builder->outputState = TX_OUTPUT_ASSET_GROUP;
+	builder->outputData.outputState = TX_OUTPUT_ASSET_GROUP;
 }
 
 __noinline_due_to_stack__
@@ -456,10 +471,10 @@ static void addToken(
 {
 	_TRACE(
 	        "state = %d, outputState = %d, remainingTokens = %u",
-	        builder->state, builder->outputState, builder->outputData.multiassetData.remainingTokens
+	        builder->state, builder->outputData.outputState, builder->outputData.multiassetData.remainingTokens
 	);
 
-	switch (builder->outputState) {
+	switch (builder->outputData.outputState) {
 	case TX_OUTPUT_ASSET_GROUP:
 		// we have been adding tokens into an asset group
 		break;
@@ -485,7 +500,7 @@ static void addToken(
 		}
 	}
 
-	builder->outputState = TX_OUTPUT_ASSET_GROUP;
+	builder->outputData.outputState = TX_OUTPUT_ASSET_GROUP;
 }
 
 void txHashBuilder_addOutput_tokenGroup(
@@ -518,9 +533,9 @@ void txHashBuilder_addOutput_datum(
 {
 	ASSERT(builder->outputData.includeDatum);
 
-	TRACE("%d", builder->outputState);
+	TRACE("%d", builder->outputData.outputState);
 
-	switch (builder->outputState) {
+	switch (builder->outputData.outputState) {
 	case TX_OUTPUT_TOP_LEVEL_DATA:
 		// top level data has been added instantaneously
 		// so we only check there are no asset groups left out
@@ -564,7 +579,7 @@ void txHashBuilder_addOutput_datum(
 			BUILDER_APPEND_DATA(buffer, bufferSize);
 		}
 		//  Hash is transmitted in one chunk, and datumType stage is finished
-		builder->outputState = TX_OUTPUT_DATUM_HASH;
+		builder->outputData.outputState = TX_OUTPUT_DATUM_HASH;
 		break;
 
 	case DATUM_INLINE:
@@ -578,7 +593,7 @@ void txHashBuilder_addOutput_datum(
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, bufferSize);
 			// byte chunks will be added later
 		}
-		builder->outputState = TX_OUTPUT_DATUM_INLINE;
+		builder->outputData.outputState = TX_OUTPUT_DATUM_INLINE;
 		break;
 
 	default:
@@ -591,7 +606,7 @@ void txHashBuilder_addOutput_datum_inline_chunk(
         const uint8_t* buffer, size_t bufferSize
 )
 {
-	ASSERT(builder->outputState == TX_OUTPUT_DATUM_INLINE);
+	ASSERT(builder->outputData.outputState == TX_OUTPUT_DATUM_INLINE);
 	ASSERT(bufferSize <= builder->outputData.datumData.remainingBytes);
 	builder->outputData.datumData.remainingBytes -= bufferSize;
 	{
@@ -603,7 +618,7 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 {
 	ASSERT(builder->outputData.includeRefScript);
 
-	switch (builder->outputState) {
+	switch (builder->outputData.outputState) {
 	case TX_OUTPUT_TOP_LEVEL_DATA:
 		// top level data has been added instantaneously
 		// so we only check there are no asset groups left out
@@ -639,7 +654,7 @@ void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t 
 		// byte chunks will be added later
 	}
 	builder->outputData.referenceScriptData.remainingBytes = scriptSize;
-	builder->outputState = TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS;
+	builder->outputData.outputState = TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS;
 }
 
 void txHashBuilder_addOutput_referenceScript_dataChunk(
@@ -647,7 +662,7 @@ void txHashBuilder_addOutput_referenceScript_dataChunk(
         const uint8_t* buffer, size_t bufferSize
 )
 {
-	ASSERT(builder->outputState == TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS);
+	ASSERT(builder->outputData.outputState == TX_OUTPUT_SCRIPT_REFERENCE_CHUNKS);
 	{
 		BUILDER_APPEND_DATA(buffer, bufferSize);
 	}
@@ -751,7 +766,7 @@ static void _initNewCertificate(tx_hash_builder_t* builder)
 	builder->remainingCertificates--;
 }
 
-static const uint8_t* getCredentialHashBuffer(const credential_t* credential)
+static const uint8_t* _getCredentialHashBuffer(const credential_t* credential)
 {
 	switch (credential->type) {
 	case CREDENTIAL_KEY_HASH:
@@ -763,7 +778,7 @@ static const uint8_t* getCredentialHashBuffer(const credential_t* credential)
 	}
 }
 
-static size_t getCredentialHashSize(const credential_t* credential)
+static size_t _getCredentialHashSize(const credential_t* credential)
 {
 	switch (credential->type) {
 	case CREDENTIAL_KEY_HASH:
@@ -775,8 +790,25 @@ static size_t getCredentialHashSize(const credential_t* credential)
 	}
 }
 
+static void _appendCredential(
+        tx_hash_builder_t* builder,
+        const credential_t* credential
+)
+{
+	BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, credential->type);
+	}
+	{
+		const size_t size = _getCredentialHashSize(credential);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, size);
+		BUILDER_APPEND_DATA(_getCredentialHashBuffer(credential), size);
+	}
+}
+
 // stake key certificate registration or deregistration
-void txHashBuilder_addCertificate_stakingHash(
+// will be deprecated after Conway
+void txHashBuilder_addCertificate_stakingOld(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
         const credential_t* stakeCredential
@@ -784,8 +816,8 @@ void txHashBuilder_addCertificate_stakingHash(
 {
 	_initNewCertificate(builder);
 
-	ASSERT((certificateType == CERTIFICATE_TYPE_STAKE_REGISTRATION)
-	       || (certificateType == CERTIFICATE_TYPE_STAKE_DEREGISTRATION));
+	ASSERT((certificateType == CERTIFICATE_STAKE_REGISTRATION)
+	       || (certificateType == CERTIFICATE_STAKE_DEREGISTRATION));
 
 	// Array(2)[
 	//   Unsigned[certificateType]
@@ -800,20 +832,48 @@ void txHashBuilder_addCertificate_stakingHash(
 			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, certificateType);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
-			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredential->type);
-			}
-			{
-				const size_t size = getCredentialHashSize(stakeCredential);
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, size);
-				BUILDER_APPEND_DATA(getCredentialHashBuffer(stakeCredential), size);
-			}
+			_appendCredential(builder, stakeCredential);
 		}
 	}
 }
 
-void txHashBuilder_addCertificate_delegation(
+// stake key certificate registration or deregistration
+// exists since Conway
+void txHashBuilder_addCertificate_staking(
+        tx_hash_builder_t* builder,
+        const certificate_type_t certificateType,
+        const credential_t* stakeCredential,
+        uint64_t deposit
+)
+{
+	_initNewCertificate(builder);
+
+	ASSERT((certificateType == CERTIFICATE_STAKE_REGISTRATION_CONWAY)
+	       || (certificateType == CERTIFICATE_STAKE_DEREGISTRATION_CONWAY));
+
+	// Array(3)[
+	//   Unsigned[certificateType]
+	//   Array(2)[
+	//     Unsigned[0]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	//   Unsigned[deposit]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, certificateType);
+		}
+		{
+			_appendCredential(builder, stakeCredential);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, deposit);
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_stakeDelegation(
         tx_hash_builder_t* builder,
         const credential_t* stakeCredential,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
@@ -834,22 +894,254 @@ void txHashBuilder_addCertificate_delegation(
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 2);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_STAKE_DELEGATION);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
-			{
-				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, stakeCredential->type);
-			}
-			{
-				const size_t size = getCredentialHashSize(stakeCredential);
-				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, size);
-				BUILDER_APPEND_DATA(getCredentialHashBuffer(stakeCredential), size);
-			}
+			_appendCredential(builder, stakeCredential);
 		}
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, poolKeyHashSize);
 			BUILDER_APPEND_DATA(poolKeyHash, poolKeyHashSize);
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_voteDelegation(
+        tx_hash_builder_t* builder,
+        const credential_t* stakeCredential,
+        const drep_t* drep
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[9]
+	//   Array(2)[
+	//     Unsigned[0]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	//   Array(1 or 2)[
+	//     Unsigned[drep_type]
+	//     ?Bytes[key/script hash] // optional
+	//   ]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_VOTE_DELEGATION);
+		}
+		{
+			_appendCredential(builder, stakeCredential);
+		}
+		{
+			// DRep
+			switch (drep->type) {
+			case DREP_KEY_HASH: {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, DREP_KEY_HASH);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(drep->keyHash));
+				BUILDER_APPEND_DATA(drep->keyHash, SIZEOF(drep->keyHash));
+				break;
+			}
+			case DREP_SCRIPT_HASH: {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, DREP_SCRIPT_HASH);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(drep->scriptHash));
+				BUILDER_APPEND_DATA(drep->scriptHash, SIZEOF(drep->scriptHash));
+				break;
+			}
+			case DREP_ALWAYS_ABSTAIN:
+			case DREP_ALWAYS_NO_CONFIDENCE: {
+				BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 1);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, drep->type);
+				break;
+			}
+			default:
+				ASSERT(false);
+			}
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_committeeAuthHot(
+        tx_hash_builder_t* builder,
+        const credential_t* coldCredential,
+        const credential_t* hotCredential
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[14]
+	//   Array(2)[
+	//     Unsigned[0 or 1]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	//   Array(2)[
+	//     Unsigned[0 or 1]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_AUTHORIZE_COMMITTEE_HOT);
+		}
+		{
+			_appendCredential(builder, coldCredential);
+		}
+		{
+			_appendCredential(builder, hotCredential);
+		}
+	}
+}
+
+static void _appendAnchor(
+        tx_hash_builder_t* builder,
+        const anchor_t* anchor
+)
+{
+	if (anchor->isIncluded) {
+		// Array(2)[
+		//   Tstr[url]
+		//   Bytes[32]
+		// ]
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_TEXT, anchor->urlLength);
+			BUILDER_APPEND_DATA(anchor->url, anchor->urlLength);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(anchor->hash));
+			BUILDER_APPEND_DATA(anchor->hash, SIZEOF(anchor->hash));
+		}
+	} else {
+		// Null
+		BUILDER_APPEND_CBOR(CBOR_TYPE_NULL, 0);
+	}
+}
+
+void txHashBuilder_addCertificate_committeeResign(
+        tx_hash_builder_t* builder,
+        const credential_t* coldCredential,
+        const anchor_t* anchor
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[15]
+	//   Array(2)[
+	//     Unsigned[0 or 1]
+	//     Bytes[stakingKeyHash]
+	//   ]
+	//   Null / ...anchor
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_RESIGN_COMMITTEE_COLD);
+		}
+		{
+			_appendCredential(builder, coldCredential);
+		}
+		{
+			_appendAnchor(builder, anchor);
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_dRepRegistration(
+        tx_hash_builder_t* builder,
+        const credential_t* dRepCredential,
+        uint64_t deposit,
+        const anchor_t* anchor
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(4)[
+	//   Unsigned[16]
+	//   Array(2)[
+	//     Unsigned[0/1]
+	//     Bytes[key/script hash]
+	//   ]
+	//   Unsigned[deposit]
+	//   Null / ...anchor
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 4);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_DREP_REGISTRATION);
+		}
+		{
+			_appendCredential(builder, dRepCredential);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, deposit);
+		}
+		{
+			_appendAnchor(builder, anchor);
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_dRepDeregistration(
+        tx_hash_builder_t* builder,
+        const credential_t* dRepCredential,
+        uint64_t deposit
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[17]
+	//   Array(2)[
+	//     Unsigned[0/1]
+	//     Bytes[key/script hash]
+	//   ]
+	//   Unsigned[deposit]
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_DREP_DEREGISTRATION);
+		}
+		{
+			_appendCredential(builder, dRepCredential);
+		}
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, deposit);
+		}
+	}
+}
+
+void txHashBuilder_addCertificate_dRepUpdate(
+        tx_hash_builder_t* builder,
+        const credential_t* dRepCredential,
+        const anchor_t* anchor
+)
+{
+	_initNewCertificate(builder);
+
+	// Array(3)[
+	//   Unsigned[18]
+	//   Array(2)[
+	//     Unsigned[0/1]
+	//     Bytes[key/script hash]
+	//   ]
+	//   Null / ...anchor
+	// ]
+	{
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		{
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_DREP_UPDATE);
+		}
+		{
+			_appendCredential(builder, dRepCredential);
+		}
+		{
+			_appendAnchor(builder, anchor);
 		}
 	}
 }
@@ -874,7 +1166,7 @@ void txHashBuilder_addCertificate_poolRetirement(
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 4);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_STAKE_POOL_RETIREMENT);
 		}
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, poolKeyHashSize);
@@ -906,7 +1198,7 @@ void txHashBuilder_poolRegistrationCertificate_enter(
 	{
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 10);
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, 3);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_STAKE_POOL_REGISTRATION);
 		}
 	}
 
@@ -1466,7 +1758,7 @@ void txHashBuilder_addMint_topLevelData(
 	// ]
 	BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, numAssetGroups);
 
-	builder->outputState = TX_OUTPUT_TOP_LEVEL_DATA;
+	builder->outputData.outputState = TX_OUTPUT_TOP_LEVEL_DATA;
 }
 
 void txHashBuilder_addMint_tokenGroup(
@@ -1501,7 +1793,7 @@ static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 
 	switch (builder->state) {
 	case TX_HASH_BUILDER_IN_MINT:
-		ASSERT(builder->outputState == TX_OUTPUT_ASSET_GROUP);
+		ASSERT(builder->outputData.outputState == TX_OUTPUT_ASSET_GROUP);
 		ASSERT(builder->outputData.multiassetData.remainingAssetGroups == 0);
 		ASSERT(builder->outputData.multiassetData.remainingTokens == 0);
 		break;
@@ -1717,7 +2009,7 @@ void txHashBuilder_addCollateralOutput(
 	}
 	processOutputTopLevel(builder, output);
 
-	builder->outputState = TX_OUTPUT_TOP_LEVEL_DATA;
+	builder->outputData.outputState = TX_OUTPUT_TOP_LEVEL_DATA;
 	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_OUTPUT;
 }
 
@@ -1851,11 +2143,194 @@ static void txHashBuilder_assertCanLeaveReferenceInputs(tx_hash_builder_t* build
 	}
 }
 
+// ========================= VOTING PROCEDURES ==========================
+
+void txHashBuilder_enterVotingProcedures(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveReferenceInputs(builder);
+	// we don't allow an empty map for an optional item
+	ASSERT(builder->remainingVotingProcedures > 0);
+
+	{
+		// Enter voting procedures
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_VOTING_PROCEDURES);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, builder->remainingVotingProcedures);
+	}
+	builder->state = TX_HASH_BUILDER_IN_VOTING_PROCEDURES;
+}
+
+// assumes a single voting procedure for the voter
+void txHashBuilder_addVotingProcedure(
+        tx_hash_builder_t* builder,
+        voter_t* voter,
+        gov_action_id_t* govActionId,
+        voting_procedure_t* votingProcedure
+)
+{
+	_TRACE("state = %d, remainingVotingProcedures = %u", builder->state, builder->remainingVotingProcedures);
+
+	ASSERT(builder->state == TX_HASH_BUILDER_IN_VOTING_PROCEDURES);
+	ASSERT(builder->remainingVotingProcedures > 0);
+	builder->remainingVotingProcedures--;
+
+	{
+		// voter
+		// Array(2)[
+		//    Unsigned[voter type]
+		//    Bytes[key or script hash],
+		// ]
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, voter->type);
+
+		switch (voter->type) {
+		case VOTER_COMMITTEE_HOT_KEY_HASH:
+		case VOTER_DREP_KEY_HASH:
+		case VOTER_STAKE_POOL_KEY_HASH: {
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(voter->keyHash));
+			BUILDER_APPEND_DATA(voter->keyHash, SIZEOF(voter->keyHash));
+			break;
+		}
+		case VOTER_COMMITTEE_HOT_SCRIPT_HASH:
+		case VOTER_DREP_SCRIPT_HASH: {
+			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, SIZEOF(voter->scriptHash));
+			BUILDER_APPEND_DATA(voter->scriptHash, SIZEOF(voter->scriptHash));
+			break;
+		}
+		default:
+			ASSERT(false);
+		}
+	}
+	{
+		// only 1 vote for the voter is supported
+		BUILDER_APPEND_CBOR(CBOR_TYPE_MAP, 1);
+		{
+			// governance action id
+			// Array(2)[
+			//    Bytes[hash],
+			//    Unsigned[index]
+			// ]
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+			{
+				size_t size = SIZEOF(govActionId->txHashBuffer);
+				ASSERT(size == TX_HASH_LENGTH);
+				BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, size);
+				BUILDER_APPEND_DATA(govActionId->txHashBuffer, size);
+			}
+			{
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, govActionId->govActionIndex);
+			}
+		}
+		{
+			// voting procedure
+			// Array(2)[
+			//   Unsigned[vote]
+			//   Null / ...anchor
+			// ]
+			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
+			{
+				// vote
+				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, votingProcedure->vote);
+			}
+			{
+				_appendAnchor(builder, &votingProcedure->anchor);
+			}
+		}
+	}
+}
+
+
+static void txHashBuilder_assertCanLeaveVotingProcedures(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_VOTING_PROCEDURES:
+		// make sure there are no more voting procedures to process
+		ASSERT(builder->remainingVotingProcedures == 0);
+		break;
+
+	default:
+		// make sure no voting procedures are expected
+		ASSERT(builder->remainingVotingProcedures == 0);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveReferenceInputs(builder);
+		break;
+	}
+}
+
+// ============================== TREASURY ==============================
+
+void txHashBuilder_addTreasury(tx_hash_builder_t* builder, uint64_t treasury)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveVotingProcedures(builder);
+
+	// add treasury item into the main tx body map
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_TREASURY);
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, treasury);
+
+	builder->state = TX_HASH_BUILDER_IN_TREASURY;
+}
+
+static void txHashBuilder_assertCanLeaveTreasury(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_TREASURY:
+		// treasury item was added, we can move on
+		break;
+
+	default:
+		// make sure treasury was not expected
+		ASSERT(!builder->includeTreasury);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveVotingProcedures(builder);
+		break;
+	}
+}
+
+// ============================== DONATION ==============================
+
+void txHashBuilder_addDonation(tx_hash_builder_t* builder, uint64_t donation)
+{
+	_TRACE("state = %d", builder->state);
+
+	txHashBuilder_assertCanLeaveTreasury(builder);
+
+	// add donation item into the main tx body map
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_DONATION);
+	BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, donation);
+
+	builder->state = TX_HASH_BUILDER_IN_DONATION;
+}
+
+static void txHashBuilder_assertCanLeaveDonation(tx_hash_builder_t* builder)
+{
+	_TRACE("state = %d", builder->state);
+
+	switch (builder->state) {
+	case TX_HASH_BUILDER_IN_DONATION:
+		// donation item was added, we can move on
+		break;
+
+	default:
+		// make sure donation was not expected
+		ASSERT(!builder->includeDonation);
+		// assert we can leave the previous state
+		txHashBuilder_assertCanLeaveTreasury(builder);
+		break;
+	}
+}
+
 // ========================= FINALIZE ==========================
 
 void txHashBuilder_finalize(tx_hash_builder_t* builder, uint8_t* outBuffer, size_t outSize)
 {
-	txHashBuilder_assertCanLeaveReferenceInputs(builder);
+	txHashBuilder_assertCanLeaveDonation(builder);
 
 	ASSERT(outSize == TX_HASH_LENGTH);
 	{

@@ -216,6 +216,20 @@ static bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec)
 	return (address <= MAX_REASONABLE_ADDRESS);
 }
 
+static bool bip44_isConwayPathRecommended(const bip44_path_t* pathSpec)
+{
+	switch (bip44_classifyPath(pathSpec)) {
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+		// strongly recommended in CIP-0105 to only use 0 as address
+		return (bip44_getAddressValue(pathSpec) == 0);
+	default:
+		ASSERT(false);
+		return false;
+	}
+}
+
 static bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 {
 	return (pathSpec->length > BIP44_I_ADDRESS + 1);
@@ -263,7 +277,8 @@ bool bip44_isDRepKeyPath(const bip44_path_t* pathSpec)
 	CHECK(bip44_hasShelleyPrefix(pathSpec));
 	CHECK(isHardened(bip44_getAccount(pathSpec)));
 	CHECK(bip44_getChainTypeValue(pathSpec) == CARDANO_CHAIN_DREP_KEY);
-	CHECK(bip44_getAddressValue(pathSpec) == 0); // TODO allow other values and check for hardened only?
+	// is it strongly recommended (but not forbidden) to only use 0 as address
+	CHECK(!isHardened(bip44_getAddressValue(pathSpec)));
 	return true;
 #undef CHECK
 }
@@ -276,7 +291,8 @@ bool bip44_isCommitteeColdKeyPath(const bip44_path_t* pathSpec)
 	CHECK(bip44_hasShelleyPrefix(pathSpec));
 	CHECK(isHardened(bip44_getAccount(pathSpec)));
 	CHECK(bip44_getChainTypeValue(pathSpec) == CARDANO_CHAIN_COMMITTEE_COLD_KEY);
-	CHECK(bip44_getAddressValue(pathSpec) == 0); // TODO allow other values and check for hardened only?
+	// is it strongly recommended (but not forbidden) to only use 0 as address
+	CHECK(!isHardened(bip44_getAddressValue(pathSpec)));
 	return true;
 #undef CHECK
 }
@@ -289,7 +305,8 @@ bool bip44_isCommitteeHotKeyPath(const bip44_path_t* pathSpec)
 	CHECK(bip44_hasShelleyPrefix(pathSpec));
 	CHECK(isHardened(bip44_getAccount(pathSpec)));
 	CHECK(bip44_getChainTypeValue(pathSpec) == CARDANO_CHAIN_COMMITTEE_HOT_KEY);
-	CHECK(bip44_getAddressValue(pathSpec) == 0); // TODO allow other values and check for hardened only?
+	// is it strongly recommended (but not forbidden) to only use 0 as address
+	CHECK(!isHardened(bip44_getAddressValue(pathSpec)));
 	return true;
 #undef CHECK
 }
@@ -552,7 +569,9 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 	case PATH_DREP_KEY:
 	case PATH_COMMITTEE_COLD_KEY:
 	case PATH_COMMITTEE_HOT_KEY:
-		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
+		return bip44_hasReasonableAccount(pathSpec)
+		       && bip44_hasReasonableAddress(pathSpec)
+		       && bip44_isConwayPathRecommended(pathSpec);
 
 	case PATH_MINT_KEY:
 		return bip44_hasReasonableMintPolicy(pathSpec);
