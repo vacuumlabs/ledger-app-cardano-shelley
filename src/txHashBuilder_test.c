@@ -401,9 +401,9 @@ static void addCertificates(tx_hash_builder_t* builder)
 			.type = CREDENTIAL_KEY_HASH
 		};
 		decode_hex(PTR_PIC(it->stakingKeyHash), credential.keyHash, SIZEOF(credential.keyHash));
-		txHashBuilder_addCertificate_stakingHash(
+		txHashBuilder_addCertificate_stakingOld(
 		        builder,
-		        CERTIFICATE_TYPE_STAKE_REGISTRATION,
+		        CERTIFICATE_STAKE_REGISTRATION,
 		        &credential
 		);
 	}
@@ -413,9 +413,9 @@ static void addCertificates(tx_hash_builder_t* builder)
 			.type = CREDENTIAL_KEY_HASH
 		};
 		decode_hex(PTR_PIC(it->stakingKeyHash), credential.keyHash, SIZEOF(credential.keyHash));
-		txHashBuilder_addCertificate_stakingHash(
+		txHashBuilder_addCertificate_stakingOld(
 		        builder,
-		        CERTIFICATE_TYPE_STAKE_DEREGISTRATION,
+		        CERTIFICATE_STAKE_DEREGISTRATION,
 		        &credential
 		);
 	}

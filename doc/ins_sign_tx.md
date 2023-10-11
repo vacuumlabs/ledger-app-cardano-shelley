@@ -242,41 +242,41 @@ In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR
 |  P1 | `0x06` |
 |  P2 | (unused / see [Stake Pool Registration](ins_sign_stake_pool_registration.md)) |
 
-**Data for CERTIFICATE_TYPE_STAKE_REGISTRATION**
+**Data for CERTIFICATE_STAKE_REGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_REGISTRATION=0x00`|
+|Output type| 1 | `CERTIFICATE_STAKE_REGISTRATION=0x00`|
 |Stake credential| variable | See stake credential explained above|
 
-**Data for CERTIFICATE_TYPE_STAKE_DEREGISTRATION**
+**Data for CERTIFICATE_STAKE_DEREGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_DEREGISTRATION=0x01`|
+|Output type| 1 | `CERTIFICATE_STAKE_DEREGISTRATION=0x01`|
 |Stake credential| variable | See stake credential explained above|
 
-**Data for CERTIFICATE_TYPE_STAKE_DELEGATION**
+**Data for CERTIFICATE_STAKE_DELEGATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_DELEGATION=0x02`|
+|Output type| 1 | `CERTIFICATE_STAKE_DELEGATION=0x02`|
 |Stake credential| variable | See stake credential explained above|
 |Pool key hash| 28 | Hash of staking pool public key|
 
-**Data for CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION**
+**Data for CERTIFICATE_STAKE_POOL_REGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION=0x03`|
+|Output type| 1 | `CERTIFICATE_STAKE_POOL_REGISTRATION=0x03`|
 
 This only describes the initial certificate message. All the data for this certificate are obtained via a series of additional APDU messages; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details.
 
-**Data for CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT**
+**Data for CERTIFICATE_STAKE_POOL_RETIREMENT**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT=0x04`|
+|Output type| 1 | `CERTIFICATE_STAKE_POOL_RETIREMENT=0x04`|
 |Stake key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 |Pool key hash| 28 | Hash of staking pool public key|
 

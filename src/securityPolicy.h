@@ -113,6 +113,24 @@ security_policy_t policyForSignTxCertificateStaking(
         const certificate_type_t certificateType,
         const ext_credential_t* stakeCredential
 );
+security_policy_t policyForSignTxCertificateVoteDelegation(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* stakeCredential,
+        const ext_drep_t* drep
+);
+security_policy_t policyForSignTxCertificateCommitteeAuth(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* coldCredential,
+        const ext_credential_t* hotCredential
+);
+security_policy_t policyForSignTxCertificateCommitteeResign(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* coldCredential
+);
+security_policy_t policyForSignTxCertificateDRep(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* drepCredential
+);
 #ifdef APP_FEATURE_POOL_RETIREMENT
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_signingmode_t txSigningMode,
