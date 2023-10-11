@@ -1,8 +1,10 @@
 # Sign Transaction
 
+Note: this is somewhat incomplete (Babbage and Conway era elements are not described in detail) and some parts might be outdated. We strongly recommend to use [ledgerjs for Cardano](https://github.com/vacuumlabs/ledgerjs-cardano-shelley) for signing transactions. Check its latest API to find out what is supported.
+
 **Description**
 
-Given transaction inputs and transaction outputs, fee, ttl, staking certificates, reward withdrawals, metadata hash, validity interval start, and mint, construct and sign a transaction.
+Given transaction inputs and transaction outputs, fee, ttl, staking certificates, reward withdrawals, metadata hash, validity interval start, mint, Plutus (Babbage) additional transaction body elements, and Conway additional elements, construct and sign a transaction.
 
 Due to Ledger constraints and potential security implications (parsing errors), Cardano Ledger app uses a custom format for streaming the transaction to be signed. The main rationale behind not streaming directly the (CBOR-encoded) cardano raw transaction to Ledger is the following:
 1) The app needs to support BIP44 change address outputs (Ledger should not display user's own change addresses to the user as this degrades UX).
@@ -233,7 +235,23 @@ Optional.
 
 ### Certificate
 
-We support 4 types of certificates in ordinary transactions (signing mode `SIGN_TX_SIGNINGMODE_ORDINARY_TX` in the initial APDU message): stake key registration, stake key deregistration, stake delegation, and stake pool retirement. We support 3 types in multisig transactions (signing mode `SIGN_TX_SIGNINGMODE_MULTISIG_TX` in the initial APDU message): stake key registration, stake key deregistration, and stake delegation.
+We support the following certificate types in ordinary transactions (signing mode `SIGN_TX_SIGNINGMODE_ORDINARY_TX` in the initial APDU message):
+* CERTIFICATE_STAKE_REGISTRATION = 0,
+* CERTIFICATE_STAKE_DEREGISTRATION = 1,
+* CERTIFICATE_STAKE_DELEGATION = 2,
+* CERTIFICATE_STAKE_POOL_RETIREMENT = 4,
+* CERTIFICATE_STAKE_REGISTRATION_CONWAY = 7,
+* CERTIFICATE_STAKE_DEREGISTRATION_CONWAY = 8,
+* CERTIFICATE_VOTE_DELEGATION = 9,
+* CERTIFICATE_AUTHORIZE_COMMITTEE_HOT = 14,
+* CERTIFICATE_RESIGN_COMMITTEE_COLD = 15,
+* CERTIFICATE_DREP_REGISTRATION = 16,
+* CERTIFICATE_DREP_DEREGISTRATION = 17,
+* CERTIFICATE_DREP_UPDATE = 18,
+
+For signing mode `SIGN_TX_SIGNINGMODE_MULTISIG_TX`, everything from the above list except `CERTIFICATE_STAKE_POOL_RETIREMENT` is allowed.
+
+For signing mode `SIGN_TX_SIGNINGMODE_PLUTUS_TX`, everything from the above list is allowed.
 
 In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR` or `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER` as the signing mode contains a single certificate for stake pool registration which must not be accompanied by other certificates or by withdrawals (due to security concerns about cross-witnessing data between them). This certificate is processed by a state sub-machine. Instructions for this sub-machine are given in P2; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details on accepted P2 values and additional APDU messages needed.
 
@@ -242,41 +260,41 @@ In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR
 |  P1 | `0x06` |
 |  P2 | (unused / see [Stake Pool Registration](ins_sign_stake_pool_registration.md)) |
 
-**Data for CERTIFICATE_TYPE_STAKE_REGISTRATION**
+**Data for CERTIFICATE_STAKE_REGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_REGISTRATION=0x00`|
+|Output type| 1 | `CERTIFICATE_STAKE_REGISTRATION=0x00`|
 |Stake credential| variable | See stake credential explained above|
 
-**Data for CERTIFICATE_TYPE_STAKE_DEREGISTRATION**
+**Data for CERTIFICATE_STAKE_DEREGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_DEREGISTRATION=0x01`|
+|Output type| 1 | `CERTIFICATE_STAKE_DEREGISTRATION=0x01`|
 |Stake credential| variable | See stake credential explained above|
 
-**Data for CERTIFICATE_TYPE_STAKE_DELEGATION**
+**Data for CERTIFICATE_STAKE_DELEGATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_DELEGATION=0x02`|
+|Output type| 1 | `CERTIFICATE_STAKE_DELEGATION=0x02`|
 |Stake credential| variable | See stake credential explained above|
 |Pool key hash| 28 | Hash of staking pool public key|
 
-**Data for CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION**
+**Data for CERTIFICATE_STAKE_POOL_REGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION=0x03`|
+|Output type| 1 | `CERTIFICATE_STAKE_POOL_REGISTRATION=0x03`|
 
 This only describes the initial certificate message. All the data for this certificate are obtained via a series of additional APDU messages; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details.
 
-**Data for CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT**
+**Data for CERTIFICATE_STAKE_POOL_RETIREMENT**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT=0x04`|
+|Output type| 1 | `CERTIFICATE_STAKE_POOL_RETIREMENT=0x04`|
 |Stake key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 |Pool key hash| 28 | Hash of staking pool public key|
 

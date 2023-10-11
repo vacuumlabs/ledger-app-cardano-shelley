@@ -44,7 +44,10 @@ security_policy_t policyForSignTxInit(
         bool includeNetworkId,
         bool includeCollateralOutput,
         bool includeTotalCollateral,
-        uint16_t numReferenceInputs
+        uint16_t numReferenceInputs,
+        uint16_t numVotingProcedures,
+        bool includeTreasury,
+        bool includeDonation
 );
 
 security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode);
@@ -112,6 +115,24 @@ security_policy_t policyForSignTxCertificateStaking(
         sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType,
         const ext_credential_t* stakeCredential
+);
+security_policy_t policyForSignTxCertificateVoteDelegation(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* stakeCredential,
+        const ext_drep_t* drep
+);
+security_policy_t policyForSignTxCertificateCommitteeAuth(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* coldCredential,
+        const ext_credential_t* hotCredential
+);
+security_policy_t policyForSignTxCertificateCommitteeResign(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* coldCredential
+);
+security_policy_t policyForSignTxCertificateDRep(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* dRepCredential
 );
 #ifdef APP_FEATURE_POOL_RETIREMENT
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
@@ -185,6 +206,15 @@ security_policy_t policyForSignTxWitness(
 security_policy_t policyForSignTxTotalCollateral();
 
 security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSigningMode);
+
+security_policy_t policyForSignTxVotingProcedure(
+        sign_tx_signingmode_t txSigningMode,
+        ext_voter_t* voter
+);
+
+security_policy_t policyForSignTxTreasury(sign_tx_signingmode_t txSigningMode, uint64_t treasury);
+
+security_policy_t policyForSignTxDonation(sign_tx_signingmode_t txSigningMode, uint64_t donation);
 
 security_policy_t policyForSignTxConfirm();
 
