@@ -4,6 +4,6 @@
 
 pushd fuzzing
 cmake -DBOLOS_SDK=../BOLOS_SDK -Bbuild -H.
-make -C build VERBOSE=1
+make -C build
 mv build/*_harness $OUT
 popd
