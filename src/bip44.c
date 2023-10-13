@@ -4,9 +4,9 @@
 #include "hash.h"
 #include "keyDerivation.h"
 
-static const uint32_t CARDANO_CHAIN_EXTERNAL = 0;
-static const uint32_t CARDANO_CHAIN_INTERNAL = 1;
-static const uint32_t CARDANO_CHAIN_STAKING_KEY = 2;
+#define CARDANO_CHAIN_EXTERNAL 0
+#define CARDANO_CHAIN_INTERNAL 1
+#define CARDANO_CHAIN_STAKING_KEY 2
 
 static const uint32_t MAX_REASONABLE_ACCOUNT = 100;
 static const uint32_t MAX_REASONABLE_ADDRESS = 1000000;
