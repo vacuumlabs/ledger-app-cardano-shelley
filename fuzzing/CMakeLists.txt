@@ -152,6 +152,7 @@ set(SOURCE
 )
 
 
+add_library(cardano ${SOURCE})
 
 set(harnesses
     all_harness
@@ -166,6 +167,6 @@ set(harnesses
 foreach(harness IN LISTS harnesses)
     add_executable(${harness} 
         ./src/${harness}.c
-        ${SOURCE}
     )    
+    target_link_libraries(${harness} PUBLIC cardano)
 endforeach()

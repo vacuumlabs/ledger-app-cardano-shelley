@@ -49,7 +49,6 @@ void deriveExtendedPublicKey(
 	// if the path is invalid, it's a bug in previous validation
 	ASSERT(policyForDerivePrivateKey(pathSpec) != POLICY_DENY);
 
-	#ifndef FUZZING
 	{
 		cx_err_t error = crypto_get_pubkey(pathSpec->path,
 		                                   pathSpec->length,
@@ -60,7 +59,6 @@ void deriveExtendedPublicKey(
 			ASSERT(false);
 		}
 	}
-	#endif
 
 	extractRawPublicKey(rawPubkey, out->pubKey, SIZEOF(out->pubKey));
 
