@@ -17,6 +17,7 @@
 #define ARRAY_LEN(arr) \
 	(sizeof(arr) / sizeof((arr)[0]) + ARRAY_NOT_A_PTR(arr))
 
+#ifndef FUZZING
 // Does not compile if x *might* be a pointer of some kind
 // Might produce false positives on small structs...
 // Note: ARRAY_NOT_A_PTR does not compile if arg is a struct so this is a workaround
@@ -27,6 +28,9 @@
 #define SIZEOF(var) \
 	(sizeof(var) + SIZEOF_NOT_A_PTR(var))
 
+#else
+#define SIZEOF(var) sizeof(var)
+#endif
 
 #define ASSERT_TYPE(expr, expected_type) \
 	STATIC_ASSERT( \

@@ -768,7 +768,9 @@ void ui_displayPoolRelayScreen(
 	char firstLine[20] = {0};
 	explicit_bzero(firstLine, SIZEOF(firstLine));
 	{
+		#ifndef FUZZING
 		STATIC_ASSERT(sizeof(relayIndex + 1) <= sizeof(unsigned), "oversized type for %u");
+		#endif
 		STATIC_ASSERT(!IS_SIGNED(relayIndex + 1), "signed type for %u");
 		// indexed from 0 as discussed with IOHK on Slack
 		snprintf(firstLine, SIZEOF(firstLine), "Relay #%u", relayIndex);
