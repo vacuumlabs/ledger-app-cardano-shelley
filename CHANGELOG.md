@@ -6,7 +6,28 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [6.0.3](TBD) - [TBD]
+## [7.0.2](TBD) - [TBD]
+
+Conway era
+
+### Added
+
+- export of Conway-era keys (DReps, Constitutional Committee Hot and Cold keys)
+- Conway era transaction body items (new certificates, voting procedures, treasury, donation)
+- optional CBOR tag 258 in CDDL sets
+- reduced features on Nano S (since Ledger app v7, due to memory limits)
+
+### Changed
+
+- updated list of native tokens recognized by the app with correct decimal places
+- increased max. URL and DNS name length to 128
+
+### Fixed
+
+- bug in checking canonical ordering of withdrawals
+
+
+## [6.1.2](TBD) - [TBD]
 
 Support for CIP-36 voting
 
@@ -15,11 +36,13 @@ Support for CIP-36 voting
 - export of vote keys (1694'/1815'/...)
 - support for CIP-36 voting (signing of vote-cast fragments with 1694 keys)
 - support for CIP-36 registrations (in transaction auxiliary data)
+- support for the Stax device
 
 ### Changed
 
 - API for Catalyst voting registration (it is still possible to use CIP-15 in auxiliary data)
 - updated list of native tokens recognized by the app with correct decimal places
+- multidelegation allowed (as used by Lace, i.e. stake keys do not need to end with 0 as address_index)
 
 
 ## [5.0.0](https://github.com/LedgerHQ/app-cardano/compare/4.1.2...LedgerHQ:nanos_2.1.0_5.0.0) - [October 11th 2022]
