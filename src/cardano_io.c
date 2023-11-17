@@ -1,4 +1,4 @@
-#include "io.h"
+#include "cardano_io.h"
 #include "common.h"
 #include "ui.h"
 
@@ -92,8 +92,6 @@ void io_seproxyhal_display(const bagl_element_t* element)
 	io_seproxyhal_display_default(element);
 }
 #endif
-
-unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B] = {0};
 
 #ifndef FUZZING
 unsigned char io_event(unsigned char channel MARK_UNUSED)
