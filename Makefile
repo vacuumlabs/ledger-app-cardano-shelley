@@ -15,12 +15,7 @@
 #  limitations under the License.
 #*******************************************************************************
 
-APPNAME      = "Cardano ADA"
-
-APPVERSION_M = 6
-APPVERSION_N = 1
-APPVERSION_P = 2
-APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
+# based on https://github.com/LedgerHQ/app-boilerplate/blob/master/Makefile
 
 ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
@@ -28,97 +23,63 @@ endif
 
 include $(BOLOS_SDK)/Makefile.defines
 
-ifeq ($(TARGET_NAME),TARGET_NANOS)
-	ICONNAME=icon_ada_nanos.gif
-else ifeq ($(TARGET_NAME),TARGET_STAX)
-	ICONNAME=icon_ada_stax.gif
-else
-	ICONNAME=icon_ada_nanox.gif
-endif
+########################################
+#        Mandatory configuration       #
+########################################
+# Application name
+APPNAME = "Cardano ADA"
 
-##############
-#  Compiler  #
-##############
+# Application version
+APPVERSION_M = 6
+APPVERSION_N = 1
+APPVERSION_P = 2
+APPVERSION = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
-# based in part on https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags
-WERROR   := -Werror=return-type -Werror=parentheses -Werror=format-security
+# Application source files
+APP_SOURCE_PATH += src
 
-CC       := $(CLANGPATH)clang
-CFLAGS   += -std=gnu99 -Wall -Wextra -Wuninitialized -Wshadow -Wformat=2 -Wwrite-strings -Wundef -fno-common $(WERROR)
+# Application icons following guidelines:
+# https://developers.ledger.com/docs/embedded-app/design-requirements/#device-icon
+ICON_NANOS = icons/app_ada_16px.gif
+ICON_NANOX = icons/app_ada_14px.gif
+ICON_NANOSP = icons/app_ada_14px.gif
+ICON_STAX = icons/app_ada_32px.gif
 
-AS       := $(GCCPATH)arm-none-eabi-gcc
-LD       := $(GCCPATH)arm-none-eabi-gcc
-LDFLAGS  += -Wall
-LDLIBS   += -lm -lgcc -lc
+# Application allowed derivation curves.
+# Possibles curves are: secp256k1, secp256r1, ed25519 and bls12381g1
+# If your app needs it, you can specify multiple curves by using:
+# `CURVE_APP_LOAD_PARAMS = <curve1> <curve2>`
+CURVE_APP_LOAD_PARAMS = ed25519
 
+# Application allowed derivation paths.
+# You should request a specific path for your app.
+# This serve as an isolation mechanism.
+# Most application will have to request a path according to the BIP-0044
+# and SLIP-0044 standards.
+# If your app needs it, you can specify multiple path by using:
+# `PATH_APP_LOAD_PARAMS = "44'/1'" "45'/1'"`
+PATH_APP_LOAD_PARAMS = "44'/1815'" "1852'/1815'" "1853'/1815'" "1854'/1815'" "1855'/1815'" "1694'/1815'"
 
-############
-# Platform #
-############
+# Setting to allow building variant applications
+# - <VARIANT_PARAM> is the name of the parameter which should be set
+#   to specify the variant that should be build.
+# - <VARIANT_VALUES> a list of variant that can be build using this app code.
+#   * It must at least contains one value.
+#   * Values can be the app ticker or anything else but should be unique.
+VARIANT_PARAM = COIN
+VARIANT_VALUES = cardano_ada
 
-DEFINES += OS_IO_SEPROXYHAL
-ifneq ($(TARGET_NAME),TARGET_STAX)
-DEFINES += HAVE_BAGL
-endif
-DEFINES += HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
-DEFINES += APPVERSION=\"$(APPVERSION)\"
-DEFINES += MAJOR_VERSION=$(APPVERSION_M) MINOR_VERSION=$(APPVERSION_N) PATCH_VERSION=$(APPVERSION_P)
-
-## USB HID?
-DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
-
-## USB U2F
-DEFINES += HAVE_U2F HAVE_IO_U2F U2F_PROXY_MAGIC=\"ADA\" USB_SEGMENT_SIZE=64
-
-## WEBUSB
-#WEBUSB_URL = https://www.ledger.com/pages/supported-crypto-assets
-#DEFINES += HAVE_WEBUSB WEBUSB_URL_SIZE_B=$(shell echo -n $(WEBUSB_URL) | wc -c) WEBUSB_URL=$(shell echo -n $(WEBUSB_URL) | sed -e "s/./\\\'\0\\\',/g")
-DEFINES   += HAVE_WEBUSB WEBUSB_URL_SIZE_B=0 WEBUSB_URL=""
-
-## BLUETOOTH
-ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_STAX))
-	DEFINES += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000 HAVE_BLE_APDU
-endif
-
-## Protect stack overflows
-DEFINES += HAVE_BOLOS_APP_STACK_CANARY
-
-ifeq ($(TARGET_NAME),TARGET_NANOS)
-DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=128
-else
-DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=300
-DEFINES += HAVE_GLO096
-ifneq ($(TARGET_NAME),TARGET_STAX)
-DEFINES += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
-DEFINES += HAVE_UX_FLOW
-endif
-
-ifeq ($(TARGET_NAME),TARGET_STAX)
-DEFINES += NBGL_QRCODE
-SDK_SOURCE_PATH += qrcode
-endif
-DEFINES += HAVE_BAGL_ELLIPSIS # long label truncation feature
-DEFINES += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
-DEFINES += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
-DEFINES += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
-endif
-
-DEFINES += RESET_ON_CRASH
-
-## Use developer build
+# Use developer build for testing (e.g. on Speculos)
 #DEVEL = 1
-#DEFINES += HEADLESS
 
-# Enabling debug PRINTF
 ifeq ($(DEVEL), 1)
-	DEFINES += DEVEL HAVE_PRINTF
-	ifeq ($(TARGET_NAME),TARGET_NANOS)
-		DEFINES += PRINTF=screen_printf
-	else
-		DEFINES += PRINTF=mcu_usb_printf
-	endif
+	DEFINES += DEVEL
+	# Automatically confirm all prompts to avoid manually clicking through UI
+	DEFINES += HEADLESS
+	# Enabling DEBUG flag will enable PRINTF and disable optimizations
+	DEBUG = 1
 else
-	DEFINES += PRINTF\(...\)=
+	DEFINES += RESET_ON_CRASH
 endif
 
 # restricted features for Nano S
@@ -145,91 +106,75 @@ endif
 # always include this, it's important for Plutus users
 DEFINES += APP_FEATURE_TOKEN_MINTING
 
-##################
-#  Dependencies  #
-##################
+########################################
+#     Application custom permissions   #
+########################################
+# See SDK `include/appflags.h` for the purpose of each permission
+#HAVE_APPLICATION_FLAG_DERIVE_MASTER = 1
+#HAVE_APPLICATION_FLAG_GLOBAL_PIN = 1
+HAVE_APPLICATION_FLAG_BOLOS_SETTINGS = 1
+#HAVE_APPLICATION_FLAG_LIBRARY = 1
 
-# import rules to compile glyphs
-include $(BOLOS_SDK)/Makefile.glyphs
+########################################
+# Application communication interfaces #
+########################################
+ENABLE_BLUETOOTH = 1
+#ENABLE_NFC = 1
 
-### computed variables
-APP_SOURCE_PATH  += src
-SDK_SOURCE_PATH  += lib_stusb lib_stusb_impl lib_u2f
+########################################
+#         NBGL custom features         #
+########################################
+ENABLE_NBGL_QRCODE = 1
+#ENABLE_NBGL_KEYBOARD = 1
+#ENABLE_NBGL_KEYPAD = 1
 
-ifneq ($(TARGET_NAME),TARGET_STAX)
-SDK_SOURCE_PATH  += lib_ux
+########################################
+#          Features disablers          #
+########################################
+# These advanced settings allow to disable some feature that are by
+# default enabled in the SDK `Makefile.standard_app`.
+#DISABLE_STANDARD_APP_FILES = 1
+#DISABLE_DEFAULT_IO_SEPROXY_BUFFER_SIZE = 1 # To allow custom size declaration
+#DISABLE_STANDARD_APP_DEFINES = 1 # Will set all the following disablers
+#DISABLE_STANDARD_SNPRINTF = 1
+#DISABLE_STANDARD_USB = 1
+#DISABLE_STANDARD_WEBUSB = 1
+
+ifeq ($(TARGET_NAME), TARGET_NANOS)
+    DISABLE_STANDARD_BAGL_UX_FLOW = 1
 endif
 
-ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_STAX))
-	SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
-endif
+########################################
+#       Additional configuration       #
+########################################
 
-################
-# Default rule #
-################
+# USB U2F
+DEFINES += HAVE_U2F HAVE_IO_U2F U2F_PROXY_MAGIC=\"ADA\"
+SDK_SOURCE_PATH  += lib_u2f
 
-all: default
+# Protect against stack overflows
+DEFINES += HAVE_BOLOS_APP_STACK_CANARY
 
-
-##############
-#   Build    #
-##############
-
-# import generic rules from the sdk
-include $(BOLOS_SDK)/Makefile.rules
-
-#add dependency on custom makefile filename
-dep/%.d: %.c Makefile
-
-listvariants:
-	@echo VARIANTS COIN cardano_ada
-
-# part of CI
-analyze: clean
-	scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make default
-
-##############
-#   Load     #
-##############
-
-NANOS_ID = 1
+# mnemonic and PIN for testing on a physical device
 WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 PIN = 5555
 
-APP_LOAD_PARAMS =--appFlags 0x200 --curve ed25519 --path "44'/1815'" --path "1852'/1815'" --path "1853'/1815'" --path "1854'/1815'" --path "1855'/1815'" --path "1694'/1815'"
-APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
+# based in part on https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags
+CFLAGS   += -Wuninitialized -Wreturn-type -Wparentheses -fno-common
 
-load:
-	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
+########################################
+#          Additional targets          #
+########################################
 
-delete:
-	python -m ledgerblue.deleteApp $(COMMON_DELETE_PARAMS)
-
-seed:
-	python -m ledgerblue.hostOnboard --id $(NANOS_ID) --words $(WORDS) --pin $(PIN)
-
-
-##############
-#   Style    #
-##############
-
+# code style
 format:
-	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c --ignore-exclude-errors
-
-
-##############
-#    Size    #
-##############
+	astyle --options=.astylerc "src/*.h" "src/*.c"
 
 # prints app size, max is about 140K
-
 size: all
 	$(GCCPATH)arm-none-eabi-size --format=gnu bin/app.elf
 
-##############
-#   Device-specific builds
-##############
-
+# device-specific builds
 nanos: clean
 	BOLOS_SDK=$(NANOS_SDK) make
 
@@ -241,3 +186,10 @@ nanox: clean
 
 stax: clean
 	BOLOS_SDK=$(STAX_SDK) make
+
+# part of CI
+analyze: clean
+	scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make default
+
+
+include $(BOLOS_SDK)/Makefile.standard_app

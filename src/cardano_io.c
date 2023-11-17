@@ -1,4 +1,4 @@
-#include "io.h"
+#include "cardano_io.h"
 #include "common.h"
 #include "ui.h"
 
@@ -93,8 +93,6 @@ void io_seproxyhal_display(const bagl_element_t* element)
 }
 #endif
 
-unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B] = {0};
-
 #ifndef FUZZING
 unsigned char io_event(unsigned char channel MARK_UNUSED)
 {
@@ -181,7 +179,6 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len)
 	return 0;
 }
 
-STATIC_ASSERT(CX_APILEVEL >= 9, "bad api level");
 static const unsigned PIN_VERIFIED = BOLOS_UX_OK; // Seems to work for api 9/10
 
 bool device_is_unlocked()

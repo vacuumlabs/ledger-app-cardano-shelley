@@ -418,8 +418,4 @@ void txHashBuilder_finalize(
 );
 
 
-#if defined(DEVEL) && !defined(APP_XS)
-void run_txHashBuilder_test();
-#endif // DEVEL
-
 #endif // H_CARDANO_APP_TX_HASH_BUILDER
