@@ -63,8 +63,6 @@ DEFINES += HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 DEFINES += APPVERSION=\"$(APPVERSION)\"
 DEFINES += MAJOR_VERSION=$(APPVERSION_M) MINOR_VERSION=$(APPVERSION_N) PATCH_VERSION=$(APPVERSION_P)
 
-DEFINES   += UNUSED\(x\)=\(void\)x
-
 ## USB HID?
 DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
 
@@ -153,12 +151,6 @@ all: default
 #   Build    #
 ##############
 
-# import generic rules from the sdk
-include $(BOLOS_SDK)/Makefile.rules
-
-#add dependency on custom makefile filename
-dep/%.d: %.c Makefile
-
 listvariants:
 	@echo VARIANTS COIN cardano_ada
 
@@ -203,3 +195,6 @@ format:
 
 size: all
 	$(GCCPATH)arm-none-eabi-size --format=gnu bin/app.elf
+
+# import generic rules from the sdk
+include $(BOLOS_SDK)/Makefile.rules
