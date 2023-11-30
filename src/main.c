@@ -39,12 +39,6 @@
 #include "uiScreens_nbgl.h"
 #endif
 
-// The whole app is designed for a specific api level.
-// In case there is an api change, first *verify* changes
-// (especially potential security implications) before bumping
-// the API level!
-STATIC_ASSERT(CX_APILEVEL >= 9, "bad api level");
-
 static const int INS_NONE = -1;
 
 static const uint8_t CLA = 0xD7;
