@@ -101,10 +101,10 @@ typedef struct {
 
 // ==============================  CERTIFICATES  ==============================
 
-#define ANCHOR_URL_LENGTH_MAX 64
+#define ANCHOR_URL_LENGTH_MAX 128
 
-#define POOL_METADATA_URL_LENGTH_MAX 64
-#define DNS_NAME_SIZE_MAX 64
+#define POOL_METADATA_URL_LENGTH_MAX 128
+#define DNS_NAME_SIZE_MAX 128
 
 #define IPV4_SIZE 4
 #define IPV6_SIZE 16
