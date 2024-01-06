@@ -570,8 +570,8 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 	case PATH_COMMITTEE_COLD_KEY:
 	case PATH_COMMITTEE_HOT_KEY:
 		return bip44_hasReasonableAccount(pathSpec)
-			&& bip44_hasReasonableAddress(pathSpec)
-			&& bip44_isConwayPathRecommended(pathSpec);
+		       && bip44_hasReasonableAddress(pathSpec)
+		       && bip44_isConwayPathRecommended(pathSpec);
 
 	case PATH_MINT_KEY:
 		return bip44_hasReasonableMintPolicy(pathSpec);
