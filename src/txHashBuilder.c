@@ -1082,7 +1082,7 @@ void txHashBuilder_addCertificate_dRepRegistration(
 	//   Null / ...anchor
 	// ]
 	{
-		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 3);
+		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 4);
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, CERTIFICATE_DREP_REGISTRATION);
 		}
