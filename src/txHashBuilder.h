@@ -196,6 +196,8 @@ typedef enum {
 } tx_hash_builder_output_state_t;
 
 typedef struct {
+	bool tagCborSets;
+
 	uint16_t remainingInputs;
 	uint16_t remainingOutputs;
 	uint16_t remainingWithdrawals;
@@ -264,6 +266,7 @@ typedef struct {
 
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
+        bool tagCborSets,
         uint16_t numInputs,
         uint16_t numOutputs,
         bool includeTtl,

@@ -51,6 +51,12 @@ static void blake2b_256_append_cbor_tx_body(
 	blake2b_256_append(hashCtx, buffer, size);
 }
 
+#define BUILDER_TAG_CBOR_SET() \
+	if (builder->tagCborSets) { \
+		TRACE("appending set tag 258"); \
+		BUILDER_APPEND_CBOR(CBOR_TYPE_TAG, CBOR_TAG_SET); \
+	}
+
 /* End of hash computation utilities. */
 
 static void cbor_append_txInput(
@@ -221,6 +227,7 @@ static void assertCanLeaveCurrentOutput(tx_hash_builder_t* builder)
 
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
+        bool tagCborSets,
         uint16_t numInputs,
         uint16_t numOutputs,
         bool includeTtl,
@@ -241,6 +248,7 @@ void txHashBuilder_init(
         bool includeDonation
 )
 {
+	TRACE("tagCborSets = %u", tagCborSets);
 	TRACE("numInputs = %u", numInputs);
 	TRACE("numOutputs = %u", numOutputs);
 	TRACE("includeTtl = %u", includeTtl);
@@ -259,6 +267,8 @@ void txHashBuilder_init(
 	TRACE("numVotingProcedures = %u", numReferenceInputs);
 	TRACE("includeTreasury = %u", includeTreasury);
 	TRACE("includeDonation = %u", includeDonation);
+
+	builder->tagCborSets = tagCborSets;
 
 	blake2b_256_init(&builder->txHash);
 
@@ -347,6 +357,7 @@ void txHashBuilder_enterInputs(tx_hash_builder_t* builder)
 	{
 		// Enter inputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_INPUTS);
+		BUILDER_TAG_CBOR_SET();
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingInputs);
 	}
 	builder->state = TX_HASH_BUILDER_IN_INPUTS;
@@ -748,6 +759,7 @@ void txHashBuilder_enterCertificates(tx_hash_builder_t* builder)
 	{
 		// Enter certificates
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_CERTIFICATES);
+		BUILDER_TAG_CBOR_SET();
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingCertificates);
 	}
 
@@ -1269,7 +1281,7 @@ void txHashBuilder_poolRegistrationCertificate_financials(
 			BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, cost);
 		}
 		{
-			BUILDER_APPEND_CBOR(CBOR_TYPE_TAG, 30);
+			BUILDER_APPEND_CBOR(CBOR_TYPE_TAG, CBOR_TAG_UNIT_INTERVAL);
 			BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, 2);
 			{
 				BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, marginNumerator);
@@ -1310,6 +1322,7 @@ void txHashBuilder_addPoolRegistrationCertificate_enterOwners(tx_hash_builder_t*
 	ASSERT(builder->state == TX_HASH_BUILDER_IN_CERTIFICATES_POOL_REWARD_ACCOUNT);
 
 	{
+		BUILDER_TAG_CBOR_SET();
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->poolCertificateData.remainingOwners);
 	}
 
@@ -1859,6 +1872,7 @@ void txHashBuilder_enterCollateralInputs(tx_hash_builder_t* builder)
 	{
 		// Enter collateral inputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_COLLATERAL_INPUTS);
+		BUILDER_TAG_CBOR_SET();
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingCollateralInputs);
 	}
 	builder->state = TX_HASH_BUILDER_IN_COLLATERAL_INPUTS;
@@ -1909,6 +1923,7 @@ void txHashBuilder_enterRequiredSigners(tx_hash_builder_t* builder)
 	{
 		// Enter required signers
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_REQUIRED_SIGNERS);
+		BUILDER_TAG_CBOR_SET();
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingRequiredSigners);
 	}
 	builder->state = TX_HASH_BUILDER_IN_REQUIRED_SIGNERS;
@@ -2101,6 +2116,7 @@ void txHashBuilder_enterReferenceInputs(tx_hash_builder_t* builder)
 	{
 		// Enter reference inputs
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, TX_BODY_KEY_REFERENCE_INPUTS);
+		BUILDER_TAG_CBOR_SET();
 		BUILDER_APPEND_CBOR(CBOR_TYPE_ARRAY, builder->remainingReferenceInputs);
 	}
 	builder->state = TX_HASH_BUILDER_IN_REFERENCE_INPUTS;

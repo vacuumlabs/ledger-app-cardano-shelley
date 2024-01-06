@@ -75,6 +75,10 @@ typedef struct {
 	uint32_t accountNumber;
 } single_account_data_t;
 
+enum {
+	TX_OPTIONS_TAG_CBOR_SETS = 1,
+};
+
 typedef struct {
 	// significantly affects restrictions on the tx
 	sign_tx_signingmode_t txSigningMode;
@@ -83,6 +87,11 @@ typedef struct {
 	uint32_t protocolMagic; // part of Byron address
 
 	single_account_data_t singleAccountData;
+
+	// there is only one flag and no more flags planned for the future
+	// but if there were many, it might be necessary to keep them
+	// packed in a single uint variable
+	bool tagCborSets;
 } common_tx_data_t;
 
 // credentials are extended to allow key derivation paths
