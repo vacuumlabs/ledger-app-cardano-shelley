@@ -91,6 +91,7 @@ void tx_advanceStage()
 			// Note: make sure that everything in ctx is initialized properly
 			txHashBuilder_init(
 			        &BODY_CTX->txHashBuilder,
+			        ctx->commonTxData.tagCborSets,
 			        ctx->numInputs,
 			        ctx->numOutputs,
 			        ctx->includeTtl,
@@ -475,6 +476,16 @@ static inline void CHECK_STAGE(sign_tx_stage_t expected)
 
 // ============================== INIT ==============================
 
+static void _parseTxOptions(uint64_t options)
+{
+	ctx->commonTxData.tagCborSets = options & TX_OPTIONS_TAG_CBOR_SETS;
+	options &= ~TX_OPTIONS_TAG_CBOR_SETS;
+	TRACE("tagCborSets = %d", ctx->commonTxData.tagCborSets);
+
+	// we only accept known flags
+	VALIDATE(options == 0, ERR_INVALID_DATA);
+}
+
 __noinline_due_to_stack__
 static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
@@ -492,6 +503,8 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		struct {
+			uint8_t txOptions[8];
+
 			uint8_t networkId;
 			uint8_t protocolMagic[4];
 
@@ -520,6 +533,9 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		}* wireHeader = (void*) wireDataBuffer;
 
 		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
+
+		uint64_t txOptions = u8be_read(wireHeader->txOptions);
+		_parseTxOptions(txOptions);
 
 		ASSERT_TYPE(ctx->commonTxData.networkId, uint8_t);
 		ctx->commonTxData.networkId = wireHeader->networkId;
