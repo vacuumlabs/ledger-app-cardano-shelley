@@ -1707,7 +1707,10 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, const uint8_t* wireDataBuffe
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 	}
 
-	explicit_bzero(&BODY_CTX->stageData.withdrawal, SIZEOF(BODY_CTX->stageData.withdrawal));
+	// we can't bzero the whole stageData.withdrawal since
+	// we need to compare it with the previous one (canonical ordering check)
+	BODY_CTX->stageData.withdrawal.amount = 0;
+	explicit_bzero(&BODY_CTX->stageData.withdrawal.stakeCredential, SIZEOF(BODY_CTX->stageData.withdrawal.stakeCredential));
 
 	{
 		// parse input
@@ -2588,7 +2591,6 @@ void signTx_handleAPDU(
 		#ifdef APP_FEATURE_POOL_REGISTRATION
 	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
 		#endif // APP_FEATURE_POOL_REGISTRATION
-	case SIGN_STAGE_BODY_WITHDRAWALS:
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
 		#ifdef APP_FEATURE_TOKEN_MINTING
@@ -2604,6 +2606,11 @@ void signTx_handleAPDU(
 		explicit_bzero(&BODY_CTX->stageData, SIZEOF(BODY_CTX->stageData));
 		break;
 	}
+
+	case SIGN_STAGE_BODY_WITHDRAWALS:
+		// we need to keep previous data for checking canonical ordering
+		break;
+
 	default:
 		break;
 	}

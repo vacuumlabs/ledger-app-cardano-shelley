@@ -238,7 +238,6 @@ typedef struct {
 	bool treasuryReceived;
 	bool donationReceived;
 
-	// this holds data valid only through the processing of a single APDU
 	union {
 		sign_tx_transaction_input_t input;
 		uint64_t fee;
