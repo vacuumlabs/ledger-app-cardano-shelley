@@ -732,7 +732,7 @@ void signTx_handleCertificateVoteDeleg_ui_runStep()
 			_displayKeyHash(this_fn, cert->drep.keyHash, "DRep key hash", "drep");
 			break;
 		case EXT_DREP_SCRIPT_HASH:
-			_displayScriptHash(this_fn, cert->drep.scriptHash, "DRep script hash", "drep");
+			_displayScriptHash(this_fn, cert->drep.scriptHash, "DRep script hash", "drep_script");
 			break;
 		case DREP_ALWAYS_ABSTAIN:
 			#ifdef HAVE_BAGL
@@ -811,7 +811,7 @@ void signTx_handleCertificateCommitteeAuth_ui_runStep()
 		        "Cmte. cold key hash",
 		        "cc_cold",
 		        "Cmte. cold script",
-		        "cc_cold"
+		        "cc_cold_script"
 		);
 	}
 	UI_STEP(HANDLE_CERTIFICATE_COMM_AUTH_STEP_DISPLAY_HOT_CRED) {
@@ -822,7 +822,7 @@ void signTx_handleCertificateCommitteeAuth_ui_runStep()
 		        "Cmte. hot key hash",
 		        "cc_hot",
 		        "Cmte. hot script",
-		        "cc_hot"
+		        "cc_hot_script"
 		);
 	}
 	UI_STEP(HANDLE_CERTIFICATE_COMM_AUTH_STEP_CONFIRM) {
