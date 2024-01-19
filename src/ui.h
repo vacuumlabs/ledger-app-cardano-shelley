@@ -1,7 +1,7 @@
 #ifndef H_CARDANO_APP_UI_H
 #define H_CARDANO_APP_UI_H
 
-#include "io.h"
+#include "cardano_io.h"
 #include "uiHelpers.h"
 
 #ifdef HAVE_NBGL
@@ -25,9 +25,5 @@ void display_cancel_message(void);
 void display_error(void);
 void nbgl_reset_transaction_full_context(void);
 #endif
-
-#ifdef HAVE_BAGL
-void io_seproxyhal_display(const bagl_element_t* element);
-#endif // HAVE_BAGL
 
 #endif // H_CARDANO_APP_UI_H

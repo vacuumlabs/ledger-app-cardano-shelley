@@ -1,4 +1,4 @@
-#ifdef DEVEL
+#if defined(DEVEL) && defined(APP_FEATURE_NATIVE_SCRIPT_HASH)
 
 #include "hexUtils.h"
 #include "nativeScriptHashBuilder.h"
@@ -105,4 +105,5 @@ void run_nativeScriptHashBuilder_test()
 #undef FINALIZE
 #undef BEFORE_EACH
 #undef BUF_FROM_STR
-#endif // DEVEL
+
+#endif // DEVEL && APP_FEATURE_NATIVE_SCRIPT_HASH

@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 #include "signTx.h"
 #include "signTxPoolRegistration_ui.h"
 #include "state.h"
@@ -792,3 +794,5 @@ void signTxPoolRegistration_handleConfirm_ui_runStep()
 	}
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION

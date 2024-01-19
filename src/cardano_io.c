@@ -1,4 +1,4 @@
-#include "io.h"
+#include "cardano_io.h"
 #include "common.h"
 #include "ui.h"
 
@@ -93,8 +93,6 @@ void io_seproxyhal_display(const bagl_element_t* element)
 }
 #endif
 
-unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B] = {0};
-
 #ifndef FUZZING
 unsigned char io_event(unsigned char channel MARK_UNUSED)
 {
@@ -127,7 +125,7 @@ unsigned char io_event(unsigned char channel MARK_UNUSED)
 	case SEPROXYHAL_TAG_FINGER_EVENT:
 		UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
 		break;
-		#endif  // HAVE_NBGL
+		#endif // HAVE_NBGL
 
 	case SEPROXYHAL_TAG_TICKER_EVENT:
 		UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer, {

@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 #include "signTx.h"
 #include "signTxPoolRegistration_ui.h"
 #include "state.h"
@@ -969,3 +971,5 @@ void signTxPoolRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer
 		ASSERT(false);
 	}
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION

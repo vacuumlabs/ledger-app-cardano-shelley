@@ -4,8 +4,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <os_io_seproxyhal.h>
-#include <ux.h>
 #include "ui.h"
+
+extern uint8_t G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B];
 
 enum  {
 	P1_UNUSED = 0,

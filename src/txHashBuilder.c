@@ -537,8 +537,6 @@ void txHashBuilder_addOutput_datum(
 		ASSERT(false);
 	}
 
-	//TODO: MAX_DATUM_SIZE??
-
 	// the babbage output format serializes some preliminary stuff
 	if (builder->outputData.serializationFormat == MAP_BABBAGE) {
 		//   datum_option = [ 0, $hash32 // 1, data ]
@@ -603,8 +601,6 @@ void txHashBuilder_addOutput_datum_inline_chunk(
 
 void txHashBuilder_addOutput_referenceScript(tx_hash_builder_t* builder, size_t scriptSize)
 {
-	// TODO: MAX_SCRIPT_SIZE?? maybe we don't need to limit it
-
 	ASSERT(builder->outputData.includeRefScript);
 
 	switch (builder->outputState) {
@@ -854,6 +850,8 @@ void txHashBuilder_addCertificate_delegation(
 	}
 }
 
+#ifdef APP_FEATURE_POOL_RETIREMENT
+
 void txHashBuilder_addCertificate_poolRetirement(
         tx_hash_builder_t* builder,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize,
@@ -885,6 +883,10 @@ void txHashBuilder_addCertificate_poolRetirement(
 		BUILDER_APPEND_CBOR(CBOR_TYPE_UNSIGNED, epoch);
 	}
 }
+
+#endif // APP_FEATURE_POOL_RETIREMENT
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 void txHashBuilder_poolRegistrationCertificate_enter(
         tx_hash_builder_t* builder,
@@ -1280,6 +1282,8 @@ void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(
 	builder->state = TX_HASH_BUILDER_IN_CERTIFICATES;
 }
 
+#endif // APP_FEATURE_POOL_REGISTRATION
+
 static void txHashBuilder_assertCanLeaveCertificates(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d, remainingCertificates = %u", builder->state, builder->remainingCertificates);
@@ -1434,6 +1438,8 @@ static void txHashBuilder_assertCanLeaveValidityIntervalStart(tx_hash_builder_t*
 
 // ============================== MINT ==============================
 
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 void txHashBuilder_enterMint(tx_hash_builder_t* builder)
 {
 	_TRACE("state = %d", builder->state);
@@ -1489,6 +1495,8 @@ void txHashBuilder_addMint_token(
 	addToken(builder, assetNameBuffer, assetNameSize, amount,
 	         amount < 0 ? CBOR_TYPE_NEGATIVE : CBOR_TYPE_UNSIGNED);
 }
+
+#endif // APP_FEATURE_TOKEN_MINTING
 
 static void txHashBuilder_assertCanLeaveMint(tx_hash_builder_t* builder)
 {

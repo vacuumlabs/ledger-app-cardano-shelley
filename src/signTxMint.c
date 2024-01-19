@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 #include "signTxMint.h"
 #include "signTxMint_ui.h"
 #include "signTxUtils.h"
@@ -290,3 +292,5 @@ bool signTxMint_isFinished()
 		ASSERT(false);
 	}
 }
+
+#endif // APP_FEATURE_TOKEN_MINTING

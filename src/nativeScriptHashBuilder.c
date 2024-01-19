@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_NATIVE_SCRIPT_HASH
+
 #include "cbor.h"
 #include "nativeScriptHashBuilder.h"
 
@@ -227,3 +229,5 @@ void nativeScriptHashBuilder_finalize(
 #undef APPEND_CBOR
 #undef _TRACE_BUFFER
 #undef _TRACE
+
+#endif // APP_FEATURE_NATIVE_SCRIPT_HASH

@@ -188,10 +188,14 @@ void tx_advanceStage()
 		}
 		ctx->stage = SIGN_STAGE_BODY_MINT;
 		if (ctx->includeMint) {
+			#ifdef APP_FEATURE_TOKEN_MINTING
 			txHashBuilder_enterMint(&BODY_CTX->txHashBuilder);
 			signTxMint_init();
 			// wait for mint APDU
 			break;
+			#else
+			ASSERT(false);
+			#endif // APP_FEATURE_TOKEN_MINTING
 		}
 
 		__attribute__((fallthrough));
@@ -312,7 +316,11 @@ void tx_advanceCertificatesStateIfAppropriate()
 	break;
 
 	default:
+		#ifdef APP_FEATURE_POOL_REGISTRATION
 		ASSERT(ctx->stage == SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE);
+		#else
+		ASSERT(false);
+		#endif // APP_FEATURE_POOL_REGISTRATION
 	}
 }
 
@@ -343,6 +351,8 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
+		#ifdef APP_FEATURE_POOL_REGISTRATION
+
 	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
 		if (signTxPoolRegistration_isFinished()) {
 			TRACE();
@@ -352,6 +362,8 @@ static inline void checkForFinishedSubmachines()
 			tx_advanceCertificatesStateIfAppropriate();
 		}
 		break;
+
+		#endif // APP_FEATURE_POOL_REGISTRATION
 
 	case SIGN_STAGE_AUX_DATA_CVOTE_REGISTRATION_SUBMACHINE:
 		if (signTxCVoteRegistration_isFinished()) {
@@ -367,6 +379,8 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
+		#ifdef APP_FEATURE_TOKEN_MINTING
+
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
 		if (signTxMint_isFinished()) {
 			TRACE();
@@ -375,6 +389,8 @@ static inline void checkForFinishedSubmachines()
 			tx_advanceStage();
 		}
 		break;
+
+		#endif // APP_FEATURE_TOKEN_MINTING
 
 	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
 		if (isCurrentOutputFinished()) {
@@ -480,11 +496,17 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		TRACE("Signing mode %d", (int) ctx->commonTxData.txSigningMode);
 		switch (ctx->commonTxData.txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 			// these signing modes are allowed
+			break;
+
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+			// these are allowed unless we have the XS app which does not have code for handling them
+			#ifndef APP_FEATURE_POOL_REGISTRATION
+			THROW(ERR_INVALID_DATA);
+			#endif // APP_FEATURE_POOL_REGISTRATION
 			break;
 
 		default:
@@ -534,6 +556,13 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		ctx->poolOwnerByPath = false;
 		ctx->shouldDisplayTxid = false;
 	}
+
+	// minting not included in the XS app
+	#ifndef APP_FEATURE_TOKEN_MINTING
+	if (ctx->includeMint) {
+		THROW(ERR_INVALID_DATA);
+	}
+	#endif // APP_FEATURE_TOKEN_MINTING
 
 	security_policy_t policy = policyForSignTxInit(
 	                                   ctx->commonTxData.txSigningMode,
@@ -925,15 +954,23 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 		view_parseBuffer(certificateData->poolKeyHash, &view, POOL_KEY_HASH_LENGTH);
 		break;
 
+		#ifdef APP_FEATURE_POOL_REGISTRATION
+
 	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION:
 		// nothing more to parse, certificate data will be provided
 		// in additional APDUs processed by a submachine
 		return;
 
+		#endif // APP_FEATURE_POOL_REGISTRATION
+
+		#ifdef APP_FEATURE_POOL_RETIREMENT
+
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
 		_parsePathSpec(&view, &certificateData->poolIdPath);
 		certificateData->epoch = parse_u8be(&view);
 		break;
+
+		#endif // APP_FEATURE_POOL_RETIREMENT
 
 	default:
 		THROW(ERR_INVALID_DATA);
@@ -1016,6 +1053,8 @@ static void _addCertificateDataToTx(
 		break;
 	}
 
+	#ifdef APP_FEATURE_POOL_RETIREMENT
+
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		_fillHashFromPath(&BODY_CTX->stageData.certificate.poolIdPath, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
 		txHashBuilder_addCertificate_poolRetirement(
@@ -1025,6 +1064,8 @@ static void _addCertificateDataToTx(
 		);
 		break;
 	}
+
+	#endif // APP_FEATURE_POOL_RETIREMENT
 
 	default:
 		ASSERT(false);
@@ -1038,6 +1079,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(BODY_CTX->currentCertificate < ctx->numCertificates);
 
+	#ifdef APP_FEATURE_POOL_REGISTRATION
 	// delegate to state sub-machine for stake pool registration certificate data
 	if (signTxPoolRegistration_isValidInstruction(p2)) {
 		TRACE();
@@ -1048,6 +1090,7 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 		signTxPoolRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
 		return;
 	}
+	#endif // APP_FEATURE_POOL_REGISTRATION
 
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 	CHECK_STAGE(SIGN_STAGE_BODY_CERTIFICATES);
@@ -1097,6 +1140,8 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 		return;
 	}
 
+	#ifdef APP_FEATURE_POOL_REGISTRATION
+
 	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION: {
 		// pool registration certificates have a separate sub-machine for handling APDU and UI
 		// nothing more to be done with them here, we just init the sub-machine
@@ -1106,6 +1151,10 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 		respondSuccessEmptyMsg();
 		return;
 	}
+
+	#endif // APP_FEATURE_POOL_REGISTRATION
+
+	#ifdef APP_FEATURE_POOL_RETIREMENT
 
 	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
 		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
@@ -1129,6 +1178,8 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 		signTx_handleCertificatePoolRetirement_ui_runStep();
 		return;
 	}
+
+	#endif // APP_FEATURE_POOL_RETIREMENT
 
 	default:
 		ASSERT(false);
@@ -1305,6 +1356,8 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, const uint8_t* wi
 
 // ============================== MINT ==============================
 
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
@@ -1323,6 +1376,8 @@ static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 	VALIDATE(signTxMint_isValidInstruction(p2), ERR_INVALID_REQUEST_PARAMETERS);
 	signTxMint_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
+
+#endif // APP_FEATURE_TOKEN_MINTING
 
 // ========================= SCRIPT DATA HASH ==========================
 
@@ -1778,11 +1833,13 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x06, signTx_handleCertificateAPDU);
 		CASE(0x07, signTx_handleWithdrawalAPDU);
 		CASE(0x09, signTx_handleValidityIntervalStartAPDU);
+		#ifdef APP_FEATURE_TOKEN_MINTING
 		CASE(0x0b, signTx_handleMintAPDU);
+		#endif // APP_FEATURE_TOKEN_MINTING
 		CASE(0x0c, signTx_handleScriptDataHashAPDU);
 		CASE(0x0d, signTx_handleCollateralInputAPDU);
 		CASE(0x0e, signTx_handleRequiredSignerAPDU);
-		CASE(0x12, signTx_handleCollateralOutputAPDU); // TODO perhaps change the numbers for the newly added items?
+		CASE(0x12, signTx_handleCollateralOutputAPDU);
 		CASE(0x10, signTx_handleTotalCollateralAPDU);
 		CASE(0x11, signTx_handleReferenceInputsAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
@@ -1819,11 +1876,15 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_FEE:
 	case SIGN_STAGE_BODY_TTL:
 	case SIGN_STAGE_BODY_CERTIFICATES:
+		#ifdef APP_FEATURE_POOL_REGISTRATION
 	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
+		#endif // APP_FEATURE_POOL_REGISTRATION
 	case SIGN_STAGE_BODY_WITHDRAWALS:
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
+		#ifdef APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
+		#endif // APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
@@ -1869,11 +1930,15 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_FEE:
 	case SIGN_STAGE_BODY_TTL:
 	case SIGN_STAGE_BODY_CERTIFICATES:
+		#ifdef APP_FEATURE_POOL_REGISTRATION
 	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
+		#endif // APP_FEATURE_POOL_REGISTRATION
 	case SIGN_STAGE_BODY_WITHDRAWALS:
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
+		#ifdef APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
+		#endif // APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:

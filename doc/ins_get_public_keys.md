@@ -80,8 +80,6 @@ Concatenation of `pub_key` and `chain_code` representing the extended public key
     - Ledger might impose more restrictions, see implementation of `policyForGetExtendedPublicKey` in [src/securityPolicy.c](../src/securityPolicy.c) for details
 - calculate extended public key
 - respond with extended public key
- 
+
 **TODOs**
 - ❓(IOHK): Should we also support BTC app like token validation? (Note: Token validation is to prevent concurrent access to the Ledger by two different host apps which could confuse user into performing wrong actions)
-- ❓(IOHK): Should we support permanent app setting where Ledger forces user to acknowledge public key retrieval before sending it to host? (Note: probably not in the first version of the app)
-- ❓(IOHK): Should there be an option to show the public key on display? Is it useful in any way? (Note: probably not)

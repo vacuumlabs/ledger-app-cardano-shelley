@@ -134,6 +134,8 @@ void ui_displayPoolMarginScreen(
         ui_callback_fn_t callback
 );
 
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 __noinline_due_to_stack__
 void ui_displayPoolOwnerScreen(
         const pool_owner_t* owner,
@@ -166,6 +168,8 @@ void ui_displayIpPortScreen(
         const ipport_t* port,
         ui_callback_fn_t callback
 );
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 __noinline_due_to_stack__
 void ui_displayInputScreen(

@@ -620,6 +620,8 @@ void ui_getPoolMarginScreen(
 	TRACE("%s", line1);
 }
 
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 void ui_getPoolOwnerScreen(
         char* firstLine,
         const size_t firstLineSize,
@@ -747,6 +749,8 @@ void ui_getIpPortScreen(
 	// make sure all the information is displayed to the user
 	ASSERT(strlen(portStr) + 1 < portStrSize);
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 void ui_getInputScreen(
         char* line,

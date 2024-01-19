@@ -22,16 +22,12 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <os_io_seproxyhal.h>
-#include <os.h>
 
-#include "getVersion.h"
 #include "handlers.h"
 #include "state.h"
 #include "errors.h"
-#include "menu.h"
 #include "assert.h"
-#include "io.h"
+#include "cardano_io.h"
 
 #ifdef HAVE_BAGL
 #include "uiScreens_bagl.h"
@@ -50,8 +46,16 @@ static const uint8_t CLA = 0xD7;
 // subsequent io_exchange call. The handler may also throw an exception, which
 // will be caught, converted to an error code, appended to the response APDU,
 // and sent in the next io_exchange call.
-static void cardano_main(void)
+void app_main()
 {
+	ui_idle();
+
+	#ifdef HAVE_NBGL
+	ui_idle_flow();
+	#endif // HAVE_NBGL
+
+	io_state = IO_EXPECT_IO;
+
 	volatile size_t rx = 0;
 	volatile size_t tx = 0;
 	volatile uint8_t flags = 0;
@@ -65,7 +69,7 @@ static void cardano_main(void)
 		// In sia_main, this TRY block serves to catch any thrown exceptions
 		// and convert them to response codes, which are then sent in APDUs.
 		// However, EXCEPTION_IO_RESET will be re-thrown and caught by the
-		// "true" main function defined at the bottom of this file.
+		// "true" main function defined in the SDK.
 		BEGIN_TRY {
 			TRY {
 				rx = tx;
@@ -124,7 +128,6 @@ static void cardano_main(void)
 					VALIDATE(header->ins == currentInstruction, ERR_STILL_IN_CALL);
 				}
 
-
 				// Note: handlerFn is responsible for calling io_send
 				// either during its call or subsequent UI actions
 				handlerFn(header->p1,
@@ -172,76 +175,4 @@ static void cardano_main(void)
 		}
 		END_TRY;
 	}
-}
-
-
-// Everything below this point is Ledger magic. And the magic isn't well-
-// documented, so if you want to understand it, you'll need to read the
-// source, which you can find in the nanos-secure-sdk repo. Fortunately, you
-// don't need to understand any of this in order to write an app.
-//
-
-
-static void app_exit(void)
-{
-	BEGIN_TRY_L(exit) {
-		TRY_L(exit) {
-			os_sched_exit(-1);
-		}
-		FINALLY_L(exit) {
-		}
-	}
-	END_TRY_L(exit);
-}
-
-__attribute__((section(".boot"))) int main(void)
-{
-	// exit critical section
-	__asm volatile("cpsie i");
-
-	for (;;) {
-		UX_INIT();
-		os_boot();
-		BEGIN_TRY {
-			TRY {
-				io_seproxyhal_init();
-
-				#if defined(HAVE_BLE)
-				// grab the current plane mode setting
-				G_io_app.plane_mode = os_setting_get(OS_SETTING_PLANEMODE, NULL, 0);
-				#endif
-
-				USB_power(0);
-				USB_power(1);
-				ui_idle();
-
-				#ifdef HAVE_NBGL
-				ui_idle_flow();
-				#endif // HAVE_NBGL
-
-				#if defined(HAVE_BLE)
-				BLE_power(0, NULL);
-				BLE_power(1, NULL);
-				#endif
-
-				io_state = IO_EXPECT_IO;
-				cardano_main();
-			}
-			CATCH(EXCEPTION_IO_RESET)
-			{
-				// reset IO and UX before continuing
-				CLOSE_TRY;
-				continue;
-			}
-			CATCH_ALL {
-				CLOSE_TRY;
-				break;
-			}
-			FINALLY {
-			}
-		}
-		END_TRY;
-	}
-	app_exit();
-	return 0;
 }

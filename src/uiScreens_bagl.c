@@ -653,11 +653,23 @@ void ui_displayNetworkParamsScreen(
 	STATIC_ASSERT(!IS_SIGNED(networkId), "signed type for %u");
 	STATIC_ASSERT(sizeof(protocolMagic) <= sizeof(unsigned), "oversized type for %u");
 	STATIC_ASSERT(!IS_SIGNED(protocolMagic), "signed type for %u");
+
+	#ifdef APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 	snprintf(
 	        networkParams, SIZEOF(networkParams),
 	        "network id %u / protocol magic %u",
 	        networkId, protocolMagic
 	);
+	#else
+	// if the protocol magic check is not enabled,
+	// displaying the protocol magic might be misleading,
+	// so we must not show it
+	snprintf(
+	        networkParams, SIZEOF(networkParams),
+	        "network id %u",
+	        networkId
+	);
+	#endif // APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 	ASSERT(strlen(networkParams) + 1 < SIZEOF(networkParams));
 
 	ui_displayPaginatedText(
@@ -701,6 +713,8 @@ void ui_displayPoolMarginScreen(
 	        callback
 	);
 }
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 void ui_displayPoolOwnerScreen(
         const pool_owner_t* owner,
@@ -858,6 +872,8 @@ void ui_displayIpPortScreen(
 	        callback
 	);
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 void ui_displayInputScreen(
         const sign_tx_transaction_input_t* input,

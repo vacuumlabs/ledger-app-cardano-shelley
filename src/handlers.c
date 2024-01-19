@@ -29,11 +29,15 @@ handler_fn_t* lookupHandler(uint8_t ins)
 		// 0x1* -  public-key/address related
 		CASE(0x10, getPublicKeys_handleAPDU);
 		CASE(0x11, deriveAddress_handleAPDU);
+		#ifdef APP_FEATURE_NATIVE_SCRIPT_HASH
 		CASE(0x12, deriveNativeScriptHash_handleAPDU);
+		#endif // APP_FEATURE_NATIVE_SCRIPT_HASH
 
 		// 0x2* -  signing related
 		CASE(0x21, signTx_handleAPDU);
+		#ifdef APP_FEATURE_OPCERT
 		CASE(0x22, signOpCert_handleAPDU);
+		#endif // APP_FEATURE_OPCERT
 		CASE(0x23, signCVote_handleAPDU);
 
 		#ifdef DEVEL
