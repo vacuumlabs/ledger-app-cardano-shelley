@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
+## [7.1.0](TBD) - [TBD]
+
+Message signing (CIP-8)
+
+### Added
+
+- support for basic message signing (CIP-8, CIP-30)
+
+### Changed
+
+- usage of chunks of maximum allowed size is now enforced (datums and reference scripts in outputs)
+- TODO updated list of native tokens recognized by the app with correct decimal places
+
+
 ## [7.0.2](TBD) - [TBD]
 
 Conway era

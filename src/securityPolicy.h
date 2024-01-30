@@ -242,4 +242,10 @@ security_policy_t policyForSignCVoteInit();
 security_policy_t policyForSignCVoteConfirm();
 security_policy_t policyForSignCVoteWitness(bip44_path_t* path);
 
+security_policy_t policyForSignMsg(
+        const bip44_path_t* witnessPath,
+        cip8_address_field_type_t addressFieldType,
+        const addressParams_t* addressParams
+);
+
 #endif // H_CARDANO_APP_SECURITY_POLICY

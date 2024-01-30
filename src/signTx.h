@@ -1,6 +1,7 @@
 #ifndef H_CARDANO_APP_SIGN_TX
 #define H_CARDANO_APP_SIGN_TX
 
+#include "cardano.h"
 #include "common.h"
 #include "hash.h"
 #include "handlers.h"
@@ -156,7 +157,7 @@ typedef struct {
 
 typedef struct {
 	bip44_path_t path;
-	uint8_t signature[64];
+	uint8_t signature[ED25519_SIGNATURE_LENGTH];
 } sign_tx_witness_data_t;
 
 typedef struct {

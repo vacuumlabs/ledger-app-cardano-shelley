@@ -19,6 +19,7 @@ deriveAddress_harness
 deriveNativeScriptHash_harness
 getPublicKeys_harness
 signCVote_harness
+signMsg_harness
 signOpCert_harness
 signTx_harness
 ```

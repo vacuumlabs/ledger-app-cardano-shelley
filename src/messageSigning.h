@@ -3,6 +3,10 @@
 
 #include "bip44.h"
 
+void signRawMessageWithPath(bip44_path_t* pathSpec,
+                            const uint8_t* messageBuffer, size_t messageSize,
+                            uint8_t* outBuffer, size_t outSize);
+
 void getWitness(bip44_path_t* pathSpec,
                 const uint8_t* txHashBuffer, size_t txHashSize,
                 uint8_t* outBuffer, size_t outSize);

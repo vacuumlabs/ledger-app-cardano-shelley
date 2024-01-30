@@ -115,7 +115,7 @@ void signCVote_handleInitAPDU(
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
-	handleInit_ui_runStep();
+	signCVote_handleInit_ui_runStep();
 }
 
 // ============================== VOTECAST CHUNK ==============================
@@ -190,7 +190,7 @@ void signCVote_handleConfirmAPDU(
 		}
 	}
 
-	handleConfirm_ui_runStep();
+	signCVote_handleConfirm_ui_runStep();
 }
 
 // ============================== WITNESS ==============================

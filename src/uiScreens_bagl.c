@@ -373,7 +373,7 @@ void ui_displaySpendingInfoScreen(
 
 	case SPENDING_PATH: {
 		ui_displayPathScreen(
-		        "Derivation path",
+		        "Spending key path",
 		        &addressParams->spendingKeyPath,
 		        callback
 		);
@@ -398,7 +398,7 @@ void ui_displaySpendingInfoScreen(
 	}
 }
 
-static const char STAKING_HEADING_PATH[]        = "Staking path";
+static const char STAKING_HEADING_PATH[]        = "Stake key path";
 static const char STAKING_HEADING_KEY_HASH[]    = "Stake key hash";
 static const char STAKING_HEADING_SCRIPT_HASH[] = "Stake script hash";
 static const char STAKING_HEADING_POINTER[]     = "Stake key pointer";

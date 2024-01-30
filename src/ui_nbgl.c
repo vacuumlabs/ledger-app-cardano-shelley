@@ -214,6 +214,9 @@ static void _display_light_confirmation(void)
 {
 	TRACE("_light_confirmation");
 
+	// TODO "reject transaction" is used as a constant string in several places
+	// and then applied also for signing messages and operational certificates.
+	// We should change this as part of the upcoming larger UX rewrite.
 	nbgl_useCaseChoice(&C_cardano_64, uiContext.pageText[0], "",
 	                   "Confirm", "Reject Transaction", light_confirm_callback);
 
