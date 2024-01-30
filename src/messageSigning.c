@@ -6,9 +6,9 @@
 #include "securityPolicy.h"
 #include "crypto.h"
 
-static void signRawMessageWithPath(bip44_path_t* pathSpec,
-                                   const uint8_t* messageBuffer, size_t messageSize,
-                                   uint8_t* outBuffer, size_t outSize)
+void signRawMessageWithPath(bip44_path_t* pathSpec,
+                            const uint8_t* messageBuffer, size_t messageSize,
+                            uint8_t* outBuffer, size_t outSize)
 {
 	size_t sigLen = outSize;
 
@@ -23,6 +23,10 @@ static void signRawMessageWithPath(bip44_path_t* pathSpec,
 
 	#ifndef FUZZING
 	{
+		TRACE("signing with path:");
+		BIP44_PRINTF(pathSpec);
+		PRINTF("\n");
+
 		cx_err_t error = crypto_eddsa_sign(pathSpec->path,
 		                                   pathSpec->length,
 		                                   messageBuffer,
@@ -37,7 +41,6 @@ static void signRawMessageWithPath(bip44_path_t* pathSpec,
 	#endif
 
 	ASSERT(sigLen == ED25519_SIGNATURE_LENGTH);
-
 }
 
 // sign the given hash by the private key derived according to the given path

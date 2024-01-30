@@ -12,6 +12,7 @@
 #include "deriveAddress.h"
 #include "deriveNativeScriptHash.h"
 #include "signTx.h"
+#include "signMsg.h"
 #include "signOpCert.h"
 #include "signCVote.h"
 
@@ -39,6 +40,7 @@ handler_fn_t* lookupHandler(uint8_t ins)
 		CASE(0x22, signOpCert_handleAPDU);
 		#endif // APP_FEATURE_OPCERT
 		CASE(0x23, signCVote_handleAPDU);
+		CASE(0x24, signMsg_handleAPDU);
 
 		#ifdef DEVEL
 		// 0xF* -  debug_mode related

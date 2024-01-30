@@ -600,7 +600,7 @@ static void _parseDnsName(pool_relay_t* relay, read_view_t* view)
 {
 	relay->dnsNameSize = view_remainingSize(view);
 	VALIDATE(relay->dnsNameSize <= DNS_NAME_SIZE_MAX, ERR_INVALID_DATA);
-	VALIDATE(str_isAllowedDnsName(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)), ERR_INVALID_DATA);
+	VALIDATE(str_isUnambiguousAscii(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)), ERR_INVALID_DATA);
 
 	STATIC_ASSERT(SIZEOF(relay->dnsName) == DNS_NAME_SIZE_MAX, "wrong dns name buffer size");
 	view_parseBuffer(relay->dnsName, view, relay->dnsNameSize);

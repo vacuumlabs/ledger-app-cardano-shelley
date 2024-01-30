@@ -743,6 +743,10 @@ static void handleDatumInline(read_view_t* view)
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= subctx->stateData.datumRemainingBytes, ERR_INVALID_DATA);
+		if (subctx->stateData.datumRemainingBytes >= MAX_CHUNK_SIZE) {
+			// forces to use chunks of maximum allowed size
+			VALIDATE(chunkSize == MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+		}
 
 		view_parseBuffer(subctx->stateData.datumChunk, view, chunkSize);
 		VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
@@ -871,7 +875,7 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 
 		// parse data
 		subctx->stateData.refScriptRemainingBytes = parse_u4be(&view);
-		TRACE("refScriptRemainingBytes = %u", subctx->stateData.datumRemainingBytes);
+		TRACE("refScriptRemainingBytes = %u", subctx->stateData.refScriptRemainingBytes);
 		VALIDATE(subctx->stateData.refScriptRemainingBytes > 0, ERR_INVALID_DATA);
 
 		size_t chunkSize = parse_u4be(&view);
@@ -936,7 +940,10 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 		TRACE("chunkSize = %u", chunkSize);
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
-
+		if (subctx->stateData.refScriptRemainingBytes >= MAX_CHUNK_SIZE) {
+			// forces to use chunks of maximum allowed size
+			VALIDATE(chunkSize == MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+		}
 		VALIDATE(chunkSize <= subctx->stateData.refScriptRemainingBytes, ERR_INVALID_DATA);
 		subctx->stateData.refScriptRemainingBytes -= chunkSize;
 
@@ -947,7 +954,7 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 	}
 	{
 		// add to tx
-		TRACE("Adding inline datum chunk to tx hash");
+		TRACE("Adding reference script chunk to tx hash");
 		txHashBuilder_addOutput_referenceScript_dataChunk(
 		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.scriptChunk, subctx->stateData.refScriptChunkSize

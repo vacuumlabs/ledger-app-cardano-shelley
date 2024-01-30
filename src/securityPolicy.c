@@ -2183,3 +2183,46 @@ security_policy_t policyForSignCVoteWitness(bip44_path_t* path)
 		break;
 	}
 }
+
+security_policy_t policyForSignMsg(
+        const bip44_path_t* witnessPath,
+        cip8_address_field_type_t addressFieldType,
+        const addressParams_t* addressParams
+)
+{
+	switch (bip44_classifyPath(witnessPath)) {
+	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_STAKING_KEY:
+	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_MINT_KEY:
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+	case PATH_POOL_COLD_KEY:
+		// OK
+		break;
+	default:
+		DENY();
+		break;
+	}
+
+	if (addressFieldType == CIP8_ADDRESS_FIELD_ADDRESS) {
+		DENY_UNLESS(isValidAddressParams(addressParams));
+
+		switch (addressParams->type) {
+		case BASE_PAYMENT_KEY_STAKE_KEY:
+		case BASE_PAYMENT_KEY_STAKE_SCRIPT:
+		case REWARD_KEY:
+		case ENTERPRISE_KEY:
+			// OK
+			break;
+
+		default:
+			DENY();
+			break;
+		}
+	}
+
+	PROMPT();
+}

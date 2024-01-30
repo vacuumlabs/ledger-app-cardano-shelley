@@ -263,7 +263,8 @@ bool str_isPrintableAsciiWithSpaces(const uint8_t* buffer, size_t bufferSize)
 	return true;
 }
 
-bool str_isAllowedDnsName(const uint8_t* buffer, size_t bufferSize)
+// check if the string can be unambiguously displayed to the user
+bool str_isUnambiguousAscii(const uint8_t* buffer, size_t bufferSize)
 {
 	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
 

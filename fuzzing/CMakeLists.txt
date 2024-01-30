@@ -77,6 +77,8 @@ set(CARDANO_SOURCE
     ${CARDANO_PATH}/src/securityPolicy.c
     ${CARDANO_PATH}/src/signCVote.c
     ${CARDANO_PATH}/src/signCVote_ui.c
+    ${CARDANO_PATH}/src/signMsg.c
+    ${CARDANO_PATH}/src/signMsg_ui.c
     ${CARDANO_PATH}/src/signOpCert.c
     ${CARDANO_PATH}/src/signTx.c
     ${CARDANO_PATH}/src/signTxCVoteRegistration.c
@@ -153,7 +155,7 @@ add_compile_definitions(
     APP_FEATURE_TOKEN_MINTING
 )
 
-set(SOURCE 
+set(SOURCE
     ${UX_SOURCE}
     ${CARDANO_SOURCE}
     ./src/os_mocks.c
@@ -169,13 +171,14 @@ set(harnesses
     deriveNativeScriptHash_harness
     getPublicKeys_harness
     signCVote_harness
+    signMsg_harness
     signOpCert_harness
     signTx_harness
 )
 
 foreach(harness IN LISTS harnesses)
-    add_executable(${harness} 
+    add_executable(${harness}
         ./src/${harness}.c
-    )    
+    )
     target_link_libraries(${harness} PUBLIC cardano)
 endforeach()
