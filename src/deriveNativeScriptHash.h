@@ -1,6 +1,8 @@
 #ifndef H_CARDANO_APP_DERIVE_NATIVE_SCRIPT_HASH
 #define H_CARDANO_APP_DERIVE_NATIVE_SCRIPT_HASH
 
+#ifdef APP_FEATURE_NATIVE_SCRIPT_HASH
+
 #include "bip44.h"
 #include "cardano.h"
 #include "common.h"
@@ -47,5 +49,7 @@ typedef struct {
 	int ui_step;
 	ui_native_script_type ui_scriptType;
 } ins_derive_native_script_hash_context_t;
+
+#endif // APP_FEATURE_NATIVE_SCRIPT_HASH
 
 #endif // H_CARDANO_APP_DERIVE_NATIVE_SCRIPT_HASH

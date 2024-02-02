@@ -85,6 +85,10 @@ security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+
 	case PATH_MINT_KEY:
 
 	case PATH_POOL_COLD_KEY:
@@ -162,6 +166,9 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
 	case PATH_CVOTE_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 		// ask for permission (it is unusual if client asks this instead of the account key)
@@ -187,6 +194,9 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	case PATH_MULTISIG_ACCOUNT:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
 	case PATH_MINT_KEY:
 	case PATH_CVOTE_ACCOUNT:
 	case PATH_CVOTE_KEY:
@@ -197,7 +207,7 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 
 	case PATH_POOL_COLD_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
-		// but ask for permission when pool cold key is requested
+		// but ask for permission
 		PROMPT();
 		break;
 
@@ -357,7 +367,10 @@ security_policy_t policyForSignTxInit(
         bool includeNetworkId,
         bool includeCollateralOutput,
         bool includeTotalCollateral,
-        uint16_t numReferenceInputs
+        uint16_t numReferenceInputs,
+        uint16_t numVotingProcedures,
+        bool includeTreasury,
+        bool includeDonation
 )
 {
 	DENY_UNLESS(isValidNetworkId(networkId));
@@ -389,6 +402,12 @@ security_policy_t policyForSignTxInit(
 		DENY_IF(includeCollateralOutput);
 		DENY_IF(includeTotalCollateral);
 		DENY_IF(numReferenceInputs > 0);
+
+		// no voting, treasuries, donations for pool registrations
+		// we don't need them and we want to avoid overlap in witnesses
+		DENY_IF(numVotingProcedures > 0);
+		DENY_IF(includeTreasury);
+		DENY_IF(includeDonation);
 		break;
 
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
@@ -463,7 +482,7 @@ security_policy_t policyForSignTxInput(sign_tx_signingmode_t txSigningMode)
 
 static bool is_addressBytes_suitable_for_tx_output(
         const uint8_t* addressBuffer, size_t addressSize,
-        const uint8_t networkId, const uint32_t protocolMagic
+        const uint8_t networkId, const uint32_t protocolMagic __attribute__((unused))
 )
 {
 	ASSERT(addressSize < BUFFER_SIZE_PARANOIA);
@@ -482,7 +501,9 @@ static bool is_addressBytes_suitable_for_tx_output(
 			return false;
 
 		case BYRON:
+			#ifdef APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 			CHECK(extractProtocolMagic(addressBuffer, addressSize) == protocolMagic);
+			#endif // APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 			break;
 
 		default: {
@@ -871,6 +892,8 @@ security_policy_t policyForSignTxCollateralOutputAdaAmount(
         bool isTotalCollateralPresent
 )
 {
+	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
+
 	if (outputPolicy == POLICY_ALLOW_WITHOUT_PROMPT) {
 		// output not shown, so none of its elements should be shown
 		ALLOW();
@@ -887,6 +910,8 @@ security_policy_t policyForSignTxCollateralOutputTokens(
         const tx_output_description_t* output
 )
 {
+	// WARNING: policies for collateral inputs, collateral return output and total collateral are interdependent
+
 	if (outputPolicy == POLICY_ALLOW_WITHOUT_PROMPT) {
 		// output not shown, so none of its elements should be shown
 		ALLOW();
@@ -980,22 +1005,22 @@ security_policy_t policyForSignTxCertificate(
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		// pool registration is allowed only in POOL_REGISTRATION signing modes
-		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+		DENY_IF(certificateType == CERTIFICATE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		// pool registration is allowed only in POOL_REGISTRATION signing modes
-		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+		DENY_IF(certificateType == CERTIFICATE_STAKE_POOL_REGISTRATION);
 		// pool retirement is impossible with multisig keys
-		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
+		DENY_IF(certificateType == CERTIFICATE_STAKE_POOL_RETIREMENT);
 		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		// only pool registration is allowed
-		DENY_UNLESS(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
+		DENY_UNLESS(certificateType == CERTIFICATE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
 
@@ -1006,94 +1031,224 @@ security_policy_t policyForSignTxCertificate(
 	DENY(); // should not be reached
 }
 
+// applicable to credentials that are witnessed in this tx
+static bool _forbiddenCredential(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* credential
+)
+{
+	// certain combinations of tx signing mode and credential type are not allowed
+	// either because they don't make sense or are dangerous
+	switch (txSigningMode) {
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		switch (credential->type) {
+		case EXT_CREDENTIAL_KEY_PATH:
+		case EXT_CREDENTIAL_KEY_HASH:
+			// everything is expected to be governed by native scripts
+			return true;
+		case EXT_CREDENTIAL_SCRIPT_HASH:
+			break;
+		default:
+			ASSERT(false);
+		}
+		break;
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		// everything allowed, txs are too complex for a HW wallet to understand
+		// and there might be third-party key hashes in the tx
+		break;
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		switch (credential->type) {
+		case EXT_CREDENTIAL_KEY_HASH:
+		case EXT_CREDENTIAL_SCRIPT_HASH:
+			// keys must be given by path, otherwise the user does not know
+			// if the hash corresponds to some of his keys,
+			// and might inadvertently sign several certificates with a single witness
+			return true;
+		case EXT_CREDENTIAL_KEY_PATH:
+			break;
+		default:
+			ASSERT(false);
+		}
+		break;
+
+	default:
+		// this should not be called in POOL_REGISTRATION signing modes
+		ASSERT(false);
+	}
+
+	return false;
+}
+
+security_policy_t _policyForSignTxCertificateStakeCredential(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* stakeCredential
+)
+{
+	DENY_IF(_forbiddenCredential(txSigningMode, stakeCredential));
+
+	switch (stakeCredential->type) {
+	case EXT_CREDENTIAL_KEY_PATH:
+		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
+		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
+		break;
+	case EXT_CREDENTIAL_KEY_HASH:
+	case EXT_CREDENTIAL_SCRIPT_HASH:
+		// the rest is OK, forbidden credentials have been dealt with above
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	PROMPT();
+}
+
 // for certificates concerning stake keys and stake delegation
 security_policy_t policyForSignTxCertificateStaking(
         sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType,
-        const stake_credential_t* stakeCredential
+        const ext_credential_t* stakeCredential
 )
 {
 	switch (certificateType) {
-	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
-	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
-	case CERTIFICATE_TYPE_STAKE_DELEGATION:
+	case CERTIFICATE_STAKE_REGISTRATION:
+	case CERTIFICATE_STAKE_REGISTRATION_CONWAY:
+	case CERTIFICATE_STAKE_DEREGISTRATION:
+	case CERTIFICATE_STAKE_DEREGISTRATION_CONWAY:
+	case CERTIFICATE_STAKE_DELEGATION:
 		break; // these are allowed
 
 	default:
 		ASSERT(false);
 	}
 
-	switch (stakeCredential->type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
-		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
-		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
-		switch (txSigningMode) {
-		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-			PROMPT();
-			break;
+	return _policyForSignTxCertificateStakeCredential(txSigningMode, stakeCredential);
+}
 
-		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-			DENY();
-			break;
-
-		default:
-			// in POOL_REGISTRATION signing modes, this certificate should have already been
-			// reported as invalid (only pool registration certificate is allowed)
-			ASSERT(false);
-			break;
-		}
+security_policy_t policyForSignTxCertificateVoteDelegation(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* stakeCredential,
+        const ext_drep_t* drep
+)
+{
+	switch (drep->type) {
+	case EXT_DREP_KEY_PATH:
+		// DRep can be anything, but if given by key path, it should be a valid path
+		DENY_UNLESS(bip44_isDRepKeyPath(&drep->keyPath));
 		break;
 
-	case STAKE_CREDENTIAL_KEY_HASH:
-		switch (txSigningMode) {
-		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-			PROMPT();
-			break;
-
-		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-			DENY();
-			break;
-
-		default:
-			// in POOL_REGISTRATION signing modes, this certificate should have already been
-			// reported as invalid (only pool registration certificate is allowed)
-			ASSERT(false);
-			break;
-		}
-		break;
-
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
-		switch (txSigningMode) {
-		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
-			PROMPT();
-			break;
-
-		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-			DENY();
-			break;
-
-		default:
-			// in POOL_REGISTRATION signing modes, this certificate should have already been
-			// reported as invalid (only pool registration certificate is allowed)
-			ASSERT(false);
-			break;
-		}
+	case EXT_DREP_KEY_HASH:
+	case EXT_DREP_SCRIPT_HASH:
+	case EXT_DREP_ABSTAIN:
+	case EXT_DREP_NO_CONFIDENCE:
+		// nothing to deny
 		break;
 
 	default:
 		ASSERT(false);
-		break;
 	}
 
-	DENY(); // should not be reached
+	return _policyForSignTxCertificateStakeCredential(txSigningMode, stakeCredential);
 }
+
+security_policy_t policyForSignTxCertificateCommitteeAuth(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* coldCredential,
+        const ext_credential_t* hotCredential
+)
+{
+	DENY_IF(_forbiddenCredential(txSigningMode, coldCredential));
+
+	switch (coldCredential->type) {
+	case EXT_CREDENTIAL_KEY_PATH:
+		DENY_UNLESS(bip44_isCommitteeColdKeyPath(&coldCredential->keyPath));
+		DENY_IF(violatesSingleAccountOrStoreIt(&coldCredential->keyPath));
+		break;
+
+	case EXT_CREDENTIAL_KEY_HASH:
+	case EXT_CREDENTIAL_SCRIPT_HASH:
+		// the rest is OK, forbidden credentials have been dealt with above
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	switch (hotCredential->type) {
+
+	case EXT_CREDENTIAL_SCRIPT_HASH:
+	case EXT_CREDENTIAL_KEY_HASH:
+		// keys might be governed outside of this device
+		break;
+
+	case EXT_CREDENTIAL_KEY_PATH:
+		DENY_UNLESS(bip44_isCommitteeHotKeyPath(&hotCredential->keyPath));
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	PROMPT();
+}
+
+security_policy_t policyForSignTxCertificateCommitteeResign(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* coldCredential
+)
+{
+	DENY_IF(_forbiddenCredential(txSigningMode, coldCredential));
+
+	switch (coldCredential->type) {
+	case EXT_CREDENTIAL_KEY_PATH:
+		DENY_UNLESS(bip44_isCommitteeColdKeyPath(&coldCredential->keyPath));
+		DENY_IF(violatesSingleAccountOrStoreIt(&coldCredential->keyPath));
+		break;
+
+	case EXT_CREDENTIAL_KEY_HASH:
+	case EXT_CREDENTIAL_SCRIPT_HASH:
+		// the rest is OK, forbidden credentials have been dealt with above
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	PROMPT();
+}
+
+security_policy_t policyForSignTxCertificateDRep(
+        sign_tx_signingmode_t txSigningMode,
+        const ext_credential_t* dRepCredential
+)
+{
+	DENY_IF(_forbiddenCredential(txSigningMode, dRepCredential));
+
+	switch (dRepCredential->type) {
+	case EXT_CREDENTIAL_KEY_PATH:
+		DENY_UNLESS(bip44_isDRepKeyPath(&dRepCredential->keyPath));
+		DENY_IF(violatesSingleAccountOrStoreIt(&dRepCredential->keyPath));
+		break;
+
+	case EXT_CREDENTIAL_KEY_HASH:
+	case EXT_CREDENTIAL_SCRIPT_HASH:
+		// the rest is OK, forbidden credentials have been dealt with above
+		break;
+
+	default:
+		ASSERT(false);
+	}
+
+	PROMPT();
+}
+
+#ifdef APP_FEATURE_POOL_RETIREMENT
 
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_signingmode_t txSigningMode,
-        const bip44_path_t* poolIdPath,
+        const ext_credential_t* poolCredential,
         uint64_t epoch MARK_UNUSED
 )
 {
@@ -1102,7 +1257,8 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
 		// pool retirement may only be present in ORDINARY_TX signing mode
 		// the path hash should be a valid pool cold key path
-		DENY_UNLESS(bip44_isPoolColdKeyPath(poolIdPath));
+		DENY_UNLESS(poolCredential->type == EXT_CREDENTIAL_KEY_PATH);
+		DENY_UNLESS(bip44_isPoolColdKeyPath(&poolCredential->keyPath));
 		PROMPT();
 		break;
 
@@ -1114,6 +1270,10 @@ security_policy_t policyForSignTxCertificateStakePoolRetirement(
 
 	DENY(); // should not be reached
 }
+
+#endif // APP_FEATURE_POOL_RETIREMENT
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 security_policy_t policyForSignTxStakePoolRegistrationInit(
         sign_tx_signingmode_t txSigningMode,
@@ -1139,7 +1299,6 @@ security_policy_t policyForSignTxStakePoolRegistrationInit(
 
 	default:
 		ASSERT(false);
-		break;
 	}
 
 	DENY(); // should not be reached
@@ -1285,14 +1444,16 @@ security_policy_t policyForSignTxStakePoolRegistrationConfirm(
 	ALLOW();
 }
 
+#endif // APP_FEATURE_POOL_REGISTRATION
+
 // For each withdrawal
 security_policy_t policyForSignTxWithdrawal(
         sign_tx_signingmode_t txSigningMode,
-        const stake_credential_t* stakeCredential
+        const ext_credential_t* stakeCredential
 )
 {
 	switch (stakeCredential->type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
+	case EXT_CREDENTIAL_KEY_PATH:
 		DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(&stakeCredential->keyPath));
 		DENY_IF(violatesSingleAccountOrStoreIt(&stakeCredential->keyPath));
 		switch (txSigningMode) {
@@ -1311,11 +1472,10 @@ security_policy_t policyForSignTxWithdrawal(
 			// in POOL_REGISTRATION signing modes, this certificate should have already been
 			// reported as invalid (only pool registration certificate is allowed)
 			ASSERT(false);
-			break;
 		}
 		break;
 
-	case STAKE_CREDENTIAL_KEY_HASH:
+	case EXT_CREDENTIAL_KEY_HASH:
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 			SHOW_IF(app_mode_expert());
@@ -1339,11 +1499,10 @@ security_policy_t policyForSignTxWithdrawal(
 			// in POOL_REGISTRATION signing modes, this certificate should have already been
 			// reported as invalid (only pool registration certificate is allowed)
 			ASSERT(false);
-			break;
 		}
 		break;
 
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
+	case EXT_CREDENTIAL_SCRIPT_HASH:
 		switch (txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
@@ -1360,7 +1519,6 @@ security_policy_t policyForSignTxWithdrawal(
 			// in POOL_REGISTRATION signing modes, this certificate should have already been
 			// reported as invalid (only pool registration certificate is allowed)
 			ASSERT(false);
-			break;
 		}
 		break;
 
@@ -1368,7 +1526,6 @@ security_policy_t policyForSignTxWithdrawal(
 		// in POOL_REGISTRATION signing modes, non-zero number of withdrawals
 		// should have already been reported as invalid
 		ASSERT(false);
-		break;
 	}
 
 	DENY(); // should not be reached
@@ -1380,15 +1537,31 @@ static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path,
 	switch (bip44_classifyPath(path)) {
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
+		// ordinary key paths can be hidden if they are not unusual
+		// (the user saw all outputs not belonging to him, withdrawals and certificates,
+		// those belong to him in an ORDINARY txs thanks to
+		// keys being displayed by paths instead of hashes)
 		DENY_IF(violatesSingleAccountOrStoreIt(path));
 		WARN_UNLESS(bip44_isPathReasonable(path));
 		SHOW_IF(app_mode_expert());
 		ALLOW();
 		break;
 
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+		// used to sign certificates and voting procedures
+		// these won't occur often, so little benefit from hiding them
+		// better to show them at least while they are new
+		// in the future, we might want to hide some of them in non-expert mode
+		DENY_IF(violatesSingleAccountOrStoreIt(path));
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
 	case PATH_POOL_COLD_KEY:
-		// ordinary key paths and pool cold key paths can be hidden if they are not unusual
-		// (the user saw all outputs, withdrawals and pool certificates and they all belong to him)
+		// could be hidden perhaps, but it's safer to let the user to know
+		// the SW wallet wants to sign with the stake pool key
 		WARN_UNLESS(bip44_isPathReasonable(path));
 		SHOW();
 		break;
@@ -1428,6 +1601,7 @@ static inline security_policy_t _multisigWitnessPolicy(const bip44_path_t* path,
 
 	default:
 		// ordinary and pool cold keys forbidden
+		// DRep and committee keys forbidden
 		DENY();
 		break;
 	}
@@ -1441,6 +1615,9 @@ static inline security_policy_t _plutusWitnessPolicy(const bip44_path_t* path, b
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(path));
 		SHOW();
 		break;
@@ -1460,6 +1637,8 @@ static inline security_policy_t _plutusWitnessPolicy(const bip44_path_t* path, b
 		break;
 	}
 }
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 static inline security_policy_t _poolRegistrationOwnerWitnessPolicy(const bip44_path_t* witnessPath, const bip44_path_t* poolOwnerPath)
 {
@@ -1493,7 +1672,8 @@ static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip
 	case PATH_POOL_COLD_KEY:
 		// only ordinary spending key paths (because of inputs) and pool cold key path are allowed
 		WARN_UNLESS(bip44_isPathReasonable(path));
-		// TODO is there a reason to show the witnesses?
+		// it might be safe to hide the witnesses, but txs related to stake pools
+		// are rare, so it would not help much and might introduce some unknown risk
 		SHOW();
 		break;
 
@@ -1503,6 +1683,8 @@ static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip
 	}
 }
 
+#endif // APP_FEATURE_POOL_REGISTRATION
+
 // For each transaction witness
 // Note: witnesses reveal public key of an address and Ledger *does not* check
 // whether they correspond to previously declared inputs and certificates
@@ -1510,7 +1692,7 @@ security_policy_t policyForSignTxWitness(
         sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* witnessPath,
         bool mintPresent,
-        const bip44_path_t* poolOwnerPath
+        const bip44_path_t* poolOwnerPath __attribute__((unused))
 )
 {
 	switch (txSigningMode) {
@@ -1523,11 +1705,15 @@ security_policy_t policyForSignTxWitness(
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 		return _plutusWitnessPolicy(witnessPath, mintPresent);
 
+		#ifdef APP_FEATURE_POOL_REGISTRATION
+
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
 		return _poolRegistrationOwnerWitnessPolicy(witnessPath, poolOwnerPath);
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		return _poolRegistrationOperatorWitnessPolicy(witnessPath);
+
+		#endif // APP_FEATURE_POOL_REGISTRATION
 
 	default:
 		ASSERT(false);
@@ -1594,7 +1780,7 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t mintInitPolicy)
 		break;
 
 	case POLICY_SHOW_BEFORE_RESPONSE:
-		// all minted coins were shown, show a final confirmation prompt as well
+		// all minted tokens were shown, show a final confirmation prompt as well
 		PROMPT();
 		break;
 
@@ -1689,6 +1875,12 @@ static bool is_required_signer_allowed(bip44_path_t* path)
 	case PATH_MULTISIG_STAKING_KEY:
 		return true;
 
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+		// no known use case, but also no reason to deny
+		return true;
+
 	case PATH_MINT_KEY:
 		return true;
 
@@ -1753,6 +1945,100 @@ security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSi
 		ASSERT(false);
 	}
 	DENY();
+}
+
+// For voting procedures
+security_policy_t policyForSignTxVotingProcedure(
+        sign_tx_signingmode_t txSigningMode,
+        ext_voter_t* voter
+)
+{
+	// gov action id and vote can be arbitrary
+	// we only restrict voter because that determines witnesses
+	// certain combinations of tx signing mode and credential type are not allowed
+	// either because they don't make sense or are dangerous
+	switch (txSigningMode) {
+
+	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
+		switch (voter->type) {
+		case EXT_VOTER_COMMITTEE_HOT_KEY_HASH:
+		case EXT_VOTER_COMMITTEE_HOT_SCRIPT_HASH:
+		case EXT_VOTER_DREP_KEY_HASH:
+		case EXT_VOTER_DREP_SCRIPT_HASH:
+		case EXT_VOTER_STAKE_POOL_KEY_HASH:
+			// keys must be given by path, otherwise the user does not know
+			// if the hash corresponds to one of his keys
+			DENY();
+			break;
+
+		case EXT_VOTER_COMMITTEE_HOT_KEY_PATH:
+			DENY_UNLESS(bip44_isCommitteeHotKeyPath(&voter->keyPath));
+			break;
+
+		case EXT_VOTER_DREP_KEY_PATH:
+			DENY_UNLESS(bip44_isDRepKeyPath(&voter->keyPath));
+			break;
+
+		case EXT_VOTER_STAKE_POOL_KEY_PATH:
+			DENY_UNLESS(bip44_isPoolColdKeyPath(&voter->keyPath));
+			break;
+
+		default:
+			ASSERT(false);
+		}
+		break;
+
+	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
+		switch (voter->type) {
+		case EXT_VOTER_COMMITTEE_HOT_KEY_PATH:
+		case EXT_VOTER_COMMITTEE_HOT_KEY_HASH:
+		case EXT_VOTER_DREP_KEY_PATH:
+		case EXT_VOTER_DREP_KEY_HASH:
+		case EXT_VOTER_STAKE_POOL_KEY_PATH:
+		case EXT_VOTER_STAKE_POOL_KEY_HASH:
+			// everything is expected to be governed by native scripts
+			DENY();
+			break;
+
+		case EXT_VOTER_COMMITTEE_HOT_SCRIPT_HASH:
+		case EXT_VOTER_DREP_SCRIPT_HASH:
+			// scripts are OK
+			break;
+
+		default:
+			ASSERT(false);
+		}
+		break;
+
+	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
+		// everything allowed, txs are too complex for a HW wallet to understand
+		// and there might be third-party key hashes in the tx
+		break;
+
+	default:
+		// this should not be called in POOL_REGISTRATION signing modes
+		ASSERT(false);
+	}
+
+	SHOW();
+}
+
+// For treasury
+security_policy_t policyForSignTxTreasury(
+        sign_tx_signingmode_t txSigningMode MARK_UNUSED,
+        uint64_t treasury MARK_UNUSED
+)
+{
+	SHOW();
+}
+
+// For donation
+security_policy_t policyForSignTxDonation(
+        sign_tx_signingmode_t txSigningMode MARK_UNUSED,
+        uint64_t donation MARK_UNUSED
+)
+{
+	SHOW();
 }
 
 security_policy_t policyForSignTxConfirm()
@@ -1828,7 +2114,6 @@ security_policy_t policyForCVoteRegistrationPaymentDestination(
 
 	default:
 		ASSERT(false);
-		break;
 	}
 
 	DENY(); // should not be reached
@@ -1852,6 +2137,7 @@ security_policy_t policyForCVoteRegistrationConfirm()
 	PROMPT();
 }
 
+#ifdef APP_FEATURE_OPCERT
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 {
 	switch (bip44_classifyPath(poolColdKeyPathSpec)) {
@@ -1871,6 +2157,7 @@ security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 
 	DENY(); // should not be reached
 }
+#endif // APP_FEATURE_OPCERT
 
 security_policy_t policyForSignCVoteInit()
 {

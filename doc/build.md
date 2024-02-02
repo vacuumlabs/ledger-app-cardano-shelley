@@ -5,7 +5,7 @@
 - Install Docker
 - Pull the required containers as discussed in https://github.com/LedgerHQ/ledger-app-builder/ (lite container is sufficient for a C build):
 
-  `sudo docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest`
+  `docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest`
 
 ## Compiling the app
 

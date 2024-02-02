@@ -1,4 +1,4 @@
-#ifdef DEVEL
+#if defined(DEVEL) && defined(APP_FEATURE_POOL_REGISTRATION)
 
 #include "ipUtils.h"
 #include "utils.h"
@@ -55,4 +55,5 @@ void run_ipUtils_test()
 	test3();
 }
 
-#endif // DEVEL
+#endif // DEVEL && APP_FEATURE_POOL_REGISTRATION
+

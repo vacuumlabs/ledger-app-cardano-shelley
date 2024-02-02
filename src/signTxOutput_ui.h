@@ -1,6 +1,5 @@
 #ifndef H_CARDANO_APP_SIGN_TX_OUTPUT_UI
 #define H_CARDANO_APP_SIGN_TX_OUTPUT_UI
-#endif // H_CARDANO_APP_SIGN_TX_OUTPUT_UI
 
 #ifdef HAVE_BAGL
 #include "uiScreens_bagl.h"
@@ -91,3 +90,5 @@ enum {
 };
 
 void signTxOutput_handleConfirm_ui_runStep();
+
+#endif // H_CARDANO_APP_SIGN_TX_OUTPUT_UI

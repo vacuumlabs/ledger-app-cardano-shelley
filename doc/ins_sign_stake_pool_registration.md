@@ -157,12 +157,12 @@ P2 = `0x36`
 |relay format       |  1 | `RELAY_SINGLE_HOST_NAME=0x01` |
 |isPortGiven        |  1 | `ITEM_INCLUDED_NO=0x01` or `ITEM_INCLUDED_YES=0x02` |
 |port               |  2 | Big endian; included if and only if isPortGiven is `ITEM_INCLUDED_YES`
-|dns name           | variable | byte buffer, max size 64
+|dns name           | variable | byte buffer, max size 128
 
 |Field| Length | Comments|
 |-----|--------|---------|
 |relay format       |  1 | `RELAY_MULTIPLE_HOST_NAME=0x02` |
-|dns name           | variable | byte buffer, max size 64
+|dns name           | variable | byte buffer, max size 128
 
 
 ---
@@ -175,7 +175,7 @@ P2 = `0x37`
 |-----|--------|---------|
 |includeMetadata    |  1 | `ITEM_INCLUDED_NO=0x01` or `ITEM_INCLUDED_YES=0x02` |
 |metadata hash      | 32 | byte buffer; only if includeMetadata is `ITEM_INCLUDED_YES`
-|metadata url       | variable | byte buffer, max size 64; only if includeMetadata is `ITEM_INCLUDED_YES`
+|metadata url       | variable | byte buffer, max size 128; only if includeMetadata is `ITEM_INCLUDED_YES`
 
 
 ---

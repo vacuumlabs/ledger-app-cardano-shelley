@@ -43,8 +43,6 @@ void str_traceInt64(int64_t number);
 
 size_t str_formatValidityBoundary(uint64_t slotNumber, char* out, size_t outSize);
 
-size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, char* out, size_t outSize);
-
 bool str_isPrintableAsciiWithoutSpaces(const uint8_t* buffer, size_t bufferSize);
 bool str_isPrintableAsciiWithSpaces(const uint8_t* buffer, size_t bufferSize);
 

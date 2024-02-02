@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 #include "signTxMint.h"
 #include "signTxMint_ui.h"
 #include "signTxUtils.h"
@@ -203,3 +205,5 @@ void signTxMint_handleConfirm_ui_runStep()
 	}
 	UI_STEP_END(HANDLE_CONFIRM_STEP_INVALID);
 }
+
+#endif // APP_FEATURE_TOKEN_MINTING
