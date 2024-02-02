@@ -27,7 +27,7 @@ Conway era
 - bug in checking canonical ordering of withdrawals
 
 
-## [6.1.2](TBD) - [TBD]
+## [6.1.2](https://github.com/LedgerHQ/app-cardano/compare/v5.0.0...LedgerHQ:nanos_2.1.0_6.1.2_sdk_2.1.0-12) - [October 25th 2023]
 
 Support for CIP-36 voting
 
