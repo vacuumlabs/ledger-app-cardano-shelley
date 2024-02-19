@@ -101,15 +101,15 @@ void signMsg_handleInit_ui_runStep()
 		fill_and_display_if_required("Address field", humanAddress, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
-	UI_STEP(HANDLE_INIT_ADDRESS_FIELD_DISPLAY_SPENDING_PATH) {
+	UI_STEP(HANDLE_INIT_ADDRESS_FIELD_DISPLAY_PAYMENT_PATH) {
 		#ifdef HAVE_BAGL
-		ui_displaySpendingInfoScreen(&ctx->addressParams, this_fn);
+		ui_displayPaymentInfoScreen(&ctx->addressParams, this_fn);
 		#elif defined(HAVE_NBGL)
-#define SPENDING_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
+#define PAYMENT_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
 		char line1[30];
-		char spendingInfo[SPENDING_INFO_SIZE] = {0};
-		ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &ctx->addressParams);
-		fill_and_display_if_required(line1, spendingInfo, this_fn, respond_with_user_reject);
+		char paymentInfo[PAYMENT_INFO_SIZE] = {0};
+		ui_getPaymentInfoScreen(line1, SIZEOF(line1), paymentInfo, SIZEOF(paymentInfo), &ctx->addressParams);
+		fill_and_display_if_required(line1, paymentInfo, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_INIT_ADDRESS_FIELD_DISPLAY_STAKING_INFO) {

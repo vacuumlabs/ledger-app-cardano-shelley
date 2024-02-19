@@ -333,7 +333,7 @@ void ui_getRewardAccountScreen(
 	);
 }
 
-void ui_getSpendingInfoScreen(
+void ui_getPaymentInfoScreen(
         char* line1,
         const size_t line1Size,
         char* line2,
@@ -341,32 +341,32 @@ void ui_getSpendingInfoScreen(
         const addressParams_t* addressParams
 )
 {
-	switch (determineSpendingChoice(addressParams->type)) {
+	switch (determinePaymentChoice(addressParams->type)) {
 
-	case SPENDING_PATH: {
-		snprintf(line1, line1Size, "Derivation path");
+	case PAYMENT_PATH: {
+		snprintf(line1, line1Size, "Payment key path");
 		ui_getPathScreen(
 		        line2,
 		        line2Size,
-		        &addressParams->spendingKeyPath
+		        &addressParams->paymentKeyPath
 		);
 		return;
 	}
 
-	case SPENDING_SCRIPT_HASH: {
-		snprintf(line1, line1Size, "Spending script hash");
+	case PAYMENT_SCRIPT_HASH: {
+		snprintf(line1, line1Size, "Payment script hash");
 		ui_getBech32Screen(
 		        line2,
 		        line2Size,
 		        "script",
-		        addressParams->spendingScriptHash,
-		        SIZEOF(addressParams->spendingScriptHash)
+		        addressParams->paymentScriptHash,
+		        SIZEOF(addressParams->paymentScriptHash)
 		);
 		return;
 	}
 
 	default: {
-		// includes SPENDING_NONE
+		// includes PAYMENT_NONE
 		ASSERT(false);
 	}
 	}
