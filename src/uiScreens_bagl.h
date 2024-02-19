@@ -57,7 +57,7 @@ void ui_displayRewardAccountScreen(
 );
 
 __noinline_due_to_stack__
-void ui_displaySpendingInfoScreen(
+void ui_displayPaymentInfoScreen(
         const addressParams_t* addressParams,
         ui_callback_fn_t callback
 );

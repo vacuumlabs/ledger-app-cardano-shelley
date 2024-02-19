@@ -74,7 +74,7 @@ void ui_getRewardAccountScreen(
 );
 
 __noinline_due_to_stack__
-void ui_getSpendingInfoScreen(
+void ui_getPaymentInfoScreen(
         char* line1,
         const size_t line1Size,
         char* line2,

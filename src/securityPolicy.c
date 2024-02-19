@@ -9,7 +9,7 @@
 
 // helper functions
 
-// stake key path has the same account as the spending key path
+// stake key path has the same account as the payment key path
 static inline bool is_standard_base_address(const addressParams_t* addressParams)
 {
 	ASSERT(isValidAddressParams(addressParams));
@@ -18,8 +18,8 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 	CHECK(addressParams->type == BASE_PAYMENT_KEY_STAKE_KEY);
 	CHECK(addressParams->stakingDataSource == STAKING_KEY_PATH);
 
-	CHECK(bip44_classifyPath(&addressParams->spendingKeyPath) == PATH_ORDINARY_SPENDING_KEY);
-	CHECK(bip44_isPathReasonable(&addressParams->spendingKeyPath));
+	CHECK(bip44_classifyPath(&addressParams->paymentKeyPath) == PATH_ORDINARY_PAYMENT_KEY);
+	CHECK(bip44_isPathReasonable(&addressParams->paymentKeyPath));
 
 	CHECK(bip44_classifyPath(&addressParams->stakingKeyPath) == PATH_ORDINARY_STAKING_KEY);
 	CHECK(bip44_isPathReasonable(&addressParams->stakingKeyPath));
@@ -29,7 +29,7 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 
 	CHECK(
 	        bip44_getAccount(&addressParams->stakingKeyPath) ==
-	        bip44_getAccount(&addressParams->spendingKeyPath)
+	        bip44_getAccount(&addressParams->paymentKeyPath)
 	);
 
 	return true;
@@ -78,11 +78,11 @@ security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
 	switch (bip44_classifyPath(path)) {
 
 	case PATH_ORDINARY_ACCOUNT:
-	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
 
 	case PATH_MULTISIG_ACCOUNT:
-	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_PAYMENT_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 
 	case PATH_DREP_KEY:
@@ -162,9 +162,9 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 		ALLOW();
 		break;
 
-	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
-	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_PAYMENT_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_DREP_KEY:
 	case PATH_COMMITTEE_COLD_KEY:
@@ -189,10 +189,10 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	switch (bip44_classifyPath(pathSpec)) {
 
 	case PATH_ORDINARY_ACCOUNT:
-	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_ACCOUNT:
-	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_PAYMENT_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_DREP_KEY:
 	case PATH_COMMITTEE_COLD_KEY:
@@ -229,7 +229,7 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 		// unusual path
-		WARN_UNLESS(bip44_isPathReasonable(&addressParams->spendingKeyPath));
+		WARN_UNLESS(bip44_isPathReasonable(&addressParams->paymentKeyPath));
 		WARN_IF(
 		        addressParams->stakingDataSource == STAKING_KEY_PATH &&
 		        !bip44_isPathReasonable(&addressParams->stakingKeyPath)
@@ -241,7 +241,7 @@ static security_policy_t _policyForDeriveAddress(const addressParams_t* addressP
 	case ENTERPRISE_KEY:
 	case BYRON:
 		// unusual path
-		WARN_UNLESS(bip44_isPathReasonable(&addressParams->spendingKeyPath));
+		WARN_UNLESS(bip44_isPathReasonable(&addressParams->paymentKeyPath));
 		break;
 
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
@@ -570,7 +570,7 @@ static bool contains_forbidden_plutus_elements(
 
 bool needsMissingDatumWarning(const tx_output_destination_t* destination, bool includeDatum)
 {
-	const bool mightRequireDatum = determineSpendingChoice(getDestinationAddressType(destination)) == SPENDING_SCRIPT_HASH;
+	const bool mightRequireDatum = determinePaymentChoice(getDestinationAddressType(destination)) == PAYMENT_SCRIPT_HASH;
 	return mightRequireDatum && !includeDatum;
 }
 
@@ -647,12 +647,12 @@ static bool is_addressParams_suitable_for_tx_output(
 
 		// this captures the essence of a change output: money stays
 		// on an address where payment is fully controlled by this device
-		CHECK(determineSpendingChoice(params->type) == SPENDING_PATH);
-		// Note: if we allowed script hash in spending part, we must add a warning
+		CHECK(determinePaymentChoice(params->type) == PAYMENT_PATH);
+		// Note: if we allowed script hash in payment part, we must add a warning
 		// for missing datum (see policyForSignTxOutputAddressBytes)
 
-		ASSERT(determineSpendingChoice(params->type) == SPENDING_PATH);
-		CHECK(!violatesSingleAccountOrStoreIt(&params->spendingKeyPath));
+		ASSERT(determinePaymentChoice(params->type) == PAYMENT_PATH);
+		CHECK(!violatesSingleAccountOrStoreIt(&params->paymentKeyPath));
 	}
 
 	return true;
@@ -677,7 +677,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 
 	case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX: {
-		// unusual paths or spending and staking path mismatch
+		// unusual paths or payment and staking path mismatch
 		SHOW_UNLESS(is_standard_base_address(params));
 
 		// outputs (eUTXOs) with datum or ref script are not interchangeable
@@ -694,7 +694,7 @@ security_policy_t policyForSignTxOutputAddressParams(
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX: {
 		// for simplicity, all outputs should be given as external addresses;
 		// generally, more than one party is needed to sign
-		// spending from a multisig address, so we do not expect
+		// payment from a multisig address, so we do not expect
 		// there will be 1852 outputs (that would be considered change)
 		DENY();
 		break;
@@ -1535,7 +1535,7 @@ security_policy_t policyForSignTxWithdrawal(
 static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path, bool mintPresent)
 {
 	switch (bip44_classifyPath(path)) {
-	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
 		// ordinary key paths can be hidden if they are not unusual
 		// (the user saw all outputs not belonging to him, withdrawals and certificates,
@@ -1583,7 +1583,7 @@ static inline security_policy_t _ordinaryWitnessPolicy(const bip44_path_t* path,
 static inline security_policy_t _multisigWitnessPolicy(const bip44_path_t* path, bool mintPresent)
 {
 	switch (bip44_classifyPath(path)) {
-	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_PAYMENT_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 		// multisig key paths are allowed, but hiding them would make impossible for the user to
 		// distinguish what funds are being spent (multisig UTXOs sharing a signer are not
@@ -1611,9 +1611,9 @@ static inline security_policy_t _plutusWitnessPolicy(const bip44_path_t* path, b
 {
 	switch (bip44_classifyPath(path)) {
 	// in PLUTUS_TX, we allow signing with any path, but it must be shown
-	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
-	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_PAYMENT_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_DREP_KEY:
 	case PATH_COMMITTEE_COLD_KEY:
@@ -1668,9 +1668,9 @@ static inline security_policy_t _poolRegistrationOperatorWitnessPolicy(const bip
 {
 	switch (bip44_classifyPath(path)) {
 
-	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
 	case PATH_POOL_COLD_KEY:
-		// only ordinary spending key paths (because of inputs) and pool cold key path are allowed
+		// only ordinary payment key paths (because of inputs) and pool cold key path are allowed
 		WARN_UNLESS(bip44_isPathReasonable(path));
 		// it might be safe to hide the witnesses, but txs related to stake pools
 		// are rare, so it would not help much and might introduce some unknown risk
@@ -1866,12 +1866,12 @@ static bool is_required_signer_allowed(bip44_path_t* path)
 {
 	switch (bip44_classifyPath(path)) {
 	case PATH_ORDINARY_ACCOUNT:
-	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
 		return bip44_hasShelleyPrefix(path);
 
 	case PATH_MULTISIG_ACCOUNT:
-	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_PAYMENT_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 		return true;
 
@@ -2191,9 +2191,9 @@ security_policy_t policyForSignMsg(
 )
 {
 	switch (bip44_classifyPath(witnessPath)) {
-	case PATH_ORDINARY_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
-	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_MULTISIG_PAYMENT_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_MINT_KEY:
 	case PATH_DREP_KEY:

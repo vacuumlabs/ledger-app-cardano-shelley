@@ -364,35 +364,35 @@ void ui_displayRewardAccountScreen(
 	);
 }
 
-void ui_displaySpendingInfoScreen(
+void ui_displayPaymentInfoScreen(
         const addressParams_t* addressParams,
         ui_callback_fn_t callback
 )
 {
-	switch (determineSpendingChoice(addressParams->type)) {
+	switch (determinePaymentChoice(addressParams->type)) {
 
-	case SPENDING_PATH: {
+	case PAYMENT_PATH: {
 		ui_displayPathScreen(
-		        "Spending key path",
-		        &addressParams->spendingKeyPath,
+		        "Payment key path",
+		        &addressParams->paymentKeyPath,
 		        callback
 		);
 		return;
 	}
 
-	case SPENDING_SCRIPT_HASH: {
+	case PAYMENT_SCRIPT_HASH: {
 		ui_displayBech32Screen(
-		        "Spending script hash",
+		        "Payment script hash",
 		        "script",
-		        addressParams->spendingScriptHash,
-		        SIZEOF(addressParams->spendingScriptHash),
+		        addressParams->paymentScriptHash,
+		        SIZEOF(addressParams->paymentScriptHash),
 		        callback
 		);
 		return;
 	}
 
 	default: {
-		// includes SPENDING_NONE
+		// includes PAYMENT_NONE
 		ASSERT(false);
 	}
 	}
