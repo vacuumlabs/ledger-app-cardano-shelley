@@ -142,7 +142,8 @@ void _displayMsgIntro(ui_callback_fn_t* callback)
 	ASSERT(strlen(l1) + 1 < SIZEOF(l1));
 
 	char l2[30] = {0};
-	snprintf(l2, SIZEOF(l2), "%u bytes", ctx->msgLength);
+	ASSERT(ctx->msgLength < UINT32_MAX);
+	snprintf(l2, SIZEOF(l2), "%u bytes", (uint32_t)ctx->msgLength);
 	ASSERT(strlen(l2) + 1 < SIZEOF(l2));
 
 	#ifdef HAVE_BAGL

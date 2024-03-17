@@ -142,6 +142,7 @@ add_compile_definitions(
     HAVE_ECDSA
     HAVE_EDDSA
     HAVE_HASH
+    HAVE_SHA224
     HAVE_SHA256
     HAVE_SHA3
 

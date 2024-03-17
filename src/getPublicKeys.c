@@ -218,6 +218,7 @@ void getPublicKeys_handleAPDU(
         bool isNewCall
 )
 {
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	if (isNewCall) {

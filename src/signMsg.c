@@ -193,6 +193,7 @@ static void _prepareAddressField()
 	}
 }
 
+__noinline_due_to_stack__
 static size_t _createProtectedHeader(uint8_t* protectedHeaderBuffer, size_t maxSize)
 {
 	// protectedHeader = {
@@ -207,36 +208,41 @@ static size_t _createProtectedHeader(uint8_t* protectedHeaderBuffer, size_t maxS
 			{
 				size_t len = cbor_writeToken(CBOR_TYPE_MAP, 2, p, end - p);
 				p += len;
+				ASSERT(p < end);
 			}
 			{
 				size_t len = cbor_writeToken(CBOR_TYPE_UNSIGNED, 1, p, end - p);
 				p += len;
+				ASSERT(p < end);
 			}
 			{
 				size_t len = cbor_writeToken(CBOR_TYPE_NEGATIVE, -8, p, end - p);
 				p += len;
+				ASSERT(p < end);
 			}
 			{
 				size_t len = cbor_writeToken(CBOR_TYPE_TEXT, 7, p, end - p);
 				p += len;
+				ASSERT(p < end);
 			}
-
 			{
 				const char* text = "address";
 				const size_t len = strlen(text);
 				ASSERT(p + len < end);
 				memmove(p, text, len);
 				p += len;
+				ASSERT(p < end);
 			}
-			_prepareAddressField();
 			{
+				_prepareAddressField();
+				ASSERT(ctx->addressFieldSize > 0);
+
 				size_t len = cbor_writeToken(CBOR_TYPE_BYTES, ctx->addressFieldSize, p, end - p);
 				p += len;
-			}
-			{
 				ASSERT(p + ctx->addressFieldSize < end);
 				memmove(p, ctx->addressField, ctx->addressFieldSize);
 				p += ctx->addressFieldSize;
+				ASSERT(p < end);
 			}
 
 			const size_t protectedHeaderSize = p - protectedHeaderBuffer;
@@ -250,7 +256,7 @@ static size_t _createProtectedHeader(uint8_t* protectedHeaderBuffer, size_t maxS
 		}
 	} END_TRY;
 
-	return -1;
+	return SIZE_MAX;
 }
 
 static void signMsg_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
@@ -283,8 +289,9 @@ static void signMsg_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED,
 		ASSERT(written < maxWritten);
 	}
 	{
-		uint8_t protectedHeaderBuffer[100]; // address of max 57 bytes plus a couple of small items
+		uint8_t protectedHeaderBuffer[100] = {0}; // address of max 57 bytes plus a couple of small items
 		const size_t len = _createProtectedHeader(protectedHeaderBuffer, SIZEOF(protectedHeaderBuffer));
+		ASSERT(len < BUFFER_SIZE_PARANOIA);
 		written += cbor_writeToken(CBOR_TYPE_BYTES, len, sigStructure + written, maxWritten - written);
 		ASSERT(written + len < maxWritten);
 		memmove(sigStructure + written, protectedHeaderBuffer, len);
@@ -360,6 +367,7 @@ void signMsg_handleAPDU(
 )
 {
 	TRACE("P1 = 0x%x, P2 = 0x%x, isNewCall = %d", p1, p2, isNewCall);
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);

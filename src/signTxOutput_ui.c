@@ -356,7 +356,8 @@ void signTxOutput_handleDatumInline_ui_runStep()
 		size_t datumSize = subctx->stateData.datumRemainingBytes + subctx->stateData.datumChunkSize;
 		// datumSize with 6 digits fits on the screen, less than max tx size
 		// if more is needed, "bytes" can be replaced by "B" for those larger numbers
-		snprintf(l1, SIZEOF(l1), "Datum %u bytes", datumSize);
+		ASSERT(datumSize < UINT32_MAX);
+		snprintf(l1, SIZEOF(l1), "Datum %u bytes", (uint32_t)datumSize);
 		ASSERT(strlen(l1) + 1 < SIZEOF(l1));
 
 		char l2[20];
@@ -397,7 +398,8 @@ void handleRefScript_ui_runStep()
 		size_t scriptSize = subctx->stateData.refScriptRemainingBytes + subctx->stateData.refScriptChunkSize;
 		// scriptSize with 6 digits fits on the screen, less than max tx size
 		// if more is needed, "bytes" can be replaced by "B" for those larger numbers
-		snprintf(l1, SIZEOF(l1), "Script %u bytes", scriptSize);
+		ASSERT(scriptSize < UINT32_MAX);
+		snprintf(l1, SIZEOF(l1), "Script %u bytes", (uint32_t)scriptSize);
 		ASSERT(strlen(l1) + 1 < SIZEOF(l1));
 
 		char l2[20];

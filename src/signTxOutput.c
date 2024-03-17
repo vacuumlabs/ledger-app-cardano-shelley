@@ -1071,6 +1071,7 @@ bool signTxOutput_isValidInstruction(uint8_t p2)
 
 void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	switch (p2) {
@@ -1132,6 +1133,7 @@ bool signTxCollateralOutput_isValidInstruction(uint8_t p2)
 
 void signTxCollateralOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	switch (p2) {

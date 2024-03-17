@@ -1,5 +1,5 @@
-#ifndef H_CARDANO_APP_SIGN_CVOTE_UI
-#define H_CARDANO_APP_SIGN_CVOTE_UI
+#ifndef H_CARDANO_APP_SIGN_MSG_UI
+#define H_CARDANO_APP_SIGN_MSG_UI
 
 #include "uiHelpers.h"
 
@@ -40,4 +40,4 @@ enum {
 
 void signMsg_handleConfirm_ui_runStep();
 
-#endif // H_CARDANO_APP_SIGN_CVOTE_UI
+#endif // H_CARDANO_APP_SIGN_MSG_UI
