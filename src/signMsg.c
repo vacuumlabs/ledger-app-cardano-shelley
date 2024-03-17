@@ -200,63 +200,54 @@ static size_t _createProtectedHeader(uint8_t* protectedHeaderBuffer, size_t maxS
 	//     1 : -8,                         // set algorithm to EdDSA
 	//     “address” : address_bytes       // raw address given by the user, or key hash
 	// }
-	BEGIN_TRY {
-		TRY {
-			uint8_t* p = protectedHeaderBuffer;
-			uint8_t* end = protectedHeaderBuffer + maxSize;
+	uint8_t* p = protectedHeaderBuffer;
+	uint8_t* end = protectedHeaderBuffer + maxSize;
 
-			{
-				size_t len = cbor_writeToken(CBOR_TYPE_MAP, 2, p, end - p);
-				p += len;
-				ASSERT(p < end);
-			}
-			{
-				size_t len = cbor_writeToken(CBOR_TYPE_UNSIGNED, 1, p, end - p);
-				p += len;
-				ASSERT(p < end);
-			}
-			{
-				size_t len = cbor_writeToken(CBOR_TYPE_NEGATIVE, -8, p, end - p);
-				p += len;
-				ASSERT(p < end);
-			}
-			{
-				size_t len = cbor_writeToken(CBOR_TYPE_TEXT, 7, p, end - p);
-				p += len;
-				ASSERT(p < end);
-			}
-			{
-				const char* text = "address";
-				const size_t len = strlen(text);
-				ASSERT(p + len < end);
-				memmove(p, text, len);
-				p += len;
-				ASSERT(p < end);
-			}
-			{
-				_prepareAddressField();
-				ASSERT(ctx->addressFieldSize > 0);
+	{
+		size_t len = cbor_writeToken(CBOR_TYPE_MAP, 2, p, end - p);
+		p += len;
+		ASSERT(p < end);
+	}
+	{
+		size_t len = cbor_writeToken(CBOR_TYPE_UNSIGNED, 1, p, end - p);
+		p += len;
+		ASSERT(p < end);
+	}
+	{
+		size_t len = cbor_writeToken(CBOR_TYPE_NEGATIVE, -8, p, end - p);
+		p += len;
+		ASSERT(p < end);
+	}
+	{
+		size_t len = cbor_writeToken(CBOR_TYPE_TEXT, 7, p, end - p);
+		p += len;
+		ASSERT(p < end);
+	}
+	{
+		const char* text = "address";
+		const size_t len = strlen(text);
+		ASSERT(p + len < end);
+		memmove(p, text, len);
+		p += len;
+		ASSERT(p < end);
+	}
+	{
+		_prepareAddressField();
+		ASSERT(ctx->addressFieldSize > 0);
 
-				size_t len = cbor_writeToken(CBOR_TYPE_BYTES, ctx->addressFieldSize, p, end - p);
-				p += len;
-				ASSERT(p + ctx->addressFieldSize < end);
-				memmove(p, ctx->addressField, ctx->addressFieldSize);
-				p += ctx->addressFieldSize;
-				ASSERT(p < end);
-			}
+		size_t len = cbor_writeToken(CBOR_TYPE_BYTES, ctx->addressFieldSize, p, end - p);
+		p += len;
+		ASSERT(p + ctx->addressFieldSize < end);
+		memmove(p, ctx->addressField, ctx->addressFieldSize);
+		p += ctx->addressFieldSize;
+		ASSERT(p < end);
+	}
 
-			const size_t protectedHeaderSize = p - protectedHeaderBuffer;
-			ASSERT(protectedHeaderSize > 0);
-			ASSERT(protectedHeaderSize < maxSize);
+	const size_t protectedHeaderSize = p - protectedHeaderBuffer;
+	ASSERT(protectedHeaderSize > 0);
+	ASSERT(protectedHeaderSize < maxSize);
 
-			return protectedHeaderSize;
-		} CATCH(ERR_DATA_TOO_LARGE) {
-			ASSERT(false);
-		} FINALLY {
-		}
-	} END_TRY;
-
-	return SIZE_MAX;
+	return protectedHeaderSize;
 }
 
 static void signMsg_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)

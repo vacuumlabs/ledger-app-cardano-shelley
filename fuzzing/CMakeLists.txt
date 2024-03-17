@@ -21,6 +21,7 @@ else()
     add_link_options($ENV{LIB_FUZZING_ENGINE})
 endif()
 
+add_compile_options(-g)
 
 
 set(SDK_PATH ${BOLOS_SDK})
