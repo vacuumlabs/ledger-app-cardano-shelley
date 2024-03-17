@@ -66,7 +66,7 @@ void signTx_handleOutput_address_bytes_ui_runStep()
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_BYTES_STEP_WARNING_DATUM) {
-		// this warning does not apply to address given by params where we only allow key hash spending part
+		// this warning does not apply to address given by params where we only allow key hash payment part
 		// in which case datum is just optional and rarely used
 		if (_needsMissingDatumWarning()) {
 			#ifdef HAVE_BAGL
@@ -124,15 +124,15 @@ void signTx_handleOutput_addressParams_ui_runStep()
 		display_prompt(msg, "", this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
-	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_SPENDING_PATH) {
+	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_PAYMENT_PATH) {
 		#ifdef HAVE_BAGL
-		ui_displaySpendingInfoScreen(&subctx->stateData.destination.params, this_fn);
+		ui_displayPaymentInfoScreen(&subctx->stateData.destination.params, this_fn);
 		#elif defined(HAVE_NBGL)
-#define SPENDING_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
+#define PAYMENT_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
 		char line1[30];
-		char spendingInfo[SPENDING_INFO_SIZE] = {0};
-		ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &subctx->stateData.destination.params);
-		fill_and_display_if_required(line1, spendingInfo, this_fn, respond_with_user_reject);
+		char paymentInfoInfo[PAYMENT_INFO_SIZE] = {0};
+		ui_getPaymentInfoScreen(line1, SIZEOF(line1), paymentInfoInfo, SIZEOF(paymentInfoInfo), &subctx->stateData.destination.params);
+		fill_and_display_if_required(line1, paymentInfoInfo, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_OUTPUT_ADDRESS_PARAMS_STEP_DISPLAY_STAKING_INFO) {
@@ -356,7 +356,8 @@ void signTxOutput_handleDatumInline_ui_runStep()
 		size_t datumSize = subctx->stateData.datumRemainingBytes + subctx->stateData.datumChunkSize;
 		// datumSize with 6 digits fits on the screen, less than max tx size
 		// if more is needed, "bytes" can be replaced by "B" for those larger numbers
-		snprintf(l1, SIZEOF(l1), "Datum %u bytes", datumSize);
+		ASSERT(datumSize < UINT32_MAX);
+		snprintf(l1, SIZEOF(l1), "Datum %u bytes", (uint32_t)datumSize);
 		ASSERT(strlen(l1) + 1 < SIZEOF(l1));
 
 		char l2[20];
@@ -397,7 +398,8 @@ void handleRefScript_ui_runStep()
 		size_t scriptSize = subctx->stateData.refScriptRemainingBytes + subctx->stateData.refScriptChunkSize;
 		// scriptSize with 6 digits fits on the screen, less than max tx size
 		// if more is needed, "bytes" can be replaced by "B" for those larger numbers
-		snprintf(l1, SIZEOF(l1), "Script %u bytes", scriptSize);
+		ASSERT(scriptSize < UINT32_MAX);
+		snprintf(l1, SIZEOF(l1), "Script %u bytes", (uint32_t)scriptSize);
 		ASSERT(strlen(l1) + 1 < SIZEOF(l1));
 
 		char l2[20];

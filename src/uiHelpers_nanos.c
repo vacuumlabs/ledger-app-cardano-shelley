@@ -132,7 +132,7 @@ static const bagl_element_t ui_paginatedText[] = {
 	UI_ICON_LEFT(ID_ICON_GO_LEFT, BAGL_GLYPH_ICON_LEFT),
 	UI_ICON_RIGHT(ID_ICON_GO_RIGHT, BAGL_GLYPH_ICON_RIGHT),
 
-	// TODO(ppershing): what are the following magical numbers?
+	// Note(ppershing): what are the following magical numbers?
 
 	UI_TEXT(ID_UNSPECIFIED, 0, 12, 128, &displayState.paginatedText.header),
 	UI_TEXT(ID_UNSPECIFIED, 0, 26, 128, &displayState.paginatedText.currentText),

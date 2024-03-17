@@ -118,8 +118,6 @@ static void signTxCVoteRegistration_handleInitAPDU(const uint8_t* wireDataBuffer
 {
 	{
 		CHECK_STATE(STATE_CVOTE_REGISTRATION_INIT);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	cvote_registration_context_t* subctx = accessSubContext();
 	{
@@ -229,8 +227,6 @@ static void signTxCVoteRegistration_handleVoteKeyAPDU(const uint8_t* wireDataBuf
 {
 	{
 		CHECK_STATE(STATE_CVOTE_REGISTRATION_VOTE_KEY);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	cvote_registration_context_t* subctx = accessSubContext();
 	{
@@ -379,7 +375,6 @@ static void signTxCVoteRegistration_handleStakingKeyAPDU(const uint8_t* wireData
 	{
 		// sanity checks
 		CHECK_STATE(STATE_CVOTE_REGISTRATION_STAKING_KEY);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	cvote_registration_context_t* subctx = accessSubContext();
 	{
@@ -452,7 +447,7 @@ size_t _destinationToAddress(
 	case DESTINATION_THIRD_PARTY:
 		addressSize = destination->address.size;
 		ASSERT(addressSize <= addressBufferSize);
-		memcpy(
+		memmove(
 		        addressBuffer,
 		        destination->address.buffer,
 		        addressSize
@@ -472,8 +467,6 @@ static void signTxCVoteRegistration_handlePaymentAddressAPDU(const uint8_t* wire
 	{
 		// safety checks
 		CHECK_STATE(STATE_CVOTE_REGISTRATION_PAYMENT_ADDRESS);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	cvote_registration_context_t* subctx = accessSubContext();
 	{
@@ -535,8 +528,6 @@ static void signTxCVoteRegistration_handleNonceAPDU(const uint8_t* wireDataBuffe
 	{
 		// sanity checks
 		CHECK_STATE(STATE_CVOTE_REGISTRATION_NONCE);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	cvote_registration_context_t* subctx = accessSubContext();
 	{
@@ -583,8 +574,6 @@ static void signTxCVoteRegistration_handleVotingPurposeAPDU(const uint8_t* wireD
 {
 	{
 		CHECK_STATE(STATE_CVOTE_REGISTRATION_VOTING_PURPOSE);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	cvote_registration_context_t* subctx = accessSubContext();
 	{
@@ -652,10 +641,8 @@ __noinline_due_to_stack__
 static void signTxCVoteRegistration_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	{
-		//sanity checks
+		// sanity checks
 		CHECK_STATE(STATE_CVOTE_REGISTRATION_CONFIRM);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	cvote_registration_context_t* subctx = accessSubContext();
 	{
@@ -737,6 +724,7 @@ bool signTxCVoteRegistration_isValidInstruction(uint8_t p2)
 
 void signTxCVoteRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	switch (p2) {

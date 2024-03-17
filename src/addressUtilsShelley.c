@@ -200,17 +200,17 @@ static size_t deriveAddress_base(const addressParams_t* addressParams, uint8_t* 
 		view_appendBuffer(&out, &header, 1);
 		++size;
 	}
-	STATIC_ASSERT(SIZEOF(addressParams->spendingScriptHash) == SCRIPT_HASH_LENGTH, "bad spending script hash size");
+	STATIC_ASSERT(SIZEOF(addressParams->paymentScriptHash) == SCRIPT_HASH_LENGTH, "bad payment script hash size");
 	switch (addressParams->type) {
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 	case BASE_PAYMENT_KEY_STAKE_SCRIPT: {
-		view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
+		view_appendAddressPublicKeyHash(&out, &addressParams->paymentKeyPath);
 		size += ADDRESS_KEY_HASH_LENGTH;
 	}
 	break;
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
 	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT: {
-		view_appendBuffer(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+		view_appendBuffer(&out, addressParams->paymentScriptHash, SCRIPT_HASH_LENGTH);
 		size += SCRIPT_HASH_LENGTH;
 	}
 	break;
@@ -296,9 +296,9 @@ static size_t deriveAddress_pointer(
 	}
 	{
 		if (addressType == POINTER_KEY) {
-			view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
+			view_appendAddressPublicKeyHash(&out, &addressParams->paymentKeyPath);
 		} else {
-			view_appendBuffer(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+			view_appendBuffer(&out, addressParams->paymentScriptHash, SCRIPT_HASH_LENGTH);
 		}
 
 		STATIC_ASSERT(SCRIPT_HASH_LENGTH == ADDRESS_KEY_HASH_LENGTH, "incompatible hash lengths");
@@ -332,9 +332,9 @@ static size_t deriveAddress_enterprise(
 	}
 	{
 		if (addressType == ENTERPRISE_KEY) {
-			view_appendAddressPublicKeyHash(&out, &addressParams->spendingKeyPath);
+			view_appendAddressPublicKeyHash(&out, &addressParams->paymentKeyPath);
 		} else {
-			view_appendBuffer(&out, addressParams->spendingScriptHash, SCRIPT_HASH_LENGTH);
+			view_appendBuffer(&out, addressParams->paymentScriptHash, SCRIPT_HASH_LENGTH);
 		}
 	}
 	{
@@ -365,7 +365,7 @@ static size_t deriveAddress_reward(
 		view_appendBuffer(&out, &addressHeader, 1);
 	}
 	{
-		// no spending data
+		// no payment data
 	}
 	{
 		if (addressType == REWARD_KEY) {
@@ -439,8 +439,6 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
 	ASSERT(isValidAddressParams(addressParams));
 
-	const bip44_path_t* spendingPath = &addressParams->spendingKeyPath;
-
 	// shelley
 	switch (addressParams->type) {
 	case BASE_PAYMENT_KEY_STAKE_KEY:
@@ -458,8 +456,16 @@ size_t deriveAddress(const addressParams_t* addressParams, uint8_t* outBuffer, s
 	case REWARD_KEY:
 	case REWARD_SCRIPT:
 		return deriveAddress_reward(addressParams, outBuffer, outSize);
+
+		#ifdef APP_FEATURE_BYRON_ADDRESS_DERIVATION
 	case BYRON:
-		return deriveAddress_byron(spendingPath, addressParams->protocolMagic, outBuffer, outSize);
+		return deriveAddress_byron(
+		               &addressParams->paymentKeyPath,
+		               addressParams->protocolMagic,
+		               outBuffer, outSize
+		       );
+		#endif // APP_FEATURE_BYRON_ADDRESS_DERIVATION
+
 	default:
 		ASSERT(false);
 	}
@@ -535,7 +541,7 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
  *     protocol magic 4B
  * else
  *     network id 1B
- * spending public key derivation path (1B for length + [0-10] x 4B)
+ * payment public key derivation path (1B for length + [0-10] x 4B)
  * staking choice 1B
  *     if NO_STAKING:
  *         nothing more
@@ -564,15 +570,15 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 		TRACE("Network id: 0x%x", params->networkId);
 		VALIDATE(isValidNetworkId(params->networkId), ERR_INVALID_DATA);
 	}
-	// spending part
+	// payment part
 	switch (params->type) {
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
 	case POINTER_KEY:
 	case ENTERPRISE_KEY:
 	case BYRON:
-		view_skipBytes(view, bip44_parseFromWire(&params->spendingKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
-		BIP44_PRINTF(&params->spendingKeyPath);
+		view_skipBytes(view, bip44_parseFromWire(&params->paymentKeyPath, VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)));
+		BIP44_PRINTF(&params->paymentKeyPath);
 		PRINTF("\n");
 		break;
 
@@ -580,16 +586,16 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params)
 	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
 	case POINTER_SCRIPT:
 	case ENTERPRISE_SCRIPT: {
-		STATIC_ASSERT(SIZEOF(params->spendingScriptHash) == SCRIPT_HASH_LENGTH, "Wrong address key hash length");
-		view_parseBuffer(params->spendingScriptHash, view, SCRIPT_HASH_LENGTH);
-		TRACE("Spending script hash: ");
-		TRACE_BUFFER(params->spendingScriptHash, SIZEOF(params->spendingScriptHash));
+		STATIC_ASSERT(SIZEOF(params->paymentScriptHash) == SCRIPT_HASH_LENGTH, "Wrong address key hash length");
+		view_parseBuffer(params->paymentScriptHash, view, SCRIPT_HASH_LENGTH);
+		TRACE("Payment script hash: ");
+		TRACE_BUFFER(params->paymentScriptHash, SIZEOF(params->paymentScriptHash));
 		break;
 	}
 
 	case REWARD_KEY:
 	case REWARD_SCRIPT:
-		// no spending info for reward address types
+		// no payment info for reward address types
 		break;
 
 	default:
@@ -658,21 +664,21 @@ static inline bool isValidStakingInfo(const addressParams_t* params)
 #undef CHECK
 }
 
-static inline bool isValidSpendingInfo(const addressParams_t* params)
+static inline bool isValidPaymentInfo(const addressParams_t* params)
 {
 #define CHECK(cond) if (!(cond)) return false
 	switch (params->type) {
 	case BYRON:
-		CHECK(bip44_classifyPath(&params->spendingKeyPath) == PATH_ORDINARY_SPENDING_KEY);
-		CHECK(bip44_hasByronPrefix(&params->spendingKeyPath));
+		CHECK(bip44_classifyPath(&params->paymentKeyPath) == PATH_ORDINARY_PAYMENT_KEY);
+		CHECK(bip44_hasByronPrefix(&params->paymentKeyPath));
 		break;
 
 	case BASE_PAYMENT_KEY_STAKE_KEY:
 	case BASE_PAYMENT_KEY_STAKE_SCRIPT:
 	case POINTER_KEY:
 	case ENTERPRISE_KEY:
-		CHECK(bip44_classifyPath(&params->spendingKeyPath) == PATH_ORDINARY_SPENDING_KEY);
-		CHECK(bip44_hasShelleyPrefix(&params->spendingKeyPath));
+		CHECK(bip44_classifyPath(&params->paymentKeyPath) == PATH_ORDINARY_PAYMENT_KEY);
+		CHECK(bip44_hasShelleyPrefix(&params->paymentKeyPath));
 		break;
 
 
@@ -698,16 +704,22 @@ bool isValidAddressParams(const addressParams_t* params)
 #define CHECK(cond) if (!(cond)) return false
 	if (params->type != BYRON) {
 		CHECK(isValidNetworkId(params->networkId));
+	} else {
+		// code for Byron address derivation not available in XS app
+		// thus we cannot process address params
+		#ifndef APP_FEATURE_BYRON_ADDRESS_DERIVATION
+		return false;
+		#endif
 	}
 
 	CHECK(isValidStakingInfo(params));
-	CHECK(isValidSpendingInfo(params));
+	CHECK(isValidPaymentInfo(params));
 
 	return true;
 #undef CHECK
 }
 
-spending_choice_t determineSpendingChoice(address_type_t addressType)
+payment_choice_t determinePaymentChoice(address_type_t addressType)
 {
 	switch (addressType) {
 
@@ -716,19 +728,19 @@ spending_choice_t determineSpendingChoice(address_type_t addressType)
 	case POINTER_KEY:
 	case ENTERPRISE_KEY:
 	case BYRON:
-		return SPENDING_PATH;
+		return PAYMENT_PATH;
 
 	case BASE_PAYMENT_SCRIPT_STAKE_KEY:
 	case BASE_PAYMENT_SCRIPT_STAKE_SCRIPT:
 	case POINTER_SCRIPT:
 	case ENTERPRISE_SCRIPT:
-		return SPENDING_SCRIPT_HASH;
+		return PAYMENT_SCRIPT_HASH;
 
 	default:
 		ASSERT(false);
 		__attribute__((fallthrough));
 	case REWARD_KEY:
 	case REWARD_SCRIPT:
-		return SPENDING_NONE;
+		return PAYMENT_NONE;
 	}
 }

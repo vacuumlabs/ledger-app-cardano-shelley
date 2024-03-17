@@ -58,16 +58,16 @@ static void _displayExportAddress(ui_callback_fn_t* this_fn)
 	#endif // HAVE_BAGL
 }
 
-static void _displaySpendingInfo_returnAddr(ui_callback_fn_t* this_fn)
+static void _displayPaymentInfo_returnAddr(ui_callback_fn_t* this_fn)
 {
 	#ifdef HAVE_BAGL
-	ui_displaySpendingInfoScreen(&ctx->addressParams, this_fn);
+	ui_displayPaymentInfoScreen(&ctx->addressParams, this_fn);
 	#elif defined(HAVE_NBGL)
-#define SPENDING_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
+#define PAYMENT_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
 	char line1[30] = {0};
-	char spendingInfo[SPENDING_INFO_SIZE] = {0};
-	ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &ctx->addressParams);
-	fill_and_display_if_required(line1, spendingInfo, this_fn, respond_with_user_reject);
+	char paymentInfo[PAYMENT_INFO_SIZE] = {0};
+	ui_getPaymentInfoScreen(line1, SIZEOF(line1), paymentInfo, SIZEOF(paymentInfo), &ctx->addressParams);
+	fill_and_display_if_required(line1, paymentInfo, this_fn, respond_with_user_reject);
 	#endif // HAVE_BAGL
 }
 
@@ -108,7 +108,7 @@ static void deriveAddress_return_ui_runStep();
 enum {
 	RETURN_UI_STEP_WARNING = 100,
 	RETURN_UI_STEP_BEGIN,
-	RETURN_UI_STEP_SPENDING_PATH,
+	RETURN_UI_STEP_PAYMENT_PATH,
 	RETURN_UI_STEP_STAKING_INFO,
 	RETURN_UI_STEP_CONFIRM,
 	RETURN_UI_STEP_RESPOND,
@@ -150,12 +150,12 @@ static void deriveAddress_return_ui_runStep()
 	UI_STEP(RETURN_UI_STEP_BEGIN) {
 		_displayExportAddress(this_fn);
 	}
-	UI_STEP(RETURN_UI_STEP_SPENDING_PATH) {
-		if (determineSpendingChoice(ctx->addressParams.type) == SPENDING_NONE) {
+	UI_STEP(RETURN_UI_STEP_PAYMENT_PATH) {
+		if (determinePaymentChoice(ctx->addressParams.type) == PAYMENT_NONE) {
 			// reward address
 			UI_STEP_JUMP(RETURN_UI_STEP_STAKING_INFO);
 		}
-		_displaySpendingInfo_returnAddr(this_fn);
+		_displayPaymentInfo_returnAddr(this_fn);
 	}
 	UI_STEP(RETURN_UI_STEP_STAKING_INFO) {
 		_displayStakingInfo_returnAddr(this_fn);
@@ -175,16 +175,16 @@ static void deriveAddress_return_ui_runStep()
 
 /* ========================== DISPLAY ADDRESS ========================== */
 
-static void _displaySpendingInfo_displayAddr(ui_callback_fn_t* this_fn)
+static void _displaypaymentInfo_displayAddr(ui_callback_fn_t* this_fn)
 {
 	#ifdef HAVE_BAGL
-	ui_displaySpendingInfoScreen(&ctx->addressParams, this_fn);
+	ui_displayPaymentInfoScreen(&ctx->addressParams, this_fn);
 	#elif defined(HAVE_NBGL)
-#define SPENDING_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
+#define PAYMENT_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
 	char line1[30] = {0};
-	char spendingInfo[SPENDING_INFO_SIZE] = {0};
-	ui_getSpendingInfoScreen(line1, SIZEOF(line1), spendingInfo, SIZEOF(spendingInfo), &ctx->addressParams);
-	fill_address_data(line1, spendingInfo, this_fn);
+	char paymentInfo[PAYMENT_INFO_SIZE] = {0};
+	ui_getPaymentInfoScreen(line1, SIZEOF(line1), paymentInfo, SIZEOF(paymentInfo), &ctx->addressParams);
+	fill_address_data(line1, paymentInfo, this_fn);
 	#endif // HAVE_BAGL
 }
 
@@ -241,7 +241,7 @@ static void _displayConfirmAddressPrompt(ui_callback_fn_t* this_fn)
 static void deriveAddress_display_ui_runStep();
 enum {
 	DISPLAY_UI_STEP_WARNING = 200,
-	DISPLAY_UI_STEP_SPENDING_INFO,
+	DISPLAY_UI_STEP_PAYMENT_INFO,
 	DISPLAY_UI_STEP_STAKING_INFO,
 	DISPLAY_UI_STEP_ADDRESS,
 	DISPLAY_UI_STEP_CONFIRM,
@@ -261,7 +261,7 @@ static void deriveAddress_handleDisplay()
 	switch (policy) {
 #define  CASE(policy, step) case policy: {ctx->ui_step=step; break;}
 		CASE(POLICY_PROMPT_WARN_UNUSUAL,  DISPLAY_UI_STEP_WARNING);
-		CASE(POLICY_SHOW_BEFORE_RESPONSE, DISPLAY_UI_STEP_SPENDING_INFO);
+		CASE(POLICY_SHOW_BEFORE_RESPONSE, DISPLAY_UI_STEP_PAYMENT_INFO);
 #undef   CASE
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
@@ -279,12 +279,12 @@ static void deriveAddress_display_ui_runStep()
 	UI_STEP(DISPLAY_UI_STEP_WARNING) {
 		ui_displayUnusualWarning(this_fn);
 	}
-	UI_STEP(DISPLAY_UI_STEP_SPENDING_INFO) {
-		if (determineSpendingChoice(ctx->addressParams.type) == SPENDING_NONE) {
+	UI_STEP(DISPLAY_UI_STEP_PAYMENT_INFO) {
+		if (determinePaymentChoice(ctx->addressParams.type) == PAYMENT_NONE) {
 			// reward address
 			UI_STEP_JUMP(DISPLAY_UI_STEP_STAKING_INFO);
 		}
-		_displaySpendingInfo_displayAddr(this_fn);
+		_displaypaymentInfo_displayAddr(this_fn);
 	}
 	UI_STEP(DISPLAY_UI_STEP_STAKING_INFO) {
 		_displayStakingInfo_displayAddr(this_fn);

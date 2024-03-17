@@ -17,9 +17,9 @@ static ins_sign_cvote_context_t* ctx = &(instructionState.signCVoteContext);
 
 // ============================== INIT ==============================
 
-void handleInit_ui_runStep()
+void signCVote_handleInit_ui_runStep()
 {
-	ui_callback_fn_t* this_fn = handleInit_ui_runStep;
+	ui_callback_fn_t* this_fn = signCVote_handleInit_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 
@@ -92,11 +92,11 @@ void handleInit_ui_runStep()
 
 // ============================== CONFIRM ==============================
 
-void handleConfirm_ui_runStep()
+void signCVote_handleConfirm_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
 	TRACE_STACK_USAGE();
-	ui_callback_fn_t* this_fn = handleConfirm_ui_runStep;
+	ui_callback_fn_t* this_fn = signCVote_handleConfirm_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
 

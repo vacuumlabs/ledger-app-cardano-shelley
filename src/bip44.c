@@ -4,9 +4,12 @@
 #include "hash.h"
 #include "keyDerivation.h"
 
-#define CARDANO_CHAIN_EXTERNAL 0
-#define CARDANO_CHAIN_INTERNAL 1
-#define CARDANO_CHAIN_STAKING_KEY 2
+static const uint32_t CARDANO_CHAIN_EXTERNAL = 0;
+static const uint32_t CARDANO_CHAIN_INTERNAL = 1;
+static const uint32_t CARDANO_CHAIN_STAKING_KEY = 2;
+static const uint32_t CARDANO_CHAIN_DREP_KEY = 3;
+static const uint32_t CARDANO_CHAIN_COMMITTEE_COLD_KEY = 4;
+static const uint32_t CARDANO_CHAIN_COMMITTEE_HOT_KEY = 5;
 
 static const uint32_t MAX_REASONABLE_ACCOUNT = 100;
 static const uint32_t MAX_REASONABLE_ADDRESS = 1000000;
@@ -213,6 +216,20 @@ static bool bip44_hasReasonableAddress(const bip44_path_t* pathSpec)
 	return (address <= MAX_REASONABLE_ADDRESS);
 }
 
+static bool bip44_isConwayPathRecommended(const bip44_path_t* pathSpec)
+{
+	switch (bip44_classifyPath(pathSpec)) {
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+		// strongly recommended in CIP-0105 to only use 0 as address
+		return (bip44_getAddressValue(pathSpec) == 0);
+	default:
+		ASSERT(false);
+		return false;
+	}
+}
+
 static bool bip44_containsMoreThanAddress(const bip44_path_t* pathSpec)
 {
 	return (pathSpec->length > BIP44_I_ADDRESS + 1);
@@ -250,6 +267,48 @@ bool bip44_isMultidelegationStakingKeyPath(const bip44_path_t* pathSpec)
 {
 	return (bip44_isOrdinaryStakingKeyPath(pathSpec) || bip44_isMultisigStakingKeyPath(pathSpec))
 	       && (bip44_getAddressValue(pathSpec) > 0);
+}
+
+bool bip44_isDRepKeyPath(const bip44_path_t* pathSpec)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(bip44_containsAddress(pathSpec));
+	CHECK(!bip44_containsMoreThanAddress(pathSpec));
+	CHECK(bip44_hasShelleyPrefix(pathSpec));
+	CHECK(isHardened(bip44_getAccount(pathSpec)));
+	CHECK(bip44_getChainTypeValue(pathSpec) == CARDANO_CHAIN_DREP_KEY);
+	// is it strongly recommended (but not forbidden) to only use 0 as address
+	CHECK(!isHardened(bip44_getAddressValue(pathSpec)));
+	return true;
+#undef CHECK
+}
+
+bool bip44_isCommitteeColdKeyPath(const bip44_path_t* pathSpec)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(bip44_containsAddress(pathSpec));
+	CHECK(!bip44_containsMoreThanAddress(pathSpec));
+	CHECK(bip44_hasShelleyPrefix(pathSpec));
+	CHECK(isHardened(bip44_getAccount(pathSpec)));
+	CHECK(bip44_getChainTypeValue(pathSpec) == CARDANO_CHAIN_COMMITTEE_COLD_KEY);
+	// is it strongly recommended (but not forbidden) to only use 0 as address
+	CHECK(!isHardened(bip44_getAddressValue(pathSpec)));
+	return true;
+#undef CHECK
+}
+
+bool bip44_isCommitteeHotKeyPath(const bip44_path_t* pathSpec)
+{
+#define CHECK(cond) if (!(cond)) return false
+	CHECK(bip44_containsAddress(pathSpec));
+	CHECK(!bip44_containsMoreThanAddress(pathSpec));
+	CHECK(bip44_hasShelleyPrefix(pathSpec));
+	CHECK(isHardened(bip44_getAccount(pathSpec)));
+	CHECK(bip44_getChainTypeValue(pathSpec) == CARDANO_CHAIN_COMMITTEE_HOT_KEY);
+	// is it strongly recommended (but not forbidden) to only use 0 as address
+	CHECK(!isHardened(bip44_getAddressValue(pathSpec)));
+	return true;
+#undef CHECK
 }
 
 bool bip44_isMintKeyPath(const bip44_path_t* pathSpec)
@@ -360,11 +419,26 @@ static bip44_path_type_t bip44_classifyOrdinaryWalletPath(const bip44_path_t* pa
 			// so we don't want to make users' funds on such addresses unavailable.
 			// But such addresses are given a warning
 			// and are never hidden from users (see bip44_isPathReasonable).
-			return PATH_ORDINARY_SPENDING_KEY;
+			return PATH_ORDINARY_PAYMENT_KEY;
 
 		case CARDANO_CHAIN_STAKING_KEY:
 			return bip44_isOrdinaryStakingKeyPath(pathSpec) ?
 			       PATH_ORDINARY_STAKING_KEY :
+			       PATH_INVALID;
+
+		case CARDANO_CHAIN_DREP_KEY:
+			return bip44_isDRepKeyPath(pathSpec) ?
+			       PATH_DREP_KEY :
+			       PATH_INVALID;
+
+		case CARDANO_CHAIN_COMMITTEE_COLD_KEY:
+			return bip44_isCommitteeColdKeyPath(pathSpec) ?
+			       PATH_COMMITTEE_COLD_KEY :
+			       PATH_INVALID;
+
+		case CARDANO_CHAIN_COMMITTEE_HOT_KEY:
+			return bip44_isCommitteeHotKeyPath(pathSpec) ?
+			       PATH_COMMITTEE_HOT_KEY :
 			       PATH_INVALID;
 
 		default:
@@ -401,7 +475,7 @@ static bip44_path_type_t bip44_classifyMultisigWalletPath(const bip44_path_t* pa
 				// address index must not be hardened (CIP 1854)
 				return PATH_INVALID;
 			}
-			return PATH_MULTISIG_SPENDING_KEY;
+			return PATH_MULTISIG_PAYMENT_KEY;
 
 		case CARDANO_CHAIN_STAKING_KEY:
 			return bip44_isMultisigStakingKeyPath(pathSpec) ?
@@ -484,13 +558,20 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 	case PATH_MULTISIG_ACCOUNT:
 		return bip44_hasReasonableAccount(pathSpec);
 
-	case PATH_ORDINARY_SPENDING_KEY:
-	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
+	case PATH_MULTISIG_PAYMENT_KEY:
 		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
 
 	case PATH_ORDINARY_STAKING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
+
+	case PATH_DREP_KEY:
+	case PATH_COMMITTEE_COLD_KEY:
+	case PATH_COMMITTEE_HOT_KEY:
+		return bip44_hasReasonableAccount(pathSpec)
+		       && bip44_hasReasonableAddress(pathSpec)
+		       && bip44_isConwayPathRecommended(pathSpec);
 
 	case PATH_MINT_KEY:
 		return bip44_hasReasonableMintPolicy(pathSpec);

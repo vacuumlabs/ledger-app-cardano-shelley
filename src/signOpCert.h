@@ -1,6 +1,9 @@
 #ifndef H_CARDANO_APP_SIGN_OP_CERT
 #define H_CARDANO_APP_SIGN_OP_CERT
 
+#ifdef APP_FEATURE_OPCERT
+
+#include "cardano.h"
 #include "common.h"
 #include "handlers.h"
 #include "bip44.h"
@@ -16,8 +19,10 @@ typedef struct {
 	uint64_t kesPeriod;
 	uint64_t issueCounter;
 	bip44_path_t poolColdKeyPathSpec;
-	uint8_t signature[64];
+	uint8_t signature[ED25519_SIGNATURE_LENGTH];
 	int ui_step;
 } ins_sign_op_cert_context_t;
+
+#endif // APP_FEATURE_OPCERT
 
 #endif // H_CARDANO_APP_SIGN_OP_CERT

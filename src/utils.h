@@ -48,7 +48,6 @@
 	} while(0)
 
 // Helper functions for ranges
-// TODO(ppershing): make more type safe?
 #define BEGIN(buf) buf
 // Note: SIZEOF would not work if buf is not uin8_t*
 #define END(buf) (buf + ARRAY_LEN(buf))

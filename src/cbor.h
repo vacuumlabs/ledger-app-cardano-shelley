@@ -40,6 +40,8 @@ typedef enum {
 
 enum {
 	CBOR_TAG_EMBEDDED_CBOR_BYTE_STRING = 24,
+	CBOR_TAG_UNIT_INTERVAL = 30,
+	CBOR_TAG_SET = 258,
 };
 
 typedef struct {
