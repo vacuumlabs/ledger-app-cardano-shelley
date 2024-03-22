@@ -90,6 +90,7 @@ static void deriveScriptHash_display_ui_runStep_cb(void)
 	// where n and k is 2^32-1
 	char text[87] = {0};
 	explicit_bzero(text, SIZEOF(text));
+	ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 	snprintf(text, SIZEOF(text), "%u nested scripts", ctx->complexScripts[ctx->level].remainingScripts);
 	// make sure all the information is displayed to the user
 	ASSERT(strlen(text) + 1 < SIZEOF(text));
@@ -136,6 +137,7 @@ static void _displayScriptContent(ui_callback_fn_t* this_fn)
 		// where n is 2^32-1
 		char text[37] = {0};
 		explicit_bzero(text, SIZEOF(text));
+		ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 		STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(ctx->complexScripts[ctx->level].remainingScripts), "signed type for %u");
 		#ifdef HAVE_BAGL
@@ -157,6 +159,7 @@ static void _displayScriptContent(ui_callback_fn_t* this_fn)
 		break;
 	}
 	case UI_SCRIPT_N_OF_K: {
+		ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 		STATIC_ASSERT(sizeof(ctx->scriptContent.requiredScripts) <= sizeof(unsigned), "oversized type for %u");
 		STATIC_ASSERT(!IS_SIGNED(ctx->scriptContent.requiredScripts), "signed type for %u");
 		STATIC_ASSERT(sizeof(ctx->complexScripts[ctx->level].remainingScripts) <= sizeof(unsigned), "oversized type for %u");
