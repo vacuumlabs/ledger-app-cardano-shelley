@@ -13,6 +13,8 @@
 
 STATIC_ASSERT(LOVELACE_MAX_SUPPLY < LOVELACE_INVALID, "bad LOVELACE_INVALID");
 
+#define ED25519_SIGNATURE_LENGTH 64
+
 #define ADDRESS_KEY_HASH_LENGTH 28
 #define POOL_KEY_HASH_LENGTH 28
 #define VRF_KEY_HASH_LENGTH 32
@@ -179,5 +181,12 @@ typedef enum {
 } native_script_type;
 
 #endif // APP_FEATURE_NATIVE_SCRIPT_HASH
+
+// ==============================  CIP8 MESSAGE SIGNING  ==============================
+
+typedef enum {
+	CIP8_ADDRESS_FIELD_ADDRESS = 1,
+	CIP8_ADDRESS_FIELD_KEYHASH = 2,
+} cip8_address_field_type_t;
 
 #endif // H_CARDANO_APP_CARDANO

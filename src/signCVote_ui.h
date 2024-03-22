@@ -2,6 +2,7 @@
 #define H_CARDANO_APP_SIGN_CVOTE_UI
 
 #include "uiHelpers.h"
+
 // ============================== INIT ==============================
 
 enum {
@@ -13,7 +14,7 @@ enum {
 	HANDLE_INIT_INVALID,
 };
 
-void handleInit_ui_runStep();
+void signCVote_handleInit_ui_runStep();
 
 // ============================== CONFIRM ==============================
 
@@ -23,7 +24,7 @@ enum {
 	HANDLE_CONFIRM_STEP_INVALID,
 };
 
-void handleConfirm_ui_runStep();
+void signCVote_handleConfirm_ui_runStep();
 
 // ============================== WITNESS ==============================
 

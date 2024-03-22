@@ -447,7 +447,7 @@ size_t _destinationToAddress(
 	case DESTINATION_THIRD_PARTY:
 		addressSize = destination->address.size;
 		ASSERT(addressSize <= addressBufferSize);
-		memcpy(
+		memmove(
 		        addressBuffer,
 		        destination->address.buffer,
 		        addressSize
@@ -724,6 +724,7 @@ bool signTxCVoteRegistration_isValidInstruction(uint8_t p2)
 
 void signTxCVoteRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	switch (p2) {

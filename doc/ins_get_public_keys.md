@@ -6,7 +6,7 @@ Get an extended public key (i.e., public key + chain code) for a given BIP32 pat
 
 It is also possible to ask for a confirmation for exporting several keys (if the paths describing the keys are not suspicious, they won't be shown to the user and no further confirmation is required).
 
-The allowed derivation paths correspond to wallet keys (accounts, spending paths, staking paths) and pool cold keys, as described in
+The allowed derivation paths correspond to wallet keys (accounts, payment paths, staking paths) and pool cold keys, as described in
 - [CIP 1852 - HD Wallets for Cardano](https://cips.cardano.org/cips/cip1852/);
 - [CIP 1853 - HD Stake Pool Cold Keys for Cardano](https://cips.cardano.org/cips/cip1853/).
 

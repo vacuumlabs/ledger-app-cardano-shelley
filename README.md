@@ -10,11 +10,7 @@ We recommend using the containerized build. See [Getting started](doc/build.md) 
 
 ### Loading the app
 
-`make load`
-
-Builds and loads the application into the connected device. Make sure to close the Ledger app on the device before running the command.
-
-Most common reason for a failed loading is the app taking too much space. Check `make size` (should be below 140K or so).
+We recommend using the [Ledger VS Code plugin](https://marketplace.visualstudio.com/items?itemName=LedgerHQ.ledger-dev-tools) to load the app on a device.
 
 ### Debug version
 
@@ -27,7 +23,7 @@ also comment out
 
     DEFINES += RESET_ON_CRASH
 
-and then run `make clean load`.
+The debug version is too big to fit on Nano S, but works on Speculos.
 
 ### Setup
 
@@ -77,6 +73,10 @@ _Before merging a PR, one should make sure that:_
 * `make clean load` runs without errors and warnings (except those reported for nanos-secure-sdk repo) for production build
 * `make clean load` runs without errors and warnings (except those reported for nanos-secure-sdk repo) for development build (see Debug version above)
 * `make analyze` does not report errors or warnings
+
+## Running tests
+
+All the tests are initiated from the accompanying [ledgerjs package](https://github.com/vacuumlabs/ledgerjs-cardano-shelley) (see what [commands to run](https://github.com/vacuumlabs/ledgerjs-cardano-shelley?tab=readme-ov-file#tests)). You have to make sure that the version of ledgerjs correspond to the app version, otherwise some tests with fail (possibly resulting in odd errors) or test coverage will be incomplete.
 
 ## How to get a transaction body computed by Ledger
 

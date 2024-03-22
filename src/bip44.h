@@ -99,8 +99,8 @@ typedef enum {
 	PATH_MULTISIG_ACCOUNT,
 
 	// hd wallet address (payment part in shelley)
-	PATH_ORDINARY_SPENDING_KEY,
-	PATH_MULTISIG_SPENDING_KEY,
+	PATH_ORDINARY_PAYMENT_KEY,
+	PATH_MULTISIG_PAYMENT_KEY,
 
 	// hd wallet reward address, withdrawal witness, pool owner
 	PATH_ORDINARY_STAKING_KEY,

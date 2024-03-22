@@ -54,10 +54,10 @@ typedef enum {
 bool isValidStakingChoice(staking_data_source_t stakingDataSource);
 
 typedef enum {
-	SPENDING_PATH,
-	SPENDING_SCRIPT_HASH,
-	SPENDING_NONE,
-} spending_choice_t;
+	PAYMENT_PATH,
+	PAYMENT_SCRIPT_HASH,
+	PAYMENT_NONE,
+} payment_choice_t;
 
 typedef uint32_t blockchainIndex_t; // must be unsigned
 
@@ -74,8 +74,8 @@ typedef struct {
 		uint8_t networkId; // all the other types (i.e. Shelley)
 	};
 	union {
-		bip44_path_t spendingKeyPath;
-		uint8_t spendingScriptHash[SCRIPT_HASH_LENGTH];
+		bip44_path_t paymentKeyPath;
+		uint8_t paymentScriptHash[SCRIPT_HASH_LENGTH];
 	};
 	staking_data_source_t stakingDataSource;
 	union {
@@ -116,7 +116,7 @@ size_t humanReadableAddress(const uint8_t* address, size_t addressSize, char* ou
 void view_parseAddressParams(read_view_t* view, addressParams_t* params);
 
 bool isValidAddressParams(const addressParams_t* addressParams);
-spending_choice_t determineSpendingChoice(address_type_t addressType);
+payment_choice_t determinePaymentChoice(address_type_t addressType);
 
 #ifdef DEVEL
 void run_addressUtilsShelley_test();

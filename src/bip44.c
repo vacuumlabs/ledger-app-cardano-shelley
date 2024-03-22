@@ -419,7 +419,7 @@ static bip44_path_type_t bip44_classifyOrdinaryWalletPath(const bip44_path_t* pa
 			// so we don't want to make users' funds on such addresses unavailable.
 			// But such addresses are given a warning
 			// and are never hidden from users (see bip44_isPathReasonable).
-			return PATH_ORDINARY_SPENDING_KEY;
+			return PATH_ORDINARY_PAYMENT_KEY;
 
 		case CARDANO_CHAIN_STAKING_KEY:
 			return bip44_isOrdinaryStakingKeyPath(pathSpec) ?
@@ -475,7 +475,7 @@ static bip44_path_type_t bip44_classifyMultisigWalletPath(const bip44_path_t* pa
 				// address index must not be hardened (CIP 1854)
 				return PATH_INVALID;
 			}
-			return PATH_MULTISIG_SPENDING_KEY;
+			return PATH_MULTISIG_PAYMENT_KEY;
 
 		case CARDANO_CHAIN_STAKING_KEY:
 			return bip44_isMultisigStakingKeyPath(pathSpec) ?
@@ -558,8 +558,8 @@ bool bip44_isPathReasonable(const bip44_path_t* pathSpec)
 	case PATH_MULTISIG_ACCOUNT:
 		return bip44_hasReasonableAccount(pathSpec);
 
-	case PATH_ORDINARY_SPENDING_KEY:
-	case PATH_MULTISIG_SPENDING_KEY:
+	case PATH_ORDINARY_PAYMENT_KEY:
+	case PATH_MULTISIG_PAYMENT_KEY:
 		return bip44_hasReasonableAccount(pathSpec) && bip44_hasReasonableAddress(pathSpec);
 
 	case PATH_ORDINARY_STAKING_KEY:

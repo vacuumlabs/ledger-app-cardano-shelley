@@ -5,6 +5,7 @@
 #include "getPublicKeys.h"
 #include "deriveAddress.h"
 #include "deriveNativeScriptHash.h"
+#include "signMsg.h"
 #include "signTx.h"
 #include "signOpCert.h"
 #include "signCVote.h"
@@ -22,6 +23,7 @@ typedef union {
 	ins_sign_op_cert_context_t signOpCertContext;
 	#endif // APP_FEATURE_OPCERT
 	ins_sign_cvote_context_t signCVoteContext;
+	ins_sign_msg_context_t signMsgContext;
 } instructionState_t;
 
 // Note(instructions are uint8_t but we have a special INS_NONE value
