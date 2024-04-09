@@ -18,6 +18,63 @@ static ins_sign_msg_context_t* ctx = &(instructionState.signMsgContext);
 
 // ============================== INIT ==============================
 
+__noinline_due_to_stack__
+static void _displayAddressField(ui_callback_fn_t* callback)
+{
+	switch (ctx->addressFieldType) {
+	case CIP8_ADDRESS_FIELD_ADDRESS: {
+		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
+		size_t addressSize = deriveAddress(&ctx->addressParams, addressBuffer, SIZEOF(addressBuffer));
+		ASSERT(addressSize > 0);
+		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
+
+		#ifdef HAVE_BAGL
+		ui_displayAddressScreen(
+		        "Address field",
+		        addressBuffer, addressSize,
+		        callback
+		);
+		#elif defined(HAVE_NBGL)
+		char humanAddress[MAX_HUMAN_ADDRESS_SIZE] = {0};
+		ui_getAddressScreen(
+		        humanAddress,
+		        SIZEOF(humanAddress),
+		        addressBuffer,
+		        addressSize
+		);
+		fill_and_display_if_required("Address field", humanAddress, callback, respond_with_user_reject);
+		#endif // HAVE_BAGL
+		return;
+	}
+
+	case CIP8_ADDRESS_FIELD_KEYHASH: {
+		uint8_t hash[28];
+		blake2b_224_hash(
+		        ctx->witnessKey, SIZEOF(ctx->witnessKey),
+		        hash, SIZEOF(hash)
+		);
+
+		#ifdef HAVE_BAGL
+		ui_displayHexBufferScreen(
+		        "Address field (hex)",
+		        hash,
+		        SIZEOF(hash),
+		        callback
+		);
+		#elif defined(HAVE_NBGL)
+		char bufferHex[2 * SCRIPT_HASH_LENGTH + 1] = {0};
+		ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), hash, SIZEOF(hash));
+		fill_and_display_if_required("Address field (hex)", bufferHex, callback, respond_with_user_reject);
+		#endif // HAVE_BAGL
+		return;
+	}
+
+	default:
+		ASSERT(false);
+		return;
+	}
+}
+
 void signMsg_handleInit_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
@@ -50,77 +107,8 @@ void signMsg_handleInit_ui_runStep()
 		fill_and_display_if_required("Signing path", pathStr, this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
-	UI_STEP(HANDLE_INIT_ADDRESS_FIELD_DISPLAY_KEY_HASH) {
-		if (ctx->addressFieldType == CIP8_ADDRESS_FIELD_ADDRESS) {
-			UI_STEP_JUMP(HANDLE_INIT_ADDRESS_FIELD_DISPLAY_ADDRESS);
-		}
-
-		uint8_t hash[28];
-		blake2b_224_hash(
-		        ctx->witnessKey, SIZEOF(ctx->witnessKey),
-		        hash, SIZEOF(hash)
-		);
-
-		#ifdef HAVE_BAGL
-		ui_displayHexBufferScreen(
-		        "Address field",
-		        hash,
-		        SIZEOF(hash),
-		        this_fn
-		);
-		#elif defined(HAVE_NBGL)
-		char bufferHex[2 * SCRIPT_HASH_LENGTH + 1] = {0};
-		ui_getHexBufferScreen(bufferHex, SIZEOF(bufferHex), hash, SIZEOF(hash));
-		fill_and_display_if_required("Address field", bufferHex, this_fn, respond_with_user_reject);
-		#endif // HAVE_BAGL
-	}
-	UI_STEP(HANDLE_INIT_ADDRESS_FIELD_DISPLAY_ADDRESS) {
-		if (ctx->addressFieldType != CIP8_ADDRESS_FIELD_ADDRESS) {
-			UI_STEP_JUMP(HANDLE_INIT_RESPOND);
-		}
-
-		uint8_t addressBuffer[MAX_ADDRESS_SIZE] = {0};
-		size_t addressSize = deriveAddress(&ctx->addressParams, addressBuffer, SIZEOF(addressBuffer));
-		ASSERT(addressSize > 0);
-		ASSERT(addressSize <= MAX_ADDRESS_SIZE);
-
-		#ifdef HAVE_BAGL
-		ui_displayAddressScreen(
-		        "Address field",
-		        addressBuffer, addressSize,
-		        this_fn
-		);
-		#elif defined(HAVE_NBGL)
-		char humanAddress[MAX_HUMAN_ADDRESS_SIZE] = {0};
-		ui_getAddressScreen(
-		        humanAddress,
-		        SIZEOF(humanAddress),
-		        addressBuffer,
-		        addressSize
-		);
-		fill_and_display_if_required("Address field", humanAddress, this_fn, respond_with_user_reject);
-		#endif // HAVE_BAGL
-	}
-	UI_STEP(HANDLE_INIT_ADDRESS_FIELD_DISPLAY_PAYMENT_PATH) {
-		#ifdef HAVE_BAGL
-		ui_displayPaymentInfoScreen(&ctx->addressParams, this_fn);
-		#elif defined(HAVE_NBGL)
-#define PAYMENT_INFO_SIZE MAX(BECH32_STRING_SIZE_MAX, BIP44_PATH_STRING_SIZE_MAX)
-		char line1[30];
-		char paymentInfo[PAYMENT_INFO_SIZE] = {0};
-		ui_getPaymentInfoScreen(line1, SIZEOF(line1), paymentInfo, SIZEOF(paymentInfo), &ctx->addressParams);
-		fill_and_display_if_required(line1, paymentInfo, this_fn, respond_with_user_reject);
-		#endif // HAVE_BAGL
-	}
-	UI_STEP(HANDLE_INIT_ADDRESS_FIELD_DISPLAY_STAKING_INFO) {
-		#ifdef HAVE_BAGL
-		ui_displayStakingInfoScreen(&ctx->addressParams, this_fn);
-		#elif defined(HAVE_NBGL)
-		char line1[30] = {0};
-		char stakingInfo[120] = {0};
-		ui_getStakingInfoScreen(line1, SIZEOF(line1), stakingInfo, SIZEOF(stakingInfo), &ctx->addressParams);
-		fill_and_display_if_required(line1, stakingInfo, this_fn, respond_with_user_reject);
-		#endif // HAVE_BAGL
+	UI_STEP(HANDLE_INIT_ADDRESS_FIELD) {
+		_displayAddressField(this_fn);
 	}
 	UI_STEP(HANDLE_INIT_RESPOND) {
 		respondSuccessEmptyMsg();
