@@ -35,7 +35,6 @@ typedef enum {
 typedef struct {
 	sign_tx_output_state_t state;
 	int ui_step;
-//	void (*ui_advanceState)();
 	const char* ui_text1;
 	const char* ui_text2;
 	const char* ui_text3;
@@ -102,4 +101,5 @@ void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t w
 bool signTxCollateralOutput_isValidInstruction(uint8_t p2);
 void signTxCollateralOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
+void tx_output_advanceState();
 #endif // H_CARDANO_APP_SIGN_TX_OUTPUT

@@ -1,4 +1,4 @@
-#include "uiScreens.h"
+#ifdef HAVE_BAGL
 #include "bech32.h"
 #include "cardano.h"
 #include "hexUtils.h"
@@ -7,10 +7,34 @@
 #include "signTx.h"
 #include "signTxPoolRegistration.h"
 #include "tokens.h"
+#include "state.h"
+#include "uiHelpers.h"
+#include "menu.h"
 
+static const int INS_NONE = -1;
 
-#define BECH32_BUFFER_SIZE_MAX 150
-#define BECH32_PREFIX_LENGTH_MAX 16
+// ui_idle displays the main menu. Note that your app isn't required to use a
+// menu as its idle screen; you can define your own completely custom screen.
+void ui_idle(void)
+{
+	currentInstruction = INS_NONE;
+
+	#if defined(TARGET_NANOS)
+	nanos_clear_timer();
+	h_expert_update();
+	// The first argument is the starting index within menu_main, and the last
+	// argument is a preprocessor.
+	UX_MENU_DISPLAY(0, menu_main, NULL);
+	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
+	// reserve a display stack slot if none yet
+	if (G_ux.stack_count == 0) {
+		ux_stack_push();
+	}
+	ux_flow_init(0, ux_idle_flow, NULL);
+	#else
+	STATIC_ASSERT(false);
+	#endif
+}
 
 // encodes a buffer into bech32 and displays it (works for bufferSize <= 150 and prefix length <= 12)
 void ui_displayBech32Screen(
@@ -32,7 +56,7 @@ void ui_displayBech32Screen(
 	}
 
 	// rough upper bound on required size is used
-	char encodedStr[11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX] = {0};
+	char encodedStr[BECH32_STRING_SIZE_MAX] = {0};
 	explicit_bzero(encodedStr, SIZEOF(encodedStr));
 
 	{
@@ -186,10 +210,10 @@ void ui_displayStakingKeyScreen(
 {
 	ASSERT(bip44_isOrdinaryStakingKeyPath(stakingPath));
 
-	bool showAccountDescription = bip44_hasReasonableAccount(stakingPath);
+	bool showAccountDescription = bip44_isPathReasonable(stakingPath);
 
 	_ui_displayAccountWithDescriptionScreen(
-	        "Staking key",
+	        "Stake key",
 	        stakingPath,
 	        showAccountDescription,
 	        callback
@@ -225,7 +249,7 @@ void ui_displayAddressScreen(
 	);
 }
 
-// display bech32-encoded reward account preceded by staking key derivation path (if given)
+// display bech32-encoded reward account preceded by stake key derivation path (if given)
 static void _displayRewardAccountWithDescriptionScreen(
         const key_reference_type_t keyReferenceType,
         const bip44_path_t* path,
@@ -349,7 +373,7 @@ void ui_displaySpendingInfoScreen(
 
 	case SPENDING_PATH: {
 		ui_displayPathScreen(
-		        "Spending path",
+		        "Derivation path",
 		        &addressParams->spendingKeyPath,
 		        callback
 		);
@@ -374,10 +398,10 @@ void ui_displaySpendingInfoScreen(
 	}
 }
 
-static const char STAKING_HEADING_PATH[]        = "Staking key path";
-static const char STAKING_HEADING_KEY_HASH[]    = "Staking key hash";
-static const char STAKING_HEADING_SCRIPT_HASH[] = "Staking script hash";
-static const char STAKING_HEADING_POINTER[]     = "Staking key pointer";
+static const char STAKING_HEADING_PATH[]        = "Staking path";
+static const char STAKING_HEADING_KEY_HASH[]    = "Stake key hash";
+static const char STAKING_HEADING_SCRIPT_HASH[] = "Stake script hash";
+static const char STAKING_HEADING_POINTER[]     = "Stake key pointer";
 static const char STAKING_HEADING_WARNING[]     = "WARNING:";
 
 void ui_displayStakingInfoScreen(
@@ -744,7 +768,9 @@ void ui_displayPoolRelayScreen(
 	char firstLine[20] = {0};
 	explicit_bzero(firstLine, SIZEOF(firstLine));
 	{
+		#ifndef FUZZING
 		STATIC_ASSERT(sizeof(relayIndex + 1) <= sizeof(unsigned), "oversized type for %u");
+		#endif
 		STATIC_ASSERT(!IS_SIGNED(relayIndex + 1), "signed type for %u");
 		// indexed from 0 as discussed with IOHK on Slack
 		snprintf(firstLine, SIZEOF(firstLine), "Relay #%u", relayIndex);
@@ -864,3 +890,4 @@ void ui_displayInputScreen(
 	        callback
 	);
 }
+#endif // HAVE_BAGL

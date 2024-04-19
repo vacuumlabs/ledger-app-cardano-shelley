@@ -16,9 +16,9 @@
 #*******************************************************************************
 
 APPNAME      = "Cardano ADA"
-APPVERSION_M = 5
-APPVERSION_N = 0
-APPVERSION_P = 0
+APPVERSION_M = 6
+APPVERSION_N = 1
+APPVERSION_P = 2
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 ifeq ($(BOLOS_SDK),)
@@ -29,6 +29,8 @@ include $(BOLOS_SDK)/Makefile.defines
 
 ifeq ($(TARGET_NAME),TARGET_NANOS)
 	ICONNAME=icon_ada_nanos.gif
+else ifeq ($(TARGET_NAME),TARGET_STAX)
+	ICONNAME=icon_ada_stax.gif
 else
 	ICONNAME=icon_ada_nanox.gif
 endif
@@ -38,7 +40,7 @@ endif
 ##############
 
 # based in part on https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags
-WERROR   := -Werror=incompatible-pointer-types -Werror=return-type -Werror=parentheses -Werror=format-security
+WERROR   := -Werror=return-type -Werror=parentheses -Werror=format-security
 
 CC       := $(CLANGPATH)clang
 CFLAGS   += -std=gnu99 -Wall -Wextra -Wuninitialized -Wshadow -Wformat=2 -Wwrite-strings -Wundef -fno-common $(WERROR)
@@ -54,7 +56,10 @@ LDLIBS   += -lm -lgcc -lc
 ############
 
 DEFINES += OS_IO_SEPROXYHAL
-DEFINES += HAVE_BAGL HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
+ifneq ($(TARGET_NAME),TARGET_STAX)
+DEFINES += HAVE_BAGL
+endif
+DEFINES += HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
 DEFINES += APPVERSION=\"$(APPVERSION)\"
 DEFINES += MAJOR_VERSION=$(APPVERSION_M) MINOR_VERSION=$(APPVERSION_N) PATCH_VERSION=$(APPVERSION_P)
 
@@ -70,7 +75,7 @@ DEFINES += HAVE_U2F HAVE_IO_U2F U2F_PROXY_MAGIC=\"ADA\" USB_SEGMENT_SIZE=64
 DEFINES   += HAVE_WEBUSB WEBUSB_URL_SIZE_B=0 WEBUSB_URL=""
 
 ## BLUETOOTH
-ifeq ($(TARGET_NAME),TARGET_NANOX)
+ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_STAX))
 	DEFINES += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000 HAVE_BLE_APDU
 endif
 
@@ -79,16 +84,22 @@ DEFINES += HAVE_BOLOS_APP_STACK_CANARY
 
 ifeq ($(TARGET_NAME),TARGET_NANOS)
 DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=128
-DEFINES += HAVE_BOLOS_UX HAVE_UX_LEGACY COMPLIANCE_UX_160
 else
 DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=300
 DEFINES += HAVE_GLO096
+ifneq ($(TARGET_NAME),TARGET_STAX)
 DEFINES += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
+DEFINES += HAVE_UX_FLOW
+endif
+
+ifeq ($(TARGET_NAME),TARGET_STAX)
+DEFINES += NBGL_QRCODE
+SDK_SOURCE_PATH += qrcode
+endif
 DEFINES += HAVE_BAGL_ELLIPSIS # long label truncation feature
 DEFINES += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
 DEFINES += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
 DEFINES += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
-DEFINES += HAVE_UX_FLOW
 endif
 
 DEFINES += RESET_ON_CRASH
@@ -120,11 +131,14 @@ include $(BOLOS_SDK)/Makefile.glyphs
 ### computed variables
 APP_SOURCE_PATH  += src
 SDK_SOURCE_PATH  += lib_stusb lib_stusb_impl lib_u2f
+
+ifneq ($(TARGET_NAME),TARGET_STAX)
 SDK_SOURCE_PATH  += lib_ux
-ifeq ($(TARGET_NAME),TARGET_NANOX)
-	SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
 endif
 
+ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_STAX))
+	SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
+endif
 
 ################
 # Default rule #
@@ -136,12 +150,6 @@ all: default
 ##############
 #   Build    #
 ##############
-
-# import generic rules from the sdk
-include $(BOLOS_SDK)/Makefile.rules
-
-#add dependency on custom makefile filename
-dep/%.d: %.c Makefile
 
 listvariants:
 	@echo VARIANTS COIN cardano_ada
@@ -158,10 +166,10 @@ NANOS_ID = 1
 WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
 PIN = 5555
 
-APP_LOAD_PARAMS =--appFlags 0x240 --curve ed25519 --path "44'/1815'" --path "1852'/1815'" --path "1853'/1815'" --path "1854'/1815'" --path "1855'/1815'"
+APP_LOAD_PARAMS =--appFlags 0x200 --curve ed25519 --path "44'/1815'" --path "1852'/1815'" --path "1853'/1815'" --path "1854'/1815'" --path "1855'/1815'" --path "1694'/1815'"
 APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
 
-load: all
+load:
 	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
 
 delete:
@@ -176,7 +184,7 @@ seed:
 ##############
 
 format:
-	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c
+	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c --ignore-exclude-errors
 
 
 ##############
@@ -187,3 +195,6 @@ format:
 
 size: all
 	$(GCCPATH)arm-none-eabi-size --format=gnu bin/app.elf
+
+# import generic rules from the sdk
+include $(BOLOS_SDK)/Makefile.rules

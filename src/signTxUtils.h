@@ -2,6 +2,7 @@
 #define H_CARDANO_APP_SIGN_TX_UTILS
 
 #include "bip44.h"
+#include "txHashBuilder.h"
 
 void respondSuccessEmptyMsg();
 
@@ -14,5 +15,7 @@ void respondSuccessEmptyMsg();
  * Criteria: path has an ordinary Shelley or Byron prefix and has at least account
  */
 bool violatesSingleAccountOrStoreIt(const bip44_path_t* path);
+
+void view_parseDestination(read_view_t* view, tx_output_destination_storage_t* destination);
 
 #endif  // H_CARDANO_APP_SIGN_TX_UTILS

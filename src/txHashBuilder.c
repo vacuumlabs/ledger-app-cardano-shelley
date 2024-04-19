@@ -32,8 +32,7 @@ The following macros and functions have dual purpose:
 
 static void blake2b_256_append_buffer_tx_body(
         blake2b_256_context_t* hashCtx,
-        const uint8_t* buffer,
-        size_t bufferSize
+        const uint8_t* buffer, size_t bufferSize
 )
 {
 	TRACE_BUFFER(buffer, bufferSize);
@@ -433,7 +432,7 @@ static void addTokenGroup(
 	{
 		// Bytes[policyId]
 		// Map(numTokens)[
-		//   // entries added later { * asset_name => auint }
+		//   // entries added later { * asset_name => uint }
 		// ]
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, policyIdSize);
@@ -475,7 +474,7 @@ static void addToken(
 	ASSERT(assetNameSize <= ASSET_NAME_SIZE_MAX);
 	{
 		// add a map entry:
-		// Bytes[assetname]
+		// Bytes[asset_name]
 		// Unsigned[Amount]
 		{
 			BUILDER_APPEND_CBOR(CBOR_TYPE_BYTES, assetNameSize);
@@ -765,7 +764,7 @@ static uint32_t getStakeCredentialSource(const stake_credential_type_t stakeCred
 	}
 }
 
-// staking key certificate registration or deregistration
+// stake key certificate registration or deregistration
 void txHashBuilder_addCertificate_stakingHash(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
@@ -1215,15 +1214,13 @@ static void addPoolMetadata_updateState(tx_hash_builder_t* builder)
 		ASSERT(builder->poolCertificateData.remainingOwners == 0);
 		txHashBuilder_addPoolRegistrationCertificate_enterOwners(builder);
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_OWNERS:
 		// skipping relays is only possible if none were expected
 		ASSERT(builder->poolCertificateData.remainingRelays == 0);
 		txHashBuilder_addPoolRegistrationCertificate_enterRelays(builder);
 
-	// intentional fallthrough
-
+		__attribute__((fallthrough));
 	case TX_HASH_BUILDER_IN_CERTIFICATES_POOL_RELAYS:
 		// all relays should have been received
 		ASSERT(builder->poolCertificateData.remainingRelays == 0);

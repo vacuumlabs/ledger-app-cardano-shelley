@@ -86,7 +86,7 @@ size_t cborEncodePubkeyAddressInner(
 			if (protocolMagic == MAINNET_PROTOCOL_MAGIC) {
 				view_appendToken(&out, CBOR_TYPE_MAP, 0 /* addrAttributes is empty */);
 			} else {
-				/* addrAddtributes contains protocol magic for non-mainnet Byron addresses */
+				/* addrAttributes contains protocol magic for non-mainnet Byron addresses */
 				view_appendToken(&out, CBOR_TYPE_MAP, 1);
 				{
 					view_appendToken(&out, CBOR_TYPE_UNSIGNED, PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY); /* map key for protocol magic */
@@ -175,7 +175,7 @@ uint32_t extractProtocolMagic(
 
 	read_view_t view = make_read_view(addressBuffer, addressBuffer + addressSize);
 
-	uint32_t protocolMagic;
+	uint32_t protocolMagic = MAINNET_PROTOCOL_MAGIC; // mainnet addresses do not contain protocol magic
 	bool protocolMagicFound = false;
 	{
 		const uint8_t* unboxedAddressPayload;
@@ -245,6 +245,7 @@ uint32_t extractProtocolMagic(
 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
 	if (!protocolMagicFound) {
+		// mainnet addresses are not supposed to explicitly contain protocol magic at all
 		protocolMagic = MAINNET_PROTOCOL_MAGIC;
 	}
 

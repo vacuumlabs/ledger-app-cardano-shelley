@@ -4,6 +4,11 @@
 #include <stdint.h>
 #include <stddef.h>
 
+
+#define BECH32_BUFFER_SIZE_MAX 150
+#define BECH32_PREFIX_LENGTH_MAX 16
+#define BECH32_STRING_SIZE_MAX (1 + 11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX)
+
 /*
  * Encode bytes, using human-readable prefix given in hrp.
  *

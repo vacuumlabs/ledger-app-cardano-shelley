@@ -33,36 +33,13 @@
 #include "assert.h"
 #include "io.h"
 
-// The whole app is designed for a specific api level.
-// In case there is an api change, first *verify* changes
-// (especially potential security implications) before bumping
-// the API level!
-STATIC_ASSERT(CX_APILEVEL >= 9, "bad api level");
+#ifdef HAVE_BAGL
+#include "uiScreens_bagl.h"
+#elif defined(HAVE_NBGL)
+#include "uiScreens_nbgl.h"
+#endif
 
 static const int INS_NONE = -1;
-
-// ui_idle displays the main menu. Note that your app isn't required to use a
-// menu as its idle screen; you can define your own completely custom screen.
-void ui_idle(void)
-{
-	currentInstruction = INS_NONE;
-
-	#if defined(TARGET_NANOS)
-	nanos_clear_timer();
-	h_expert_update();
-	// The first argument is the starting index within menu_main, and the last
-	// argument is a preprocessor.
-	UX_MENU_DISPLAY(0, menu_main, NULL);
-	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-	// reserve a display stack slot if none yet
-	if (G_ux.stack_count == 0) {
-		ux_stack_push();
-	}
-	ux_flow_init(0, ux_idle_flow, NULL);
-	#else
-	STATIC_ASSERT(false);
-	#endif
-}
 
 static const uint8_t CLA = 0xD7;
 
@@ -174,7 +151,14 @@ static void cardano_main(void)
 				if (e >= _ERR_AUTORESPOND_START && e < _ERR_AUTORESPOND_END) {
 					io_send_buf(e, NULL, 0);
 					flags = IO_ASYNCH_REPLY;
+					#ifdef HAVE_NBGL
+					if (e != ERR_REJECTED_BY_USER) {
+						ui_idle();
+						display_error();
+					}
+					#else
 					ui_idle();
+					#endif
 				} else {
 					PRINTF("Uncaught error 0x%x", (unsigned) e);
 					#ifdef RESET_ON_CRASH
@@ -222,7 +206,7 @@ __attribute__((section(".boot"))) int main(void)
 			TRY {
 				io_seproxyhal_init();
 
-				#if defined(TARGET_NANOX)
+				#if defined(HAVE_BLE)
 				// grab the current plane mode setting
 				G_io_app.plane_mode = os_setting_get(OS_SETTING_PLANEMODE, NULL, 0);
 				#endif
@@ -231,9 +215,13 @@ __attribute__((section(".boot"))) int main(void)
 				USB_power(1);
 				ui_idle();
 
+				#ifdef HAVE_NBGL
+				ui_idle_flow();
+				#endif // HAVE_NBGL
+
 				#if defined(HAVE_BLE)
 				BLE_power(0, NULL);
-				BLE_power(1, "Nano X ADA");
+				BLE_power(1, NULL);
 				#endif
 
 				io_state = IO_EXPECT_IO;
@@ -242,9 +230,11 @@ __attribute__((section(".boot"))) int main(void)
 			CATCH(EXCEPTION_IO_RESET)
 			{
 				// reset IO and UX before continuing
+				CLOSE_TRY;
 				continue;
 			}
 			CATCH_ALL {
+				CLOSE_TRY;
 				break;
 			}
 			FINALLY {

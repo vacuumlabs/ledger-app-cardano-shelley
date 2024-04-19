@@ -10,7 +10,7 @@
 #include "signTxMint.h"
 #include "signTxOutput.h"
 #include "signTxPoolRegistration.h"
-#include "signTxCatalystRegistration.h"
+#include "signTxCVoteRegistration.h"
 #include "signTxAuxData.h"
 
 // the signing mode significantly affects restrictions on tx being signed
@@ -26,7 +26,7 @@ typedef enum {
 	SIGN_STAGE_NONE = 0,
 	SIGN_STAGE_INIT = 23,
 	SIGN_STAGE_AUX_DATA = 24,
-	SIGN_STAGE_AUX_DATA_CATALYST_REGISTRATION_SUBMACHINE = 25,
+	SIGN_STAGE_AUX_DATA_CVOTE_REGISTRATION_SUBMACHINE = 25,
 	SIGN_STAGE_BODY_INPUTS = 26,
 	SIGN_STAGE_BODY_OUTPUTS = 27,
 	SIGN_STAGE_BODY_OUTPUTS_SUBMACHINE = 28,
@@ -121,7 +121,7 @@ typedef struct {
 	aux_data_hash_builder_t auxDataHashBuilder;
 
 	struct {
-		catalyst_registration_context_t catalyst_registration_subctx;
+		cvote_registration_context_t cvote_registration_subctx;
 	} stageContext;
 } ins_sign_tx_aux_data_context_t;
 
@@ -251,5 +251,10 @@ static inline bool signTx_parseIncluded(uint8_t value)
 		THROW(ERR_INVALID_DATA);
 	}
 }
+
+// advances the stage of the main state machine
+void tx_advanceStage(void);
+
+void tx_advanceCertificatesStateIfAppropriate();
 
 #endif // H_CARDANO_APP_SIGN_TX

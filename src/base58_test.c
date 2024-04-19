@@ -36,6 +36,7 @@ void run_base58_test()
 
 		{
 			"82d818582183581ce63175c654dfd93a9290342a067158dc0f57a1108ddbd8cace3839bda0001a0a0e41ce",
+			/* cspell:disable-next-line */
 			"Ae2tdPwUPEZKmwoy3AU3cXb5Chnasj6mvVNxV1H11997q3VW5ihbSfQwGpm"
 		},
 

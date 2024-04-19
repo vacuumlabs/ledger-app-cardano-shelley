@@ -10,47 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  nano_build:
-    name: Build application for NanoS, X and S+
-    strategy:
-      matrix:
-        include:
-          - SDK: "$NANOS_SDK"
-            name: nanos
-          - SDK: "$NANOX_SDK"
-            name: nanox
-          - SDK: "$NANOSP_SDK"
-            name: nanosp
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
-    steps:
-      - name: Clone
-        uses: actions/checkout@v2
-      - name: Build
-        run: |
-          make clean
-          make DEBUG=1 BOLOS_SDK=${{ matrix.SDK }}
-          mv bin/app.elf bin/cardano_${{ matrix.name }}.elf
-      - name: Upload app binary
-        uses: actions/upload-artifact@v2
-        with:
-          name: apps
-          path: bin/*.elf
-
-  scan-build:
-    name: Clang Static Analyzer
-    runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder:latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Build with Clang Static Analyzer
-        run: |
-          make clean
-          scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make default
-      - uses: actions/upload-artifact@v2
-        if: failure()
-        with:
-          name: scan-build
-          path: scan-build
+  build_application:
+    name: Build application using the reusable workflow
+    uses: LedgerHQ/ledger-app-workflows/.github/workflows/reusable_build.yml@v1
+    with:
+      upload_app_binaries_artifact: "compiled_app_binaries"

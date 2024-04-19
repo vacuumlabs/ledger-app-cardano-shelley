@@ -9,7 +9,7 @@
 
 // helper functions
 
-// staking key path has the same account as the spending key path
+// stake key path has the same account as the spending key path
 static inline bool is_standard_base_address(const addressParams_t* addressParams)
 {
 	ASSERT(isValidAddressParams(addressParams));
@@ -23,6 +23,9 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 
 	CHECK(bip44_classifyPath(&addressParams->stakingKeyPath) == PATH_ORDINARY_STAKING_KEY);
 	CHECK(bip44_isPathReasonable(&addressParams->stakingKeyPath));
+	// most SW wallets do not use multidelegation,
+	// so outputs sending funds to such addresses should not be hidden
+	CHECK(!bip44_isMultidelegationStakingKeyPath(&addressParams->stakingKeyPath));
 
 	CHECK(
 	        bip44_getAccount(&addressParams->stakingKeyPath) ==
@@ -31,13 +34,6 @@ static inline bool is_standard_base_address(const addressParams_t* addressParams
 
 	return true;
 #undef CHECK
-}
-
-static inline bool is_reward_address(const addressParams_t* addressParams)
-{
-	ASSERT(isValidAddressParams(addressParams));
-
-	return addressParams->type == REWARD_KEY || addressParams->type == REWARD_SCRIPT;
 }
 
 static address_type_t getDestinationAddressType(const tx_output_destination_t* destination)
@@ -93,6 +89,9 @@ security_policy_t policyForDerivePrivateKey(const bip44_path_t* path)
 
 	case PATH_POOL_COLD_KEY:
 
+	case PATH_CVOTE_ACCOUNT:
+	case PATH_CVOTE_KEY:
+
 		ALLOW();
 		break;
 
@@ -121,24 +120,51 @@ security_policy_t policyForGetExtendedPublicKey(const bip44_path_t* pathSpec)
 
 	case PATH_ORDINARY_ACCOUNT:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
-		// in expert mode, do not export keys without permission
-		PROMPT_IF(app_mode_expert());
-
 		// show Byron paths
 		PROMPT_UNLESS(bip44_hasShelleyPrefix(pathSpec));
+
+		// in expert mode, do not export keys without permission
+		PROMPT_IF(app_mode_expert());
 		// do not bother the user with confirmation --- required by LedgerLive to improve UX
+		ALLOW();
+		break;
+
+	case PATH_MULTISIG_ACCOUNT:
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+		// ask for confirmation, multisig users need high awareness of what keys are being used
+		PROMPT();
+		break;
+
+	case PATH_MINT_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+		// used rarely, so making the user aware of the export does not hamper him
+		// but could be relaxed to expert mode if needed
+		PROMPT();
+		break;
+
+	case PATH_POOL_COLD_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+		// used rarely, so making the user aware of the export does not hamper him
+		// but could be relaxed to expert mode if needed
+		PROMPT();
+		break;
+
+	case PATH_CVOTE_ACCOUNT:
+		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
+
+		// in expert mode, do not export keys without permission
+		PROMPT_IF(app_mode_expert());
+		// do not bother the user with confirmation, similar to ordinary account
 		ALLOW();
 		break;
 
 	case PATH_ORDINARY_SPENDING_KEY:
 	case PATH_ORDINARY_STAKING_KEY:
-	case PATH_MULTISIG_ACCOUNT:
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
-	case PATH_MINT_KEY:
-	case PATH_POOL_COLD_KEY:
+	case PATH_CVOTE_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
-		// ask for permission
+		// ask for permission (it is unusual if client asks this instead of the account key)
 		PROMPT();
 		break;
 
@@ -162,6 +188,8 @@ security_policy_t policyForGetExtendedPublicKeyBulkExport(const bip44_path_t* pa
 	case PATH_MULTISIG_SPENDING_KEY:
 	case PATH_MULTISIG_STAKING_KEY:
 	case PATH_MINT_KEY:
+	case PATH_CVOTE_ACCOUNT:
+	case PATH_CVOTE_KEY:
 		WARN_UNLESS(bip44_isPathReasonable(pathSpec));
 		// we do not show these paths since there may be many of them
 		ALLOW();
@@ -250,11 +278,18 @@ security_policy_t policyForShowDeriveAddress(const addressParams_t* addressParam
 // true iff network is the standard mainnet or testnet
 bool isNetworkUsual(uint32_t networkId, uint32_t protocolMagic)
 {
-	if (networkId == MAINNET_NETWORK_ID && protocolMagic == MAINNET_PROTOCOL_MAGIC)
+	if (networkId == MAINNET_NETWORK_ID && protocolMagic == MAINNET_PROTOCOL_MAGIC) {
 		return true;
+	}
 
-	if (networkId == TESTNET_NETWORK_ID && protocolMagic == TESTNET_PROTOCOL_MAGIC)
+	const bool knownTestnetProtocolMagic =
+	        protocolMagic == TESTNET_PROTOCOL_MAGIC_LEGACY ||
+	        protocolMagic == TESTNET_PROTOCOL_MAGIC_PREPROD ||
+	        protocolMagic == TESTNET_PROTOCOL_MAGIC_PREVIEW;
+
+	if (networkId == TESTNET_NETWORK_ID && knownTestnetProtocolMagic) {
 		return true;
+	}
 
 	return false;
 }
@@ -341,7 +376,7 @@ security_policy_t policyForSignTxInit(
 
 		// witnesses for owners and withdrawals are the same
 		// we forbid withdrawals so that users cannot be tricked into witnessing
-		// something unintentionally (e.g. an owner given by the staking key hash)
+		// something unintentionally (e.g. an owner given by the stake key hash)
 		DENY_UNLESS(numWithdrawals == 0);
 
 		// mint must not be combined with pool registration certificates
@@ -944,13 +979,13 @@ security_policy_t policyForSignTxCertificate(
 
 	case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 	case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		// pool registration is allowed only in POOL_REGISTRATION signging modes
+		// pool registration is allowed only in POOL_REGISTRATION signing modes
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		ALLOW();
 		break;
 
 	case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
-		// pool registration is allowed only in POOL_REGISTRATION signging modes
+		// pool registration is allowed only in POOL_REGISTRATION signing modes
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
 		// pool retirement is impossible with multisig keys
 		DENY_IF(certificateType == CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT);
@@ -971,7 +1006,7 @@ security_policy_t policyForSignTxCertificate(
 	DENY(); // should not be reached
 }
 
-// for certificates concerning staking keys and stake delegation
+// for certificates concerning stake keys and stake delegation
 security_policy_t policyForSignTxCertificateStaking(
         sign_tx_signingmode_t txSigningMode,
         const certificate_type_t certificateType,
@@ -1306,6 +1341,7 @@ security_policy_t policyForSignTxWithdrawal(
 			ASSERT(false);
 			break;
 		}
+		break;
 
 	case STAKE_CREDENTIAL_SCRIPT_HASH:
 		switch (txSigningMode) {
@@ -1509,10 +1545,10 @@ security_policy_t policyForSignTxAuxData(aux_data_type_t auxDataType)
 		SHOW_IF(app_mode_expert());
 		ALLOW();
 
-	case AUX_DATA_TYPE_CATALYST_REGISTRATION:
+	case AUX_DATA_TYPE_CVOTE_REGISTRATION:
 		// this is the policy for the initial prompt
 		// details of the registration are governed by separate policies
-		// (see policyForCatalystRegistration...)
+		// (see policyForCVoteRegistration...)
 		SHOW();
 		break;
 
@@ -1558,7 +1594,7 @@ security_policy_t policyForSignTxMintConfirm(security_policy_t mintInitPolicy)
 		break;
 
 	case POLICY_SHOW_BEFORE_RESPONSE:
-		// all minted coins were shown, show a final cofirmation prompt as well
+		// all minted coins were shown, show a final confirmation prompt as well
 		PROMPT();
 		break;
 
@@ -1724,41 +1760,94 @@ security_policy_t policyForSignTxConfirm()
 	PROMPT();
 }
 
-security_policy_t policyForCatalystRegistrationVotingRewardsAddressParams(
-        const addressParams_t* params,
-        const uint8_t networkId
-)
+security_policy_t policyForCVoteRegistrationVoteKey()
 {
-	DENY_UNLESS(isValidAddressParams(params));
-	DENY_UNLESS(isShelleyAddressType(params->type));
-	DENY_IF(params->networkId != networkId);
-
-	WARN_UNLESS(is_reward_address(params) || is_standard_base_address(params));
-
 	SHOW();
 }
 
-security_policy_t policyForCatalystRegistrationStakingKey(
+security_policy_t policyForCVoteRegistrationVoteKeyPath(
+        bip44_path_t* path,
+        cvote_registration_format_t format
+)
+{
+	// encourages people to use the new format,
+	// so that we can drop support for CIP15 sooner
+	DENY_UNLESS(format == CIP36);
+
+	DENY_UNLESS(bip44_classifyPath(path) == PATH_CVOTE_KEY);
+	WARN_UNLESS(bip44_isPathReasonable(path));
+	SHOW();
+}
+
+security_policy_t policyForCVoteRegistrationStakingKey(
         const bip44_path_t* stakingKeyPath
 )
 {
 	DENY_UNLESS(bip44_isOrdinaryStakingKeyPath(stakingKeyPath));
-	WARN_UNLESS(bip44_hasReasonableAccount(stakingKeyPath));
+	WARN_UNLESS(bip44_isPathReasonable(stakingKeyPath));
 
 	SHOW();
 }
 
-security_policy_t policyForCatalystRegistrationVotingKey()
+// based on https://input-output-rnd.slack.com/archives/C036XSMFXE3/p1668185230182239
+security_policy_t policyForCVoteRegistrationPaymentDestination(
+        const tx_output_destination_storage_t* destination,
+        const uint8_t networkId
+)
+{
+	switch (destination->type) {
+
+	case DESTINATION_DEVICE_OWNED: {
+		DENY_UNLESS(isValidAddressParams(&destination->params));
+		DENY_UNLESS(isShelleyAddressType(destination->params.type));
+		DENY_IF(destination->params.networkId != networkId);
+
+		// in a typical case, the rewards go to an address controlled by this device
+		// and the address is sent in a way allowing a verification of that fact
+		WARN_UNLESS(
+		        is_standard_base_address(&destination->params)
+		);
+
+		// we are sure the address belongs to the device
+		SHOW();
+		break;
+	}
+
+	case DESTINATION_THIRD_PARTY: {
+		const uint8_t header = getAddressHeader(
+		                               destination->address.buffer, destination->address.size
+		                       );
+		DENY_UNLESS(isShelleyAddressType(getAddressType(header)));
+		DENY_IF(getNetworkId(header) != networkId);
+
+		// we don't know who owns the address
+		// to possibly avoid this warning, send the address as parameters (see above)
+		WARN();
+		break;
+	}
+
+	default:
+		ASSERT(false);
+		break;
+	}
+
+	DENY(); // should not be reached
+
+}
+
+security_policy_t policyForCVoteRegistrationNonce()
 {
 	SHOW();
 }
 
-security_policy_t policyForCatalystRegistrationNonce()
+security_policy_t policyForCVoteRegistrationVotingPurpose()
 {
-	SHOW();
+	// since it will only be used for Catalyst, we don't show this value to non-experts
+	SHOW_IF(app_mode_expert());
+	ALLOW();
 }
 
-security_policy_t policyForCatalystRegistrationConfirm()
+security_policy_t policyForCVoteRegistrationConfirm()
 {
 	PROMPT();
 }
@@ -1781,4 +1870,29 @@ security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec)
 	}
 
 	DENY(); // should not be reached
+}
+
+security_policy_t policyForSignCVoteInit()
+{
+	PROMPT();
+}
+
+security_policy_t policyForSignCVoteConfirm()
+{
+	PROMPT();
+}
+
+security_policy_t policyForSignCVoteWitness(bip44_path_t* path)
+{
+	switch (bip44_classifyPath(path)) {
+	case PATH_CVOTE_KEY:
+		WARN_UNLESS(bip44_isPathReasonable(path));
+		SHOW();
+		break;
+
+
+	default:
+		DENY();
+		break;
+	}
 }

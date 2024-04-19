@@ -22,6 +22,7 @@
 
 #define MAX_BUFFER_SIZE 124
 
+/* cspell:disable-next-line */
 static const char BASE58ALPHABET[] = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 
 size_t base58_encode(

@@ -1,7 +1,23 @@
 #include "io.h"
 #include "common.h"
+#include "ui.h"
 
 io_state_t io_state;
+
+#ifdef HAVE_NBGL
+static callback_t app_callback;
+static callback_t _callback;
+
+void set_app_callback(callback_t cb)
+{
+	app_callback = cb;
+}
+
+void reset_app_callback(void)
+{
+	app_callback = NULL;
+}
+#endif
 
 #if defined(TARGET_NANOS)
 static timeout_callback_fn_t* timeout_cb;
@@ -70,10 +86,12 @@ void io_send_buf(uint16_t code, uint8_t* buffer, size_t bufferSize)
 // Everything below this point is Ledger magic.
 
 // override point, but nothing more to do
+#ifdef HAVE_BAGL
 void io_seproxyhal_display(const bagl_element_t* element)
 {
-	io_seproxyhal_display_default((bagl_element_t*)element);
+	io_seproxyhal_display_default(element);
 }
+#endif
 
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B] = {0};
 
@@ -82,14 +100,11 @@ unsigned char io_event(unsigned char channel MARK_UNUSED)
 {
 	// can't have more than one tag in the reply, not supported yet.
 	switch (G_io_seproxyhal_spi_buffer[0]) {
-	case SEPROXYHAL_TAG_FINGER_EVENT:
-		// This app is not supposed to work with Blue
-		ASSERT(false);
-		UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
-		break;
 
 	case SEPROXYHAL_TAG_BUTTON_PUSH_EVENT:
+		#ifdef HAVE_BAGL
 		UX_BUTTON_PUSH_EVENT(G_io_seproxyhal_spi_buffer);
+		#endif
 		break;
 
 	case SEPROXYHAL_TAG_STATUS_EVENT:
@@ -98,18 +113,35 @@ unsigned char io_event(unsigned char channel MARK_UNUSED)
 		      SEPROXYHAL_TAG_STATUS_EVENT_FLAG_USB_POWERED)) {
 			THROW(EXCEPTION_IO_RESET);
 		}
-		UX_DEFAULT_EVENT();
-		break;
 
+		__attribute__((fallthrough));
 	case SEPROXYHAL_TAG_DISPLAY_PROCESSED_EVENT:
+		#ifdef HAVE_BAGL
 		UX_DISPLAYED_EVENT({});
+		#endif
+		#ifdef HAVE_NBGL
+		UX_DEFAULT_EVENT();
+		#endif
 		break;
+		#ifdef HAVE_NBGL
+	case SEPROXYHAL_TAG_FINGER_EVENT:
+		UX_FINGER_EVENT(G_io_seproxyhal_spi_buffer);
+		break;
+		#endif  // HAVE_NBGL
 
 	case SEPROXYHAL_TAG_TICKER_EVENT:
 		UX_TICKER_EVENT(G_io_seproxyhal_spi_buffer, {
 			TRACE("timer");
 			HANDLE_UX_TICKER_EVENT(UX_ALLOWED);
 		});
+		#ifdef HAVE_NBGL
+		if (app_callback) {
+			_callback = app_callback;
+			reset_app_callback();
+			_callback();
+		}
+		#endif
+
 		break;
 
 	default:
@@ -149,7 +181,6 @@ unsigned short io_exchange_al(unsigned char channel, unsigned short tx_len)
 	return 0;
 }
 
-STATIC_ASSERT(CX_APILEVEL >= 9, "bad api level");
 static const unsigned PIN_VERIFIED = BOLOS_UX_OK; // Seems to work for api 9/10
 
 bool device_is_unlocked()

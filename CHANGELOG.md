@@ -1,12 +1,28 @@
 # Change Log
 
 All notable changes to this project will be documented in this file.
- 
+
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 
-## [5.0.0](TBD) - [TBD]
+## [6.0.3](TBD) - [TBD]
+
+Support for CIP-36 voting
+
+### Added
+
+- export of vote keys (1694'/1815'/...)
+- support for CIP-36 voting (signing of vote-cast fragments with 1694 keys)
+- support for CIP-36 registrations (in transaction auxiliary data)
+
+### Changed
+
+- API for Catalyst voting registration (it is still possible to use CIP-15 in auxiliary data)
+- updated list of native tokens recognized by the app with correct decimal places
+
+
+## [5.0.0](https://github.com/LedgerHQ/app-cardano/compare/4.1.2...LedgerHQ:nanos_2.1.0_5.0.0) - [October 11th 2022]
 
 Support for Babbage era
 
@@ -189,7 +205,7 @@ d- Support bulk public key export: https://github.com/LedgerHQ/app-cardano/pull/
 
 ### Fixed
 
-- Serialize reward address instead of staking key into the withdrawals within the transaction body: https://github.com/LedgerHQ/app-cardano/pull/2
+- Serialize reward address instead of stake key into the withdrawals within the transaction body: https://github.com/LedgerHQ/app-cardano/pull/2
 
 
 

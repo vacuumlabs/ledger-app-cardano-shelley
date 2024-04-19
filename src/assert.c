@@ -1,6 +1,7 @@
 #include "common.h"
 #include "assert.h"
 #include "uiHelpers.h"
+#include "uiScreens_nbgl.h"
 
 // Note(ppershing): In DEBUG we need to keep going
 // because rendering on display takes multiple SEPROXYHAL
@@ -23,7 +24,11 @@ void assert(
 		{
 			PRINTF("Assertion failed %s\n", msgStr);
 			#ifndef FUZZING
+			#ifdef HAVE_BAGL
 			ui_displayPaginatedText("Assertion failed", msgStr, NULL);
+			#elif defined(HAVE_NBGL)
+			display_prompt("Assertion failed", msgStr, NULL, NULL);
+			#endif
 			#endif
 			THROW(ERR_ASSERT);
 		}

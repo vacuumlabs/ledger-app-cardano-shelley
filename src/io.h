@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <os_io_seproxyhal.h>
 #include <ux.h>
+#include "ui.h"
 
 enum  {
 	P1_UNUSED = 0,
@@ -43,7 +44,9 @@ typedef enum {
 extern io_state_t io_state;
 
 // Everything below this point is Ledger magic
+#ifdef HAVE_BAGL
 void io_seproxyhal_display(const bagl_element_t* element);
+#endif
 #ifndef FUZZING
 unsigned char io_event(unsigned char channel);
 
@@ -59,5 +62,10 @@ void nanos_clear_timer();
 // which causes other callbacks (i.e. ours) to be ignored in UX_TICKER_EVENT, so set_timer
 // does not actually work anymore in Nano X
 #endif
+
+#ifdef HAVE_NBGL
+void set_app_callback(callback_t cb);
+void reset_app_callback(void);
+#endif // HAVE_NBGL
 
 #endif // H_CARDANO_APP_IO

@@ -301,6 +301,7 @@ bool str_isAllowedDnsName(const uint8_t* buffer, size_t bufferSize)
 
 #ifdef DEVEL
 
+/* cspell:disable-next-line */
 // converts a text to bytes (suitable for CBORization) and validates if chars are allowed
 size_t str_textToBuffer(const char* text, uint8_t* buffer, size_t bufferSize)
 {

@@ -13,7 +13,7 @@ Due to Ledger constraints and potential security implications (parsing errors), 
 **SignTx Limitations**
 
 - Output address size is limited to 128 bytes (single APDU). (Note: IOHK is fine with address size limit of 100 bytes)
-- Addresses that are not shown to the user are base addresses with spending path `m/1852'/1815'/account'/{0,1}/changeIndex` and the standard staking key `m/1852'/1815'/account'/2/0`, where values of `account` and `changeIndex` are limited (for now, `0 <= account <= 100` and `0 <= changeIndex <= 1 000 000`). This makes it feasible to brute-force all change addresses in case an attacker manages to modify change address(es). (As the user does not confirm change addresses, it is relatively easy to perform MITM attack).
+- Addresses that are not shown to the user are base addresses with spending path `m/1852'/1815'/account'/{0,1}/changeIndex` and the standard stake key `m/1852'/1815'/account'/2/0`, where values of `account` and `changeIndex` are limited (for now, `0 <= account <= 100` and `0 <= changeIndex <= 1 000 000`). This makes it feasible to brute-force all change addresses in case an attacker manages to modify change address(es). (As the user does not confirm change addresses, it is relatively easy to perform MITM attack).
 - Only transactions with at least one input will be signed (this provides protection against certificate replays and transaction replays on different networks).
 
 **Communication protocol non-goals:**
@@ -86,7 +86,7 @@ Optional.
 |Field|Value|
 |-----|-----|
 |  P1 | `0x08` |
-|  P2 | (unused / see [Catalyst Registration](ins_sign_catalyst_registration.md)) |
+|  P2 | (unused / see [CIP-36 Voting Registration](ins_sign_cip36_registration.md)) |
 
 **Data for AUX_DATA_TYPE_ARBITRARY_HASH**
 
@@ -98,13 +98,13 @@ So only the hash is transferred and displayed and the user has to use other mean
 | Auxiliary data type | 1 | `AUX_DATA_TYPE_ARBITRARY_HASH=0x00` |
 | Auxiliary data hash | 32 | |
 
-**Data for AUX_DATA_TYPE_CATALYST_REGISTRATION**
+**Data for AUX_DATA_TYPE_CVOTE_REGISTRATION**
 
 |Field| Length | Comments|
 |-----|--------|---------|
-| Auxiliary data type | 1 | `AUX_DATA_TYPE_CATALYST_REGISTRATION=0x01` |
+| Auxiliary data type | 1 | `AUX_DATA_TYPE_CVOTE_REGISTRATION=0x01` |
 
-This only describes the initial message. All the data for this type of auxiliary data are obtained via a series of additional APDU messages; see [Catalyst Registration](ins_sign_catalyst_registration.md) for the details.
+This only describes the initial message. All the data for this type of auxiliary data are obtained via a series of additional APDU messages; see [CIP-36 Voting Registration](ins_sign_cip36_registration.md) for the details.
 
 ### Set UTxO inputs
 
@@ -134,28 +134,28 @@ For each output, at least two messages are required: the first one with top-leve
 |-----|-----|
 |  P1 | `0x03` |
 |  P2 | `0x30` |
-| data | depends on output type |
+| data | depends on output destination type |
 
-*Data for SIGN_TX_OUTPUT_TYPE_ADDRESS_BYTES*
+*Data for DESTINATION_THIRD_PARTY*
 
 This output type is used for regular destination addresses.
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `SIGN_TX_OUTPUT_TYPE_ADDRESS_BYTES=0x01`|
+|Output type| 1 | `DESTINATION_THIRD_PARTY=0x01`|
 |Address size| 4 | Big endian|
 |Address| variable | raw address (before bech32/base58-encoding)|
 |Amount| 8| Big endian. Amount in Lovelace|
 |Number of asset groups| 4 | Big endian|
 
-*Data for SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS*
+*Data for DESTINATION_DEVICE_OWNED*
 
 This output type is used for change addresses. Depending (mostly) on staking info, these might or might not be shown to the user. 
 (See [src/securityPolicy.c](../src/securityPolicy.c) for details.)
 
 |Field| Length | Comments|
 |-----|--------|---------|
-|Output type| 1 | `SIGN_TX_OUTPUT_TYPE_ADDRESS_PARAMS=0x02`|
+|Output type| 1 | `DESTINATION_DEVICE_OWNED=0x02`|
 |Address params | variable | see `view_parseAddressParams` in [src/addressUtilsShelley.c](../src/addressUtilsShelley.c)|
 |Amount| 8| Big endian. Amount in Lovelace|
 |Number of asset groups| 4 | Big endian|
@@ -277,7 +277,7 @@ This only describes the initial certificate message. All the data for this certi
 |Field| Length | Comments|
 |-----|--------|---------|
 |Output type| 1 | `CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT=0x04`|
-|Staking key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
+|Stake key path| variable | BIP44 path. See [GetExtPubKey call](ins_get_public_keys.md) for a format example |
 |Pool key hash| 28 | Hash of staking pool public key|
 
 ### Reward withdrawal

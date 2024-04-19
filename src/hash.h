@@ -1,6 +1,8 @@
 #ifndef H_CARDANO_APP_HASH
 #define H_CARDANO_APP_HASH
 
+#include <cx.h>
+
 #include "common.h"
 
 // This file provides convenience functions for using firmware hashing api
@@ -32,10 +34,14 @@ enum {
 	                                                                         ) \
 	{ \
 		STATIC_ASSERT( bits == CIPHER##_##bits##_SIZE * 8, "bad cipher size"); \
-		cx_##cipher##_init( \
-		                    & ctx->cx_ctx, \
-		                    CIPHER##_##bits##_SIZE * 8 \
-		                  );\
+		cx_err_t error = cx_##cipher##_init_no_throw( \
+		                 & ctx->cx_ctx, \
+		                 CIPHER##_##bits##_SIZE * 8 \
+		                                            );\
+		if (error != CX_OK) { \
+			PRINTF("error: %d", error); \
+			ASSERT(false); \
+		} \
 		ctx->initialized_magic = HASH_CONTEXT_INITIALIZED_MAGIC; \
 	} \
 	\
@@ -44,13 +50,17 @@ enum {
 	        const uint8_t* inBuffer, size_t inSize \
 	                                                                           ) { \
 		ASSERT(ctx->initialized_magic == HASH_CONTEXT_INITIALIZED_MAGIC); \
-		cx_hash( \
-		         & ctx->cx_ctx.header, \
-		         0, /* Do not output the hash, yet */ \
-		         inBuffer, \
-		         inSize, \
-		         NULL, 0 \
-		       ); \
+		cx_err_t error = cx_hash_no_throw( \
+		                                   & ctx->cx_ctx.header, \
+		                                   0, /* Do not output the hash, yet */ \
+		                                   inBuffer, \
+		                                   inSize, \
+		                                   NULL, 0 \
+		                                 ); \
+		if (error != CX_OK) { \
+			PRINTF("error: %d", error); \
+			ASSERT(false); \
+		} \
 	} \
 	\
 	static __attribute__((always_inline, unused)) void cipher##_##bits##_finalize( \
@@ -59,14 +69,18 @@ enum {
 	                                                                             ) { \
 		ASSERT(ctx->initialized_magic == HASH_CONTEXT_INITIALIZED_MAGIC); \
 		ASSERT(outSize == CIPHER##_##bits##_SIZE); \
-		cx_hash( \
-		         & ctx->cx_ctx.header, \
-		         CX_LAST, /* Output the hash */ \
-		         NULL, \
-		         0, \
-		         outBuffer, \
-		         CIPHER##_##bits##_SIZE \
-		       ); \
+		cx_err_t error = cx_hash_no_throw( \
+		                                   & ctx->cx_ctx.header, \
+		                                   CX_LAST, /* Output the hash */ \
+		                                   NULL, \
+		                                   0, \
+		                                   outBuffer, \
+		                                   CIPHER##_##bits##_SIZE \
+		                                 ); \
+		if (error != CX_OK) { \
+			PRINTF("error: %d", error); \
+			ASSERT(false); \
+		} \
 	} \
 	/* Convenience function to make all in one step */ \
 	static __attribute__((always_inline, unused)) void cipher##_##bits##_hash( \

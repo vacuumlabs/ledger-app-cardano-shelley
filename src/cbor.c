@@ -46,7 +46,6 @@ cbor_token_t cbor_parseToken(const uint8_t* buf, size_t size)
 	if (val < 24) {
 		result.width = 0;
 		result.value = val;
-		// return result;
 	} else {
 		// shift buffer
 		// Holds minimum value for a given byte-width.
@@ -135,8 +134,8 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 			THROW(ERR_UNEXPECTED_TOKEN);
 		}
 		value = (uint64_t)(-negativeValue) - 1;
-		// intentional fallthrough
 	}
+	__attribute__((fallthrough));
 	case CBOR_TYPE_UNSIGNED:
 	case CBOR_TYPE_BYTES:
 	case CBOR_TYPE_TEXT:

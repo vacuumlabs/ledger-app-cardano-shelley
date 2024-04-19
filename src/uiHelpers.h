@@ -10,6 +10,11 @@
 
 typedef void ui_callback_fn_t();
 
+#if defined(TARGET_NANOX) || defined(TARGET_NANOS2) || defined(TARGET_STAX)
+extern ux_state_t G_ux;
+extern bolos_ux_params_t G_ux_params;
+#endif
+
 // *INDENT-OFF*
 
 // Warning: Following macros are *NOT* brace-balanced by design!
@@ -37,6 +42,7 @@ typedef void ui_callback_fn_t();
 #define UI_STEP(NEXT_STEP) \
 				*__ui_step_ptr = NEXT_STEP; \
 			} \
+            __attribute__((fallthrough)); \
 			case NEXT_STEP: {
 #else
 #define UI_STEP(NEXT_STEP) \
@@ -60,8 +66,6 @@ typedef void ui_callback_fn_t();
 			__this_fn(); \
 			return; \
 		}
-
-// *INDENT-ON*
 
 typedef enum {
 	CALLBACK_NOT_RUN,
@@ -118,6 +122,8 @@ void ui_displayPrompt(
         ui_callback_fn_t* confirm,
         ui_callback_fn_t* reject
 );
+
+void ui_displayUnusualWarning(ui_callback_fn_t* cb);
 
 void ui_displayBusy();
 void ui_displayPrompt_run();
