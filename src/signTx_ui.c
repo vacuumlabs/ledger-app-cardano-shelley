@@ -591,7 +591,7 @@ void signTx_handleCertificateStaking_ui_runStep()
 			ASSERT(cert->poolCredential.type == EXT_CREDENTIAL_KEY_HASH);
 			ui_displayBech32Screen(
 			        "Delegate stake",
-			        "to pool",
+			        "pool",
 			        cert->poolCredential.keyHash, SIZEOF(cert->poolCredential.keyHash),
 			        this_fn
 			);
