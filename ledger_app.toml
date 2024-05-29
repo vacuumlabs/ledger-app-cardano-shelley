@@ -2,3 +2,4 @@
 build_directory = "./"
 sdk = "C"
 devices = ["nanos", "nanox", "nanos+", "stax"]
+

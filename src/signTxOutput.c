@@ -307,8 +307,6 @@ static void parseTopLevelData(const uint8_t* wireDataBuffer, size_t wireDataSize
 	{
 		// safety checks
 		CHECK_STATE(STATE_OUTPUT_TOP_LEVEL_DATA);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	output_context_t* subctx = accessSubcontext();
@@ -398,7 +396,6 @@ static void handleCollateralOutput_addressBytes()
 		.includeRefScript = subctx->includeRefScript,
 	};
 
-	// TODO maybe restrict to specific address types? we don't support datum in coll ret outputs
 	security_policy_t policy = policyForSignTxCollateralOutputAddressBytes(
 	                                   &output,
 	                                   commonTxData->txSigningMode,
@@ -545,8 +542,6 @@ static void handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_ASSET_GROUP);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -621,8 +616,6 @@ static void handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_TOKEN);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -750,6 +743,10 @@ static void handleDatumInline(read_view_t* view)
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= subctx->stateData.datumRemainingBytes, ERR_INVALID_DATA);
+		if (subctx->stateData.datumRemainingBytes >= MAX_CHUNK_SIZE) {
+			// forces to use chunks of maximum allowed size
+			VALIDATE(chunkSize == MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+		}
 
 		view_parseBuffer(subctx->stateData.datumChunk, view, chunkSize);
 		VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
@@ -797,7 +794,6 @@ static void handleDatumAPDU(const uint8_t* wireDataBuffer, size_t wireDataSize)
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_DATUM);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -829,7 +825,6 @@ static void handleDatumChunkAPDU(const uint8_t* wireDataBuffer, size_t wireDataS
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_DATUM_INLINE_CHUNKS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -871,7 +866,6 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_REFERENCE_SCRIPT);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -881,7 +875,7 @@ static void handleRefScriptAPDU(const uint8_t* wireDataBuffer, size_t wireDataSi
 
 		// parse data
 		subctx->stateData.refScriptRemainingBytes = parse_u4be(&view);
-		TRACE("refScriptRemainingBytes = %u", subctx->stateData.datumRemainingBytes);
+		TRACE("refScriptRemainingBytes = %u", subctx->stateData.refScriptRemainingBytes);
 		VALIDATE(subctx->stateData.refScriptRemainingBytes > 0, ERR_INVALID_DATA);
 
 		size_t chunkSize = parse_u4be(&view);
@@ -935,7 +929,6 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 	{
 		// sanity checks
 		CHECK_STATE(STATE_OUTPUT_REFERENCE_SCRIPT_CHUNKS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	output_context_t* subctx = accessSubcontext();
 	{
@@ -947,7 +940,10 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 		TRACE("chunkSize = %u", chunkSize);
 		VALIDATE(chunkSize > 0, ERR_INVALID_DATA);
 		VALIDATE(chunkSize <= MAX_CHUNK_SIZE, ERR_INVALID_DATA);
-
+		if (subctx->stateData.refScriptRemainingBytes >= MAX_CHUNK_SIZE) {
+			// forces to use chunks of maximum allowed size
+			VALIDATE(chunkSize == MAX_CHUNK_SIZE, ERR_INVALID_DATA);
+		}
 		VALIDATE(chunkSize <= subctx->stateData.refScriptRemainingBytes, ERR_INVALID_DATA);
 		subctx->stateData.refScriptRemainingBytes -= chunkSize;
 
@@ -958,7 +954,7 @@ static void handleRefScriptChunkAPDU(const uint8_t* wireDataBuffer, size_t wireD
 	}
 	{
 		// add to tx
-		TRACE("Adding inline datum chunk to tx hash");
+		TRACE("Adding reference script chunk to tx hash");
 		txHashBuilder_addOutput_referenceScript_dataChunk(
 		        &BODY_CTX->txHashBuilder,
 		        subctx->stateData.scriptChunk, subctx->stateData.refScriptChunkSize
@@ -1075,6 +1071,7 @@ bool signTxOutput_isValidInstruction(uint8_t p2)
 
 void signTxOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	switch (p2) {
@@ -1136,6 +1133,7 @@ bool signTxCollateralOutput_isValidInstruction(uint8_t p2)
 
 void signTxCollateralOutput_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	switch (p2) {

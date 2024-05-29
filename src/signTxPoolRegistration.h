@@ -1,6 +1,8 @@
 #ifndef H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION
 #define H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION
 
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 #include "common.h"
 #include "cardano.h"
 #include "txHashBuilder.h"
@@ -9,7 +11,7 @@
 #define POOL_MAX_RELAYS 1000
 
 // SIGN_STAGE_BODY_CERTIFICATES = 28
-// CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION = 3
+// CERTIFICATE_STAKE_POOL_REGISTRATION = 3
 typedef enum {
 	STAKE_POOL_REGISTRATION_INIT = 2830,
 	STAKE_POOL_REGISTRATION_POOL_KEY = 2831,
@@ -82,5 +84,7 @@ bool signTxPoolRegistration_isValidInstruction(uint8_t p2);
 void signTxPoolRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
 bool signTxPoolRegistration_isFinished();
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 #endif // H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION

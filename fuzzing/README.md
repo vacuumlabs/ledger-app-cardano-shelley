@@ -19,6 +19,7 @@ deriveAddress_harness
 deriveNativeScriptHash_harness
 getPublicKeys_harness
 signCVote_harness
+signMsg_harness
 signOpCert_harness
 signTx_harness
 ```
@@ -36,4 +37,5 @@ Since there is an already existing corpus, to start fuzzing with it simply do `.
 
 
 ## Notes
+
 For more context regarding fuzzing check out the app-boilerplate fuzzing [README.md](https://github.com/LedgerHQ/app-boilerplate/blob/master/fuzzing/README.md)

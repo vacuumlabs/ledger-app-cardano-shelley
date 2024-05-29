@@ -190,7 +190,7 @@ void str_traceInt64(int64_t number)
 #endif // DEVEL
 
 
-// TODO: This is valid only for mainnet
+// Note: This is valid only for mainnet
 static struct {
 	uint64_t startSlotNumber;
 	uint64_t startEpoch;
@@ -237,14 +237,6 @@ size_t str_formatValidityBoundary(uint64_t slotNumber, char* out, size_t outSize
 	return strlen(out);
 }
 
-// returns length of the resulting string
-size_t str_formatMetadata(const uint8_t* metadataHash, size_t metadataHashSize, char* out, size_t outSize)
-{
-	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
-
-	return encode_hex(metadataHash, metadataHashSize, out, outSize);
-}
-
 // check if a non-null-terminated buffer contains printable ASCII between 33 and 126 (inclusive)
 bool str_isPrintableAsciiWithoutSpaces(const uint8_t* buffer, size_t bufferSize)
 {
@@ -271,7 +263,8 @@ bool str_isPrintableAsciiWithSpaces(const uint8_t* buffer, size_t bufferSize)
 	return true;
 }
 
-bool str_isAllowedDnsName(const uint8_t* buffer, size_t bufferSize)
+// check if the string can be unambiguously displayed to the user
+bool str_isUnambiguousAscii(const uint8_t* buffer, size_t bufferSize)
 {
 	ASSERT(bufferSize < BUFFER_SIZE_PARANOIA);
 

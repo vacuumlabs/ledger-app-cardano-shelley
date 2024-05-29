@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_OPCERT
+
 #include "common.h"
 
 #include "signOpCert.h"
@@ -130,6 +132,8 @@ void signOpCert_handleAPDU(
 
 static void signOpCert_ui_runStep()
 {
+	TRACE("UI step %d", ctx->ui_step);
+	TRACE_STACK_USAGE();
 	ui_callback_fn_t* this_fn = signOpCert_ui_runStep;
 
 	UI_STEP_BEGIN(ctx->ui_step, this_fn);
@@ -243,3 +247,5 @@ static void signOpCert_ui_runStep()
 	}
 	UI_STEP_END(UI_STEP_INVALID);
 }
+
+#endif // APP_FEATURE_OPCERT

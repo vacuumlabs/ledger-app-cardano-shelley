@@ -6,8 +6,9 @@
 
 
 enum {
-	FLAG_DEVEL = 1,
-
+	FLAG_DEVEL =     1 << 0,
+//	FLAG_HEADLESS =  1 << 1,
+	FLAG_APP_XS =    1 << 2,
 };
 
 void getVersion_handleAPDU(
@@ -40,12 +41,15 @@ void getVersion_handleAPDU(
 		.major = MAJOR_VERSION,
 		.minor = MINOR_VERSION,
 		.patch = PATCH_VERSION,
-		.flags = 0,
+		.flags = 0, // see below
 	};
 
 	#ifdef DEVEL
 	response.flags |= FLAG_DEVEL;
 	#endif // DEVEL
+	#ifdef APP_XS
+	response.flags |= FLAG_APP_XS;
+	#endif // APP_XS
 
 	io_send_buf(SUCCESS, (uint8_t*) &response, sizeof(response));
 	ui_idle();

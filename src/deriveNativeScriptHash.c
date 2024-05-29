@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_NATIVE_SCRIPT_HASH
+
 #include "deriveNativeScriptHash.h"
 #include "deriveNativeScriptHash_ui.h"
 #include "state.h"
@@ -20,11 +22,13 @@ static inline bool areMoreScriptsExpected()
 	// if the number of remaining scripts is not bigger than 0, then this request
 	// is invalid in the current context, as Ledger was not expecting another
 	// script to be parsed
+	ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 	return ctx->complexScripts[ctx->level].remainingScripts > 0;
 }
 
 static inline bool isComplexScriptFinished()
 {
+	ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 	return ctx->level > 0 && ctx->complexScripts[ctx->level].remainingScripts == 0;
 }
 
@@ -34,6 +38,7 @@ static inline void complexScriptFinished()
 		ASSERT(ctx->level > 0);
 		ctx->level--;
 
+		ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 		ASSERT(ctx->complexScripts[ctx->level].remainingScripts > 0);
 		ctx->complexScripts[ctx->level].remainingScripts--;
 
@@ -43,6 +48,7 @@ static inline void complexScriptFinished()
 
 static inline void simpleScriptFinished()
 {
+	ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 	ASSERT(ctx->complexScripts[ctx->level].remainingScripts > 0);
 	ctx->complexScripts[ctx->level].remainingScripts--;
 
@@ -67,6 +73,7 @@ static void deriveNativeScriptHash_handleAll(read_view_t* view)
 	TRACE_WITH_CTX("");
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
+	ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 	nativeScriptHashBuilder_startComplexScript_all(&ctx->hashBuilder, ctx->complexScripts[ctx->level].remainingScripts);
 
 	UI_DISPLAY_SCRIPT(UI_SCRIPT_ALL);
@@ -77,6 +84,7 @@ static void deriveNativeScriptHash_handleAny(read_view_t* view)
 	TRACE_WITH_CTX("");
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
+	ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 	nativeScriptHashBuilder_startComplexScript_any(&ctx->hashBuilder, ctx->complexScripts[ctx->level].remainingScripts);
 
 	UI_DISPLAY_SCRIPT(UI_SCRIPT_ANY);
@@ -91,6 +99,7 @@ static void deriveNativeScriptHash_handleNofK(read_view_t* view)
 	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
 
 	// validate that the received requiredScripts count makes sense
+	ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 	VALIDATE(ctx->complexScripts[ctx->level].remainingScripts >= ctx->scriptContent.requiredScripts, ERR_INVALID_DATA);
 
 	nativeScriptHashBuilder_startComplexScript_n_of_k(&ctx->hashBuilder, ctx->scriptContent.requiredScripts, ctx->complexScripts[ctx->level].remainingScripts);
@@ -110,6 +119,7 @@ static void deriveNativeScriptHash_handleComplexScriptStart(read_view_t* view)
 	uint8_t nativeScriptType = parse_u1be(view);
 	TRACE("native complex script type = %u", nativeScriptType);
 
+	ASSERT(ctx->level < MAX_SCRIPT_DEPTH);
 	ctx->complexScripts[ctx->level].remainingScripts = parse_u4be(view);
 	ctx->complexScripts[ctx->level].totalScripts = ctx->complexScripts[ctx->level].remainingScripts;
 
@@ -304,3 +314,5 @@ void deriveNativeScriptHash_handleAPDU(
 }
 
 #undef TRACE_WITH_CTX
+
+#endif // APP_FEATURE_NATIVE_SCRIPT_HASH

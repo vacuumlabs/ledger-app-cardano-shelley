@@ -1,6 +1,7 @@
 #ifndef H_CARDANO_APP_SIGN_TX
 #define H_CARDANO_APP_SIGN_TX
 
+#include "cardano.h"
 #include "common.h"
 #include "hash.h"
 #include "handlers.h"
@@ -33,11 +34,15 @@ typedef enum {
 	SIGN_STAGE_BODY_FEE = 29,
 	SIGN_STAGE_BODY_TTL = 30,
 	SIGN_STAGE_BODY_CERTIFICATES = 31,
+	#ifdef APP_FEATURE_POOL_REGISTRATION
 	SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE = 32, // pool registration certificate sub-machine
+	#endif // APP_FEATURE_POOL_REGISTRATION
 	SIGN_STAGE_BODY_WITHDRAWALS = 33,
 	SIGN_STAGE_BODY_VALIDITY_INTERVAL = 34,
 	SIGN_STAGE_BODY_MINT = 35,
+	#ifdef APP_FEATURE_TOKEN_MINTING
 	SIGN_STAGE_BODY_MINT_SUBMACHINE = 36,
+	#endif // APP_FEATURE_TOKEN_MINTING
 	SIGN_STAGE_BODY_SCRIPT_DATA_HASH = 37,
 	SIGN_STAGE_BODY_COLLATERAL_INPUTS = 38,
 	SIGN_STAGE_BODY_REQUIRED_SIGNERS = 39,
@@ -45,8 +50,11 @@ typedef enum {
 	SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE = 41,
 	SIGN_STAGE_BODY_TOTAL_COLLATERAL = 42,
 	SIGN_STAGE_BODY_REFERENCE_INPUTS = 43,
-	SIGN_STAGE_CONFIRM = 44,
-	SIGN_STAGE_WITNESSES = 45,
+	SIGN_STAGE_BODY_VOTING_PROCEDURES = 44,
+	SIGN_STAGE_BODY_TREASURY = 45,
+	SIGN_STAGE_BODY_DONATION = 46,
+	SIGN_STAGE_CONFIRM = 47,
+	SIGN_STAGE_WITNESSES = 48,
 } sign_tx_stage_t;
 
 enum {
@@ -57,7 +65,7 @@ enum {
 	SIGN_MAX_COLLATERAL_INPUTS = UINT16_MAX,
 	SIGN_MAX_REQUIRED_SIGNERS = UINT16_MAX,
 	SIGN_MAX_REFERENCE_INPUTS = UINT16_MAX,
-	SIGN_MAX_WITNESSES = SIGN_MAX_INPUTS + SIGN_MAX_OUTPUTS + SIGN_MAX_CERTIFICATES + SIGN_MAX_REWARD_WITHDRAWALS,
+	SIGN_MAX_VOTING_PROCEDURES = 1, // we only support a single vote per tx
 };
 
 #define UI_INPUT_LABEL_SIZE 20
@@ -68,6 +76,10 @@ typedef struct {
 	uint32_t accountNumber;
 } single_account_data_t;
 
+enum {
+	TX_OPTIONS_TAG_CBOR_SETS = 1,
+};
+
 typedef struct {
 	// significantly affects restrictions on the tx
 	sign_tx_signingmode_t txSigningMode;
@@ -76,27 +88,66 @@ typedef struct {
 	uint32_t protocolMagic; // part of Byron address
 
 	single_account_data_t singleAccountData;
+
+	// there is only one flag and no more flags planned for the future
+	// but if there were many, it might be necessary to keep them
+	// packed in a single uint variable
+	bool tagCborSets;
 } common_tx_data_t;
 
+// credentials are extended to allow key derivation paths
+typedef enum {
+	// enum values are affected by backwards-compatibility
+	EXT_CREDENTIAL_KEY_PATH = 0,
+	EXT_CREDENTIAL_KEY_HASH = 2,
+	EXT_CREDENTIAL_SCRIPT_HASH = 1,
+} ext_credential_type_t;
+
 typedef struct {
-	stake_credential_type_t type;
+	ext_credential_type_t type;
 	union {
 		bip44_path_t keyPath;
 		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
 		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
 	};
-} stake_credential_t;
+} ext_credential_t;
+
+// DReps are extended to allow key derivation paths
+typedef enum {
+	EXT_DREP_KEY_HASH = 0,
+	EXT_DREP_KEY_PATH = 0 + 100,
+	EXT_DREP_SCRIPT_HASH = 1,
+	EXT_DREP_ABSTAIN = 2,
+	EXT_DREP_NO_CONFIDENCE = 3,
+} ext_drep_type_t;
+
+typedef struct {
+	ext_drep_type_t type;
+	union {
+		bip44_path_t keyPath;
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} ext_drep_t;
 
 typedef struct {
 	certificate_type_t type;
 
 	union {
-		stake_credential_t stakeCredential;
-		bip44_path_t poolIdPath;
+		ext_credential_t stakeCredential;
+		ext_credential_t committeeColdCredential;
+		ext_credential_t dRepCredential;
 	};
-	uint64_t epoch;
-	uint8_t poolKeyHash[POOL_KEY_HASH_LENGTH];
-
+	union {
+		ext_credential_t poolCredential;
+		ext_credential_t committeeHotCredential;
+		ext_drep_t drep;
+		anchor_t anchor;
+	};
+	union {
+		uint64_t epoch; // in pool retirement
+		uint64_t deposit; // not in pool retirement
+	};
 } sign_tx_certificate_data_t;
 
 typedef struct {
@@ -106,11 +157,11 @@ typedef struct {
 
 typedef struct {
 	bip44_path_t path;
-	uint8_t signature[64];
+	uint8_t signature[ED25519_SIGNATURE_LENGTH];
 } sign_tx_witness_data_t;
 
 typedef struct {
-	stake_credential_t stakeCredential;
+	ext_credential_t stakeCredential;
 	uint64_t amount;
 	uint8_t previousRewardAccount[REWARD_ACCOUNT_SIZE];
 } sign_tx_withdrawal_data_t;
@@ -138,7 +189,37 @@ typedef struct {
 	};
 } sign_tx_required_signer_t;
 
+// voters are extended to allow key derivation paths
+typedef enum {
+	EXT_VOTER_COMMITTEE_HOT_KEY_HASH = 0,
+	EXT_VOTER_COMMITTEE_HOT_KEY_PATH = 0 + 100,
+	EXT_VOTER_COMMITTEE_HOT_SCRIPT_HASH = 1,
+	EXT_VOTER_DREP_KEY_HASH = 2,
+	EXT_VOTER_DREP_KEY_PATH = 2 + 100,
+	EXT_VOTER_DREP_SCRIPT_HASH = 3,
+	EXT_VOTER_STAKE_POOL_KEY_HASH = 4,
+	EXT_VOTER_STAKE_POOL_KEY_PATH = 4 + 100,
+} ext_voter_type_t;
+
 typedef struct {
+	ext_voter_type_t type;
+	union {
+		bip44_path_t keyPath;
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} ext_voter_t;
+
+typedef struct {
+	ext_voter_t voter;
+	gov_action_id_t govActionId;
+	voting_procedure_t votingProcedure;
+} sign_tx_voting_procedure_t;
+
+
+typedef struct {
+	tx_hash_builder_t txHashBuilder;
+
 	uint16_t currentInput;
 	uint16_t currentOutput;
 	uint16_t currentCertificate;
@@ -146,6 +227,7 @@ typedef struct {
 	uint16_t currentCollateral;
 	uint16_t currentRequiredSigner;
 	uint16_t currentReferenceInput;
+	uint16_t currentVotingProcedure;
 
 	bool feeReceived;
 	bool ttlReceived;
@@ -154,11 +236,9 @@ typedef struct {
 	bool scriptDataHashReceived;
 	bool collateralOutputReceived;
 	bool totalCollateralReceived;
+	bool treasuryReceived;
+	bool donationReceived;
 
-	// TODO move these to commonTxData?
-	tx_hash_builder_t txHashBuilder;
-
-	// this holds data valid only through the processing of a single APDU
 	union {
 		sign_tx_transaction_input_t input;
 		uint64_t fee;
@@ -169,12 +249,19 @@ typedef struct {
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
 		sign_tx_required_signer_t requiredSigner;
 		uint64_t totalCollateral;
-	} stageData; // TODO rename to reflect single-APDU scope
+		sign_tx_voting_procedure_t votingProcedure;
+		uint64_t treasury;
+		uint64_t donation;
+	} stageData;
 
 	union {
+		#ifdef APP_FEATURE_POOL_REGISTRATION
 		pool_registration_context_t pool_registration_subctx;
+		#endif // APP_FEATURE_POOL_REGISTRATION
 		output_context_t output_subctx;
+		#ifdef	APP_FEATURE_TOKEN_MINTING
 		mint_context_t mint_subctx;
+		#endif // APP_FEATURE_TOKEN_MINTING
 	} stageContext;
 } ins_sign_tx_body_context_t;
 
@@ -206,6 +293,9 @@ typedef struct {
 	bool includeTotalCollateral;
 	uint64_t totalCollateral;
 	uint16_t numReferenceInputs;
+	uint16_t numVotingProcedures;
+	bool includeTreasury;
+	bool includeDonation;
 
 	uint16_t numWitnesses;
 

@@ -21,6 +21,7 @@ else()
     add_link_options($ENV{LIB_FUZZING_ENGINE})
 endif()
 
+add_compile_options(-g)
 
 
 set(SDK_PATH ${BOLOS_SDK})
@@ -77,6 +78,8 @@ set(CARDANO_SOURCE
     ${CARDANO_PATH}/src/securityPolicy.c
     ${CARDANO_PATH}/src/signCVote.c
     ${CARDANO_PATH}/src/signCVote_ui.c
+    ${CARDANO_PATH}/src/signMsg.c
+    ${CARDANO_PATH}/src/signMsg_ui.c
     ${CARDANO_PATH}/src/signOpCert.c
     ${CARDANO_PATH}/src/signTx.c
     ${CARDANO_PATH}/src/signTxCVoteRegistration.c
@@ -140,11 +143,21 @@ add_compile_definitions(
     HAVE_ECDSA
     HAVE_EDDSA
     HAVE_HASH
+    HAVE_SHA224
     HAVE_SHA256
     HAVE_SHA3
+
+    # include all app features, incl. those removed from Nano S
+    APP_FEATURE_OPCERT
+    APP_FEATURE_NATIVE_SCRIPT_HASH
+    APP_FEATURE_POOL_REGISTRATION
+    APP_FEATURE_POOL_RETIREMENT
+    APP_FEATURE_BYRON_ADDRESS_DERIVATION
+    APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
+    APP_FEATURE_TOKEN_MINTING
 )
 
-set(SOURCE 
+set(SOURCE
     ${UX_SOURCE}
     ${CARDANO_SOURCE}
     ./src/os_mocks.c
@@ -160,13 +173,14 @@ set(harnesses
     deriveNativeScriptHash_harness
     getPublicKeys_harness
     signCVote_harness
+    signMsg_harness
     signOpCert_harness
     signTx_harness
 )
 
 foreach(harness IN LISTS harnesses)
-    add_executable(${harness} 
+    add_executable(${harness}
         ./src/${harness}.c
-    )    
+    )
     target_link_libraries(${harness} PUBLIC cardano)
 endforeach()

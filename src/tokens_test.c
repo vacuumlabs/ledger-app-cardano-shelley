@@ -104,7 +104,7 @@ void test_decimalPlaces()
 	for (size_t i = 0; i < ARRAY_LEN(tokenTestCases); i++) {
 		char tokenAmountStr[60];
 		token_group_t group;
-		memcpy(group.policyId, tokenTestCases[i].policyId, MINTING_POLICY_ID_SIZE);
+		memmove(group.policyId, tokenTestCases[i].policyId, MINTING_POLICY_ID_SIZE);
 
 		str_formatTokenAmountOutput(
 		        &group,

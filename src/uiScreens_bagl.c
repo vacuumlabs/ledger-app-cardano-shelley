@@ -364,41 +364,41 @@ void ui_displayRewardAccountScreen(
 	);
 }
 
-void ui_displaySpendingInfoScreen(
+void ui_displayPaymentInfoScreen(
         const addressParams_t* addressParams,
         ui_callback_fn_t callback
 )
 {
-	switch (determineSpendingChoice(addressParams->type)) {
+	switch (determinePaymentChoice(addressParams->type)) {
 
-	case SPENDING_PATH: {
+	case PAYMENT_PATH: {
 		ui_displayPathScreen(
-		        "Derivation path",
-		        &addressParams->spendingKeyPath,
+		        "Payment key path",
+		        &addressParams->paymentKeyPath,
 		        callback
 		);
 		return;
 	}
 
-	case SPENDING_SCRIPT_HASH: {
+	case PAYMENT_SCRIPT_HASH: {
 		ui_displayBech32Screen(
-		        "Spending script hash",
+		        "Payment script hash",
 		        "script",
-		        addressParams->spendingScriptHash,
-		        SIZEOF(addressParams->spendingScriptHash),
+		        addressParams->paymentScriptHash,
+		        SIZEOF(addressParams->paymentScriptHash),
 		        callback
 		);
 		return;
 	}
 
 	default: {
-		// includes SPENDING_NONE
+		// includes PAYMENT_NONE
 		ASSERT(false);
 	}
 	}
 }
 
-static const char STAKING_HEADING_PATH[]        = "Staking path";
+static const char STAKING_HEADING_PATH[]        = "Stake key path";
 static const char STAKING_HEADING_KEY_HASH[]    = "Stake key hash";
 static const char STAKING_HEADING_SCRIPT_HASH[] = "Stake script hash";
 static const char STAKING_HEADING_POINTER[]     = "Stake key pointer";
@@ -653,11 +653,23 @@ void ui_displayNetworkParamsScreen(
 	STATIC_ASSERT(!IS_SIGNED(networkId), "signed type for %u");
 	STATIC_ASSERT(sizeof(protocolMagic) <= sizeof(unsigned), "oversized type for %u");
 	STATIC_ASSERT(!IS_SIGNED(protocolMagic), "signed type for %u");
+
+	#ifdef APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 	snprintf(
 	        networkParams, SIZEOF(networkParams),
 	        "network id %u / protocol magic %u",
 	        networkId, protocolMagic
 	);
+	#else
+	// if the protocol magic check is not enabled,
+	// displaying the protocol magic might be misleading,
+	// so we must not show it
+	snprintf(
+	        networkParams, SIZEOF(networkParams),
+	        "network id %u",
+	        networkId
+	);
+	#endif // APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 	ASSERT(strlen(networkParams) + 1 < SIZEOF(networkParams));
 
 	ui_displayPaginatedText(
@@ -701,6 +713,8 @@ void ui_displayPoolMarginScreen(
 	        callback
 	);
 }
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 void ui_displayPoolOwnerScreen(
         const pool_owner_t* owner,
@@ -858,6 +872,8 @@ void ui_displayIpPortScreen(
 	        callback
 	);
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION
 
 void ui_displayInputScreen(
         const sign_tx_transaction_input_t* input,

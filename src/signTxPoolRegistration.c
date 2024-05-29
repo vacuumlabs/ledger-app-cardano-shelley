@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
 #include "signTx.h"
 #include "signTxPoolRegistration_ui.h"
 #include "state.h"
@@ -73,8 +75,6 @@ static void signTxPoolRegistration_handleInitAPDU(const uint8_t* wireDataBuffer,
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_INIT);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	pool_registration_context_t* subctx = accessSubcontext();
 	{
@@ -183,8 +183,6 @@ static void signTxPoolRegistration_handlePoolKeyAPDU(const uint8_t* wireDataBuff
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_POOL_KEY);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -256,8 +254,6 @@ static void signTxPoolRegistration_handleVrfKeyAPDU(const uint8_t* wireDataBuffe
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_VRF_KEY);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	pool_registration_context_t* subctx = accessSubcontext();
 	{
@@ -311,8 +307,6 @@ static void signTxPoolRegistration_handlePoolFinancialsAPDU(const uint8_t* wireD
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_FINANCIALS);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	pool_registration_context_t* subctx = accessSubcontext();
 	{
@@ -405,8 +399,6 @@ static void signTxPoolRegistration_handleRewardAccountAPDU(const uint8_t* wireDa
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_REWARD_ACCOUNT);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -492,8 +484,6 @@ static void signTxPoolRegistration_handleOwnerAPDU(const uint8_t* wireDataBuffer
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_OWNERS);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	pool_registration_context_t* subctx = accessSubcontext();
@@ -610,7 +600,7 @@ static void _parseDnsName(pool_relay_t* relay, read_view_t* view)
 {
 	relay->dnsNameSize = view_remainingSize(view);
 	VALIDATE(relay->dnsNameSize <= DNS_NAME_SIZE_MAX, ERR_INVALID_DATA);
-	VALIDATE(str_isAllowedDnsName(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)), ERR_INVALID_DATA);
+	VALIDATE(str_isUnambiguousAscii(VIEW_REMAINING_TO_TUPLE_BUF_SIZE(view)), ERR_INVALID_DATA);
 
 	STATIC_ASSERT(SIZEOF(relay->dnsName) == DNS_NAME_SIZE_MAX, "wrong dns name buffer size");
 	view_parseBuffer(relay->dnsName, view, relay->dnsNameSize);
@@ -636,8 +626,6 @@ static void signTxPoolRegistration_handleRelayAPDU(const uint8_t* wireDataBuffer
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_RELAYS);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	pool_relay_t* relay = &accessSubcontext()->stateData.relay;
@@ -774,8 +762,6 @@ static void signTxPoolRegistration_handlePoolMetadataAPDU(const uint8_t* wireDat
 	{
 		// sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_METADATA);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	pool_registration_context_t* subctx = accessSubcontext();
@@ -855,8 +841,6 @@ static void signTxPoolRegistration_handleConfirmAPDU(const uint8_t* wireDataBuff
 	{
 		//sanity checks
 		CHECK_STATE(STAKE_POOL_REGISTRATION_CONFIRM);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	{
@@ -969,3 +953,5 @@ void signTxPoolRegistration_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer
 		ASSERT(false);
 	}
 }
+
+#endif // APP_FEATURE_POOL_REGISTRATION

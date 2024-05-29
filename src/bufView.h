@@ -142,5 +142,18 @@ static inline int64_t parse_int64be(read_view_t* view)
 	return (int64_t) parse_u8be(view);
 };
 
+static inline bool parse_bool(read_view_t* view)
+{
+	uint8_t value = parse_u1be(view);
+
+	switch (value) {
+	case 0:
+		return false;
+	case 1:
+		return true;
+	default:
+		THROW(ERR_INVALID_DATA);
+	}
+}
 
 #endif // H_CARDANO_APP_BUF_VIEW
