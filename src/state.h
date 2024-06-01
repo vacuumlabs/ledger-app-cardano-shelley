@@ -14,9 +14,13 @@ typedef union {
 	// Here should go states of all instructions
 	ins_get_keys_context_t getKeysContext;
 	ins_derive_address_context_t deriveAddressContext;
+	#ifdef APP_FEATURE_NATIVE_SCRIPT_HASH
 	ins_derive_native_script_hash_context_t deriveNativeScriptHashContext;
+	#endif // APP_FEATURE_NATIVE_SCRIPT_HASH
 	ins_sign_tx_context_t signTxContext;
+	#ifdef APP_FEATURE_OPCERT
 	ins_sign_op_cert_context_t signOpCertContext;
+	#endif // APP_FEATURE_OPCERT
 	ins_sign_cvote_context_t signCVoteContext;
 } instructionState_t;
 

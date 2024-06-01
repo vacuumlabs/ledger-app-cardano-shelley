@@ -3,7 +3,7 @@
 #include "uiHelpers.h"
 #include "uiElements.h"
 #include "assert.h"
-#include "io.h"
+#include "cardano_io.h"
 #include "utils.h"
 #include "securityPolicy.h"
 #include "ui.h"
@@ -20,8 +20,8 @@ displayState_t displayState;
 // should never need to reference it directly
 ux_state_t ux;
 #elif defined(TARGET_NANOX) || defined(TARGET_NANOS2) || defined(TARGET_STAX)
-ux_state_t G_ux;
-bolos_ux_params_t G_ux_params;
+extern ux_state_t G_ux;
+extern bolos_ux_params_t G_ux_params;
 #endif
 
 STATIC_ASSERT(SIZEOF(uint8_t) == SIZEOF(char), "bad char size");

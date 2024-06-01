@@ -33,11 +33,15 @@ typedef enum {
 	SIGN_STAGE_BODY_FEE = 29,
 	SIGN_STAGE_BODY_TTL = 30,
 	SIGN_STAGE_BODY_CERTIFICATES = 31,
+	#ifdef APP_FEATURE_POOL_REGISTRATION
 	SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE = 32, // pool registration certificate sub-machine
+	#endif // APP_FEATURE_POOL_REGISTRATION
 	SIGN_STAGE_BODY_WITHDRAWALS = 33,
 	SIGN_STAGE_BODY_VALIDITY_INTERVAL = 34,
 	SIGN_STAGE_BODY_MINT = 35,
+	#ifdef APP_FEATURE_TOKEN_MINTING
 	SIGN_STAGE_BODY_MINT_SUBMACHINE = 36,
+	#endif // APP_FEATURE_TOKEN_MINTING
 	SIGN_STAGE_BODY_SCRIPT_DATA_HASH = 37,
 	SIGN_STAGE_BODY_COLLATERAL_INPUTS = 38,
 	SIGN_STAGE_BODY_REQUIRED_SIGNERS = 39,
@@ -169,12 +173,16 @@ typedef struct {
 		uint8_t scriptDataHash[SCRIPT_DATA_HASH_LENGTH];
 		sign_tx_required_signer_t requiredSigner;
 		uint64_t totalCollateral;
-	} stageData; // TODO rename to reflect single-APDU scope
+	} stageData;
 
 	union {
+		#ifdef APP_FEATURE_POOL_REGISTRATION
 		pool_registration_context_t pool_registration_subctx;
+		#endif // APP_FEATURE_POOL_REGISTRATION
 		output_context_t output_subctx;
+		#ifdef	APP_FEATURE_TOKEN_MINTING
 		mint_context_t mint_subctx;
+		#endif // APP_FEATURE_TOKEN_MINTING
 	} stageContext;
 } ins_sign_tx_body_context_t;
 

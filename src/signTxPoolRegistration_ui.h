@@ -1,5 +1,7 @@
-#ifndef H_CARDANO_APP_SIGN_TX_POOL_REGISATRATION_UI
-#define H_CARDANO_APP_SIGN_TX_POOL_REGISATRATION_UI
+#ifndef H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION_UI
+#define H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION_UI
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 // ============================== INIT ==============================
 
@@ -122,4 +124,7 @@ enum {
 };
 
 void signTxPoolRegistration_handleConfirm_ui_runStep();
-#endif // H_CARDANO_APP_SIGN_TX_POOL_REGISATRATION_UI
+
+#endif // APP_FEATURE_POOL_REGISTRATION
+
+#endif // H_CARDANO_APP_SIGN_TX_POOL_REGISTRATION_UI

@@ -113,11 +113,14 @@ security_policy_t policyForSignTxCertificateStaking(
         const certificate_type_t certificateType,
         const stake_credential_t* stakeCredential
 );
+#ifdef APP_FEATURE_POOL_RETIREMENT
 security_policy_t policyForSignTxCertificateStakePoolRetirement(
         sign_tx_signingmode_t txSigningMode,
         const bip44_path_t* stakeCredential,
         uint64_t epoch
 );
+#endif // APP_FEATURE_POOL_RETIREMENT
+#ifdef APP_FEATURE_POOL_REGISTRATION
 security_policy_t policyForSignTxStakePoolRegistrationInit(
         sign_tx_signingmode_t txSigningMode,
         uint32_t numOwners
@@ -147,7 +150,7 @@ security_policy_t policyForSignTxStakePoolRegistrationNoMetadata();
 security_policy_t policyForSignTxStakePoolRegistrationConfirm(
         uint32_t numOwners, uint32_t numRelays
 );
-
+#endif // APP_FEATURE_POOL_REGISTRATION
 security_policy_t policyForSignTxWithdrawal(
         sign_tx_signingmode_t txSigningMode,
         const stake_credential_t* stakeCredential
@@ -185,7 +188,9 @@ security_policy_t policyForSignTxReferenceInput(const sign_tx_signingmode_t txSi
 
 security_policy_t policyForSignTxConfirm();
 
+#ifdef APP_FEATURE_OPCERT
 security_policy_t policyForSignOpCert(const bip44_path_t* poolColdKeyPathSpec);
+#endif // APP_FEATURE_OPCERT
 
 security_policy_t policyForCVoteRegistrationVoteKey();
 security_policy_t policyForCVoteRegistrationVoteKeyPath(
