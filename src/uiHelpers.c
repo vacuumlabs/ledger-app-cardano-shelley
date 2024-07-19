@@ -19,7 +19,7 @@ displayState_t displayState;
 // ux is a magic global variable implicitly referenced by the UX_ macros. Apps
 // should never need to reference it directly
 ux_state_t ux;
-#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2) || defined(TARGET_STAX)
+#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2) || defined(TARGET_STAX) || defined(TARGET_FLEX)
 ux_state_t G_ux;
 bolos_ux_params_t G_ux_params;
 #endif

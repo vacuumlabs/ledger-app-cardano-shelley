@@ -77,7 +77,7 @@ static void release_context(void)
 
 static inline uint16_t get_element_line_count(const char* line)
 {
-	uint16_t nbLines = nbgl_getTextNbLinesInWidth(BAGL_FONT_INTER_MEDIUM_32px,
+	uint16_t nbLines = nbgl_getTextNbLinesInWidth(LARGE_MEDIUM_FONT,
 	                   line,
 	                   SCREEN_WIDTH - 2 * BORDER_MARGIN,
 	                   false);
