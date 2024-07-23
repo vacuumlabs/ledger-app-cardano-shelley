@@ -93,11 +93,7 @@ void ui_displayPrompt_headless_cb(bool ux_allowed)
 
 void autoconfirmPrompt()
 {
-	#if defined(TARGET_NANOS)
-	nanos_set_timer(HEADLESS_DELAY, ui_displayPrompt_headless_cb);
-	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-	UX_CALLBACK_SET_INTERVAL(HEADLESS_DELAY);
-	#endif
+	set_timer(HEADLESS_DELAY, ui_displayPrompt_headless_cb);
 }
 
 void ui_displayPaginatedText_headless_cb(bool ux_allowed)
@@ -117,11 +113,7 @@ void ui_displayPaginatedText_headless_cb(bool ux_allowed)
 
 void autoconfirmPaginatedText()
 {
-	#if defined(TARGET_NANOS)
-	nanos_set_timer(HEADLESS_DELAY, ui_displayPaginatedText_headless_cb);
-	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-	UX_CALLBACK_SET_INTERVAL(HEADLESS_DELAY);
-	#endif
+	set_timer(HEADLESS_DELAY, ui_displayPaginatedText_headless_cb);
 }
 
 #endif // HEADLESS

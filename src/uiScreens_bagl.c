@@ -19,8 +19,8 @@ void ui_idle(void)
 {
 	currentInstruction = INS_NONE;
 
+	clear_timer();
 	#if defined(TARGET_NANOS)
-	nanos_clear_timer();
 	h_expert_update();
 	// The first argument is the starting index within menu_main, and the last
 	// argument is a preprocessor.
