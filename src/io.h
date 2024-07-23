@@ -46,15 +46,15 @@ extern io_state_t io_state;
 // Everything below this point is Ledger magic
 #ifdef HAVE_BAGL
 void io_seproxyhal_display(const bagl_element_t* element);
+typedef void timeout_callback_fn_t(bool ux_allowed);
+void set_timer(int ms, timeout_callback_fn_t* cb);
+void clear_timer();
 #endif
 #ifndef FUZZING
 unsigned char io_event(unsigned char channel);
 
 bool device_is_unlocked();
 
-typedef void timeout_callback_fn_t(bool ux_allowed);
-void set_timer(int ms, timeout_callback_fn_t* cb);
-void clear_timer();
 #endif
 
 #ifdef HAVE_NBGL
