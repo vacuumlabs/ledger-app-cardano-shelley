@@ -56,8 +56,8 @@ VARIANT_VALUES = cardano_ada
 
 DEFINES += RESET_ON_CRASH
 # Enabling DEBUG flag will enable PRINTF and disable optimizations
-DEVEL = 1
-DEFINES += HEADLESS
+# DEVEL = 1
+# DEFINES += HEADLESS
 
 # Enabling debug PRINTF
 ifeq ($(DEVEL), 1)
