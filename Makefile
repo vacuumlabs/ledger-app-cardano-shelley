@@ -97,11 +97,6 @@ SDK_SOURCE_PATH += lib_u2f
 ##############
 #  Compiler  #
 ##############
-
-# based in part on https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags
-WERROR   := -Werror=return-type -Werror=parentheses -Werror=format-security
-CFLAGS   += -Wuninitialized -fno-common $(WERROR)
-
 ## USB U2F
 DEFINES += HAVE_U2F HAVE_IO_U2F U2F_PROXY_MAGIC=\"ADA\" USB_SEGMENT_SIZE=64
 
