@@ -1,6 +1,6 @@
 #*******************************************************************************
-#   Ledger Nano S
-#   (c) 2016 Ledger
+#   Ledger Cardano App
+#   (c) 2024 Ledger
 #
 #  Licensed under the Apache License, Version 2.0 (the "License");
 #  you may not use this file except in compliance with the License.
@@ -15,111 +15,93 @@
 #  limitations under the License.
 #*******************************************************************************
 
-APPNAME      = "Cardano ADA"
-
-APPVERSION_M = 7
-APPVERSION_N = 1
-APPVERSION_P = 1
-APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
-
 ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
 
 include $(BOLOS_SDK)/Makefile.defines
 
-ifeq ($(TARGET_NAME),TARGET_NANOS)
-	ICONNAME=icon_ada_nanos.gif
-else ifeq ($(TARGET_NAME),TARGET_STAX)
-	ICONNAME=icon_ada_stax.gif
-else
-	ICONNAME=icon_ada_nanox.gif
+########################################
+#        Mandatory configuration       #
+########################################
+# Application name
+APPNAME      = "Cardano ADA"
+
+# Application version
+APPVERSION_M = 7
+APPVERSION_N = 2
+APPVERSION_P = 0
+APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
+
+# Application source files
+APP_SOURCE_PATH += src
+
+# Application icons following guidelines:
+# https://developers.ledger.com/docs/embedded-app/design-requirements/#device-icon
+ICON_NANOS = icon_ada_nanos.gif
+ICON_NANOX = icon_ada_nanox.gif
+ICON_NANOSP = icon_ada_nanox.gif
+ICON_STAX = icon_ada_stax.gif
+ICON_FLEX = icon_ada_flex.gif
+
+# Application allowed derivation curves.
+CURVE_APP_LOAD_PARAMS = ed25519
+
+# Application allowed derivation paths.
+PATH_APP_LOAD_PARAMS += "44'/1815'" "1852'/1815'" "1853'/1815'" "1854'/1815'" "1855'/1815'" "1694'/1815'"
+
+# Setting to allow building variant applications
+VARIANT_PARAM = COIN
+VARIANT_VALUES = cardano_ada
+
+DEFINES += RESET_ON_CRASH
+# Enabling DEBUG flag will enable PRINTF and disable optimizations
+# DEVEL = 1
+# DEFINES += HEADLESS
+
+# Enabling debug PRINTF
+ifeq ($(DEVEL), 1)
+	DEBUG = 1
+	DEFINES += DEVEL
 endif
+
+########################################
+#     Application custom permissions   #
+########################################
+HAVE_APPLICATION_FLAG_BOLOS_SETTINGS = 1
+
+########################################
+#         NBGL custom features         #
+########################################
+ENABLE_NBGL_QRCODE = 1
+
+########################################
+# Application communication interfaces #
+########################################
+ENABLE_BLUETOOTH = 1
+
+########################################
+#          Features disablers          #
+########################################
+# These advanced settings allow to disable some feature that are by
+# default enabled in the SDK `Makefile.standard_app`.
+DISABLE_STANDARD_APP_FILES = 1
+ifeq ($(TARGET_NAME),TARGET_NANOS)
+DISABLE_STANDARD_BAGL_UX_FLOW = 1
+DISABLE_DEBUG_LEDGER_ASSERT = 1
+DISABLE_DEBUG_THROW = 1
+endif
+
+SDK_SOURCE_PATH += lib_u2f
 
 ##############
 #  Compiler  #
 ##############
-
-# based in part on https://interrupt.memfault.com/blog/best-and-worst-gcc-clang-compiler-flags
-WERROR   := -Werror=return-type -Werror=parentheses -Werror=format-security
-
-CC       := $(CLANGPATH)clang
-CFLAGS   += -std=gnu99 -Wall -Wextra -Wuninitialized -Wshadow -Wformat=2 -Wwrite-strings -Wundef -fno-common $(WERROR)
-
-AS       := $(GCCPATH)arm-none-eabi-gcc
-LD       := $(GCCPATH)arm-none-eabi-gcc
-LDFLAGS  += -Wall
-LDLIBS   += -lm -lgcc -lc
-
-
-############
-# Platform #
-############
-
-DEFINES += OS_IO_SEPROXYHAL
-ifneq ($(TARGET_NAME),TARGET_STAX)
-DEFINES += HAVE_BAGL
-endif
-DEFINES += HAVE_SPRINTF HAVE_SNPRINTF_FORMAT_U
-DEFINES += APPVERSION=\"$(APPVERSION)\"
-DEFINES += MAJOR_VERSION=$(APPVERSION_M) MINOR_VERSION=$(APPVERSION_N) PATCH_VERSION=$(APPVERSION_P)
-
-## USB HID?
-DEFINES += HAVE_IO_USB HAVE_L4_USBLIB IO_USB_MAX_ENDPOINTS=4 IO_HID_EP_LENGTH=64 HAVE_USB_APDU
-
 ## USB U2F
 DEFINES += HAVE_U2F HAVE_IO_U2F U2F_PROXY_MAGIC=\"ADA\" USB_SEGMENT_SIZE=64
 
-## WEBUSB
-#WEBUSB_URL = https://www.ledger.com/pages/supported-crypto-assets
-#DEFINES += HAVE_WEBUSB WEBUSB_URL_SIZE_B=$(shell echo -n $(WEBUSB_URL) | wc -c) WEBUSB_URL=$(shell echo -n $(WEBUSB_URL) | sed -e "s/./\\\'\0\\\',/g")
-DEFINES   += HAVE_WEBUSB WEBUSB_URL_SIZE_B=0 WEBUSB_URL=""
-
-## BLUETOOTH
-ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_STAX))
-	DEFINES += HAVE_BLE BLE_COMMAND_TIMEOUT_MS=2000 HAVE_BLE_APDU
-endif
-
 ## Protect stack overflows
 DEFINES += HAVE_BOLOS_APP_STACK_CANARY
-
-ifeq ($(TARGET_NAME),TARGET_NANOS)
-DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=128
-else
-DEFINES += IO_SEPROXYHAL_BUFFER_SIZE_B=300
-DEFINES += HAVE_GLO096
-ifneq ($(TARGET_NAME),TARGET_STAX)
-DEFINES += HAVE_BAGL BAGL_WIDTH=128 BAGL_HEIGHT=64
-DEFINES += HAVE_UX_FLOW
-endif
-
-ifeq ($(TARGET_NAME),TARGET_STAX)
-DEFINES += NBGL_QRCODE
-SDK_SOURCE_PATH += qrcode
-endif
-DEFINES += HAVE_BAGL_ELLIPSIS # long label truncation feature
-DEFINES += HAVE_BAGL_FONT_OPEN_SANS_REGULAR_11PX
-DEFINES += HAVE_BAGL_FONT_OPEN_SANS_EXTRABOLD_11PX
-DEFINES += HAVE_BAGL_FONT_OPEN_SANS_LIGHT_16PX
-endif
-
-DEFINES += RESET_ON_CRASH
-
-## Use developer build
-#DEVEL = 1
-#DEFINES += HEADLESS
-
-# Enabling debug PRINTF
-ifeq ($(DEVEL), 1)
-	DEFINES += DEVEL HAVE_PRINTF
-	ifeq ($(TARGET_NAME),TARGET_NANOS)
-		DEFINES += PRINTF=screen_printf
-	else
-		DEFINES += PRINTF=mcu_usb_printf
-	endif
-else
-	DEFINES += PRINTF\(...\)=
-endif
 
 # restricted features for Nano S
 # but not in DEVEL mode where we usually want to test all features with HEADLESS
@@ -147,63 +129,13 @@ endif
 # always include this, it's important for Plutus users
 DEFINES += APP_FEATURE_TOKEN_MINTING
 
-##################
-#  Dependencies  #
-##################
-
-# import rules to compile glyphs
-include $(BOLOS_SDK)/Makefile.glyphs
-
-### computed variables
-APP_SOURCE_PATH  += src
-SDK_SOURCE_PATH  += lib_stusb lib_stusb_impl lib_u2f
-
-ifneq ($(TARGET_NAME),TARGET_STAX)
-SDK_SOURCE_PATH  += lib_ux
-endif
-
-ifeq ($(TARGET_NAME),$(filter $(TARGET_NAME),TARGET_NANOX TARGET_STAX))
-	SDK_SOURCE_PATH  += lib_blewbxx lib_blewbxx_impl
-endif
-
 ################
-# Default rule #
+#   Analyze    #
 ################
-
-all: default
-
-
-##############
-#   Build    #
-##############
-
-listvariants:
-	@echo VARIANTS COIN cardano_ada
 
 # part of CI
 analyze: clean
 	scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make default
-
-##############
-#   Load     #
-##############
-
-NANOS_ID = 1
-WORDS = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-PIN = 5555
-
-APP_LOAD_PARAMS =--appFlags 0x200 --curve ed25519 --path "44'/1815'" --path "1852'/1815'" --path "1853'/1815'" --path "1854'/1815'" --path "1855'/1815'" --path "1694'/1815'"
-APP_LOAD_PARAMS += $(COMMON_LOAD_PARAMS)
-
-load:
-	python -m ledgerblue.loadApp $(APP_LOAD_PARAMS)
-
-delete:
-	python -m ledgerblue.deleteApp $(COMMON_DELETE_PARAMS)
-
-seed:
-	python -m ledgerblue.hostOnboard --id $(NANOS_ID) --words $(WORDS) --pin $(PIN)
-
 
 ##############
 #   Style    #
@@ -212,13 +144,11 @@ seed:
 format:
 	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c --ignore-exclude-errors
 
-
 ##############
 #    Size    #
 ##############
 
 # prints app size, max is about 140K
-
 size: all
 	$(GCCPATH)arm-none-eabi-size --format=gnu bin/app.elf
 
@@ -239,4 +169,4 @@ stax: clean
 	BOLOS_SDK=$(STAX_SDK) make
 
 # import generic rules from the sdk
-include $(BOLOS_SDK)/Makefile.rules
+include $(BOLOS_SDK)/Makefile.standard_app

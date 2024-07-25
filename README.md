@@ -1,6 +1,6 @@
 # Cardano Ledger App
 
-Cardano Ledger App for Ledger Nano S
+Cardano Ledger App for Ledger devices (Nano S, Nano S Plus, Nano X, Stax, Flex)
 
 ## Building
 

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [7.2.0](TBD) - [TBD]
+
+### Added
+
+- Add flex support,
+- Add integration tests in CI using [ledgerjs-cardano-shelley](https://github.com/LedgerHQ/ledgerjs-cardano-shelley)
+
+### Changed
+
+- Update Makefile to standard format,
+- Fix headless mode on Nano X / SP for integration tests running,
+- Update some NBGL calls to latest API (main menu),
 
 ## [7.1.0](TBD) - [TBD]
 

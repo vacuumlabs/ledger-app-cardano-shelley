@@ -19,15 +19,15 @@ void reset_app_callback(void)
 }
 #endif
 
-#if defined(TARGET_NANOS)
+#ifdef HAVE_BAGL
 static timeout_callback_fn_t* timeout_cb;
 
-void nanos_clear_timer()
+void clear_timer()
 {
 	timeout_cb = NULL;
 }
 
-void nanos_set_timer(int ms, timeout_callback_fn_t* cb)
+void set_timer(int ms, timeout_callback_fn_t* cb)
 {
 	// if TRACE() is enabled, set_timer must be called
 	// before ui_ methods, because it causes Ledger Nano S
@@ -48,8 +48,6 @@ void nanos_set_timer(int ms, timeout_callback_fn_t* cb)
 			callback(ux_allowed); \
 		} \
 	} while(0)
-#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-#define HANDLE_UX_TICKER_EVENT(ux_allowed) do {} while(0)
 #endif
 
 void CHECK_RESPONSE_SIZE(unsigned int tx)
