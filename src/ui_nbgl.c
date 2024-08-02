@@ -33,15 +33,15 @@ enum {
 };
 
 typedef enum {
-    STATUS_TYPE_TRANSACTION,
-    STATUS_TYPE_ADDRESS,
+	STATUS_TYPE_TRANSACTION,
+	STATUS_TYPE_ADDRESS,
 } statusType_t;
 
 typedef struct {
 	bool standardStatus;
-    statusType_t statusType;
-    const char* confirmedStatus; // text displayed in confirmation page (after long press)
-	const char* rejectedStatus;  // text displayed in rejection page (after reject confirmed)
+	statusType_t statusType;
+	const char* confirmedStatus;  // text displayed in confirmation page (after long press)
+	const char* rejectedStatus;	  // text displayed in rejection page (after reject confirmed)
 	callback_t approvedCallback;
 	callback_t rejectedCallback;
 	callback_t pendingDisplayPageFn;
@@ -130,8 +130,8 @@ static void reset_transaction_current_context(void)
 void nbgl_reset_transaction_full_context(void)
 {
 	reset_transaction_current_context();
-    uiContext.standardStatus = false;
-    uiContext.statusType = STATUS_TYPE_TRANSACTION;
+	uiContext.standardStatus = false;
+	uiContext.statusType = STATUS_TYPE_TRANSACTION;
 	uiContext.pendingElement = 0;
 	uiContext.lightConfirmation = false;
 	uiContext.rejectedStatus = NULL;
@@ -259,15 +259,18 @@ static void display_cancel_status(void)
 
 	if (uiContext.rejectedStatus) {
 		nbgl_useCaseStatus(uiContext.rejectedStatus, false, cancellation_status_callback);
-	} else {
-        switch (uiContext.statusType) {
-            case STATUS_TYPE_TRANSACTION:
-                nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_REJECTED, cancellation_status_callback);
-                break;
-            case STATUS_TYPE_ADDRESS:
-                nbgl_useCaseReviewStatus(STATUS_TYPE_ADDRESS_REJECTED, cancellation_status_callback);
-                break;
-        }
+	}
+	else {
+		switch (uiContext.statusType) {
+			case STATUS_TYPE_TRANSACTION:
+				nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_REJECTED,
+										 cancellation_status_callback);
+				break;
+			case STATUS_TYPE_ADDRESS:
+				nbgl_useCaseReviewStatus(STATUS_TYPE_ADDRESS_REJECTED,
+										 cancellation_status_callback);
+				break;
+		}
 	}
 }
 
@@ -544,14 +547,14 @@ void display_address(callback_t userAcceptCallback, callback_t userRejectCallbac
 	TRACE("Displaying Address");
 	set_callbacks(userAcceptCallback, userRejectCallback);
 
-    uint8_t address_index = 0;
+	uint8_t address_index = 0;
 
 	// Address field is not displayed in pairList, so there is one element less.
 	uiContext.pairList.nbPairs = uiContext.currentElementCount - 1;
 	uiContext.pairList.pairs = tagValues;
 
-    uiContext.standardStatus = true;
-    uiContext.statusType = STATUS_TYPE_ADDRESS;
+	uiContext.standardStatus = true;
+	uiContext.statusType = STATUS_TYPE_ADDRESS;
 
 	for (uint8_t i = 0; i < uiContext.currentElementCount; i++) {
 		if (strcmp(uiContext.tagTitle[i], "Address")) {
@@ -562,12 +565,9 @@ void display_address(callback_t userAcceptCallback, callback_t userRejectCallbac
 		}
 	}
 
-    nbgl_useCaseAddressReview(uiContext.tagContent[address_index],
-                              &uiContext.pairList,
-                              &C_cardano_64,
-                              "Verify Cardano address",
-                              NULL,
-                              light_confirm_callback);
+	nbgl_useCaseAddressReview(uiContext.tagContent[address_index], &uiContext.pairList,
+							  &C_cardano_64, "Verify Cardano address", NULL,
+							  light_confirm_callback);
 	reset_transaction_current_context();
 
 	#ifdef HEADLESS

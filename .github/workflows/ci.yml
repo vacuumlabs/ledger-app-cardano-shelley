@@ -42,7 +42,7 @@ jobs:
       - name : Install yarn
         run: npm install --global yarn
       - name: Install Cardano JS Library (Ledger fork)
-        run: git clone https://github.com/LedgerHQ/ledgerjs-cardano-shelley.git
+        run: git clone https://github.com/vacuumlabs/ledgerjs-cardano-shelley.git
       - name : Run tests
         run: |
           BUILD_DEVICE_NAME="$(echo ${{ matrix.device }} | sed 's/nanosp/nanos2/')"
