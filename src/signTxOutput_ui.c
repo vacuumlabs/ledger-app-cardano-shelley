@@ -450,7 +450,7 @@ void signTxOutput_handleConfirm_ui_runStep()
 		char msg[100] = {0};
 		snprintf(msg, SIZEOF(msg), "%s\n%s", subctx->ui_text1, subctx->ui_text2);
 		ASSERT(strlen(msg) + 1 < SIZEOF(msg));
-		display_confirmation(msg, "",  "OUTPUT\nCONFIRMED", "Output\nrejected", this_fn, respond_with_user_reject);
+		display_confirmation(msg, "",  "Output\nconfirmed", "Output\nrejected", this_fn, respond_with_user_reject);
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_CONFIRM_STEP_RESPOND) {

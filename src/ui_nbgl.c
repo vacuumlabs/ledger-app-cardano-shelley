@@ -32,9 +32,16 @@ enum {
 	CONFIRMATION_STATUS_TOKEN,
 };
 
+typedef enum {
+	STATUS_TYPE_TRANSACTION,
+	STATUS_TYPE_ADDRESS,
+} statusType_t;
+
 typedef struct {
-	const char* confirmedStatus; // text displayed in confirmation page (after long press)
-	const char* rejectedStatus;  // text displayed in rejection page (after reject confirmed)
+	bool standardStatus;
+	statusType_t statusType;
+	const char* confirmedStatus;  // text displayed in confirmation page (after long press)
+	const char* rejectedStatus;	  // text displayed in rejection page (after reject confirmed)
 	callback_t approvedCallback;
 	callback_t rejectedCallback;
 	callback_t pendingDisplayPageFn;
@@ -123,6 +130,8 @@ static void reset_transaction_current_context(void)
 void nbgl_reset_transaction_full_context(void)
 {
 	reset_transaction_current_context();
+	uiContext.standardStatus = false;
+	uiContext.statusType = STATUS_TYPE_TRANSACTION;
 	uiContext.pendingElement = 0;
 	uiContext.lightConfirmation = false;
 	uiContext.rejectedStatus = NULL;
@@ -248,10 +257,24 @@ static void display_cancel_status(void)
 {
 	ui_idle();
 
+	// If rejectedStatus string is not NULL, then use it to display
+	// the status notification after the user has rejected the transaction.
 	if (uiContext.rejectedStatus) {
 		nbgl_useCaseStatus(uiContext.rejectedStatus, false, cancellation_status_callback);
-	} else {
-		nbgl_useCaseStatus("Transaction rejected", false, cancellation_status_callback);
+	}
+	// Otherwise use the statusType to determine the status to display.
+	// The string is managed by the SDK.
+	else {
+		switch (uiContext.statusType) {
+			case STATUS_TYPE_TRANSACTION:
+				nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_REJECTED,
+										 cancellation_status_callback);
+				break;
+			case STATUS_TYPE_ADDRESS:
+				nbgl_useCaseReviewStatus(STATUS_TYPE_ADDRESS_REJECTED,
+										 cancellation_status_callback);
+				break;
+		}
 	}
 }
 
@@ -344,13 +367,31 @@ static void _display_choice(void)
 
 static void confirmation_status_callback(void)
 {
+	// If confirmedStatus string is not NULL, then use it to display
+	// the status notification after the user has confirmed the transaction.
 	if (uiContext.confirmedStatus) {
 		nbgl_useCaseStatus(uiContext.confirmedStatus, true, ui_idle_flow);
 		nbgl_reset_transaction_full_context();
-	} else {
+	// Otherwise, if the standardStatus flag is set, then use the statusType
+	// to determine the status to display (the string is managed by the SDK).
+	}
+	else if (uiContext.standardStatus) {
+		switch (uiContext.statusType) {
+			case STATUS_TYPE_TRANSACTION:
+				nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_SIGNED, ui_idle_flow);
+				break;
+			case STATUS_TYPE_ADDRESS:
+				nbgl_useCaseReviewStatus(STATUS_TYPE_ADDRESS_VERIFIED, ui_idle_flow);
+				break;
+		}
+		nbgl_reset_transaction_full_context();
+	// If neither of the above conditions are met, then the status notification
+	// display is delayed until the confirmation process is finished.
+	// A spinner is displayed in the meantime.
+	}
+	else {
 		nbgl_useCaseSpinner("Processing");
 	}
-
 }
 
 static void display_confirmation_status(void)
@@ -362,35 +403,6 @@ static void display_confirmation_status(void)
 	if (!uiContext.no_approved_status) {
 		confirmation_status_callback();
 	}
-}
-
-static void display_address_callback(void)
-{
-	uint8_t address_index = 0;
-
-	// Address field is not displayed in pairList, so there is one element less.
-	uiContext.pairList.nbPairs = uiContext.currentElementCount - 1;
-	uiContext.pairList.pairs = tagValues;
-
-	uiContext.confirmedStatus = "ADDRESS\nVERIFIED";
-	uiContext.rejectedStatus = "Address verification\ncancelled";
-
-	for (uint8_t i = 0; i < uiContext.currentElementCount; i++) {
-		if (strcmp(uiContext.tagTitle[i], "Address")) {
-			tagValues[i].item = uiContext.tagTitle[i];
-			tagValues[i].value = uiContext.tagContent[i];
-		} else {
-			address_index = i;
-		}
-	}
-
-	nbgl_useCaseAddressConfirmationExt(uiContext.tagContent[address_index], light_confirm_callback, &uiContext.pairList);
-	reset_transaction_current_context();
-
-	#ifdef HEADLESS
-	nbgl_refresh();
-	trigger_callback(&display_confirmation_status);
-	#endif
 }
 
 static void trigger_callback(callback_t userAcceptCallback)
@@ -446,6 +458,8 @@ void force_display(callback_t userAcceptCallback, callback_t userRejectCallback)
 	}
 }
 
+// Fill page content. If the content's number of lines exceeds the maximum number of lines per page,
+// the page is displayed and the pending element is added.
 void fill_and_display_if_required(const char* line1, const char* line2,
                                   callback_t userAcceptCallback,
                                   callback_t userRejectCallback)
@@ -545,15 +559,34 @@ void display_choice(const char* text1, const char* text2, callback_t userAcceptC
 void display_address(callback_t userAcceptCallback, callback_t userRejectCallback)
 {
 	TRACE("Displaying Address");
-	uiContext.rejectedStatus = "Address verification\ncancelled";
-
 	set_callbacks(userAcceptCallback, userRejectCallback);
-	nbgl_useCaseReviewStart(&C_cardano_64, "Verify Cardano\naddress",
-	                        NULL, "Cancel", display_address_callback,
-	                        display_cancel_status);
+
+	uint8_t address_index = 0;
+
+	// Address field is not displayed in pairList, so there is one element less.
+	uiContext.pairList.nbPairs = uiContext.currentElementCount - 1;
+	uiContext.pairList.pairs = tagValues;
+
+	uiContext.standardStatus = true;
+	uiContext.statusType = STATUS_TYPE_ADDRESS;
+
+	for (uint8_t i = 0; i < uiContext.currentElementCount; i++) {
+		if (strcmp(uiContext.tagTitle[i], "Address")) {
+			tagValues[i].item = uiContext.tagTitle[i];
+			tagValues[i].value = uiContext.tagContent[i];
+		} else {
+			address_index = i;
+		}
+	}
+
+	nbgl_useCaseAddressReview(uiContext.tagContent[address_index], &uiContext.pairList,
+							  &C_cardano_64, "Verify Cardano address", NULL,
+							  light_confirm_callback);
+	reset_transaction_current_context();
+
 	#ifdef HEADLESS
 	nbgl_refresh();
-	trigger_callback(&display_address_callback);
+	trigger_callback(&display_confirmation_status);
 	#endif
 }
 

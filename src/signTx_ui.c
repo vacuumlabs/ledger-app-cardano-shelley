@@ -1692,6 +1692,6 @@ void signTx_handleWitness_ui_runStep()
 void endTxStatus(void)
 {
 	#ifdef HAVE_NBGL
-	display_status("TRANSACTION\nSIGNED");
+	display_status("Transaction\nsigned");
 	#endif // HAVE_NBGL
 }
