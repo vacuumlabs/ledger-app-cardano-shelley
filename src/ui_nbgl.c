@@ -257,9 +257,13 @@ static void display_cancel_status(void)
 {
 	ui_idle();
 
+	// If rejectedStatus string is not NULL, then use it to display
+	// the status notification after the user has rejected the transaction.
 	if (uiContext.rejectedStatus) {
 		nbgl_useCaseStatus(uiContext.rejectedStatus, false, cancellation_status_callback);
 	}
+	// Otherwise use the statusType to determine the status to display.
+	// The string is managed by the SDK.
 	else {
 		switch (uiContext.statusType) {
 			case STATUS_TYPE_TRANSACTION:
@@ -363,23 +367,31 @@ static void _display_choice(void)
 
 static void confirmation_status_callback(void)
 {
+	// If confirmedStatus string is not NULL, then use it to display
+	// the status notification after the user has confirmed the transaction.
 	if (uiContext.confirmedStatus) {
 		nbgl_useCaseStatus(uiContext.confirmedStatus, true, ui_idle_flow);
 		nbgl_reset_transaction_full_context();
-    } else if(uiContext.standardStatus) {
-        switch (uiContext.statusType) {
-            case STATUS_TYPE_TRANSACTION:
-                nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_SIGNED, ui_idle_flow);
-                break;
-            case STATUS_TYPE_ADDRESS:
-                nbgl_useCaseReviewStatus(STATUS_TYPE_ADDRESS_VERIFIED, ui_idle_flow);
-                break;
-        }
-        nbgl_reset_transaction_full_context();
-	} else {
+	// Otherwise, if the standardStatus flag is set, then use the statusType
+	// to determine the status to display (the string is managed by the SDK).
+	}
+	else if (uiContext.standardStatus) {
+		switch (uiContext.statusType) {
+			case STATUS_TYPE_TRANSACTION:
+				nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_SIGNED, ui_idle_flow);
+				break;
+			case STATUS_TYPE_ADDRESS:
+				nbgl_useCaseReviewStatus(STATUS_TYPE_ADDRESS_VERIFIED, ui_idle_flow);
+				break;
+		}
+		nbgl_reset_transaction_full_context();
+	// If neither of the above conditions are met, then the status notification
+	// display is delayed until the confirmation process is finished.
+	// A spinner is displayed in the meantime.
+	}
+	else {
 		nbgl_useCaseSpinner("Processing");
 	}
-
 }
 
 static void display_confirmation_status(void)
@@ -446,6 +458,8 @@ void force_display(callback_t userAcceptCallback, callback_t userRejectCallback)
 	}
 }
 
+// Fill page content. If the content's number of lines exceeds the maximum number of lines per page,
+// the page is displayed and the pending element is added.
 void fill_and_display_if_required(const char* line1, const char* line2,
                                   callback_t userAcceptCallback,
                                   callback_t userRejectCallback)
