@@ -97,7 +97,7 @@
   },
   {
     "assetSubject": "7f376e3d1cf52e6c4350a1a91c8f8d0f0b63baedd443999ebe8fe57a424f52475a",
-    "name": "BORGZ",
+    "name": "Battle Borgz",
     "ticker": "BORGZ",
     "decimals": 0
   },
@@ -276,12 +276,6 @@
     "decimals": 6
   },
   {
-    "assetSubject": "8fef2d34078659493ce161a6c7fba4b56afefa8535296a5743f6958741414441",
-    "name": "Aada DAO Token",
-    "ticker": "AADA",
-    "decimals": 6
-  },
-  {
     "assetSubject": "0c78f619e54a5d00e143f66181a2c500d0c394b38a10e86cd1a23c5f41444158",
     "name": "ADAX",
     "ticker": "ADAX",
@@ -396,12 +390,6 @@
     "decimals": 0
   },
   {
-    "assetSubject": "25f0fc240e91bd95dcdaebd2ba7713fc5168ac77234a3d79449fc20c534f4349455459",
-    "name": "SOCIETY",
-    "ticker": "SOCIETY",
-    "decimals": 6
-  },
-  {
     "assetSubject": "c9f955eeffa84e42363b4992281d32dd2f9239153d6c66420a9acc154c4f47",
     "name": "Life Log Token",
     "ticker": "LOG",
@@ -504,12 +492,6 @@
     "decimals": 0
   },
   {
-    "assetSubject": "133fac9e153194428eb0919be39837b42b9e977fc7298f3ff1b76ef95055444759",
-    "name": "$PUDGY Token",
-    "ticker": "PUDGY",
-    "decimals": 0
-  },
-  {
     "assetSubject": "f555c46bad0731d080c9381d7fff6f82839946a66bd070d185e1ea2f42444f4745",
     "name": "BlackDoge",
     "ticker": "BDOGE",
@@ -609,6 +591,210 @@
     "assetSubject": "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b6988069555344",
     "name": "iUSD",
     "ticker": "iUSD",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "279c909f348e533da5808898f87f9a14bb2c3dfbbacccd631d927a3f534e454b",
+    "name": "Snek",
+    "ticker": "SNEK",
+    "decimals": 0
+  },
+  {
+    "assetSubject": "95a427e384527065f2f8946f5e86320d0117839a5e98ea2c0b55fb0048554e54",
+    "name": "HUNT",
+    "ticker": "HUNT",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "5d16cc1a177b5d9ba9cfa9793b07e60f1fb70fea1f8aef064415d114494147",
+    "name": "IAGON",
+    "ticker": "IAG",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "749d101a169dbd15bcd488d3fca942665b7bc6f69512235bd301c5864652454e",
+    "name": "FREN",
+    "ticker": "FREN",
+    "decimals": 0
+  },
+  {
+    "assetSubject": "8fef2d34078659493ce161a6c7fba4b56afefa8535296a5743f6958741414441",
+    "name": "Lenfi DAO token",
+    "ticker": "LENFI",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b6988069425443",
+    "name": "iBTC",
+    "ticker": "iBTC",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "51a5e236c4de3af2b8020442e2a26f454fda3b04cb621c1294a0ef34424f4f4b",
+    "name": "BOOK",
+    "ticker": "BOOK",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "edfd7a1d77bcb8b884c474bdc92a16002d1fb720e454fa6e993444794e5458",
+    "name": "NuNet Utility Token",
+    "ticker": "NTX",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "a3931691f5c4e65d01c429e473d0dd24c51afdb6daf88e632a6c1e516f7263666178746f6b656e",
+    "name": "Orcfax Token",
+    "ticker": "FACT",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "7914fae20eb2903ed6fd5021a415c1bd2626b64a2d86a304cb40ff5e4c494649",
+    "name": "LinkageFinanceToken",
+    "ticker": "LIFI",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "e52964af4fffdb54504859875b1827b60ba679074996156461143dc14f5054494d",
+    "name": "OPTIM",
+    "ticker": "OPTIM",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "1ddcb9c9de95361565392c5bdff64767492d61a96166cb16094e54be4f5054",
+    "name": "OptionFlowToken",
+    "ticker": "OPT",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "2d587111358801114f04df83dc0015de0a740b462b75cce5170fc935434749",
+    "name": "CardanoGPT",
+    "ticker": "CGI",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "8db269c3ec630e06ae29f74bc39edd1f87c819f1056206e879a1cd615368656e4d6963726f555344",
+    "name": "Shen USD",
+    "ticker": "SHEN",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "cc8d1b026353022abbfcc2e1e71159f9e308d9c6e905ac1db24c7fb650617269627573",
+    "name": "Paribus",
+    "ticker": "PBX",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "f66d78b4a3cb3d37afa0ec36461e51ecbde00f26c8f0a68f94b6988069455448",
+    "name": "iETH",
+    "ticker": "iETH",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "b166a1047a8cd275bf0a50201ece3d4f0b4da300094ffcc668a6f4084b49545550",
+    "name": "KITUP",
+    "ticker": "KITUP",
+    "decimals": 0
+  },
+  {
+    "assetSubject": "dda5fdb1002f7389b33e036b6afee82a8189becb6cba852e8b79b4fb0014df1047454e53",
+    "name": "Genius Yield Token",
+    "ticker": "GENS",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "b201928d6bdb21c2e39205a92e226653d6002b949eaaacde3d986c2f524f4e",
+    "name": "Ron",
+    "ticker": "RON",
+    "decimals": 0
+  },
+  {
+    "assetSubject": "ac015c38917f306a84748c2d646bed90bdd64421c592163e60702d735453555255",
+    "name": "TOOL",
+    "ticker": "TOOL",
+    "decimals": 0
+  },
+  {
+    "assetSubject": "681b5d0383ac3b457e1bcc453223c90ccef26b234328f45fa10fd2764a5047",
+    "name": "JPG TOKEN",
+    "ticker": "JPG",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "25f0fc240e91bd95dcdaebd2ba7713fc5168ac77234a3d79449fc20c534f4349455459",
+    "name": "Society",
+    "ticker": "SOC",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "caff93803e51c7b97bf79146790bfa3feb0d0b856ef16113b391b9975649504552",
+    "name": "VIPER",
+    "ticker": "VIPER",
+    "decimals": 0
+  },
+  {
+    "assetSubject": "9abf0afd2f236a19f2842d502d0450cbcd9c79f123a9708f96fd9b96454e4353",
+    "name": "ENCOINS utility token",
+    "ticker": "ENCS",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "2b28c81dbba6d67e4b5a997c6be1212cba9d60d33f82444ab8b1f21842414e4b",
+    "name": "Bankercoin",
+    "ticker": "BANK",
+    "decimals": 0
+  },
+  {
+    "assetSubject": "a1c94e56e4b24945338f2779e33b02e52fdd30d5f279c6131cc43c7c42555a5a",
+    "name": "Buzz The Bellboy",
+    "ticker": "BUZZ",
+    "decimals": 2
+  },
+  {
+    "assetSubject": "04b95368393c821f180deee8229fbd941baaf9bd748ebcdbf7adbb147273455247",
+    "name": "rsERG",
+    "ticker": "rsERG",
+    "decimals": 9
+  },
+  {
+    "assetSubject": "c27600f3aff3d94043464a33786429b78e6ab9df5e1d23b774acb34c434e4354",
+    "name": "Coinecta",
+    "ticker": "CNCT",
+    "decimals": 4
+  },
+  {
+    "assetSubject": "420000029ad9527271b1b1e3c27ee065c18df70a4a4cfc3093a41a4441584f",
+    "name": "AXO",
+    "ticker": "AXO",
+    "decimals": 9
+  },
+  {
+    "assetSubject": "09f2d4e4a5c3662f4c1e6a7d9600e9605279dbdcedb22d4507cb6e75535046",
+    "name": "SPF",
+    "ticker": "SPF",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "86abe45be4d8fb2e8f28e8047d17d0ba5592f2a6c8c452fc88c2c14358524159",
+    "name": "XRAY",
+    "ticker": "XRAY",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "8daefa391220bd0d8d007f3748d870f7f3c106040314c8515ccc35a5464c4143",
+    "name": "Flac Finance",
+    "ticker": "FLAC",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "75fcc276057db5fc48eae0e11453c773c8a54604c3086bf9d95ac1b743485259",
+    "name": "CherryLend",
+    "ticker": "CHRY",
+    "decimals": 6
+  },
+  {
+    "assetSubject": "c48cbb3d5e57ed56e276bc45f99ab39abe94e6cd7ac39fb402da47ad0014df105553444d",
+    "name": "USDM",
+    "ticker": "USDM",
     "decimals": 6
   }
 ]

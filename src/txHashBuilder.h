@@ -6,6 +6,41 @@
 #include "addressUtilsShelley.h"
 
 typedef enum {
+	CREDENTIAL_KEY_HASH = 0,
+	CREDENTIAL_SCRIPT_HASH = 1,
+} credential_type_t;
+
+typedef struct {
+	credential_type_t type;
+	union {
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} credential_t;
+
+typedef enum {
+	DREP_KEY_HASH = 0,
+	DREP_SCRIPT_HASH = 1,
+	DREP_ALWAYS_ABSTAIN = 2,
+	DREP_ALWAYS_NO_CONFIDENCE = 3,
+} drep_type_t;
+
+typedef struct {
+	drep_type_t type;
+	union {
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} drep_t;
+
+typedef struct {
+	bool isIncluded;
+	uint8_t url[ANCHOR_URL_LENGTH_MAX];
+	size_t urlLength;
+	uint8_t hash[ANCHOR_HASH_LENGTH];
+} anchor_t;
+
+typedef enum {
 	ARRAY_LEGACY = 0,   // legacy_transaction_output
 	MAP_BABBAGE = 1     // post_alonzo_transaction_output
 } tx_output_serialization_format_t;
@@ -45,6 +80,39 @@ typedef struct {
 	};
 } tx_output_destination_t;
 
+typedef enum {
+	VOTER_COMMITTEE_HOT_KEY_HASH = 0,
+	VOTER_COMMITTEE_HOT_SCRIPT_HASH = 1,
+	VOTER_DREP_KEY_HASH = 2,
+	VOTER_DREP_SCRIPT_HASH = 3,
+	VOTER_STAKE_POOL_KEY_HASH = 4,
+} voter_type_t;
+
+typedef struct {
+	voter_type_t type;
+	union {
+		uint8_t keyHash[ADDRESS_KEY_HASH_LENGTH];
+		uint8_t scriptHash[SCRIPT_HASH_LENGTH];
+	};
+} voter_t;
+
+typedef struct {
+	uint8_t txHashBuffer[TX_HASH_LENGTH];
+	uint32_t govActionIndex;
+} gov_action_id_t;
+
+typedef enum {
+	VOTE_NO = 0,
+	VOTE_YES = 1,
+	VOTE_ABSTAIN = 2,
+} vote_t;
+
+typedef struct {
+	vote_t vote;
+	anchor_t anchor;
+} voting_procedure_t;
+
+
 enum {
 	TX_BODY_KEY_INPUTS = 0,
 	TX_BODY_KEY_OUTPUTS = 1,
@@ -63,6 +131,10 @@ enum {
 	TX_BODY_KEY_COLLATERAL_OUTPUT = 16,
 	TX_BODY_KEY_TOTAL_COLLATERAL = 17,
 	TX_BODY_KEY_REFERENCE_INPUTS = 18,
+	TX_BODY_KEY_VOTING_PROCEDURES = 19,
+	// TX_BODY_KEY_PROPOSAL_PROCEDURES = 20, // not used
+	TX_BODY_KEY_TREASURY = 21,
+	TX_BODY_KEY_DONATION = 22,
 };
 
 enum {
@@ -108,7 +180,10 @@ typedef enum {
 	TX_HASH_BUILDER_IN_COLLATERAL_OUTPUT = 1500,
 	TX_HASH_BUILDER_IN_TOTAL_COLLATERAL = 1600,
 	TX_HASH_BUILDER_IN_REFERENCE_INPUTS = 1700,
-	TX_HASH_BUILDER_FINISHED = 1800,
+	TX_HASH_BUILDER_IN_VOTING_PROCEDURES = 1800,
+	TX_HASH_BUILDER_IN_TREASURY = 1900,
+	TX_HASH_BUILDER_IN_DONATION = 2000,
+	TX_HASH_BUILDER_FINISHED = 2100,
 } tx_hash_builder_state_t;
 
 typedef enum {
@@ -121,6 +196,8 @@ typedef enum {
 } tx_hash_builder_output_state_t;
 
 typedef struct {
+	bool tagCborSets;
+
 	uint16_t remainingInputs;
 	uint16_t remainingOutputs;
 	uint16_t remainingWithdrawals;
@@ -128,6 +205,7 @@ typedef struct {
 	uint16_t remainingCollateralInputs;
 	uint16_t remainingRequiredSigners;
 	uint16_t remainingReferenceInputs;
+	uint16_t remainingVotingProcedures;
 	bool includeTtl;
 	bool includeAuxData;
 	bool includeValidityIntervalStart;
@@ -136,6 +214,8 @@ typedef struct {
 	bool includeNetworkId;
 	bool includeCollateralOutput;
 	bool includeTotalCollateral;
+	bool includeTreasury;
+	bool includeDonation;
 
 	union {
 		struct {
@@ -144,6 +224,7 @@ typedef struct {
 		} poolCertificateData;
 
 		struct {
+			tx_hash_builder_output_state_t outputState;
 			tx_output_serialization_format_t serializationFormat;
 			bool includeDatum;
 			bool includeRefScript;
@@ -164,9 +245,8 @@ typedef struct {
 					size_t remainingBytes;
 				} referenceScriptData;
 			};
-		} outputData; // TODO rename to output?
+		} outputData;
 	};
-	tx_hash_builder_output_state_t outputState; // TODO move to outputData above
 
 
 	tx_hash_builder_state_t state;
@@ -186,6 +266,7 @@ typedef struct {
 
 void txHashBuilder_init(
         tx_hash_builder_t* builder,
+        bool tagCborSets,
         uint16_t numInputs,
         uint16_t numOutputs,
         bool includeTtl,
@@ -200,7 +281,10 @@ void txHashBuilder_init(
         bool includeNetworkId,
         bool includeCollateralOutput,
         bool includeTotalCollateral,
-        uint16_t numReferenceInputs
+        uint16_t numReferenceInputs,
+        uint16_t numVotingProcedures,
+        bool includeTreasury,
+        bool includeDonation
 );
 
 void txHashBuilder_enterInputs(tx_hash_builder_t* builder);
@@ -250,25 +334,72 @@ void txHashBuilder_addTtl(tx_hash_builder_t* builder, uint64_t ttl);
 
 void txHashBuilder_enterCertificates(tx_hash_builder_t* builder);
 
-void txHashBuilder_addCertificate_stakingHash(
+void txHashBuilder_addCertificate_stakingOld(
         tx_hash_builder_t* builder,
         const certificate_type_t certificateType,
-        const stake_credential_type_t stakeCredentialType,
-        const uint8_t* stakingHash, size_t stakingHashSize
+        const credential_t* stakingCredential
+);
+void txHashBuilder_addCertificate_staking(
+        tx_hash_builder_t* builder,
+        const certificate_type_t certificateType,
+        const credential_t* stakeCredential,
+        uint64_t deposit
 );
 
-void txHashBuilder_addCertificate_delegation(
+void txHashBuilder_addCertificate_stakeDelegation(
         tx_hash_builder_t* builder,
-        const stake_credential_type_t stakeCredentialType,
-        const uint8_t* stakingKeyHash, size_t stakingKeyHashSize,
+        const credential_t* stakeCredential,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize
 );
+
+void txHashBuilder_addCertificate_voteDelegation(
+        tx_hash_builder_t* builder,
+        const credential_t* stakeCredential,
+        const drep_t* drep
+);
+
+void txHashBuilder_addCertificate_committeeAuthHot(
+        tx_hash_builder_t* builder,
+        const credential_t* coldCredential,
+        const credential_t* hotCredential
+);
+
+void txHashBuilder_addCertificate_committeeResign(
+        tx_hash_builder_t* builder,
+        const credential_t* coldCredential,
+        const anchor_t* anchor
+);
+
+void txHashBuilder_addCertificate_dRepRegistration(
+        tx_hash_builder_t* builder,
+        const credential_t* dRepCredential,
+        uint64_t deposit,
+        const anchor_t* anchor
+);
+
+void txHashBuilder_addCertificate_dRepDeregistration(
+        tx_hash_builder_t* builder,
+        const credential_t* dRepCredential,
+        uint64_t deposit
+);
+
+void txHashBuilder_addCertificate_dRepUpdate(
+        tx_hash_builder_t* builder,
+        const credential_t* dRepCredential,
+        const anchor_t* anchor
+);
+
+#ifdef APP_FEATURE_POOL_RETIREMENT
 
 void txHashBuilder_addCertificate_poolRetirement(
         tx_hash_builder_t* builder,
         const uint8_t* poolKeyHash, size_t poolKeyHashSize,
         uint64_t epoch
 );
+
+#endif // APP_FEATURE_POOL_RETIREMENT
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
 void txHashBuilder_poolRegistrationCertificate_enter(
         tx_hash_builder_t* builder,
@@ -320,6 +451,8 @@ void txHashBuilder_addPoolRegistrationCertificate_addPoolMetadata_null(
         tx_hash_builder_t* builder
 );
 
+#endif // APP_FEATURE_POOL_REGISTRATION
+
 void txHashBuilder_enterWithdrawals(tx_hash_builder_t* builder);
 
 void txHashBuilder_addWithdrawal(
@@ -338,6 +471,8 @@ void txHashBuilder_addValidityIntervalStart(
         uint64_t validityIntervalStart
 );
 
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 void txHashBuilder_enterMint(tx_hash_builder_t* builder);
 
 void txHashBuilder_addMint_topLevelData(
@@ -355,6 +490,8 @@ void txHashBuilder_addMint_token(
         const uint8_t* assetNameBuffer, size_t assetNameSize,
         int64_t amount
 );
+
+#endif // APP_FEATURE_TOKEN_MINTING
 
 void txHashBuilder_addScriptDataHash(
         tx_hash_builder_t* builder,
@@ -400,14 +537,23 @@ void txHashBuilder_addReferenceInput(
         const tx_input_t* refInput
 );
 
+void txHashBuilder_enterVotingProcedures(tx_hash_builder_t* builder);
+
+void txHashBuilder_addVotingProcedure(
+        tx_hash_builder_t* builder,
+        voter_t* voter,
+        gov_action_id_t* govActionId,
+        voting_procedure_t* votingProcedure
+);
+
+void txHashBuilder_addTreasury(tx_hash_builder_t* builder, uint64_t treasury);
+
+void txHashBuilder_addDonation(tx_hash_builder_t* builder, uint64_t donation);
+
 void txHashBuilder_finalize(
         tx_hash_builder_t* builder,
         uint8_t* outBuffer, size_t outSize
 );
 
-
-#ifdef DEVEL
-void run_txHashBuilder_test();
-#endif // DEVEL
 
 #endif // H_CARDANO_APP_TX_HASH_BUILDER

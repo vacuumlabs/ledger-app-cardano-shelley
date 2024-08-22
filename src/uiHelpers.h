@@ -10,7 +10,7 @@
 
 typedef void ui_callback_fn_t();
 
-#if defined(TARGET_NANOX) || defined(TARGET_NANOS2) || defined(TARGET_STAX)
+#if !defined(TARGET_NANOS) 
 extern ux_state_t G_ux;
 extern bolos_ux_params_t G_ux_params;
 #endif

@@ -30,6 +30,8 @@ static inline void initTxBodyCtx()
 		BODY_CTX->currentWithdrawal = 0;
 		BODY_CTX->currentCollateral = 0;
 		BODY_CTX->currentRequiredSigner = 0;
+		BODY_CTX->currentReferenceInput = 0;
+		BODY_CTX->currentVotingProcedure = 0;
 		BODY_CTX->feeReceived = false;
 		BODY_CTX->ttlReceived = false;
 		BODY_CTX->validityIntervalStartReceived = false;
@@ -37,6 +39,8 @@ static inline void initTxBodyCtx()
 		BODY_CTX->scriptDataHashReceived = false;
 		BODY_CTX->collateralOutputReceived = false;
 		BODY_CTX->totalCollateralReceived = false;
+		BODY_CTX->treasuryReceived = false;
+		BODY_CTX->donationReceived = false;
 	}
 }
 
@@ -87,6 +91,7 @@ void tx_advanceStage()
 			// Note: make sure that everything in ctx is initialized properly
 			txHashBuilder_init(
 			        &BODY_CTX->txHashBuilder,
+			        ctx->commonTxData.tagCborSets,
 			        ctx->numInputs,
 			        ctx->numOutputs,
 			        ctx->includeTtl,
@@ -101,7 +106,10 @@ void tx_advanceStage()
 			        ctx->includeNetworkId,
 			        ctx->includeCollateralOutput,
 			        ctx->includeTotalCollateral,
-			        ctx->numReferenceInputs
+			        ctx->numReferenceInputs,
+			        ctx->numVotingProcedures,
+			        ctx->includeTreasury,
+			        ctx->includeDonation
 			);
 			txHashBuilder_enterInputs(&BODY_CTX->txHashBuilder);
 		}
@@ -112,6 +120,7 @@ void tx_advanceStage()
 		ASSERT(BODY_CTX->currentInput == ctx->numInputs);
 		txHashBuilder_enterOutputs(&BODY_CTX->txHashBuilder);
 		initializeOutputSubmachine();
+
 		ctx->stage = SIGN_STAGE_BODY_OUTPUTS;
 
 		if (ctx->numOutputs > 0) {
@@ -123,6 +132,7 @@ void tx_advanceStage()
 	case SIGN_STAGE_BODY_OUTPUTS:
 		// we should have received all outputs
 		ASSERT(BODY_CTX->currentOutput == ctx->numOutputs);
+
 		ctx->stage = SIGN_STAGE_BODY_FEE;
 		break;
 
@@ -176,6 +186,7 @@ void tx_advanceStage()
 		}
 
 		ctx->stage = SIGN_STAGE_BODY_VALIDITY_INTERVAL;
+
 		if (ctx->includeValidityIntervalStart) {
 			// wait for Validity interval start APDU
 			break;
@@ -186,12 +197,18 @@ void tx_advanceStage()
 		if (ctx->includeValidityIntervalStart) {
 			ASSERT(BODY_CTX->validityIntervalStartReceived);
 		}
+
 		ctx->stage = SIGN_STAGE_BODY_MINT;
+
 		if (ctx->includeMint) {
+			#ifdef APP_FEATURE_TOKEN_MINTING
 			txHashBuilder_enterMint(&BODY_CTX->txHashBuilder);
 			signTxMint_init();
 			// wait for mint APDU
 			break;
+			#else
+			ASSERT(false);
+			#endif // APP_FEATURE_TOKEN_MINTING
 		}
 
 		__attribute__((fallthrough));
@@ -199,7 +216,9 @@ void tx_advanceStage()
 		if (ctx->includeMint) {
 			ASSERT(BODY_CTX->mintReceived);
 		}
+
 		ctx->stage = SIGN_STAGE_BODY_SCRIPT_DATA_HASH;
+
 		if (ctx->includeScriptDataHash) {
 			break;
 		}
@@ -209,7 +228,9 @@ void tx_advanceStage()
 		if (ctx->includeScriptDataHash) {
 			ASSERT(BODY_CTX->scriptDataHashReceived);
 		}
+
 		ctx->stage = SIGN_STAGE_BODY_COLLATERAL_INPUTS;
+
 		if (ctx->numCollateralInputs > 0) {
 			txHashBuilder_enterCollateralInputs(&BODY_CTX->txHashBuilder);
 			break;
@@ -218,7 +239,9 @@ void tx_advanceStage()
 		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 		ASSERT(BODY_CTX->currentCollateral == ctx->numCollateralInputs);
+
 		ctx->stage = SIGN_STAGE_BODY_REQUIRED_SIGNERS;
+
 		if (ctx->numRequiredSigners > 0) {
 			txHashBuilder_enterRequiredSigners(&BODY_CTX->txHashBuilder);
 			break;
@@ -231,7 +254,9 @@ void tx_advanceStage()
 			// we are not waiting for any APDU here, network id is already known from the init APDU
 			txHashBuilder_addNetworkId(&BODY_CTX->txHashBuilder, ctx->commonTxData.networkId);
 		}
+
 		ctx->stage = SIGN_STAGE_BODY_COLLATERAL_OUTPUT;
+
 		if (ctx->includeCollateralOutput) {
 			break;
 		}
@@ -241,7 +266,9 @@ void tx_advanceStage()
 		if (ctx->includeCollateralOutput) {
 			ASSERT(BODY_CTX->collateralOutputReceived);
 		}
+
 		ctx->stage = SIGN_STAGE_BODY_TOTAL_COLLATERAL;
+
 		if (ctx->includeTotalCollateral) {
 			break;
 		}
@@ -251,7 +278,9 @@ void tx_advanceStage()
 		if (ctx->includeTotalCollateral) {
 			ASSERT(BODY_CTX->totalCollateralReceived);
 		}
+
 		ctx->stage = SIGN_STAGE_BODY_REFERENCE_INPUTS;
+
 		if (ctx->numReferenceInputs > 0) {
 			txHashBuilder_enterReferenceInputs(&BODY_CTX->txHashBuilder);
 			break;
@@ -260,6 +289,42 @@ void tx_advanceStage()
 		__attribute__((fallthrough));
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
 		ASSERT(BODY_CTX->currentReferenceInput == ctx->numReferenceInputs);
+
+		ctx->stage = SIGN_STAGE_BODY_VOTING_PROCEDURES;
+
+		if (ctx->numVotingProcedures > 0) {
+			txHashBuilder_enterVotingProcedures(&BODY_CTX->txHashBuilder);
+			break;
+		}
+
+		__attribute__((fallthrough));
+	case SIGN_STAGE_BODY_VOTING_PROCEDURES:
+		ASSERT(BODY_CTX->currentVotingProcedure == ctx->numVotingProcedures);
+
+		ctx->stage = SIGN_STAGE_BODY_TREASURY;
+
+		if (ctx->includeTreasury) {
+			break;
+		}
+
+		__attribute__((fallthrough));
+	case SIGN_STAGE_BODY_TREASURY:
+		if (ctx->includeTreasury) {
+			ASSERT(BODY_CTX->treasuryReceived);
+		}
+
+		ctx->stage = SIGN_STAGE_BODY_DONATION;
+
+		if (ctx->includeDonation) {
+			break;
+		}
+
+		__attribute__((fallthrough));
+	case SIGN_STAGE_BODY_DONATION:
+		if (ctx->includeDonation) {
+			ASSERT(BODY_CTX->donationReceived);
+		}
+
 		ctx->stage = SIGN_STAGE_CONFIRM;
 		break;
 
@@ -312,7 +377,11 @@ void tx_advanceCertificatesStateIfAppropriate()
 	break;
 
 	default:
+		#ifdef APP_FEATURE_POOL_REGISTRATION
 		ASSERT(ctx->stage == SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE);
+		#else
+		ASSERT(false);
+		#endif // APP_FEATURE_POOL_REGISTRATION
 	}
 }
 
@@ -343,6 +412,8 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
+		#ifdef APP_FEATURE_POOL_REGISTRATION
+
 	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
 		if (signTxPoolRegistration_isFinished()) {
 			TRACE();
@@ -352,6 +423,8 @@ static inline void checkForFinishedSubmachines()
 			tx_advanceCertificatesStateIfAppropriate();
 		}
 		break;
+
+		#endif // APP_FEATURE_POOL_REGISTRATION
 
 	case SIGN_STAGE_AUX_DATA_CVOTE_REGISTRATION_SUBMACHINE:
 		if (signTxCVoteRegistration_isFinished()) {
@@ -367,6 +440,8 @@ static inline void checkForFinishedSubmachines()
 		}
 		break;
 
+		#ifdef APP_FEATURE_TOKEN_MINTING
+
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
 		if (signTxMint_isFinished()) {
 			TRACE();
@@ -375,6 +450,8 @@ static inline void checkForFinishedSubmachines()
 			tx_advanceStage();
 		}
 		break;
+
+		#endif // APP_FEATURE_TOKEN_MINTING
 
 	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
 		if (isCurrentOutputFinished()) {
@@ -399,6 +476,16 @@ static inline void CHECK_STAGE(sign_tx_stage_t expected)
 
 // ============================== INIT ==============================
 
+static void _parseTxOptions(uint64_t options)
+{
+	ctx->commonTxData.tagCborSets = options & TX_OPTIONS_TAG_CBOR_SETS;
+	options &= ~TX_OPTIONS_TAG_CBOR_SETS;
+	TRACE("tagCborSets = %d", ctx->commonTxData.tagCborSets);
+
+	// we only accept known flags
+	VALIDATE(options == 0, ERR_INVALID_DATA);
+}
+
 __noinline_due_to_stack__
 static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
@@ -408,7 +495,6 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		CHECK_STAGE(SIGN_STAGE_INIT);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	{
@@ -417,6 +503,8 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 		struct {
+			uint8_t txOptions[8];
+
 			uint8_t networkId;
 			uint8_t protocolMagic[4];
 
@@ -428,6 +516,8 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 			uint8_t includeNetworkId;
 			uint8_t includeCollateralOutput;
 			uint8_t includeTotalCollateral;
+			uint8_t includeTreasury;
+			uint8_t includeDonation;
 			uint8_t txSigningMode;
 
 			uint8_t numInputs[4];
@@ -437,11 +527,15 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 			uint8_t numCollateralInputs[4];
 			uint8_t numRequiredSigners[4];
 			uint8_t numReferenceInputs[4];
+			uint8_t numVotingProcedures[4];
 
 			uint8_t numWitnesses[4];
 		}* wireHeader = (void*) wireDataBuffer;
 
 		VALIDATE(SIZEOF(*wireHeader) == wireDataSize, ERR_INVALID_DATA);
+
+		uint64_t txOptions = u8be_read(wireHeader->txOptions);
+		_parseTxOptions(txOptions);
 
 		ASSERT_TYPE(ctx->commonTxData.networkId, uint8_t);
 		ctx->commonTxData.networkId = wireHeader->networkId;
@@ -476,15 +570,27 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		ctx->includeTotalCollateral = signTx_parseIncluded(wireHeader->includeTotalCollateral);
 		TRACE("Include total collateral %d", ctx->includeTotalCollateral);
 
+		ctx->includeTreasury = signTx_parseIncluded(wireHeader->includeTreasury);
+		TRACE("Include treasury %d", ctx->includeTreasury);
+
+		ctx->includeDonation = signTx_parseIncluded(wireHeader->includeDonation);
+		TRACE("Include donation %d", ctx->includeDonation);
+
 		ctx->commonTxData.txSigningMode = wireHeader->txSigningMode;
 		TRACE("Signing mode %d", (int) ctx->commonTxData.txSigningMode);
 		switch (ctx->commonTxData.txSigningMode) {
 		case SIGN_TX_SIGNINGMODE_ORDINARY_TX:
-		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
-		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
 		case SIGN_TX_SIGNINGMODE_MULTISIG_TX:
 		case SIGN_TX_SIGNINGMODE_PLUTUS_TX:
 			// these signing modes are allowed
+			break;
+
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER:
+		case SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR:
+			// these are allowed unless we have the XS app which does not have code for handling them
+			#ifndef APP_FEATURE_POOL_REGISTRATION
+			THROW(ERR_INVALID_DATA);
+			#endif // APP_FEATURE_POOL_REGISTRATION
 			break;
 
 		default:
@@ -498,21 +604,24 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		ASSERT_TYPE(ctx->numCollateralInputs, uint16_t);
 		ASSERT_TYPE(ctx->numRequiredSigners, uint16_t);
 		ASSERT_TYPE(ctx->numReferenceInputs, uint16_t);
+		ASSERT_TYPE(ctx->numVotingProcedures, uint16_t);
 		ASSERT_TYPE(ctx->numWitnesses, uint16_t);
 
 		ctx->numInputs            = (uint16_t) u4be_read(wireHeader->numInputs);
 		ctx->numOutputs           = (uint16_t) u4be_read(wireHeader->numOutputs);
 		ctx->numCertificates      = (uint16_t) u4be_read(wireHeader->numCertificates);
 		ctx->numWithdrawals       = (uint16_t) u4be_read(wireHeader->numWithdrawals);
-		ctx->numCollateralInputs       = (uint16_t) u4be_read(wireHeader->numCollateralInputs);
+		ctx->numCollateralInputs  = (uint16_t) u4be_read(wireHeader->numCollateralInputs);
 		ctx->numRequiredSigners	  = (uint16_t) u4be_read(wireHeader->numRequiredSigners);
 		ctx->numReferenceInputs   = (uint16_t) u4be_read(wireHeader->numReferenceInputs);
+		ctx->numVotingProcedures  = (uint16_t) u4be_read(wireHeader->numVotingProcedures);
 		ctx->numWitnesses         = (uint16_t) u4be_read(wireHeader->numWitnesses);
 
 		TRACE(
-		        "num inputs, outputs, certificates, withdrawals, collateral inputs, required signers, reference inputs, witnesses: %d %d %d %d %d %d %d %d",
+		        "num inputs, outputs, certificates, withdrawals, collateral inputs, required signers, reference inputs, voting procedures, witnesses: %d %d %d %d %d %d %d %d %d",
 		        ctx->numInputs, ctx->numOutputs, ctx->numCertificates, ctx->numWithdrawals,
-		        ctx->numCollateralInputs, ctx->numRequiredSigners, ctx->numReferenceInputs, ctx->numWitnesses
+		        ctx->numCollateralInputs, ctx->numRequiredSigners, ctx->numReferenceInputs, ctx->numVotingProcedures,
+		        ctx->numWitnesses
 		);
 		VALIDATE(ctx->numInputs <= SIGN_MAX_INPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numOutputs <= SIGN_MAX_OUTPUTS, ERR_INVALID_DATA);
@@ -521,6 +630,7 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		VALIDATE(ctx->numCollateralInputs <= SIGN_MAX_COLLATERAL_INPUTS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numRequiredSigners <= SIGN_MAX_REQUIRED_SIGNERS, ERR_INVALID_DATA);
 		VALIDATE(ctx->numReferenceInputs <= SIGN_MAX_REFERENCE_INPUTS, ERR_INVALID_DATA);
+		VALIDATE(ctx->numVotingProcedures <= SIGN_MAX_VOTING_PROCEDURES, ERR_INVALID_DATA);
 
 		// Current code design assumes at least one input.
 		// If this is to be relaxed, stage switching logic needs to be re-visited.
@@ -534,6 +644,13 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 		ctx->poolOwnerByPath = false;
 		ctx->shouldDisplayTxid = false;
 	}
+
+	// minting not included in the XS app
+	#ifndef APP_FEATURE_TOKEN_MINTING
+	if (ctx->includeMint) {
+		THROW(ERR_INVALID_DATA);
+	}
+	#endif // APP_FEATURE_TOKEN_MINTING
 
 	security_policy_t policy = policyForSignTxInit(
 	                                   ctx->commonTxData.txSigningMode,
@@ -549,7 +666,10 @@ static void signTx_handleInitAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 	                                   ctx->includeNetworkId,
 	                                   ctx->includeCollateralOutput,
 	                                   ctx->includeTotalCollateral,
-	                                   ctx->numReferenceInputs
+	                                   ctx->numReferenceInputs,
+	                                   ctx->numVotingProcedures,
+	                                   ctx->includeTreasury,
+	                                   ctx->includeDonation
 	                           );
 	TRACE("Policy: %d", (int) policy);
 	ENSURE_NOT_DENIED(policy);
@@ -576,7 +696,6 @@ static void signTx_handleAuxDataAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 {
 	{
 		TRACE_STACK_USAGE();
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 		ASSERT(ctx->includeAuxData == true);
 
 		// delegate to state sub-machine for CIP-36 voting registration data
@@ -720,7 +839,6 @@ static void signTx_handleInputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, si
 		ASSERT(BODY_CTX->currentInput < ctx->numInputs);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	parseInput(wireDataBuffer, wireDataSize);
@@ -754,7 +872,6 @@ static void signTx_handleOutputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, s
 {
 	{
 		TRACE("p2 = %d", p2);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 	}
 
@@ -783,7 +900,6 @@ static void signTx_handleFeeAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size
 		CHECK_STAGE(SIGN_STAGE_BODY_FEE);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -831,7 +947,6 @@ static void signTx_handleTtlAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size
 		ASSERT(ctx->includeTtl == true);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -878,21 +993,21 @@ static void _parsePathSpec(read_view_t* view, bip44_path_t* pathSpec)
 	PRINTF("\n");
 }
 
-static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCredential)
+static void _parseCredential(read_view_t* view, ext_credential_t* credential)
 {
-	stakeCredential->type = parse_u1be(view);
-	switch (stakeCredential->type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
-		_parsePathSpec(view, &stakeCredential->keyPath);
+	credential->type = parse_u1be(view);
+	switch (credential->type) {
+	case EXT_CREDENTIAL_KEY_PATH:
+		_parsePathSpec(view, &credential->keyPath);
 		break;
-	case STAKE_CREDENTIAL_KEY_HASH: {
-		STATIC_ASSERT(SIZEOF(stakeCredential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
-		view_parseBuffer(stakeCredential->keyHash, view, SIZEOF(stakeCredential->keyHash));
+	case EXT_CREDENTIAL_KEY_HASH: {
+		STATIC_ASSERT(SIZEOF(credential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
+		view_parseBuffer(credential->keyHash, view, SIZEOF(credential->keyHash));
 		break;
 	}
-	case STAKE_CREDENTIAL_SCRIPT_HASH: {
-		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		view_parseBuffer(stakeCredential->scriptHash, view, SIZEOF(stakeCredential->scriptHash));
+	case EXT_CREDENTIAL_SCRIPT_HASH: {
+		STATIC_ASSERT(SIZEOF(credential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		view_parseBuffer(credential->scriptHash, view, SIZEOF(credential->scriptHash));
 		break;
 	}
 	default:
@@ -900,9 +1015,63 @@ static void _parseStakeCredential(read_view_t* view, stake_credential_t* stakeCr
 	}
 }
 
+static void _parseDRep(read_view_t* view, ext_drep_t* drep)
+{
+	drep->type = parse_u1be(view);
+	switch (drep->type) {
+	case EXT_DREP_KEY_PATH:
+		_parsePathSpec(view, &drep->keyPath);
+		break;
+	case EXT_DREP_KEY_HASH: {
+		STATIC_ASSERT(SIZEOF(drep->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
+		view_parseBuffer(drep->keyHash, view, SIZEOF(drep->keyHash));
+		break;
+	}
+	case EXT_DREP_SCRIPT_HASH: {
+		STATIC_ASSERT(SIZEOF(drep->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+		view_parseBuffer(drep->scriptHash, view, SIZEOF(drep->scriptHash));
+		break;
+	}
+	case EXT_DREP_ABSTAIN:
+	case EXT_DREP_NO_CONFIDENCE: {
+		// nothing more to parse
+		break;
+	}
+	default:
+		THROW(ERR_INVALID_DATA);
+	}
+}
+
+static void _parseAnchor(read_view_t* view, anchor_t* anchor)
+{
+	{
+		uint8_t includeAnchorByte = parse_u1be(view);
+		anchor->isIncluded = signTx_parseIncluded(includeAnchorByte);
+
+		if (!anchor->isIncluded) {
+			VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
+			return;
+		}
+	}
+	{
+		STATIC_ASSERT(SIZEOF(anchor->hash) == ANCHOR_HASH_LENGTH, "wrong anchor buffer size");
+		view_parseBuffer(anchor->hash, view, ANCHOR_HASH_LENGTH);
+	}
+	{
+		anchor->urlLength = view_remainingSize(view);
+		VALIDATE(anchor->urlLength <= ANCHOR_URL_LENGTH_MAX, ERR_INVALID_DATA);
+		STATIC_ASSERT(SIZEOF(anchor->url) >= ANCHOR_URL_LENGTH_MAX, "wrong anchor url length");
+		view_parseBuffer(anchor->url, view, anchor->urlLength);
+
+		// whitespace not allowed
+		VALIDATE(str_isPrintableAsciiWithoutSpaces(anchor->url, anchor->urlLength), ERR_INVALID_DATA);
+	}
+
+	VALIDATE(view_remainingSize(view) == 0, ERR_INVALID_DATA);
+}
+
 static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireDataSize, sign_tx_certificate_data_t* certificateData)
 {
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
 	read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
@@ -911,29 +1080,73 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 	TRACE("Certificate type: %d", certificateData->type);
 
 	switch (certificateData->type) {
-	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
-		_parseStakeCredential(&view, &certificateData->stakeCredential);
+	case CERTIFICATE_STAKE_REGISTRATION:
+	case CERTIFICATE_STAKE_DEREGISTRATION:
+		_parseCredential(&view, &certificateData->stakeCredential);
 		break;
 
-	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
-		_parseStakeCredential(&view, &certificateData->stakeCredential);
+	case CERTIFICATE_STAKE_REGISTRATION_CONWAY:
+	case CERTIFICATE_STAKE_DEREGISTRATION_CONWAY:
+		_parseCredential(&view, &certificateData->stakeCredential);
+		certificateData->deposit = parse_u8be(&view);
 		break;
 
-	case CERTIFICATE_TYPE_STAKE_DELEGATION:
-		_parseStakeCredential(&view, &certificateData->stakeCredential);
-		STATIC_ASSERT(SIZEOF(certificateData->poolKeyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
-		view_parseBuffer(certificateData->poolKeyHash, &view, POOL_KEY_HASH_LENGTH);
+	case CERTIFICATE_STAKE_DELEGATION:
+		_parseCredential(&view, &certificateData->stakeCredential);
+		certificateData->poolCredential.type = EXT_CREDENTIAL_KEY_HASH;
+		STATIC_ASSERT(SIZEOF(certificateData->poolCredential.keyHash) == POOL_KEY_HASH_LENGTH, "wrong poolKeyHash size");
+		view_parseBuffer(certificateData->poolCredential.keyHash, &view, POOL_KEY_HASH_LENGTH);
 		break;
 
-	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION:
+	case CERTIFICATE_VOTE_DELEGATION:
+		_parseCredential(&view, &certificateData->stakeCredential);
+		_parseDRep(&view, &certificateData->drep);
+		break;
+
+	case CERTIFICATE_AUTHORIZE_COMMITTEE_HOT:
+		_parseCredential(&view, &certificateData->committeeColdCredential);
+		_parseCredential(&view, &certificateData->committeeHotCredential);
+		break;
+
+	case CERTIFICATE_RESIGN_COMMITTEE_COLD:
+		_parseCredential(&view, &certificateData->committeeColdCredential);
+		_parseAnchor(&view, &certificateData->anchor);
+		break;
+
+	case CERTIFICATE_DREP_REGISTRATION:
+		_parseCredential(&view, &certificateData->dRepCredential);
+		certificateData->deposit = parse_u8be(&view);
+		_parseAnchor(&view, &certificateData->anchor);
+		break;
+
+	case CERTIFICATE_DREP_DEREGISTRATION:
+		_parseCredential(&view, &certificateData->dRepCredential);
+		certificateData->deposit = parse_u8be(&view);
+		break;
+
+	case CERTIFICATE_DREP_UPDATE:
+		_parseCredential(&view, &certificateData->dRepCredential);
+		_parseAnchor(&view, &certificateData->anchor);
+		break;
+
+		#ifdef APP_FEATURE_POOL_REGISTRATION
+
+	case CERTIFICATE_STAKE_POOL_REGISTRATION:
 		// nothing more to parse, certificate data will be provided
 		// in additional APDUs processed by a submachine
 		return;
 
-	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT:
-		_parsePathSpec(&view, &certificateData->poolIdPath);
+		#endif // APP_FEATURE_POOL_REGISTRATION
+
+		#ifdef APP_FEATURE_POOL_RETIREMENT
+
+	case CERTIFICATE_STAKE_POOL_RETIREMENT:
+		certificateData->poolCredential.type = EXT_CREDENTIAL_KEY_PATH;
+		_parsePathSpec(&view, &certificateData->poolCredential.keyPath);
 		certificateData->epoch = parse_u8be(&view);
 		break;
+
+		#endif // APP_FEATURE_POOL_RETIREMENT
 
 	default:
 		THROW(ERR_INVALID_DATA);
@@ -942,43 +1155,79 @@ static void _parseCertificateData(const uint8_t* wireDataBuffer, size_t wireData
 	VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 }
 
-static void _fillHashFromPath(const bip44_path_t* path,
-                              uint8_t* hash, size_t hashSize)
+static void _setCredential(
+        credential_t* credential,
+        const ext_credential_t* extCredential
+)
 {
-	ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
-	ASSERT(hashSize < BUFFER_SIZE_PARANOIA);
+	switch (extCredential->type) {
 
-	bip44_pathToKeyHash(
-	        path,
-	        hash, hashSize
-	);
-}
+	case EXT_CREDENTIAL_KEY_PATH:
+		credential->type = CREDENTIAL_KEY_HASH;
+		bip44_pathToKeyHash(
+		        &extCredential->keyPath,
+		        credential->keyHash, SIZEOF(credential->keyHash)
+		);
+		break;
 
-static void _fillHashFromStakeCredential(const stake_credential_t* stakeCredential,
-        uint8_t* hash, size_t hashSize)
-{
-	ASSERT(hashSize < BUFFER_SIZE_PARANOIA);
+	case EXT_CREDENTIAL_KEY_HASH:
+		credential->type = CREDENTIAL_KEY_HASH;
+		STATIC_ASSERT(SIZEOF(credential->keyHash) == SIZEOF(extCredential->keyHash), "bad script hash container size");
+		memmove(credential->keyHash, extCredential->keyHash, SIZEOF(extCredential->keyHash));
+		break;
 
-	switch (stakeCredential->type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
-		_fillHashFromPath(&stakeCredential->keyPath, hash, hashSize);
+	case EXT_CREDENTIAL_SCRIPT_HASH:
+		credential->type = CREDENTIAL_SCRIPT_HASH;
+		STATIC_ASSERT(SIZEOF(credential->scriptHash) == SIZEOF(extCredential->scriptHash), "bad script hash container size");
+		memmove(credential->scriptHash, extCredential->scriptHash, SIZEOF(extCredential->scriptHash));
 		break;
-	case STAKE_CREDENTIAL_KEY_HASH:
-		ASSERT(ADDRESS_KEY_HASH_LENGTH <= hashSize);
-		STATIC_ASSERT(SIZEOF(stakeCredential->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
-		memmove(hash, stakeCredential->keyHash, SIZEOF(stakeCredential->keyHash));
-		break;
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
-		ASSERT(SCRIPT_HASH_LENGTH <= hashSize);
-		STATIC_ASSERT(SIZEOF(stakeCredential->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
-		memmove(hash, stakeCredential->scriptHash, SIZEOF(stakeCredential->scriptHash));
-		break;
+
 	default:
 		ASSERT(false);
 		break;
 	}
 }
 
+static void _setDRep(
+        drep_t* drep,
+        const ext_drep_t* extDRep
+)
+{
+	switch (extDRep->type) {
+
+	case EXT_DREP_KEY_PATH:
+		drep->type = DREP_KEY_HASH;
+		bip44_pathToKeyHash(
+		        &extDRep->keyPath,
+		        drep->keyHash, SIZEOF(drep->keyHash)
+		);
+		break;
+
+	case EXT_DREP_KEY_HASH:
+		drep->type = DREP_KEY_HASH;
+		STATIC_ASSERT(SIZEOF(drep->keyHash) == SIZEOF(extDRep->keyHash), "bad script hash container size");
+		memmove(drep->keyHash, extDRep->keyHash, SIZEOF(extDRep->keyHash));
+		break;
+
+	case EXT_DREP_SCRIPT_HASH:
+		drep->type = DREP_SCRIPT_HASH;
+		STATIC_ASSERT(SIZEOF(drep->scriptHash) == SIZEOF(extDRep->scriptHash), "bad script hash container size");
+		memmove(drep->scriptHash, extDRep->scriptHash, SIZEOF(extDRep->scriptHash));
+		break;
+
+	case EXT_DREP_ABSTAIN:
+		drep->type = DREP_ALWAYS_ABSTAIN;
+		break;
+
+	case EXT_DREP_NO_CONFIDENCE:
+		drep->type = DREP_ALWAYS_NO_CONFIDENCE;
+		break;
+
+	default:
+		ASSERT(false);
+		break;
+	}
+}
 
 __noinline_due_to_stack__
 static void _addCertificateDataToTx(
@@ -986,58 +1235,143 @@ static void _addCertificateDataToTx(
         tx_hash_builder_t* txHashBuilder
 )
 {
-	// data only added in the sub-machine, see signTxPoolRegistration.c
-	ASSERT(BODY_CTX->stageData.certificate.type != CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION);
-
 	TRACE("Adding certificate (type %d) to tx hash", certificateData->type);
 
-	STATIC_ASSERT(ADDRESS_KEY_HASH_LENGTH == SCRIPT_HASH_LENGTH, "incompatible hash sizes");
-	uint8_t stakingHash[ADDRESS_KEY_HASH_LENGTH] = {0};
+	// declared here to save the stack space compiler allocates for this function
+	credential_t tmpCredential;
 
 	switch (BODY_CTX->stageData.certificate.type) {
 
-	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
-	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION: {
-		_fillHashFromStakeCredential(&BODY_CTX->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
-		txHashBuilder_addCertificate_stakingHash(
-		        txHashBuilder, certificateData->type, certificateData->stakeCredential.type,
-		        stakingHash, SIZEOF(stakingHash)
+	case CERTIFICATE_STAKE_REGISTRATION:
+	case CERTIFICATE_STAKE_DEREGISTRATION: {
+		_setCredential(&tmpCredential, &certificateData->stakeCredential);
+		txHashBuilder_addCertificate_stakingOld(
+		        txHashBuilder,
+		        certificateData->type,
+		        &tmpCredential
 		);
 		break;
 	}
 
-	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		_fillHashFromStakeCredential(&BODY_CTX->stageData.certificate.stakeCredential, stakingHash, SIZEOF(stakingHash));
-		txHashBuilder_addCertificate_delegation(
-		        txHashBuilder, certificateData->stakeCredential.type,
-		        stakingHash, SIZEOF(stakingHash),
-		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash)
+	case CERTIFICATE_STAKE_REGISTRATION_CONWAY:
+	case CERTIFICATE_STAKE_DEREGISTRATION_CONWAY: {
+		_setCredential(&tmpCredential, &certificateData->stakeCredential);
+		txHashBuilder_addCertificate_staking(
+		        txHashBuilder,
+		        certificateData->type,
+		        &tmpCredential,
+		        certificateData->deposit
 		);
 		break;
 	}
 
-	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		_fillHashFromPath(&BODY_CTX->stageData.certificate.poolIdPath, certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash));
+	case CERTIFICATE_STAKE_DELEGATION: {
+		_setCredential(&tmpCredential, &certificateData->stakeCredential);
+		ASSERT(certificateData->poolCredential.type == EXT_CREDENTIAL_KEY_HASH);
+		txHashBuilder_addCertificate_stakeDelegation(
+		        txHashBuilder,
+		        &tmpCredential,
+		        certificateData->poolCredential.keyHash, SIZEOF(certificateData->poolCredential.keyHash)
+		);
+		break;
+	}
+
+	case CERTIFICATE_VOTE_DELEGATION: {
+		drep_t drep;
+		_setCredential(&tmpCredential, &certificateData->stakeCredential);
+		_setDRep(&drep, &certificateData->drep);
+		txHashBuilder_addCertificate_voteDelegation(
+		        txHashBuilder,
+		        &tmpCredential,
+		        &drep
+		);
+		break;
+	}
+
+	case CERTIFICATE_AUTHORIZE_COMMITTEE_HOT: {
+		credential_t hotCredential;
+		_setCredential(&tmpCredential, &certificateData->committeeColdCredential);
+		_setCredential(&hotCredential, &certificateData->committeeHotCredential);
+		txHashBuilder_addCertificate_committeeAuthHot(
+		        txHashBuilder,
+		        &tmpCredential,
+		        &hotCredential
+		);
+		break;
+	}
+
+	case CERTIFICATE_RESIGN_COMMITTEE_COLD: {
+		_setCredential(&tmpCredential, &certificateData->committeeColdCredential);
+		txHashBuilder_addCertificate_committeeResign(
+		        txHashBuilder,
+		        &tmpCredential,
+		        &certificateData->anchor
+		);
+		break;
+	}
+
+	case CERTIFICATE_DREP_REGISTRATION: {
+		_setCredential(&tmpCredential, &certificateData->dRepCredential);
+		txHashBuilder_addCertificate_dRepRegistration(
+		        txHashBuilder,
+		        &tmpCredential,
+		        certificateData->deposit,
+		        &certificateData->anchor
+		);
+		break;
+	}
+
+	case CERTIFICATE_DREP_DEREGISTRATION: {
+		_setCredential(&tmpCredential, &certificateData->dRepCredential);
+		txHashBuilder_addCertificate_dRepDeregistration(
+		        txHashBuilder,
+		        &tmpCredential,
+		        certificateData->deposit
+		);
+		break;
+	}
+
+	case CERTIFICATE_DREP_UPDATE: {
+		_setCredential(&tmpCredential, &certificateData->dRepCredential);
+		txHashBuilder_addCertificate_dRepUpdate(
+		        txHashBuilder,
+		        &tmpCredential,
+		        &certificateData->anchor
+		);
+		break;
+	}
+
+	#ifdef APP_FEATURE_POOL_RETIREMENT
+
+	case CERTIFICATE_STAKE_POOL_RETIREMENT: {
+		uint8_t hash[ADDRESS_KEY_HASH_LENGTH] = {0};
+		ext_credential_t* extCredential = &BODY_CTX->stageData.certificate.poolCredential;
+		ASSERT(extCredential->type == EXT_CREDENTIAL_KEY_PATH);
+		bip44_pathToKeyHash(
+		        &extCredential->keyPath,
+		        hash, SIZEOF(hash)
+		);
 		txHashBuilder_addCertificate_poolRetirement(
 		        txHashBuilder,
-		        certificateData->poolKeyHash, SIZEOF(certificateData->poolKeyHash),
+		        hash, SIZEOF(hash),
 		        certificateData->epoch
 		);
 		break;
 	}
 
+	#endif // APP_FEATURE_POOL_RETIREMENT
+
 	default:
+		// stake pool registration data only added in the sub-machine, not here
+		// see signTxPoolRegistration.c
 		ASSERT(false);
 	}
 }
 
-__noinline_due_to_stack__
-static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
-{
-	TRACE_STACK_USAGE();
-	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-	ASSERT(BODY_CTX->currentCertificate < ctx->numCertificates);
+#ifdef APP_FEATURE_POOL_REGISTRATION
 
+static bool _handlePoolRegistrationIfNeeded(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
 	// delegate to state sub-machine for stake pool registration certificate data
 	if (signTxPoolRegistration_isValidInstruction(p2)) {
 		TRACE();
@@ -1046,19 +1380,197 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 		TRACE_STACK_USAGE();
 
 		signTxPoolRegistration_handleAPDU(p2, wireDataBuffer, wireDataSize);
-		return;
+		return true;
 	}
 
+	return false;
+}
+
+#endif // APP_FEATURE_POOL_REGISTRATION
+
+static void _handleCertificateStaking()
+{
+	security_policy_t policy = policyForSignTxCertificateStaking(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   BODY_CTX->stageData.certificate.type,
+	                                   &BODY_CTX->stageData.certificate.stakeCredential
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_STAKING_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_STAKING_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificateStaking_ui_runStep();
+}
+
+static void _handleCertificateVoteDeleg()
+{
+	security_policy_t policy = policyForSignTxCertificateVoteDelegation(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.stakeCredential,
+	                                   &BODY_CTX->stageData.certificate.drep
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_VOTE_DELEGATION_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_VOTE_DELEGATION_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificateVoteDeleg_ui_runStep();
+}
+
+static void _handleCertificateCommitteeAuth()
+{
+	security_policy_t policy = policyForSignTxCertificateCommitteeAuth(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.committeeColdCredential,
+	                                   &BODY_CTX->stageData.certificate.committeeHotCredential
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_COMM_AUTH_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_COMM_AUTH_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificateCommitteeAuth_ui_runStep();
+}
+
+static void _handleCertificateCommitteeResign()
+{
+	security_policy_t policy = policyForSignTxCertificateCommitteeResign(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.committeeColdCredential
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_COMM_RESIGN_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_COMM_RESIGN_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificateCommitteeResign_ui_runStep();
+}
+
+static void _handleCertificateDRep()
+{
+	security_policy_t policy = policyForSignTxCertificateDRep(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.dRepCredential
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_DREP_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_DREP_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+
+	signTx_handleCertificateDRep_ui_runStep();
+}
+
+#ifdef APP_FEATURE_POOL_REGISTRATION
+
+static void _handleCertificatePoolRegistration()
+{
+	// pool registration certificates have a separate sub-machine for handling APDU and UI
+	// nothing more to be done with them here, we just init the sub-machine
+	ctx->stage = SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE;
+	signTxPoolRegistration_init();
+
+	respondSuccessEmptyMsg();
+}
+
+#endif // APP_FEATURE_POOL_REGISTRATION
+
+
+#ifdef APP_FEATURE_POOL_RETIREMENT
+
+static void _handleCertificatePoolRetirement()
+{
+	security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.certificate.poolCredential,
+	                                   BODY_CTX->stageData.certificate.epoch
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
+
+	switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+		CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION);
+		CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_RESPOND);
+#undef   CASE
+	default:
+		THROW(ERR_NOT_IMPLEMENTED);
+	}
+	signTx_handleCertificatePoolRetirement_ui_runStep();
+}
+
+#endif // APP_FEATURE_POOL_RETIREMENT
+
+// Note(JM): it is possible to treat every certificate separately,
+// which makes the code somewhat more readable if read per certificate,
+// but it increases code size and that creates problems for Nano S
+__noinline_due_to_stack__
+static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	TRACE_STACK_USAGE();
+	ASSERT(BODY_CTX->currentCertificate < ctx->numCertificates);
+
+	#ifdef APP_FEATURE_POOL_REGISTRATION
+	// usage of P2 determines if we are in the pool registration submachine
+	if (_handlePoolRegistrationIfNeeded(p2, wireDataBuffer, wireDataSize)) {
+		return;
+	}
+	#endif // APP_FEATURE_POOL_REGISTRATION
 	VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 	CHECK_STAGE(SIGN_STAGE_BODY_CERTIFICATES);
 
 	// a new certificate arrived
 	explicit_bzero(&BODY_CTX->stageData.certificate, SIZEOF(BODY_CTX->stageData.certificate));
-
 	_parseCertificateData(wireDataBuffer, wireDataSize, &BODY_CTX->stageData.certificate);
-
 	{
-		// basic policy that just decides if the certificate is allowed
+		// basic policy that just decides if the certificate type is allowed
 		security_policy_t policy = policyForSignTxCertificate(
 		                                   ctx->commonTxData.txSigningMode,
 		                                   BODY_CTX->stageData.certificate.type
@@ -1067,68 +1579,51 @@ static void signTx_handleCertificateAPDU(uint8_t p2, const uint8_t* wireDataBuff
 		ENSURE_NOT_DENIED(policy);
 	}
 
-	// TODO refactor --- does it make sense to process different certificate types entirely separately?
-	// or perhaps group registration with deregistration?
-	// notice that _parseCertificateData and _addCertificateDataToTx already do a big switch on cert type
 	switch (BODY_CTX->stageData.certificate.type) {
-	case CERTIFICATE_TYPE_STAKE_REGISTRATION:
-	case CERTIFICATE_TYPE_STAKE_DEREGISTRATION:
-	case CERTIFICATE_TYPE_STAKE_DELEGATION: {
-		security_policy_t policy = policyForSignTxCertificateStaking(
-		                                   ctx->commonTxData.txSigningMode,
-		                                   BODY_CTX->stageData.certificate.type,
-		                                   &BODY_CTX->stageData.certificate.stakeCredential
-		                           );
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
-
-		_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
-
-		switch (policy) {
-#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_STEP_DISPLAY_OPERATION);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_STEP_RESPOND);
-#undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
-
-		signTx_handleCertificate_ui_runStep();
+	case CERTIFICATE_STAKE_REGISTRATION:
+	case CERTIFICATE_STAKE_DEREGISTRATION:
+	case CERTIFICATE_STAKE_REGISTRATION_CONWAY:
+	case CERTIFICATE_STAKE_DEREGISTRATION_CONWAY:
+	case CERTIFICATE_STAKE_DELEGATION: {
+		_handleCertificateStaking();
 		return;
 	}
 
-	case CERTIFICATE_TYPE_STAKE_POOL_REGISTRATION: {
-		// pool registration certificates have a separate sub-machine for handling APDU and UI
-		// nothing more to be done with them here, we just init the sub-machine
-		ctx->stage = SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE;
-		signTxPoolRegistration_init();
-
-		respondSuccessEmptyMsg();
+	case CERTIFICATE_VOTE_DELEGATION: {
+		_handleCertificateVoteDeleg();
 		return;
 	}
 
-	case CERTIFICATE_TYPE_STAKE_POOL_RETIREMENT: {
-		security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
-		                                   ctx->commonTxData.txSigningMode,
-		                                   &BODY_CTX->stageData.certificate.poolIdPath,
-		                                   BODY_CTX->stageData.certificate.epoch
-		                           );
-		TRACE("Policy: %d", (int) policy);
-		ENSURE_NOT_DENIED(policy);
-
-		_addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
-
-		switch (policy) {
-#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_PROMPT_BEFORE_RESPONSE, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_DISPLAY_OPERATION);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_CERTIFICATE_POOL_RETIREMENT_STEP_RESPOND);
-#undef   CASE
-		default:
-			THROW(ERR_NOT_IMPLEMENTED);
-		}
-		signTx_handleCertificatePoolRetirement_ui_runStep();
+	case CERTIFICATE_AUTHORIZE_COMMITTEE_HOT: {
+		_handleCertificateCommitteeAuth();
 		return;
 	}
+
+	case CERTIFICATE_RESIGN_COMMITTEE_COLD: {
+		_handleCertificateCommitteeResign();
+		return;
+	}
+
+	case CERTIFICATE_DREP_REGISTRATION:
+	case CERTIFICATE_DREP_DEREGISTRATION:
+	case CERTIFICATE_DREP_UPDATE: {
+		_handleCertificateDRep();
+		return;
+	}
+
+	#ifdef APP_FEATURE_POOL_REGISTRATION
+	case CERTIFICATE_STAKE_POOL_REGISTRATION: {
+		_handleCertificatePoolRegistration();
+		return;
+	}
+	#endif // APP_FEATURE_POOL_REGISTRATION
+
+	#ifdef APP_FEATURE_POOL_RETIREMENT
+	case CERTIFICATE_STAKE_POOL_RETIREMENT: {
+		_handleCertificatePoolRetirement();
+		return;
+	}
+	#endif // APP_FEATURE_POOL_RETIREMENT
 
 	default:
 		ASSERT(false);
@@ -1143,7 +1638,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 	uint8_t rewardAddress[REWARD_ACCOUNT_SIZE] = {0};
 
 	switch (BODY_CTX->stageData.withdrawal.stakeCredential.type) {
-	case STAKE_CREDENTIAL_KEY_PATH:
+	case EXT_CREDENTIAL_KEY_PATH:
 		constructRewardAddressFromKeyPath(
 		        &BODY_CTX->stageData.withdrawal.stakeCredential.keyPath,
 		        ctx->commonTxData.networkId,
@@ -1151,7 +1646,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 		        SIZEOF(rewardAddress)
 		);
 		break;
-	case STAKE_CREDENTIAL_KEY_HASH:
+	case EXT_CREDENTIAL_KEY_HASH:
 		constructRewardAddressFromHash(
 		        ctx->commonTxData.networkId,
 		        REWARD_HASH_SOURCE_KEY,
@@ -1161,7 +1656,7 @@ static void _addWithdrawalToTxHash(bool validateCanonicalOrdering)
 		        SIZEOF(rewardAddress)
 		);
 		break;
-	case STAKE_CREDENTIAL_SCRIPT_HASH:
+	case EXT_CREDENTIAL_SCRIPT_HASH:
 		constructRewardAddressFromHash(
 		        ctx->commonTxData.networkId,
 		        REWARD_HASH_SOURCE_SCRIPT,
@@ -1210,10 +1705,12 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, const uint8_t* wireDataBuffe
 		ASSERT(BODY_CTX->currentWithdrawal < ctx->numWithdrawals);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
-	explicit_bzero(&BODY_CTX->stageData.withdrawal, SIZEOF(BODY_CTX->stageData.withdrawal));
+	// we can't bzero the whole stageData.withdrawal since
+	// we need to compare it with the previous one (canonical ordering check)
+	BODY_CTX->stageData.withdrawal.amount = 0;
+	explicit_bzero(&BODY_CTX->stageData.withdrawal.stakeCredential, SIZEOF(BODY_CTX->stageData.withdrawal.stakeCredential));
 
 	{
 		// parse input
@@ -1222,7 +1719,7 @@ static void signTx_handleWithdrawalAPDU(uint8_t p2, const uint8_t* wireDataBuffe
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
 		BODY_CTX->stageData.withdrawal.amount = parse_u8be(&view);
 
-		_parseStakeCredential(&view, &BODY_CTX->stageData.withdrawal.stakeCredential);
+		_parseCredential(&view, &BODY_CTX->stageData.withdrawal.stakeCredential);
 
 		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 
@@ -1263,7 +1760,6 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, const uint8_t* wi
 		ASSERT(ctx->includeValidityIntervalStart == true);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	{
@@ -1305,11 +1801,12 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2, const uint8_t* wi
 
 // ============================== MINT ==============================
 
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		TRACE("p2 = %d", p2);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 	}
 
@@ -1324,6 +1821,8 @@ static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
 	signTxMint_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
 
+#endif // APP_FEATURE_TOKEN_MINTING
+
 // ========================= SCRIPT DATA HASH ==========================
 
 static void signTx_handleScriptDataHashAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
@@ -1331,9 +1830,9 @@ static void signTx_handleScriptDataHashAPDU(uint8_t p2, const uint8_t* wireDataB
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_BODY_SCRIPT_DATA_HASH);
+		ASSERT(ctx->includeScriptDataHash == true);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -1395,7 +1894,6 @@ static void signTx_handleCollateralInputAPDU(uint8_t p2, const uint8_t* wireData
 		ASSERT(BODY_CTX->currentCollateral < ctx->numCollateralInputs);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	parseInput(wireDataBuffer, wireDataSize);
@@ -1437,7 +1935,6 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, const uint8_t* wireDataB
 		ASSERT(BODY_CTX->currentRequiredSigner < ctx->numRequiredSigners);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	{
@@ -1495,13 +1992,13 @@ static void signTx_handleRequiredSignerAPDU(uint8_t p2, const uint8_t* wireDataB
 	}
 	signTx_handleRequiredSigner_ui_runStep();
 }
+
 // ========================= COLLATERAL RETURN OUTPUT ===========================
 
 static void signTx_handleCollateralOutputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	{
 		TRACE("p2 = %d", p2);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
 	}
 
@@ -1526,9 +2023,9 @@ static void signTx_handleTotalCollateralAPDU(uint8_t p2, const uint8_t* wireData
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_BODY_TOTAL_COLLATERAL);
+		ASSERT(ctx->includeTotalCollateral == true);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// parse data
@@ -1556,8 +2053,8 @@ static void signTx_handleTotalCollateralAPDU(uint8_t p2, const uint8_t* wireData
 		// select UI steps
 		switch (policy) {
 #define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
-			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_FEE_STEP_DISPLAY);
-			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_FEE_STEP_RESPOND);
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TOTAL_COLLATERAL_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TOTAL_COLLATERAL_STEP_RESPOND);
 #undef   CASE
 		default:
 			THROW(ERR_NOT_IMPLEMENTED);
@@ -1581,7 +2078,7 @@ static void ui_advanceState_ReferenceInput()
 }
 
 __noinline_due_to_stack__
-static void signTx_handleReferenceInputsAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+static void signTx_handleReferenceInputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
 	TRACE_STACK_USAGE();
 	{
@@ -1590,7 +2087,6 @@ static void signTx_handleReferenceInputsAPDU(uint8_t p2, const uint8_t* wireData
 		ASSERT(BODY_CTX->currentReferenceInput < ctx->numReferenceInputs);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	// Parsed in same way as the inputs
 	parseInput(wireDataBuffer, wireDataSize);
@@ -1616,6 +2112,276 @@ static void signTx_handleReferenceInputsAPDU(uint8_t p2, const uint8_t* wireData
 		signTx_handleInput_ui_runStep();
 	}
 }
+
+
+// ========================= VOTING PROCEDURES ===========================
+
+static void _setVoter(
+        voter_t* voter,
+        const ext_voter_t* extVoter
+)
+{
+	switch (extVoter->type) {
+
+	case EXT_VOTER_COMMITTEE_HOT_KEY_PATH:
+		voter->type = VOTER_COMMITTEE_HOT_KEY_HASH;
+		bip44_pathToKeyHash(
+		        &extVoter->keyPath,
+		        voter->keyHash, SIZEOF(voter->keyHash)
+		);
+		break;
+
+	case EXT_VOTER_DREP_KEY_PATH:
+		voter->type = VOTER_DREP_KEY_HASH;
+		bip44_pathToKeyHash(
+		        &extVoter->keyPath,
+		        voter->keyHash, SIZEOF(voter->keyHash)
+		);
+		break;
+
+	case EXT_VOTER_STAKE_POOL_KEY_PATH:
+		voter->type = VOTER_STAKE_POOL_KEY_HASH;
+		bip44_pathToKeyHash(
+		        &extVoter->keyPath,
+		        voter->keyHash, SIZEOF(voter->keyHash)
+		);
+		break;
+
+	case EXT_VOTER_COMMITTEE_HOT_KEY_HASH:
+		voter->type = VOTER_COMMITTEE_HOT_KEY_HASH;
+		STATIC_ASSERT(SIZEOF(voter->keyHash) == SIZEOF(extVoter->keyHash), "bad script hash container size");
+		memmove(voter->keyHash, extVoter->keyHash, SIZEOF(extVoter->keyHash));
+		break;
+
+	case EXT_VOTER_DREP_KEY_HASH:
+		voter->type = VOTER_DREP_KEY_HASH;
+		STATIC_ASSERT(SIZEOF(voter->keyHash) == SIZEOF(extVoter->keyHash), "bad script hash container size");
+		memmove(voter->keyHash, extVoter->keyHash, SIZEOF(extVoter->keyHash));
+		break;
+
+	case EXT_VOTER_STAKE_POOL_KEY_HASH:
+		voter->type = VOTER_STAKE_POOL_KEY_HASH;
+		STATIC_ASSERT(SIZEOF(voter->keyHash) == SIZEOF(extVoter->keyHash), "bad script hash container size");
+		memmove(voter->keyHash, extVoter->keyHash, SIZEOF(extVoter->keyHash));
+		break;
+
+	case EXT_VOTER_COMMITTEE_HOT_SCRIPT_HASH:
+		voter->type = VOTER_COMMITTEE_HOT_SCRIPT_HASH;
+		STATIC_ASSERT(SIZEOF(voter->scriptHash) == SIZEOF(extVoter->scriptHash), "bad script hash container size");
+		memmove(voter->scriptHash, extVoter->scriptHash, SIZEOF(extVoter->scriptHash));
+		break;
+
+	case EXT_VOTER_DREP_SCRIPT_HASH:
+		voter->type = VOTER_DREP_SCRIPT_HASH;
+		STATIC_ASSERT(SIZEOF(voter->scriptHash) == SIZEOF(extVoter->scriptHash), "bad script hash container size");
+		memmove(voter->scriptHash, extVoter->scriptHash, SIZEOF(extVoter->scriptHash));
+		break;
+
+	default:
+		ASSERT(false);
+		break;
+	}
+}
+
+__noinline_due_to_stack__
+static void signTx_handleVotingProcedureAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	TRACE_STACK_USAGE();
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_BODY_VOTING_PROCEDURES);
+		ASSERT(BODY_CTX->currentVotingProcedure < ctx->numVotingProcedures);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+	}
+
+	{
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
+		{
+			// voter
+			ext_voter_t* voter = &BODY_CTX->stageData.votingProcedure.voter;
+			voter->type = parse_u1be(&view);
+			switch (voter->type) {
+			case EXT_VOTER_COMMITTEE_HOT_KEY_PATH:
+			case EXT_VOTER_DREP_KEY_PATH:
+			case EXT_VOTER_STAKE_POOL_KEY_PATH: {
+				_parsePathSpec(&view, &voter->keyPath);
+				break;
+			}
+			case EXT_VOTER_COMMITTEE_HOT_KEY_HASH:
+			case EXT_VOTER_DREP_KEY_HASH:
+			case EXT_VOTER_STAKE_POOL_KEY_HASH: {
+				STATIC_ASSERT(SIZEOF(voter->keyHash) == ADDRESS_KEY_HASH_LENGTH, "bad key hash container size");
+				view_parseBuffer(voter->keyHash, &view, SIZEOF(voter->keyHash));
+				break;
+			}
+			case EXT_VOTER_COMMITTEE_HOT_SCRIPT_HASH:
+			case EXT_VOTER_DREP_SCRIPT_HASH: {
+				STATIC_ASSERT(SIZEOF(voter->scriptHash) == SCRIPT_HASH_LENGTH, "bad script hash container size");
+				view_parseBuffer(voter->scriptHash, &view, SIZEOF(voter->scriptHash));
+				break;
+			}
+			default:
+				THROW(ERR_INVALID_DATA);
+			}
+		}
+		{
+			// gov action id
+			gov_action_id_t* actionId = &BODY_CTX->stageData.votingProcedure.govActionId;
+			view_parseBuffer(actionId->txHashBuffer, &view, TX_HASH_LENGTH);
+			actionId->govActionIndex = parse_u4be(&view);
+		}
+		{
+			// voting procedure
+			voting_procedure_t* procedure = &BODY_CTX->stageData.votingProcedure.votingProcedure;
+			procedure->vote = parse_u1be(&view);
+			switch (procedure->vote) {
+			case VOTE_NO:
+			case VOTE_YES:
+			case VOTE_ABSTAIN:
+				// OK
+				break;
+			default:
+				THROW(ERR_INVALID_DATA);
+			}
+			_parseAnchor(&view, &procedure->anchor);
+		}
+		VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
+	}
+
+	security_policy_t policy = policyForSignTxVotingProcedure(
+	                                   ctx->commonTxData.txSigningMode,
+	                                   &BODY_CTX->stageData.votingProcedure.voter
+	                           );
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	// Note: if more than one voter is ever allowed, we need to check canonical ordering
+	// of voters and possibly canonical ordering of governance actions in the subordinated map
+	{
+		// add to tx
+		TRACE("Adding voting procedure to tx hash");
+		voter_t voter;
+		_setVoter(&voter, &BODY_CTX->stageData.votingProcedure.voter);
+		txHashBuilder_addVotingProcedure(
+		        &BODY_CTX->txHashBuilder,
+		        &voter,
+		        &BODY_CTX->stageData.votingProcedure.govActionId,
+		        &BODY_CTX->stageData.votingProcedure.votingProcedure
+		);
+	}
+
+	{
+		// select UI steps
+		switch (policy) {
+#	define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_VOTING_PROCEDURE_STEP_INTRO);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_VOTING_PROCEDURE_STEP_RESPOND);
+#	undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+	signTx_handleVotingProcedure_ui_runStep();
+}
+
+
+// ============================== TREASURY ==============================
+
+__noinline_due_to_stack__
+static void signTx_handleTreasuryAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_BODY_TREASURY);
+		ASSERT(ctx->includeTreasury == true);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+	}
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
+		BODY_CTX->stageData.treasury = u8be_read(wireDataBuffer);
+		BODY_CTX->treasuryReceived = true;
+	}
+
+	security_policy_t policy = policyForSignTxTreasury(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.treasury);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// add to tx
+		TRACE("Adding treasury to tx hash");
+		txHashBuilder_addTreasury(&BODY_CTX->txHashBuilder, BODY_CTX->stageData.treasury);
+	}
+
+	{
+		// select UI steps
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_TREASURY_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_TREASURY_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
+	signTx_handleTreasury_ui_runStep();
+}
+
+
+// ============================== DONATION ==============================
+
+__noinline_due_to_stack__
+static void signTx_handleDonationAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
+{
+	{
+		// sanity checks
+		CHECK_STAGE(SIGN_STAGE_BODY_DONATION);
+		ASSERT(ctx->includeDonation == true);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
+	}
+	{
+		// parse data
+		TRACE_BUFFER(wireDataBuffer, wireDataSize);
+
+		VALIDATE(wireDataSize == 8, ERR_INVALID_DATA);
+		BODY_CTX->stageData.donation = u8be_read(wireDataBuffer);
+		VALIDATE(BODY_CTX->stageData.donation > 0, ERR_INVALID_DATA);
+		BODY_CTX->donationReceived = true;
+	}
+
+	security_policy_t policy = policyForSignTxDonation(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.donation);
+	TRACE("Policy: %d", (int) policy);
+	ENSURE_NOT_DENIED(policy);
+
+	{
+		// add to tx
+		TRACE("Adding donation to tx hash");
+		txHashBuilder_addDonation(&BODY_CTX->txHashBuilder, BODY_CTX->stageData.donation);
+	}
+
+	{
+		// select UI steps
+		switch (policy) {
+#define  CASE(POLICY, UI_STEP) case POLICY: {ctx->ui_step=UI_STEP; break;}
+			CASE(POLICY_SHOW_BEFORE_RESPONSE, HANDLE_DONATION_STEP_DISPLAY);
+			CASE(POLICY_ALLOW_WITHOUT_PROMPT, HANDLE_DONATION_STEP_RESPOND);
+#undef   CASE
+		default:
+			THROW(ERR_NOT_IMPLEMENTED);
+		}
+	}
+
+	signTx_handleDonation_ui_runStep();
+}
+
 
 // ============================== CONFIRM ==============================
 
@@ -1646,7 +2412,6 @@ static void signTx_handleConfirmAPDU(uint8_t p2, const uint8_t* wireDataBuffer M
 		CHECK_STAGE(SIGN_STAGE_CONFIRM);
 
 		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	{
@@ -1694,11 +2459,10 @@ static void signTx_handleWitnessAPDU(uint8_t p2, const uint8_t* wireDataBuffer, 
 	{
 		// sanity checks
 		CHECK_STAGE(SIGN_STAGE_WITNESSES);
-		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
-
 		TRACE("Witness no. %d out of %d", WITNESS_CTX->currentWitness + 1, ctx->numWitnesses);
 		ASSERT(WITNESS_CTX->currentWitness < ctx->numWitnesses);
+
+		VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
 	}
 
 	explicit_bzero(&WITNESS_CTX->stageData.witness, SIZEOF(WITNESS_CTX->stageData.witness));
@@ -1778,13 +2542,18 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1)
 		CASE(0x06, signTx_handleCertificateAPDU);
 		CASE(0x07, signTx_handleWithdrawalAPDU);
 		CASE(0x09, signTx_handleValidityIntervalStartAPDU);
+		#ifdef APP_FEATURE_TOKEN_MINTING
 		CASE(0x0b, signTx_handleMintAPDU);
+		#endif // APP_FEATURE_TOKEN_MINTING
 		CASE(0x0c, signTx_handleScriptDataHashAPDU);
 		CASE(0x0d, signTx_handleCollateralInputAPDU);
 		CASE(0x0e, signTx_handleRequiredSignerAPDU);
-		CASE(0x12, signTx_handleCollateralOutputAPDU); // TODO perhaps change the numbers for the newly added items?
+		CASE(0x12, signTx_handleCollateralOutputAPDU);
 		CASE(0x10, signTx_handleTotalCollateralAPDU);
-		CASE(0x11, signTx_handleReferenceInputsAPDU);
+		CASE(0x11, signTx_handleReferenceInputAPDU);
+		CASE(0x13, signTx_handleVotingProcedureAPDU);
+		CASE(0x15, signTx_handleTreasuryAPDU);
+		CASE(0x16, signTx_handleDonationAPDU);
 		CASE(0x0a, signTx_handleConfirmAPDU);
 		CASE(0x0f, signTx_handleWitnessAPDU);
 		DEFAULT(NULL)
@@ -1819,11 +2588,14 @@ void signTx_handleAPDU(
 	case SIGN_STAGE_BODY_FEE:
 	case SIGN_STAGE_BODY_TTL:
 	case SIGN_STAGE_BODY_CERTIFICATES:
+		#ifdef APP_FEATURE_POOL_REGISTRATION
 	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
-	case SIGN_STAGE_BODY_WITHDRAWALS:
+		#endif // APP_FEATURE_POOL_REGISTRATION
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
+		#ifdef APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
+		#endif // APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
@@ -1834,6 +2606,11 @@ void signTx_handleAPDU(
 		explicit_bzero(&BODY_CTX->stageData, SIZEOF(BODY_CTX->stageData));
 		break;
 	}
+
+	case SIGN_STAGE_BODY_WITHDRAWALS:
+		// we need to keep previous data for checking canonical ordering
+		break;
+
 	default:
 		break;
 	}
@@ -1852,9 +2629,8 @@ ins_sign_tx_aux_data_context_t* accessAuxDataContext()
 		return &(ctx->txPartCtx.aux_data_ctx);
 
 	default:
-		#ifndef DEVEL
+		PRINTF("accessAuxDataContext() bug\n");
 		ASSERT(false);
-		#endif
 		THROW(ERR_ASSERT);
 	}
 }
@@ -1869,11 +2645,15 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_FEE:
 	case SIGN_STAGE_BODY_TTL:
 	case SIGN_STAGE_BODY_CERTIFICATES:
+		#ifdef APP_FEATURE_POOL_REGISTRATION
 	case SIGN_STAGE_BODY_CERTIFICATES_POOL_SUBMACHINE:
+		#endif // APP_FEATURE_POOL_REGISTRATION
 	case SIGN_STAGE_BODY_WITHDRAWALS:
 	case SIGN_STAGE_BODY_VALIDITY_INTERVAL:
 	case SIGN_STAGE_BODY_MINT:
+		#ifdef APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_MINT_SUBMACHINE:
+		#endif // APP_FEATURE_TOKEN_MINTING
 	case SIGN_STAGE_BODY_SCRIPT_DATA_HASH:
 	case SIGN_STAGE_BODY_COLLATERAL_INPUTS:
 	case SIGN_STAGE_BODY_REQUIRED_SIGNERS:
@@ -1881,13 +2661,15 @@ ins_sign_tx_body_context_t* accessBodyContext()
 	case SIGN_STAGE_BODY_COLLATERAL_OUTPUT_SUBMACHINE:
 	case SIGN_STAGE_BODY_TOTAL_COLLATERAL:
 	case SIGN_STAGE_BODY_REFERENCE_INPUTS:
+	case SIGN_STAGE_BODY_VOTING_PROCEDURES:
+	case SIGN_STAGE_BODY_TREASURY:
+	case SIGN_STAGE_BODY_DONATION:
 	case SIGN_STAGE_CONFIRM:
 		return &(ctx->txPartCtx.body_ctx);
 
 	default:
-		#ifndef DEVEL
+		PRINTF("accessBodyContext() bug\n");
 		ASSERT(false);
-		#endif
 		THROW(ERR_ASSERT);
 	}
 }
@@ -1900,9 +2682,8 @@ ins_sign_tx_witness_context_t* accessWitnessContext()
 		return &(ctx->txPartCtx.witnesses_ctx);
 
 	default:
-		#ifndef DEVEL
+		PRINTF("accessWitnessContext() bug\n");
 		ASSERT(false);
-		#endif
 		THROW(ERR_ASSERT);
 	}
 }

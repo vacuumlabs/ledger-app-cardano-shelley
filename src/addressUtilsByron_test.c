@@ -1,4 +1,4 @@
-#ifdef DEVEL
+#if defined(DEVEL) && !defined(APP_XS)
 
 #include "addressUtilsByron.h"
 #include "cardano.h"

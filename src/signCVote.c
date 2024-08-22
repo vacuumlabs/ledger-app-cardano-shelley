@@ -60,9 +60,8 @@ void signCVote_handleInitAPDU(
 )
 {
 	{
-		//sanity checks
+		// sanity checks
 		CHECK_STAGE(VOTECAST_STAGE_INIT);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		TRACE_BUFFER(wireDataBuffer, wireDataSize);
@@ -116,7 +115,7 @@ void signCVote_handleInitAPDU(
 	default:
 		THROW(ERR_NOT_IMPLEMENTED);
 	}
-	handleInit_ui_runStep();
+	signCVote_handleInit_ui_runStep();
 }
 
 // ============================== VOTECAST CHUNK ==============================
@@ -127,9 +126,8 @@ void signCVote_handleVotecastChunkAPDU(
 )
 {
 	{
-		//sanity checks
+		// sanity checks
 		CHECK_STAGE(VOTECAST_STAGE_CHUNK);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		read_view_t view = make_read_view(wireDataBuffer, wireDataBuffer + wireDataSize);
@@ -159,9 +157,8 @@ void signCVote_handleConfirmAPDU(
 {
 	TRACE_STACK_USAGE();
 	{
-		//sanity checks
+		// sanity checks
 		CHECK_STAGE(VOTECAST_STAGE_CONFIRM);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	{
 		// no data to receive
@@ -193,7 +190,7 @@ void signCVote_handleConfirmAPDU(
 		}
 	}
 
-	handleConfirm_ui_runStep();
+	signCVote_handleConfirm_ui_runStep();
 }
 
 // ============================== WITNESS ==============================
@@ -207,7 +204,6 @@ void signCVote_handleWitnessAPDU(
 	{
 		// sanity checks
 		CHECK_STAGE(VOTECAST_STAGE_WITNESS);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	{
@@ -282,6 +278,7 @@ void signCVote_handleAPDU(
         bool isNewCall
 )
 {
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	if (isNewCall) {

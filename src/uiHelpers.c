@@ -19,7 +19,7 @@ displayState_t displayState;
 // ux is a magic global variable implicitly referenced by the UX_ macros. Apps
 // should never need to reference it directly
 ux_state_t ux;
-#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2) || defined(TARGET_STAX)
+#else
 ux_state_t G_ux;
 bolos_ux_params_t G_ux_params;
 #endif
@@ -93,11 +93,7 @@ void ui_displayPrompt_headless_cb(bool ux_allowed)
 
 void autoconfirmPrompt()
 {
-	#if defined(TARGET_NANOS)
-	nanos_set_timer(HEADLESS_DELAY, ui_displayPrompt_headless_cb);
-	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-	UX_CALLBACK_SET_INTERVAL(HEADLESS_DELAY);
-	#endif
+	set_timer(HEADLESS_DELAY, ui_displayPrompt_headless_cb);
 }
 
 void ui_displayPaginatedText_headless_cb(bool ux_allowed)
@@ -117,11 +113,7 @@ void ui_displayPaginatedText_headless_cb(bool ux_allowed)
 
 void autoconfirmPaginatedText()
 {
-	#if defined(TARGET_NANOS)
-	nanos_set_timer(HEADLESS_DELAY, ui_displayPaginatedText_headless_cb);
-	#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-	UX_CALLBACK_SET_INTERVAL(HEADLESS_DELAY);
-	#endif
+	set_timer(HEADLESS_DELAY, ui_displayPaginatedText_headless_cb);
 }
 
 #endif // HEADLESS

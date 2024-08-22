@@ -46,21 +46,15 @@ extern io_state_t io_state;
 // Everything below this point is Ledger magic
 #ifdef HAVE_BAGL
 void io_seproxyhal_display(const bagl_element_t* element);
+typedef void timeout_callback_fn_t(bool ux_allowed);
+void set_timer(int ms, timeout_callback_fn_t* cb);
+void clear_timer();
 #endif
 #ifndef FUZZING
 unsigned char io_event(unsigned char channel);
 
 bool device_is_unlocked();
-#endif
-#if defined(TARGET_NANOS)
-typedef void timeout_callback_fn_t(bool ux_allowed);
-void nanos_set_timer(int ms, timeout_callback_fn_t* cb);
-void nanos_clear_timer();
-#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-// we had to disable set_timer for Nano X, since in the new SDK UX_STEP_CB/UX_STEP_NOCB macros
-// automatically push a confirm callback to G_ux.stack[].ticker_callback with timeout zero
-// which causes other callbacks (i.e. ours) to be ignored in UX_TICKER_EVENT, so set_timer
-// does not actually work anymore in Nano X
+
 #endif
 
 #ifdef HAVE_NBGL

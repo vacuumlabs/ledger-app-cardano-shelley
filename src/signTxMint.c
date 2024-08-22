@@ -1,3 +1,5 @@
+#ifdef APP_FEATURE_TOKEN_MINTING
+
 #include "signTxMint.h"
 #include "signTxMint_ui.h"
 #include "signTxUtils.h"
@@ -33,7 +35,6 @@ static void signTxMint_handleTopLevelDataAPDU(const uint8_t* wireDataBuffer, siz
 	{
 		// safety checks
 		CHECK_STATE(STATE_MINT_TOP_LEVEL_DATA);
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	TRACE_BUFFER(wireDataBuffer, wireDataSize);
 	mint_context_t* subctx = accessSubcontext();
@@ -65,8 +66,6 @@ static void signTxMint_handleAssetGroupAPDU(const uint8_t* wireDataBuffer, size_
 	{
 		// sanity checks
 		CHECK_STATE(STATE_MINT_ASSET_GROUP);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	mint_context_t* subctx = accessSubcontext();
 	{
@@ -120,8 +119,6 @@ static void signTxMint_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wir
 	{
 		// sanity checks
 		CHECK_STATE(STATE_MINT_TOKEN);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 	mint_context_t* subctx = accessSubcontext();
 	{
@@ -183,10 +180,8 @@ static void signTxMint_handleTokenAPDU(const uint8_t* wireDataBuffer, size_t wir
 static void signTxMint_handleConfirmAPDU(const uint8_t* wireDataBuffer MARK_UNUSED, size_t wireDataSize)
 {
 	{
-		//sanity checks
+		// sanity checks
 		CHECK_STATE(STATE_MINT_CONFIRM);
-
-		ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 	}
 
 	{
@@ -246,6 +241,7 @@ void signTxMint_init()
 
 void signTxMint_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize)
 {
+	ASSERT(wireDataBuffer != NULL);
 	ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
 	switch (p2) {
@@ -290,3 +286,5 @@ bool signTxMint_isFinished()
 		ASSERT(false);
 	}
 }
+
+#endif // APP_FEATURE_TOKEN_MINTING

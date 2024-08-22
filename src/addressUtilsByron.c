@@ -7,6 +7,15 @@
 #include "crc32.h"
 #include "bufView.h"
 
+#if defined(APP_FEATURE_BYRON_ADDRESS_DERIVATION) || defined(APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK)
+
+static const size_t ADDRESS_ROOT_SIZE = 28;
+static const size_t PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY = 2;
+
+#endif
+
+#ifdef APP_FEATURE_BYRON_ADDRESS_DERIVATION
+
 enum {
 	CARDANO_ADDRESS_TYPE_PUBKEY = 0,
 	/*
@@ -14,9 +23,6 @@ enum {
 	CARDANO_ADDRESS_TYPE_REDEEM = 2,
 	*/
 };
-
-static const size_t ADDRESS_ROOT_SIZE = 28;
-static const size_t PROTOCOL_MAGIC_ADDRESS_ATTRIBUTE_KEY = 2;
 
 void addressRootFromExtPubKey(
         const extendedPublicKey_t* extPubKey,
@@ -31,7 +37,7 @@ void addressRootFromExtPubKey(
 
 	{
 		// [0, [0, publicKey:chainCode], Map(0)]
-		// TODO(ppershing): what are the first two 0 constants?
+		// Note(ppershing): what are the first two 0 constants?
 		view_appendToken(&cbor, CBOR_TYPE_ARRAY, 3);
 		{
 			view_appendToken(&cbor, CBOR_TYPE_UNSIGNED, CARDANO_ADDRESS_TYPE_PUBKEY);
@@ -136,6 +142,56 @@ size_t cborPackRawAddressWithChecksum(
 	return view_processedSize(&output);
 }
 
+size_t deriveRawAddress(
+        const bip44_path_t* pathSpec, uint32_t protocolMagic,
+        uint8_t* outBuffer, size_t outSize
+)
+{
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
+	uint8_t addressRoot[28] = {0};
+	{
+		extendedPublicKey_t extPubKey;
+
+		deriveExtendedPublicKey(pathSpec, &extPubKey);
+
+		addressRootFromExtPubKey(
+		        &extPubKey,
+		        addressRoot, SIZEOF(addressRoot)
+		);
+	}
+
+	return cborEncodePubkeyAddressInner(
+	               addressRoot, SIZEOF(addressRoot),
+	               protocolMagic,
+	               outBuffer, outSize
+	       );
+}
+
+size_t deriveAddress_byron(
+        const bip44_path_t* pathSpec, uint32_t protocolMagic,
+        uint8_t* outBuffer, size_t outSize
+)
+{
+	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
+
+	uint8_t rawAddressBuffer[40] = {0};
+	size_t rawAddressSize = deriveRawAddress(
+	                                pathSpec, protocolMagic,
+	                                rawAddressBuffer, SIZEOF(rawAddressBuffer)
+	                        );
+
+	return cborPackRawAddressWithChecksum(
+	               rawAddressBuffer, rawAddressSize,
+	               outBuffer, outSize
+	       );
+
+}
+
+#endif // APP_FEATURE_BYRON_ADDRESS_DERIVATION
+
+#ifdef APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
+
 static uint64_t parseToken(read_view_t* view, uint8_t type)
 {
 	const cbor_token_t token = view_parseToken(view);
@@ -165,7 +221,6 @@ static size_t parseBytesSizeToken(read_view_t* view)
 
 	return parsedSizeDowncasted;
 }
-
 
 uint32_t extractProtocolMagic(
         const uint8_t* addressBuffer, size_t addressSize
@@ -252,48 +307,4 @@ uint32_t extractProtocolMagic(
 	return protocolMagic;
 }
 
-size_t deriveRawAddress(
-        const bip44_path_t* pathSpec, uint32_t protocolMagic,
-        uint8_t* outBuffer, size_t outSize
-)
-{
-	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
-
-	uint8_t addressRoot[28] = {0};
-	{
-		extendedPublicKey_t extPubKey;
-
-		deriveExtendedPublicKey(pathSpec, &extPubKey);
-
-		addressRootFromExtPubKey(
-		        &extPubKey,
-		        addressRoot, SIZEOF(addressRoot)
-		);
-	}
-
-	return cborEncodePubkeyAddressInner(
-	               addressRoot, SIZEOF(addressRoot),
-	               protocolMagic,
-	               outBuffer, outSize
-	       );
-}
-
-size_t deriveAddress_byron(
-        const bip44_path_t* pathSpec, uint32_t protocolMagic,
-        uint8_t* outBuffer, size_t outSize
-)
-{
-	ASSERT(outSize < BUFFER_SIZE_PARANOIA);
-
-	uint8_t rawAddressBuffer[40] = {0};
-	size_t rawAddressSize = deriveRawAddress(
-	                                pathSpec, protocolMagic,
-	                                rawAddressBuffer, SIZEOF(rawAddressBuffer)
-	                        );
-
-	return cborPackRawAddressWithChecksum(
-	               rawAddressBuffer, rawAddressSize,
-	               outBuffer, outSize
-	       );
-
-}
+#endif // APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK

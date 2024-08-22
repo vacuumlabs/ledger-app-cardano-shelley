@@ -5,8 +5,55 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [7.2.0](TBD) - [TBD]
 
-## [6.0.3](TBD) - [TBD]
+### Added
+
+- Add flex support,
+- Add integration tests in CI using [ledgerjs-cardano-shelley](https://github.com/LedgerHQ/ledgerjs-cardano-shelley)
+
+### Changed
+
+- Update Makefile to standard format,
+- Fix headless mode on Nano X / SP for integration tests running,
+- Update some NBGL calls to latest API (main menu),
+
+## [7.1.0](TBD) - [TBD]
+
+Message signing (CIP-8)
+
+### Added
+
+- support for basic message signing (CIP-8, CIP-30)
+
+### Changed
+
+- usage of chunks of maximum allowed size is now enforced (datums and reference scripts in outputs)
+- TODO updated list of native tokens recognized by the app with correct decimal places
+
+
+## [7.0.2](TBD) - [TBD]
+
+Conway era
+
+### Added
+
+- export of Conway-era keys (DReps, Constitutional Committee Hot and Cold keys)
+- Conway era transaction body items (new certificates, voting procedures, treasury, donation)
+- optional CBOR tag 258 in CDDL sets
+- reduced features on Nano S (since Ledger app v7, due to memory limits)
+
+### Changed
+
+- updated list of native tokens recognized by the app with correct decimal places
+- increased max. URL and DNS name length to 128
+
+### Fixed
+
+- bug in checking canonical ordering of withdrawals
+
+
+## [6.1.2](https://github.com/LedgerHQ/app-cardano/compare/v5.0.0...LedgerHQ:nanos_2.1.0_6.1.2_sdk_2.1.0-12) - [October 25th 2023]
 
 Support for CIP-36 voting
 
@@ -15,11 +62,13 @@ Support for CIP-36 voting
 - export of vote keys (1694'/1815'/...)
 - support for CIP-36 voting (signing of vote-cast fragments with 1694 keys)
 - support for CIP-36 registrations (in transaction auxiliary data)
+- support for the Stax device
 
 ### Changed
 
 - API for Catalyst voting registration (it is still possible to use CIP-15 in auxiliary data)
 - updated list of native tokens recognized by the app with correct decimal places
+- multidelegation allowed (as used by Lace, i.e. stake keys do not need to end with 0 as address_index)
 
 
 ## [5.0.0](https://github.com/LedgerHQ/app-cardano/compare/4.1.2...LedgerHQ:nanos_2.1.0_5.0.0) - [October 11th 2022]
