@@ -3,8 +3,17 @@
 
 #include "io.h"
 #include "uiHelpers.h"
+#ifdef HAVE_NBGL
+#include "nbgl_use_case.h"
+#endif
 
 #ifdef HAVE_NBGL
+enum {
+    TOKEN_HIGH_FEES_NEXT = FIRST_USER_TOKEN,
+    TOKEN_HIGH_FEES_REJECT,
+};
+
+
 typedef void (*callback_t)(void);
 
 void set_light_confirmation(bool needed);
@@ -24,6 +33,8 @@ void ui_idle_flow(void);
 void display_cancel_message(void);
 void display_error(void);
 void nbgl_reset_transaction_full_context(void);
+void display_warning_fee(void);
+void fee_high_cb(int token, uint8_t index);
 #endif
 
 #ifdef HAVE_BAGL

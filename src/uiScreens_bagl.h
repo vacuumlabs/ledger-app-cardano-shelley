@@ -177,4 +177,6 @@ void ui_displayInputScreen(
         ui_callback_fn_t callback
 );
 
+void fee_high_cb(void);
+
 #endif // H_CARDANO_APP_UI_SCREENS_BAGL
