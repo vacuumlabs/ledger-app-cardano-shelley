@@ -334,7 +334,7 @@ static void _display_warning(void)
 {
 	TRACE("_warning");
 
-	nbgl_useCaseReviewStart(&C_warning64px, "WARNING",
+	nbgl_useCaseReviewStart(&C_Warning_64px, "WARNING",
 	                        uiContext.pageText[0], "Reject if not sure",
 	                        ui_callback, &display_cancel);
 	#ifdef HEADLESS
@@ -356,7 +356,7 @@ static void _display_choice(void)
 {
 	TRACE("_choice");
 
-	nbgl_useCaseChoice(&C_round_warning_64px, uiContext.pageText[0],
+	nbgl_useCaseChoice(&C_Important_Circle_64px, uiContext.pageText[0],
 	                   uiContext.pageText[1], "Allow", "Don't Allow",
 	                   display_choice_callback);
 	#ifdef HEADLESS

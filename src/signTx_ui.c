@@ -21,6 +21,8 @@
 #elif defined(HAVE_NBGL)
 #include "uiScreens_nbgl.h"
 #include "nbgl_use_case.h"
+#include "nbgl_layout.h"
+#include "nbgl_page.h"
 #endif
 
 static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
@@ -293,6 +295,67 @@ void signTx_handleInput_ui_runStep()
 
 // ============================== FEE ==============================
 
+#define MAX_FEES 5000000	// 5 ADA threshold
+
+#ifdef HAVE_BAGL
+static void fee_high_cb(void) {
+	ui_displayAdaAmountScreen("Transaction fee", BODY_CTX->stageData.fee, signTx_handleFee_ui_runStep);
+}
+#elif defined(HAVE_NBGL)
+
+enum {
+    TOKEN_HIGH_FEES_NEXT = FIRST_USER_TOKEN,
+    TOKEN_HIGH_FEES_REJECT,
+};
+
+static void cancellation_status_callback(void)
+{
+	respond_with_user_reject();
+	ui_idle_flow();
+	nbgl_reset_transaction_full_context();
+}
+
+static void display_cancel_status(void)
+{
+	nbgl_useCaseStatus("Transaction\nrejected", false, cancellation_status_callback);
+}
+
+static void fee_high_cb(int token, uint8_t index) {
+	UNUSED(index);
+	char adaAmountStr[50] = {0};
+	
+	switch (token) {
+		case TOKEN_HIGH_FEES_NEXT:
+			ui_getAdaAmountScreen(adaAmountStr, SIZEOF(adaAmountStr), BODY_CTX->stageData.fee);
+			fill_and_display_if_required("Fees", adaAmountStr, signTx_handleFee_ui_runStep, respond_with_user_reject);
+			break;
+		case TOKEN_HIGH_FEES_REJECT:
+			nbgl_useCaseConfirm("Reject transaction?", NULL, "Yes, reject",
+								"Go back to transaction", display_cancel_status);
+			break;
+		default:
+			break;
+	}
+}
+
+static void display_warning_fee(void) {
+	nbgl_pageInfoDescription_t info = {0};
+
+	info.footerText     = "Reject";
+	info.footerToken    = TOKEN_HIGH_FEES_REJECT,
+	info.isSwipeable    = true,
+	info.tapActionToken = TOKEN_HIGH_FEES_NEXT,
+	info.topRightStyle  = NO_BUTTON_STYLE,
+
+	info.centeredInfo.icon  = &C_Important_Circle_64px;
+	info.centeredInfo.text1 = "Fee are above\n5 ADA";
+	info.centeredInfo.text3 = "Swipe to review";
+	info.centeredInfo.style = LARGE_CASE_GRAY_INFO;
+
+	nbgl_pageDrawInfo(fee_high_cb, NULL, &info);
+}
+#endif // HAVE_BAGL
+
 void signTx_handleFee_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
@@ -304,11 +367,17 @@ void signTx_handleFee_ui_runStep()
 
 	UI_STEP(HANDLE_FEE_STEP_DISPLAY) {
 		#ifdef HAVE_BAGL
-		ui_displayAdaAmountScreen("Transaction fee", BODY_CTX->stageData.fee, this_fn);
+		if (BODY_CTX->stageData.fee > (uint64_t)MAX_FEES) {
+			ui_displayPaginatedText("Warning: Fees are", "above 5 ADA", fee_high_cb);
+		} else {
+			fee_high_cb();
+		}
 		#elif defined(HAVE_NBGL)
-		char adaAmountStr[50] = {0};
-		ui_getAdaAmountScreen(adaAmountStr, SIZEOF(adaAmountStr), BODY_CTX->stageData.fee);
-		fill_and_display_if_required("Fees", adaAmountStr, this_fn, respond_with_user_reject);
+		if (BODY_CTX->stageData.fee > (uint64_t)MAX_FEES) {
+			display_warning_fee();
+		} else {
+			fee_high_cb(TOKEN_HIGH_FEES_NEXT, 0);
+		}
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_FEE_STEP_RESPOND) {
