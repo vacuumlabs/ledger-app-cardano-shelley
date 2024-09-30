@@ -293,6 +293,8 @@ void signTx_handleInput_ui_runStep()
 
 // ============================== FEE ==============================
 
+#define MAX_FEES 5000000	// 5 ADA threshold
+
 void signTx_handleFee_ui_runStep()
 {
 	TRACE("UI step %d", ctx->ui_step);
@@ -304,11 +306,17 @@ void signTx_handleFee_ui_runStep()
 
 	UI_STEP(HANDLE_FEE_STEP_DISPLAY) {
 		#ifdef HAVE_BAGL
-		ui_displayAdaAmountScreen("Transaction fee", BODY_CTX->stageData.fee, this_fn);
+		if (BODY_CTX->stageData.fee > (uint64_t)MAX_FEES) {
+			ui_displayPaginatedText("Warning: Fees are", "above 5 ADA", fee_high_cb);
+		} else {
+			fee_high_cb();
+		}
 		#elif defined(HAVE_NBGL)
-		char adaAmountStr[50] = {0};
-		ui_getAdaAmountScreen(adaAmountStr, SIZEOF(adaAmountStr), BODY_CTX->stageData.fee);
-		fill_and_display_if_required("Fees", adaAmountStr, this_fn, respond_with_user_reject);
+		if (BODY_CTX->stageData.fee > (uint64_t)MAX_FEES) {
+			display_warning_fee();
+		} else {
+			fee_high_cb(TOKEN_HIGH_FEES_NEXT, 0);
+		}
 		#endif // HAVE_BAGL
 	}
 	UI_STEP(HANDLE_FEE_STEP_RESPOND) {

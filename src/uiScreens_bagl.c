@@ -10,6 +10,7 @@
 #include "state.h"
 #include "uiHelpers.h"
 #include "menu.h"
+#include "signTx_ui.h"
 
 static const int INS_NONE = -1;
 
@@ -906,4 +907,9 @@ void ui_displayInputScreen(
 	        callback
 	);
 }
+
+void fee_high_cb(void) {
+	ui_displayAdaAmountScreen("Transaction fee", BODY_CTX->stageData.fee, signTx_handleFee_ui_runStep);
+}
+
 #endif // HAVE_BAGL
