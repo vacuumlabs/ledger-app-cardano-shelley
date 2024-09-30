@@ -20,6 +20,7 @@
 #include "ui.h"
 #include "uiHelpers.h"
 #include "uiScreens_nbgl.h"
+#include "signTx_ui.h"
 
 #define MAX_LINE_PER_PAGE_COUNT NB_MAX_LINES_IN_REVIEW
 #define MAX_TAG_TITLE_LINE_LENGTH 30
@@ -334,7 +335,7 @@ static void _display_warning(void)
 {
 	TRACE("_warning");
 
-	nbgl_useCaseReviewStart(&C_warning64px, "WARNING",
+	nbgl_useCaseReviewStart(&C_Warning_64px, "WARNING",
 	                        uiContext.pageText[0], "Reject if not sure",
 	                        ui_callback, &display_cancel);
 	#ifdef HEADLESS
@@ -356,7 +357,7 @@ static void _display_choice(void)
 {
 	TRACE("_choice");
 
-	nbgl_useCaseChoice(&C_round_warning_64px, uiContext.pageText[0],
+	nbgl_useCaseChoice(&C_Important_Circle_64px, uiContext.pageText[0],
 	                   uiContext.pageText[1], "Allow", "Don't Allow",
 	                   display_choice_callback);
 	#ifdef HEADLESS
@@ -602,4 +603,47 @@ void display_status(const char* text)
 {
 	nbgl_useCaseStatus(text, true, ui_idle_flow);
 }
+
+
+void fee_high_cb(int token, uint8_t index) {
+	UNUSED(index);
+	char adaAmountStr[50] = {0};
+	
+	switch (token) {
+		case TOKEN_HIGH_FEES_NEXT:
+			ui_getAdaAmountScreen(adaAmountStr, SIZEOF(adaAmountStr), BODY_CTX->stageData.fee);
+			fill_and_display_if_required("Fees", adaAmountStr, signTx_handleFee_ui_runStep, respond_with_user_reject);
+			break;
+		case TOKEN_HIGH_FEES_REJECT:
+			nbgl_useCaseConfirm("Reject transaction?", NULL, "Yes, reject",
+								"Go back to transaction", display_cancel_status);
+			break;
+		default:
+			break;
+	}
+}
+
+void display_warning_fee(void) {
+	nbgl_pageInfoDescription_t info = {0};
+
+	info.footerText     = "Reject";
+	info.footerToken    = TOKEN_HIGH_FEES_REJECT;
+	info.isSwipeable    = true;
+	info.tapActionToken = TOKEN_HIGH_FEES_NEXT;
+	info.topRightStyle  = NO_BUTTON_STYLE;
+	info.tuneId         = TUNE_LOOK_AT_ME;
+
+	info.centeredInfo.icon  = &C_Important_Circle_64px;
+	info.centeredInfo.text1 = "Fee are above\n5 ADA";
+	info.centeredInfo.text3 = "Swipe to review";
+	info.centeredInfo.style = LARGE_CASE_GRAY_INFO;
+
+	nbgl_pageDrawInfo(fee_high_cb, NULL, &info);
+
+	#ifdef HEADLESS
+	nbgl_refresh();
+	fee_high_cb(TOKEN_HIGH_FEES_NEXT, 0);
+	#endif
+}
+
 #endif // HAVE_NBGL
