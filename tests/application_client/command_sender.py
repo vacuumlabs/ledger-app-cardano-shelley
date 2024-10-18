@@ -7,10 +7,12 @@ It contains the command sending part.
 """
 
 from typing import Generator, Optional
+from contextlib import contextmanager
 
 from ragger.backend.interface import BackendInterface, RAPDU
 
-from application_client.command_builder import CommandBuilder
+from input_files.derive_address import DeriveAddressTestCase
+from application_client.command_builder import CommandBuilder, P1Type
 from application_client.app_def import Errors
 
 
@@ -96,3 +98,32 @@ class CommandSender:
         assert rapdu.status == Errors.SW_SUCCESS
         return rapdu.data
 
+
+    @contextmanager
+    def derive_address_async(self, p1: P1Type, testCase: DeriveAddressTestCase) -> Generator[None, None, None]:
+        """APDU Derive Address
+
+        Args:
+            p1 (P1Type): APDU Parameter 1
+            testCase (DeriveAddressTestCase): Test parameters
+
+        Returns:
+            Generator
+        """
+
+        with self._exchange_async(self._cmd_builder.derive_address(p1, testCase)):
+            yield
+
+
+    def derive_address(self, p1: P1Type, testCase: DeriveAddressTestCase) -> RAPDU:
+        """APDU Derive Address
+
+        Args:
+            p1 (P1Type): APDU Parameter 1
+            testCase (DeriveAddressTestCase): Test parameters
+
+        Returns:
+            Response APDU
+        """
+
+        return self._exchange(self._cmd_builder.derive_address(p1, testCase))
