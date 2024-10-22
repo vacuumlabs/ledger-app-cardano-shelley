@@ -7,10 +7,12 @@ It contains the command building part.
 """
 
 from enum import IntEnum
+from typing import List
 
 from ragger.bip import pack_derivation_path
 
 from input_files.derive_address import DeriveAddressTestCase
+from input_files.cvote import MAX_CIP36_PAYLOAD_SIZE, CVoteTestCase
 from application_client.app_def import InsType, AddressType, StakingDataSourceType
 
 
@@ -21,6 +23,11 @@ class P1Type(IntEnum):
     # Get Pub Key
     P1_KEY_INIT = 0x00
     P1_KEY_NEXT = 0x01
+    # Sign CIP36 Vote
+    P1_INIT = 0x01
+    P1_CHUNK = 0x02
+    P1_CONFIRM = 0x03
+    P1_WITNESS = 0x04
 
 
 class CommandBuilder:
@@ -138,3 +145,80 @@ class CommandBuilder:
         if remainingKeysData > 0:
             data += remainingKeysData.to_bytes(4, "big")
         return self._serialize(InsType.GET_PUBLIC_ADDR, p1, 0x00, data)
+
+
+    def sign_cip36_init(self, testCase: CVoteTestCase) -> bytes:
+        """APDU Builder for CIP36 Vote - INIT step
+
+        Args:
+            testCase (CVoteTestCase): Test parameters
+
+        Returns:
+            Serial data APDU
+        """
+
+        # Serialization format:
+        #    Full length of voteCastDataHex (4B)
+        #    voteCastDataHex (up to 240 B)
+        data = bytes()
+        # 2 hex chars per byte
+        data_size = int(len(testCase.cVote.voteCastDataHex) / 2)
+        chunk_size = min(MAX_CIP36_PAYLOAD_SIZE * 2, len(testCase.cVote.voteCastDataHex))
+        data += data_size.to_bytes(4, "big")
+        data += bytes.fromhex(testCase.cVote.voteCastDataHex[:chunk_size])
+        # Remove the data sent in this step
+        testCase.cVote.voteCastDataHex = testCase.cVote.voteCastDataHex[chunk_size:]
+        return self._serialize(InsType.SIGN_CIP36_VOTE, P1Type.P1_INIT, 0x00, data)
+
+
+    def sign_cip36_chunk(self, testCase: CVoteTestCase) -> List[bytes]:
+        """APDU Builder for CIP36 Vote - CHUNK step
+
+        Args:
+            testCase (CVoteTestCase): Test parameters
+
+        Returns:
+            Response APDU
+        """
+
+        # Serialization format:
+        #    voteCastDataHex (following data, up to MAX_CIP36_PAYLOAD_SIZE B each)
+        chunks = []
+        payload = testCase.cVote.voteCastDataHex
+        max_payload_size = MAX_CIP36_PAYLOAD_SIZE * 2 # 2 hex chars per byte
+        while len(payload) > 0:
+            chunks.append(self._serialize(InsType.SIGN_CIP36_VOTE,
+                                          P1Type.P1_CHUNK,
+                                          0x00,
+                                          bytes.fromhex(payload[:max_payload_size])))
+            payload = payload[max_payload_size:]
+
+        return chunks
+
+
+    def sign_cip36_confirm(self) -> bytes:
+        """APDU Builder for CIP36 Vote - CONFIRM step
+
+        Returns:
+            Serial data APDU
+        """
+
+        return self._serialize(InsType.SIGN_CIP36_VOTE, P1Type.P1_CONFIRM, 0x00)
+
+
+    def sign_cip36_witness(self, testCase: CVoteTestCase) -> bytes:
+        """APDU Builder for CIP36 Vote - WITNESS step
+
+        Args:
+            testCase (CVoteTestCase): Test parameters
+
+        Returns:
+            Serial data APDU
+        """
+
+        # Serialization format:
+        #     witness path (1B for length + [0-10] x 4B)
+        return self._serialize(InsType.SIGN_CIP36_VOTE,
+                               P1Type.P1_WITNESS,
+                               0x00,
+                               pack_derivation_path(testCase.cVote.witnessPath))

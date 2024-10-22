@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from ragger.backend.interface import BackendInterface, RAPDU
 
 from input_files.derive_address import DeriveAddressTestCase
+from input_files.cvote import CVoteTestCase
 from application_client.command_builder import CommandBuilder, P1Type
 from application_client.app_def import Errors
 
@@ -159,3 +160,62 @@ class CommandSender:
         """
 
         return self._exchange(self._cmd_builder.get_pubkey(p1, path, remainingKeysData))
+
+
+    @contextmanager
+    def sign_cip36_init(self, testCase: CVoteTestCase) -> Generator[None, None, None]:
+        """APDU CIP36 Vote - INIT step
+
+        Args:
+            testCase (CVoteTestCase): Test parameters
+
+        Returns:
+            Generator
+        """
+
+        with self._exchange_async(self._cmd_builder.sign_cip36_init(testCase)):
+            yield
+
+
+    def sign_cip36_chunk(self, testCase: CVoteTestCase) -> RAPDU:
+        """APDU CIP36 Vote - INIT step
+
+        Args:
+            testCase (CVoteTestCase): Test parameters
+
+        Returns:
+            Response APDU
+        """
+
+        chunks = self._cmd_builder.sign_cip36_chunk(testCase)
+        for chunk in chunks[:-1]:
+            resp = self._exchange(chunk)
+            assert resp.status == Errors.SW_SUCCESS
+        return self._exchange(chunks[-1])
+
+
+    @contextmanager
+    def sign_cip36_confirm(self) -> Generator[None, None, None]:
+        """APDU CIP36 Vote - CONFIRM step
+
+        Returns:
+            Generator
+        """
+
+        with self._exchange_async(self._cmd_builder.sign_cip36_confirm()):
+            yield
+
+
+    @contextmanager
+    def sign_cip36_witness(self, testCase: CVoteTestCase) -> Generator[None, None, None]:
+        """APDU CIP36 Vote - WITNESS step
+
+        Args:
+            testCase (CVoteTestCase): Test parameters
+
+        Returns:
+            Generator
+        """
+
+        with self._exchange_async(self._cmd_builder.sign_cip36_witness(testCase)):
+            yield
