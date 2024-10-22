@@ -127,3 +127,35 @@ class CommandSender:
         """
 
         return self._exchange(self._cmd_builder.derive_address(p1, testCase))
+
+
+    @contextmanager
+    def get_pubkey_async(self, p1: P1Type, path: str, remainingKeysData: int = 0) -> Generator[None, None, None]:
+        """APDU Get Public Key
+
+        Args:
+            p1 (P1Type): APDU Parameter 1
+            path (str): Test parameters
+            remainingKeysData (int): Nb of remaining paths
+
+        Returns:
+            Generator
+        """
+
+        with self._exchange_async(self._cmd_builder.get_pubkey(p1, path, remainingKeysData)):
+            yield
+
+
+    def get_pubkey(self, p1: P1Type, path: str, remainingKeysData: int = 0) -> RAPDU:
+        """APDU Get Public Key
+
+        Args:
+            p1 (P1Type): APDU Parameter 1
+            path (str): Test parameters
+            remainingKeysData (int): Nb of remaining paths
+
+        Returns:
+            Response APDU
+        """
+
+        return self._exchange(self._cmd_builder.get_pubkey(p1, path, remainingKeysData))

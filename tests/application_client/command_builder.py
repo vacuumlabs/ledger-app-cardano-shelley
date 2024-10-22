@@ -15,8 +15,12 @@ from application_client.app_def import InsType, AddressType, StakingDataSourceTy
 
 
 class P1Type(IntEnum):
+    # Derive Address
     P1_RETURN = 0x01
     P1_DISPLAY = 0x02
+    # Get Pub Key
+    P1_KEY_INIT = 0x00
+    P1_KEY_NEXT = 0x01
 
 
 class CommandBuilder:
@@ -115,3 +119,22 @@ class CommandBuilder:
             raise NotImplementedError("Not implemented yet")
 
         return self._serialize(InsType.DERIVE_PUBLIC_ADDR, p1, 0x00, data)
+
+
+    def get_pubkey(self, p1: P1Type, path: str, remainingKeysData: int = 0) -> bytes:
+        """APDU Builder for Public Key
+
+        Args:
+            p1 (P1Type): APDU Parameter 1
+            path (str): Test parameters
+            remainingKeysData (int): Nb of remaining paths
+
+        Returns:
+            Response APDU
+        """
+
+        data = bytes()
+        data += pack_derivation_path(path)
+        if remainingKeysData > 0:
+            data += remainingKeysData.to_bytes(4, "big")
+        return self._serialize(InsType.GET_PUBLIC_ADDR, p1, 0x00, data)
