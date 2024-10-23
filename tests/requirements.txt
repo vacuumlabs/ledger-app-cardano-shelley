@@ -1,4 +1,5 @@
 base58
 bech32m
+cbor
 pytest
 ragger[speculos,ledgerwallet]

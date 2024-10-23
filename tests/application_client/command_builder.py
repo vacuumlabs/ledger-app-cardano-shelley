@@ -14,6 +14,7 @@ from ragger.bip import pack_derivation_path
 from input_files.derive_address import DeriveAddressTestCase
 from input_files.cvote import MAX_CIP36_PAYLOAD_SIZE, CVoteTestCase
 from input_files.signOpCert import OpCertTestCase
+from input_files.signMsg import SignMsgTestCase, MessageAddressFieldType
 
 from application_client.app_def import InsType, AddressType, StakingDataSourceType
 
@@ -73,60 +74,7 @@ class CommandBuilder:
             Serial data APDU
         """
 
-        # Serialization format (from the documentation):
-        # address type 1B
-        # if address type == BYRON
-        #     protocol magic 4B
-        # else
-        #     network id 1B
-        # payment public key derivation path (1B for length + [0-10] x 4B) or script hash 28B
-        # staking choice 1B
-        #     if NO_STAKING:
-        #         nothing more
-        #     if STAKING_KEY_PATH:
-        #         staking public key derivation path (1B for length + [0-10] x 4B)
-        #     if STAKING_KEY_HASH:
-        #         stake key hash 28B
-        #     if BLOCKCHAIN_POINTER:
-        #         certificate blockchain pointer 3 x 4B
-
-        data = bytes()
-        data += testCase.addrType.to_bytes(1, "big")
-        if testCase.addrType == AddressType.BYRON:
-            data += testCase.netDesc.protocol.to_bytes(4, "big")
-        else:
-            data += testCase.netDesc.networkId.to_bytes(1, "big")
-
-        if not testCase.spendingValue.startswith("m/"):
-            data += bytes.fromhex(testCase.spendingValue)
-        elif testCase.spendingValue:
-            data += pack_derivation_path(testCase.spendingValue)
-
-        if testCase.addrType in (AddressType.BYRON, AddressType.ENTERPRISE_KEY,
-                        AddressType.ENTERPRISE_SCRIPT):
-            staking = StakingDataSourceType.NONE
-        elif testCase.addrType in (AddressType.BASE_PAYMENT_KEY_STAKE_SCRIPT,
-                          AddressType.BASE_PAYMENT_SCRIPT_STAKE_SCRIPT,
-                          AddressType.REWARD_SCRIPT):
-            staking = StakingDataSourceType.SCRIPT_HASH
-        elif testCase.addrType in (AddressType.POINTER_KEY, AddressType.POINTER_SCRIPT):
-            staking = StakingDataSourceType.BLOCKCHAIN_POINTER
-        elif not testCase.stakingValue.startswith("m/"):
-            staking = StakingDataSourceType.KEY_HASH
-        else:
-            staking = StakingDataSourceType.KEY_PATH
-        data += staking.to_bytes(1, "big")
-
-
-        if staking == StakingDataSourceType.KEY_PATH:
-            data += pack_derivation_path(testCase.stakingValue)
-        elif staking in (StakingDataSourceType.KEY_HASH,
-                         StakingDataSourceType.SCRIPT_HASH,
-                         StakingDataSourceType.BLOCKCHAIN_POINTER):
-            data += bytes.fromhex(testCase.stakingValue)
-        elif staking != StakingDataSourceType.NONE:
-            raise NotImplementedError("Not implemented yet")
-
+        data = self._serializeAddressParams(testCase)
         return self._serialize(InsType.DERIVE_PUBLIC_ADDR, p1, 0x00, data)
 
 
@@ -247,3 +195,138 @@ class CommandBuilder:
         data += testCase.opCert.issueCounter.to_bytes(8, "big")
         data += pack_derivation_path(testCase.opCert.path)
         return self._serialize(InsType.SIGN_OP_CERT, 0x00, 0x00, data)
+
+
+    def sign_msg_init(self, testCase: SignMsgTestCase) -> bytes:
+        """APDU Builder for Sign Message - INIT step
+
+        Args:
+            testCase (SignMsgTestCase): Test parameters
+
+        Returns:
+            Serial data APDU
+        """
+
+        # Serialization format:
+        #    Full length of messageHex (4B)
+        #    signingPath (1B for length + [0-10] x 4B)
+        #    hashPayload (1B)
+        #    isAscii display (1B)
+        #    addressFieldType (1B)
+        #    addressBuffer, if any
+        data = bytes()
+        # 2 hex chars per byte
+        data_size = int(len(testCase.msgData.messageHex) / 2)
+        data += data_size.to_bytes(4, "big")
+        data += pack_derivation_path(testCase.msgData.signingPath)
+
+        data += testCase.msgData.hashPayload.to_bytes(1, "big")
+        data += testCase.msgData.isAscii.to_bytes(1, "big")
+        data += testCase.msgData.addressFieldType.to_bytes(1, "big")
+        if testCase.msgData.addressFieldType == MessageAddressFieldType.ADDRESS:
+            assert testCase.msgData.addressDesc is not None
+            data += self._serializeAddressParams(testCase.msgData.addressDesc)
+        return self._serialize(InsType.SIGN_MSG, P1Type.P1_INIT, 0x00, data)
+
+
+    def sign_msg_chunk(self, testCase: SignMsgTestCase) -> List[bytes]:
+        """APDU Builder for Sign Message - CHUNK step
+
+        Args:
+            testCase (SignMsgTestCase): Test parameters
+
+        Returns:
+            Response APDU
+        """
+
+        MAX_CIP8_MSG_FIRST_CHUNK_ASCII_SIZE = 198 * 2
+        MAX_CIP8_MSG_FIRST_CHUNK_HEX_SIZE = 99 * 2
+        MAX_CIP8_MSG_HIDDEN_CHUNK_SIZE = 250 * 2
+        # Serialization format:
+        #    messageHex (up to MAX_CIP8_MSG_HIDDEN_CHUNK_SIZE B each, started by the length)
+        chunks = []
+        if testCase.msgData.isAscii:
+            firstChunkSize = MAX_CIP8_MSG_FIRST_CHUNK_ASCII_SIZE
+        else:
+            firstChunkSize = MAX_CIP8_MSG_FIRST_CHUNK_HEX_SIZE
+        chunk_size = min(firstChunkSize, len(testCase.msgData.messageHex))
+        payload = testCase.msgData.messageHex
+        while True:
+            data = bytes()
+            data += int(chunk_size / 2).to_bytes(4, "big")
+            data += bytes.fromhex(payload[:chunk_size])
+            chunks.append(self._serialize(InsType.SIGN_MSG, P1Type.P1_CHUNK, 0x00, data))
+            payload = payload[chunk_size:]
+            chunk_size = min(MAX_CIP8_MSG_HIDDEN_CHUNK_SIZE, len(payload))
+            if len(payload) == 0:
+                break
+
+        return chunks
+
+
+    def sign_msg_confirm(self) -> bytes:
+        """APDU Builder for Sign Message - CONFIRM step
+
+        Returns:
+            Serial data APDU
+        """
+
+        return self._serialize(InsType.SIGN_MSG, P1Type.P1_CONFIRM, 0x00)
+
+
+    def _serializeAddressParams(self, testCase: DeriveAddressTestCase) -> bytes:
+        """Serialize address parameters"""
+
+        # Serialization format (from the documentation):
+        # address type 1B
+        # if address type == BYRON
+        #     protocol magic 4B
+        # else
+        #     network id 1B
+        # payment public key derivation path (1B for length + [0-10] x 4B) or script hash 28B
+        # staking choice 1B
+        #     if NO_STAKING:
+        #         nothing more
+        #     if STAKING_KEY_PATH:
+        #         staking public key derivation path (1B for length + [0-10] x 4B)
+        #     if STAKING_KEY_HASH:
+        #         stake key hash 28B
+        #     if BLOCKCHAIN_POINTER:
+        #         certificate blockchain pointer 3 x 4B
+        data = bytes()
+        data += testCase.addrType.to_bytes(1, "big")
+        if testCase.addrType == AddressType.BYRON:
+            data += testCase.netDesc.protocol.to_bytes(4, "big")
+        else:
+            data += testCase.netDesc.networkId.to_bytes(1, "big")
+
+        if not testCase.spendingValue.startswith("m/"):
+            data += bytes.fromhex(testCase.spendingValue)
+        elif testCase.spendingValue:
+            data += pack_derivation_path(testCase.spendingValue)
+
+        if testCase.addrType in (AddressType.BYRON, AddressType.ENTERPRISE_KEY,
+                        AddressType.ENTERPRISE_SCRIPT):
+            staking = StakingDataSourceType.NONE
+        elif testCase.addrType in (AddressType.BASE_PAYMENT_KEY_STAKE_SCRIPT,
+                          AddressType.BASE_PAYMENT_SCRIPT_STAKE_SCRIPT,
+                          AddressType.REWARD_SCRIPT):
+            staking = StakingDataSourceType.SCRIPT_HASH
+        elif testCase.addrType in (AddressType.POINTER_KEY, AddressType.POINTER_SCRIPT):
+            staking = StakingDataSourceType.BLOCKCHAIN_POINTER
+        elif not testCase.stakingValue.startswith("m/"):
+            staking = StakingDataSourceType.KEY_HASH
+        else:
+            staking = StakingDataSourceType.KEY_PATH
+        data += staking.to_bytes(1, "big")
+
+        if staking == StakingDataSourceType.KEY_PATH:
+            data += pack_derivation_path(testCase.stakingValue)
+        elif staking in (StakingDataSourceType.KEY_HASH,
+                         StakingDataSourceType.SCRIPT_HASH,
+                         StakingDataSourceType.BLOCKCHAIN_POINTER):
+            data += bytes.fromhex(testCase.stakingValue)
+        elif staking != StakingDataSourceType.NONE:
+            raise NotImplementedError("Not implemented yet")
+
+        return data
