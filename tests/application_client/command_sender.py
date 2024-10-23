@@ -13,6 +13,8 @@ from ragger.backend.interface import BackendInterface, RAPDU
 
 from input_files.derive_address import DeriveAddressTestCase
 from input_files.cvote import CVoteTestCase
+from input_files.signOpCert import OpCertTestCase
+
 from application_client.command_builder import CommandBuilder, P1Type
 from application_client.app_def import Errors
 
@@ -218,4 +220,19 @@ class CommandSender:
         """
 
         with self._exchange_async(self._cmd_builder.sign_cip36_witness(testCase)):
+            yield
+
+
+    @contextmanager
+    def sign_opCert(self, testCase: OpCertTestCase) -> Generator[None, None, None]:
+        """APDU Sign Operational Certificate
+
+        Args:
+            testCase (OpCertTestCase): Test parameters
+
+        Returns:
+            Generator
+        """
+
+        with self._exchange_async(self._cmd_builder.sign_opCert(testCase)):
             yield

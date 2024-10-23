@@ -13,6 +13,8 @@ from ragger.bip import pack_derivation_path
 
 from input_files.derive_address import DeriveAddressTestCase
 from input_files.cvote import MAX_CIP36_PAYLOAD_SIZE, CVoteTestCase
+from input_files.signOpCert import OpCertTestCase
+
 from application_client.app_def import InsType, AddressType, StakingDataSourceType
 
 
@@ -222,3 +224,26 @@ class CommandBuilder:
                                P1Type.P1_WITNESS,
                                0x00,
                                pack_derivation_path(testCase.cVote.witnessPath))
+
+
+    def sign_opCert(self, testCase: OpCertTestCase) -> bytes:
+        """APDU Builder for Sign Operational Certificate
+
+        Args:
+            testCase (OpCertTestCase): Test parameters
+
+        Returns:
+            Serial data APDU
+        """
+
+        # Serialization format:
+        # kesPublicKeyHex hex string (32B)
+        # kesPeriod (8B)
+        # issueCounter (8B)
+        # derivation path (1B for length + [0-10] x 4B)
+        data = bytes()
+        data += bytes.fromhex(testCase.opCert.kesPublicKeyHex)
+        data += testCase.opCert.kesPeriod.to_bytes(8, "big")
+        data += testCase.opCert.issueCounter.to_bytes(8, "big")
+        data += pack_derivation_path(testCase.opCert.path)
+        return self._serialize(InsType.SIGN_OP_CERT, 0x00, 0x00, data)
