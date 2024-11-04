@@ -28,6 +28,9 @@ from input_files.signTx import StakeDelegationParams, StakeRegistrationConwayPar
 from input_files.signTx import PoolRegistrationParams, PoolKey, Relay, PoolMetadataParams, RelayType
 from input_files.signTx import SingleHostIpAddrRelayParams, SingleHostHostnameRelayParams, MultiHostRelayParams
 from input_files.signTx import MAX_SIGN_TX_CHUNK_SIZE
+from input_files.derive_native_script import NativeScript, NativeScriptType, NativeScriptHashDisplayFormat
+from input_files.derive_native_script import NativeScriptParamsPubkey, NativeScriptParamsInvalid
+from input_files.derive_native_script import NativeScriptParamsScripts, NativeScriptParamsNofK
 
 from application_client.app_def import InsType, AddressType, StakingDataSourceType
 
@@ -65,6 +68,10 @@ class P1Type(IntEnum):
     P1_VOTING_PROCEDURES = 0x13
     P1_TREASURY = 0x15
     P1_DONATION = 0x16
+    # Derive Native Script Hash
+    P1_COMPLEX_SCRIPT_START = 0x01
+    P1_ADD_SIMPLE_SCRIPT = 0x02
+    P1_WHOLE_NATIVE_SCRIPT_FINISH = 0x03
 
 
 class P2Type(IntEnum):
@@ -1318,6 +1325,102 @@ class CommandBuilder:
         #    Witness Path
         data = pack_derivation_path(path)
         return self._serialize(InsType.SIGN_TX, P1Type.P1_TX_WITNESSES, 0x00, data)
+
+
+    def derive_script_add_simple(self, script: NativeScript) -> bytes:
+        """APDU Builder for DERIVE NATIVE SCRIPT HASH - SIMPLE SCRIPT step
+
+        Args:
+            script (NativeScript): Input Test params
+
+        Returns:
+            Serial data APDU
+        """
+
+        # Serialization format:
+        #    Script type (1B)
+        #    Script Pubkey type if PUBKEY_XXX (1B)
+        #    Script path (if PUBKEY_XXX)
+        #    Script slot (if INVALID_XXX)
+        data = bytes()
+        scriptType = 0 if script.type == NativeScriptType.PUBKEY_THIRD_PARTY else script.type
+        data += scriptType.to_bytes(1, "big")
+        if script.type in (NativeScriptType.PUBKEY_DEVICE_OWNED, NativeScriptType.PUBKEY_THIRD_PARTY):
+            assert isinstance(script.params, NativeScriptParamsPubkey)
+            data += self._derive_script_pubkey(script.type)
+            if script.params.key.startswith("m/"):
+                data += pack_derivation_path(script.params.key)
+            else:
+                data += bytes.fromhex(script.params.key)
+        elif script.type in (NativeScriptType.INVALID_BEFORE, NativeScriptType.INVALID_HEREAFTER):
+            assert isinstance(script.params, NativeScriptParamsInvalid)
+            data += script.params.slot.to_bytes(8, "big")
+        return self._serialize(InsType.DERIVE_SCRIPT_HASH, P1Type.P1_ADD_SIMPLE_SCRIPT, 0x00, data)
+
+
+    def derive_script_add_complex(self, script: NativeScript) -> bytes:
+        """APDU Builder for DERIVE NATIVE SCRIPT HASH - COMPLEX SCRIPT step
+
+        Args:
+            script (NativeScript): Input Test params
+
+        Returns:
+            Serial data APDU
+        """
+
+        # Serialization format:
+        #    Script type (1B)
+        #    Script Pubkey type if PUBKEY_XXX (1B)
+        #    Script path (if PUBKEY_XXX)
+        #    Script slot (if INVALID_XXX)
+        data = bytes()
+        data += script.type.to_bytes(1, "big")
+        if script.type in (NativeScriptType.ALL, NativeScriptType.ANY):
+            assert isinstance(script.params, NativeScriptParamsScripts)
+            data += len(script.params.scripts).to_bytes(4, "big")
+        elif script.type == NativeScriptType.N_OF_K:
+            assert isinstance(script.params, NativeScriptParamsNofK)
+            data += len(script.params.scripts).to_bytes(4, "big")
+            data += script.params.requiredCount.to_bytes(4, "big")
+        return self._serialize(InsType.DERIVE_SCRIPT_HASH, P1Type.P1_COMPLEX_SCRIPT_START, 0x00, data)
+
+
+    def derive_script_finish(self, disp: NativeScriptHashDisplayFormat) -> bytes:
+        """APDU Builder for DERIVE NATIVE SCRIPT HASH - FINISH step
+
+        Args:
+            disp (NativeScriptHashDisplayFormat): Input Test params
+
+        Returns:
+            Serial data APDU
+        """
+
+        # Serialization format:
+        #    Display format (1B)
+        data = disp.to_bytes(1, "big")
+        return self._serialize(InsType.DERIVE_SCRIPT_HASH, P1Type.P1_WHOLE_NATIVE_SCRIPT_FINISH, 0x00, data)
+
+
+    def _derive_script_pubkey(self, scriptType: NativeScriptType) -> bytes:
+        """APDU Builder for DERIVE NATIVE SCRIPT HASH - START step
+
+        Args:
+            scriptType (NativeScriptType): Input script type
+
+        Returns:
+            Serial data APDU
+        """
+
+        # Serialization format:
+        #    Encoding (1B)
+        if scriptType == NativeScriptType.PUBKEY_DEVICE_OWNED:
+            encoding = 1
+        elif scriptType == NativeScriptType.PUBKEY_THIRD_PARTY:
+            encoding = 2
+        else:
+            encoding = 0
+
+        return encoding.to_bytes(1, "big")
 
 
     def _serializeTxChunk(self, referenceHex: str) -> bytes:

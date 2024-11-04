@@ -18,6 +18,7 @@ from input_files.signMsg import SignMsgTestCase
 from input_files.signTx import SignTxTestCase, TxInput, TxOutput, TxAuxiliaryData, TxAuxiliaryDataCIP36, CIP36VoteDelegation
 from input_files.signTx import Withdrawal, Certificate, VoterVotes, AssetGroup, Token, RequiredSigner, Datum
 from input_files.signTx import PoolRegistrationParams, PoolKey, Relay, PoolMetadataParams
+from input_files.derive_native_script import NativeScript, NativeScriptHashDisplayFormat
 
 from application_client.command_builder import CommandBuilder, P1Type, P2Type
 from application_client.app_def import Errors
@@ -935,4 +936,49 @@ class CommandSender:
         """
 
         with self._exchange_async(self._cmd_builder.sign_tx_witness(path)):
+            yield
+
+
+    @contextmanager
+    def derive_script_add_simple(self, script: NativeScript) -> Generator[None, None, None]:
+        """APDU NATIVE SCRIPT HASH - SIMPLE SCRIPT step
+
+        Args:
+            script (NativeScript): Input Test param
+
+        Returns:
+            Generator
+        """
+
+        with self._exchange_async(self._cmd_builder.derive_script_add_simple(script)):
+            yield
+
+
+    @contextmanager
+    def derive_script_add_complex(self, script: NativeScript) -> Generator[None, None, None]:
+        """APDU NATIVE SCRIPT HASH - COMPLEX SCRIPT step
+
+        Args:
+            script (NativeScript): Input Test param
+
+        Returns:
+            Generator
+        """
+
+        with self._exchange_async(self._cmd_builder.derive_script_add_complex(script)):
+            yield
+
+
+    @contextmanager
+    def derive_script_finish(self, displayFormat: NativeScriptHashDisplayFormat) -> Generator[None, None, None]:
+        """APDU NATIVE SCRIPT HASH - FINISH step
+
+        Args:
+            displayFormat (NativeScriptHashDisplayFormat): Input Test param
+
+        Returns:
+            Generator
+        """
+
+        with self._exchange_async(self._cmd_builder.derive_script_finish(displayFormat)):
             yield
