@@ -84,7 +84,7 @@ void ui_displayPrompt_run() {
 }
 
 // ----- Flow busy -----
-UX_STEP_NOCB(ux_display_busy_flow_1_step, pn, LINES(&C_icon_loader, ""));
+UX_STEP_NOCB(ux_display_busy_flow_1_step, pn, LINES(&C_icon_processing, ""));
 
 UX_FLOW(ux_busy_flow, &ux_display_busy_flow_1_step);
 
