@@ -11,10 +11,6 @@
 void inet_ntop4(const uint8_t* src, char* dst, size_t dstSize);
 void inet_ntop6(const uint8_t* src, char* dst, size_t dstSize);
 
-#ifdef DEVEL
-void run_ipUtils_test();
-#endif  // DEVEL
-
 #endif  // APP_FEATURE_POOL_REGISTRATION
 
 #endif  // H_CARDANO_APP_IP_UTILS

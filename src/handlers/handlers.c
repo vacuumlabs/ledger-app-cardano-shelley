@@ -1,8 +1,7 @@
 #ifndef H_HANDLERS
 
+#include <stdlib.h>
 #include "os_io_seproxyhal.h"
-#include "stdlib.h"
-
 #include "handlers.h"
 #include "getVersion.h"
 #include "getSerial.h"

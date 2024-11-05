@@ -22,8 +22,4 @@ typedef struct {
 
 void deriveExtendedPublicKey(const bip44_path_t* pathSpec, extendedPublicKey_t* out);
 
-#ifdef DEVEL
-void run_key_derivation_test();
-#endif  // DEVEL
-
 #endif  // H_CARDANO_APP_KEY_DERIVATION

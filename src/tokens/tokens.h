@@ -25,8 +25,4 @@ __noinline_due_to_stack__ size_t str_formatTokenAmountMint(const token_group_t* 
                                                            char* out,
                                                            size_t outSize);
 
-#ifdef DEVEL
-void run_tokens_test();
-#endif  // DEVEL
-
 #endif  // H_CARDANO_APP_TOKENS

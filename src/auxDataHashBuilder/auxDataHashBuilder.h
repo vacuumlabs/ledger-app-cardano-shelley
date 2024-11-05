@@ -88,8 +88,4 @@ void auxDataHashBuilder_finalize(aux_data_hash_builder_t* builder,
                                  uint8_t* outBuffer,
                                  size_t outSize);
 
-#ifdef DEVEL
-void run_auxDataHashBuilder_test();
-#endif  // DEVEL
-
 #endif  // H_CARDANO_APP_AUX_DATA_HASH_BUILDER

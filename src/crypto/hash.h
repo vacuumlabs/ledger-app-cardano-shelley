@@ -96,8 +96,4 @@ __CIPHER_DECLARE(BLAKE2B, blake2b, 512)
 
 __CIPHER_DECLARE(SHA3, sha3, 256)
 
-#ifdef DEVEL
-void run_hash_test();
-#endif  // DEVEL
-
 #endif  // H_CARDANO_APP_HASH

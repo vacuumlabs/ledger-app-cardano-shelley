@@ -23,8 +23,4 @@ size_t bech32_encode(const char* hrp,
                      char* output,
                      size_t maxOutputSize);
 
-#ifdef DEVEL
-void run_bech32_test();
-#endif  // DEVEL
-
 #endif  // H_CARDANO_APP_BECH32

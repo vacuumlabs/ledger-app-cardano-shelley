@@ -44,8 +44,4 @@ static inline uint64_t u8be_read(const uint8_t* inBuffer) {
     return ((uint64_t) u4be_read(inBuffer) << 32u) | (uint64_t)(u4be_read(inBuffer + 4));
 }
 
-#ifdef DEVEL
-void run_endian_test();
-#endif  // DEVEL
-
 #endif  // H_CARDANO_APP_ENDIAN

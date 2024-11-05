@@ -61,8 +61,4 @@ bool cbor_mapKeyFulfillsCanonicalOrdering(const uint8_t* previousBuffer,
                                           const uint8_t* nextBuffer,
                                           size_t nextSize);
 
-#ifdef DEVEL
-void run_cbor_test();
-#endif  // DEVEL
-
 #endif  // H_CARDANO_APP_CBOR

@@ -1,8 +1,8 @@
 #ifdef DEVEL
 
-#include "crc32.h"
 #include "hexUtils.h"
 #include "testUtils.h"
+#include "lcx_crc.h"
 
 void run_crc32_test() {
     const struct {

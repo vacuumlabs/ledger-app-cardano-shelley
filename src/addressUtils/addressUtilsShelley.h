@@ -116,8 +116,4 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params);
 bool isValidAddressParams(const addressParams_t* addressParams);
 payment_choice_t determinePaymentChoice(address_type_t addressType);
 
-#ifdef DEVEL
-void run_addressUtilsShelley_test();
-#endif  // DEVEL
-
 #endif  // H_CARDANO_APP_ADDRESS_UTILS_SHELLEY

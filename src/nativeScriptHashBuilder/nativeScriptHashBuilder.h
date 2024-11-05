@@ -44,10 +44,6 @@ void nativeScriptHashBuilder_finalize(native_script_hash_builder_t* builder,
                                       uint8_t* outBuffer,
                                       size_t outSize);
 
-/* #ifdef DEVEL */
-void run_nativeScriptHashBuilder_test();
-/* #endif // DEVEL */
-
 #endif  // APP_FEATURE_NATIVE_SCRIPT_HASH
 
 #endif  // H_CARDANO_APP_NATIVE_SCRIPT_HASH_BUILDER

@@ -49,11 +49,7 @@ bool str_isPrintableAsciiWithSpaces(const uint8_t* buffer, size_t bufferSize);
 bool str_isUnambiguousAscii(const uint8_t* buffer, size_t bufferSize);
 
 #ifdef DEVEL
-
 size_t str_textToBuffer(const char* text, uint8_t* buffer, size_t bufferSize);
-
-void run_textUtils_test();
-
 #endif  // DEVEL
 
 #endif  // H_CARDANO_APP_TEXT_UTILS

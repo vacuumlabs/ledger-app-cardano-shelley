@@ -20,8 +20,4 @@ uint32_t extractProtocolMagic(const uint8_t* addressBuffer, size_t addressSize);
 
 #endif  // APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 
-#if defined(DEVEL) && !defined(APP_XS)
-void run_addressUtilsByron_test();
-#endif  // DEVEL
-
 #endif  // H_CARDANO_APP_ADDRESS_UTILS_BYRON
