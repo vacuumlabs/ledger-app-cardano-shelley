@@ -3,19 +3,13 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <os_io_seproxyhal.h>
-#include <ux.h>
+#include "os_io_seproxyhal.h"
+#include "ux.h"
 #include "ui.h"
 
-enum  {
-	P1_UNUSED = 0,
-	P2_UNUSED = 0
-};
+enum { P1_UNUSED = 0, P2_UNUSED = 0 };
 
-enum {
-	ITEM_INCLUDED_NO = 1,
-	ITEM_INCLUDED_YES = 2
-};
+enum { ITEM_INCLUDED_NO = 1, ITEM_INCLUDED_YES = 2 };
 
 // `io_send_*` are helper functions for sending response APDUs.
 // Note that the IO_RETURN_AFTER_TX flag is set so that the function
@@ -33,12 +27,12 @@ void CHECK_RESPONSE_SIZE(unsigned int tx);
 // This was added for sanity checking -- our program should always be awaiting on something
 // and it should be exactly the expected handler
 typedef enum {
-	// We are doing IO, display handlers should not fire
-	IO_EXPECT_IO = 42, // Note: random constants
-	// We are displaying things, IO handlers should not fire
-	IO_EXPECT_UI = 47,
-	// We should not be handling events
-	IO_EXPECT_NONE = 49,
+    // We are doing IO, display handlers should not fire
+    IO_EXPECT_IO = 42,  // Note: random constants
+    // We are displaying things, IO handlers should not fire
+    IO_EXPECT_UI = 47,
+    // We should not be handling events
+    IO_EXPECT_NONE = 49,
 } io_state_t;
 
 extern io_state_t io_state;
@@ -60,6 +54,6 @@ bool device_is_unlocked();
 #ifdef HAVE_NBGL
 void set_app_callback(callback_t cb);
 void reset_app_callback(void);
-#endif // HAVE_NBGL
+#endif  // HAVE_NBGL
 
-#endif // H_CARDANO_APP_IO
+#endif  // H_CARDANO_APP_IO

@@ -18,4 +18,4 @@ bool violatesSingleAccountOrStoreIt(const bip44_path_t* path);
 
 void view_parseDestination(read_view_t* view, tx_output_destination_storage_t* destination);
 
-#endif // H_CARDANO_APP_SIGN_TX_UTILS
+#endif  // H_CARDANO_APP_SIGN_TX_UTILS

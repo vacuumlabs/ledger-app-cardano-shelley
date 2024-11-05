@@ -1,32 +1,56 @@
 # Sign Transaction
 
-Note: this is somewhat incomplete (Babbage and Conway era elements are not described in detail) and some parts might be outdated. We strongly recommend to use [ledgerjs for Cardano](https://github.com/vacuumlabs/ledgerjs-cardano-shelley) for signing transactions. Check its latest API to find out what is supported.
+> Note: this is somewhat incomplete (Babbage and Conway era elements are not described in detail)
+> and some parts might be outdated. We strongly recommend to use [ledgerjs for Cardano](https://github.com/vacuumlabs/ledgerjs-cardano-shelley)
+> for signing transactions. Check its latest API to find out what is supported.
 
 **Description**
 
-Given transaction inputs and transaction outputs, fee, ttl, staking certificates, reward withdrawals, metadata hash, validity interval start, mint, Plutus (Babbage) additional transaction body elements, and Conway additional elements, construct and sign a transaction.
+Given transaction inputs and transaction outputs, fee, ttl, staking certificates, reward withdrawals, metadata hash,
+validity interval start, mint, Plutus (Babbage) additional transaction body elements, and Conway additional elements,
+construct and sign a transaction.
 
-Due to Ledger constraints and potential security implications (parsing errors), Cardano Ledger app uses a custom format for streaming the transaction to be signed. The main rationale behind not streaming directly the (CBOR-encoded) cardano raw transaction to Ledger is the following:
-1) The app needs to support BIP44 change address outputs (Ledger should not display user's own change addresses to the user as this degrades UX).
-2) Serializing is easier than parsing. This is true especially if transaction chunks would not be aligned with processing (e.g., inputs/outputs arbitrarily split between multiple APDUs). This also allows a potentially smaller memory footprint on the device.
+Due to Ledger constraints and potential security implications (parsing errors), Cardano Ledger app uses a custom format
+for streaming the transaction to be signed. The main rationale behind not streaming directly the (CBOR-encoded)
+cardano raw transaction to Ledger is the following:
+
+1) The app needs to support BIP44 change address outputs
+  (Ledger should not display user's own change addresses to the user as this degrades UX).
+2) Serializing is easier than parsing. This is true especially if transaction chunks would not be aligned with processing
+  (e.g., inputs/outputs arbitrarily split between multiple APDUs).
+  This also allows a potentially smaller memory footprint on the device.
 3) SignTx communication protocol is more extensible in the future.
-4) Potential security improvement --- because SignTx does not output the serialized transaction, only the witnesses, the host app is responsible for serializing the transaction itself. Any serialization mismatch between host and Ledger would result in a transaction which is rejected by nodes.
+4) Potential security improvement --- because SignTx does not output the serialized transaction, only the witnesses,
+  the host app is responsible for serializing the transaction itself.
+  Any serialization mismatch between host and Ledger would result in a transaction which is rejected by nodes.
 
 **SignTx Limitations**
 
 - Output address size is limited to 128 bytes (single APDU). (Note: IOHK is fine with address size limit of 100 bytes)
-- Addresses that are not shown to the user are base addresses with payment key path `m/1852'/1815'/account'/{0,1}/changeIndex` and the standard stake key `m/1852'/1815'/account'/2/0`, where values of `account` and `changeIndex` are limited (for now, `0 <= account <= 100` and `0 <= changeIndex <= 1 000 000`). This makes it feasible to brute-force all change addresses in case an attacker manages to modify change address(es). (As the user does not confirm change addresses, it is relatively easy to perform MITM attack).
-- Only transactions with at least one input will be signed (this provides protection against certificate replays and transaction replays on different networks).
+- Addresses that are not shown to the user are base addresses with payment key path `m/1852'/1815'/account'/{0,1}/changeIndex`
+  and the standard stake key `m/1852'/1815'/account'/2/0`, where values of `account` and `changeIndex` are limited
+  (for now, `0 <= account <= 100` and `0 <= changeIndex <= 1 000 000`). This makes it feasible to brute-force all
+  change addresses in case an attacker manages to modify change address(es). (As the user does not confirm change addresses,
+  it is relatively easy to perform MITM attack).
+- Only transactions with at least one input will be signed (this provides protection against certificate replays
+  and transaction replays on different networks).
 
 **Communication protocol non-goals:**
 
-The communication protocol is designed to *ease* the Ledger App implementation (and simplify potential edge conditions). As such, the protocol might need more APDU exchanges than strictly necessary. We deem this as a good tradeoff between implementation and performance (after all, the bottleneck are user UI confirmations).
+The communication protocol is designed to *ease* the Ledger App implementation (and simplify potential edge conditions).
+As such, the protocol might need more APDU exchanges than strictly necessary. We deem this as a good tradeoff between
+implementation and performance (after all, the bottleneck are user UI confirmations).
 
 Given these requirements in mind, here is how transaction signing works:
 
 ## Signing
 
-Transaction signing consists of an exchange of several APDUs. During this exchange, Ledger keeps track of its current internal state, so APDU messages have to be sent in the order of increasing P1 values, and the entities in the transaction body are serialized in the same order as the messages are received. Ledger maintains an internal state and refuses to accept APDU messages that are out of place by aborting the transaction being signed. (This also applies to outputs and pool registration certificates which are serialized in multiple steps.)
+Transaction signing consists of an exchange of several APDUs. During this exchange, Ledger keeps track
+of its current internal state, so APDU messages have to be sent in the order of increasing P1 values,
+and the entities in the transaction body are serialized in the same order as the messages are received.
+Ledger maintains an internal state and refuses to accept APDU messages that are out of place by aborting
+the transaction being signed. (This also applies to outputs and pool registration certificates
+which are serialized in multiple steps.)
 
 **Common notions**
 
@@ -34,13 +58,14 @@ By BIP44, we refer here both to the original BIP44 scheme and its Cardano Shelle
 
 The numbers are unsigned integers (big endian) if not mentioned otherwise.
 
-*Stake credential* refers to an object that contains either a script hash or a BIP44 path used to derive a public key; such objects are used in the serialization of certificates into CBOR and we also use them to supply parameters for reward address derivation in certain places. It is serialized in APDU data as a concatenation of two fields:
+*Stake credential* refers to an object that contains either a script hash or a BIP44 path used to derive a public key;
+such objects are used in the serialization of certificates into CBOR and we also use them to supply parameters for reward
+address derivation in certain places. It is serialized in APDU data as a concatenation of two fields:
 
 |Field|Length|Value|
 |-----|-----|-----|
 | type | 1 | `KEY_PATH=0x00` / `SCRIPT_HASH=0x01` |
 | credential | variable for BIP44 paths, 28 for script hashes | BIP44 path / script hash|
-
 
 **General command**
 
@@ -79,7 +104,9 @@ Initializes signing request.
 | number of tx withdrawals                  | 4 | Big endian |
 | number of tx witnesses                    | 4 | Big endian |
 
-The signing mode describes whether the transaction contains a pool registration certificate (if not, use `SIGN_TX_SIGNINGMODE_ORDINARY_TX` or `SIGN_TX_SIGNINGMODE_MULTISIG_TX`) and how the certificate should be treated (see the section on certificates below).
+The signing mode describes whether the transaction contains a pool registration certificate
+(if not, use `SIGN_TX_SIGNINGMODE_ORDINARY_TX` or `SIGN_TX_SIGNINGMODE_MULTISIG_TX`) and
+how the certificate should be treated (see the section on certificates below).
 
 ### Auxiliary data
 
@@ -92,7 +119,8 @@ Optional.
 
 **Data for AUX_DATA_TYPE_ARBITRARY_HASH**
 
-Ledger cannot parse and display generic auxiliary data in full because their structure is too loose and their memory footprint potentially too big.
+Ledger cannot parse and display generic auxiliary data in full because their structure is too loose
+and their memory footprint potentially too big.
 So only the hash is transferred and displayed and the user has to use other means of verification that the hash is correct.
 
 |Field| Length | Comments|
@@ -106,7 +134,8 @@ So only the hash is transferred and displayed and the user has to use other mean
 |-----|--------|---------|
 | Auxiliary data type | 1 | `AUX_DATA_TYPE_CVOTE_REGISTRATION=0x01` |
 
-This only describes the initial message. All the data for this type of auxiliary data are obtained via a series of additional APDU messages; see [CIP-36 Voting Registration](ins_sign_cip36_registration.md) for the details.
+This only describes the initial message. All the data for this type of auxiliary data are obtained via a series of
+additional APDU messages; see [CIP-36 Voting Registration](ins_sign_cip36_registration.md) for the details.
 
 ### Set UTxO inputs
 
@@ -125,10 +154,12 @@ This only describes the initial message. All the data for this type of auxiliary
 |tx id (hash) | 32 | |
 |output index |  4 | Big endian |
 
-
 ### Set outputs
 
-For each output, at least two messages are required: the first one with top-level data and the last one for confirmation. The messages in between them describe multiasset tokens if such are included in the output (one message for each asset group, followed by messages for tokens included in the group). The asset groups and tokens are serialized into their respective CBOR maps in the same order as they are received.
+For each output, at least two messages are required: the first one with top-level data and the last one for confirmation.
+The messages in between them describe multiasset tokens if such are included in the output (one message for each asset group,
+followed by messages for tokens included in the group). The asset groups and tokens are serialized
+into their respective CBOR maps in the same order as they are received.
 
 **Command (top-level output data)**
 
@@ -152,7 +183,7 @@ This output type is used for regular destination addresses.
 
 *Data for DESTINATION_DEVICE_OWNED*
 
-This output type is used for change addresses. Depending (mostly) on staking info, these might or might not be shown to the user. 
+This output type is used for change addresses. Depending (mostly) on staking info, these might or might not be shown to the user.
 (See [src/securityPolicy.c](../src/securityPolicy.c) for details.)
 
 |Field| Length | Comments|
@@ -201,8 +232,6 @@ This output type is used for change addresses. Depending (mostly) on staking inf
 |  P2 | `0x33` |
 | data | (none) |
 
-
- 
 ### Fee
 
 User needs to confirm the given fee.
@@ -235,25 +264,33 @@ Optional.
 
 ### Certificate
 
-We support the following certificate types in ordinary transactions (signing mode `SIGN_TX_SIGNINGMODE_ORDINARY_TX` in the initial APDU message):
-* CERTIFICATE_STAKE_REGISTRATION = 0,
-* CERTIFICATE_STAKE_DEREGISTRATION = 1,
-* CERTIFICATE_STAKE_DELEGATION = 2,
-* CERTIFICATE_STAKE_POOL_RETIREMENT = 4,
-* CERTIFICATE_STAKE_REGISTRATION_CONWAY = 7,
-* CERTIFICATE_STAKE_DEREGISTRATION_CONWAY = 8,
-* CERTIFICATE_VOTE_DELEGATION = 9,
-* CERTIFICATE_AUTHORIZE_COMMITTEE_HOT = 14,
-* CERTIFICATE_RESIGN_COMMITTEE_COLD = 15,
-* CERTIFICATE_DREP_REGISTRATION = 16,
-* CERTIFICATE_DREP_DEREGISTRATION = 17,
-* CERTIFICATE_DREP_UPDATE = 18,
+We support the following certificate types in ordinary transactions (signing mode `SIGN_TX_SIGNINGMODE_ORDINARY_TX`
+in the initial APDU message):
 
-For signing mode `SIGN_TX_SIGNINGMODE_MULTISIG_TX`, everything from the above list except `CERTIFICATE_STAKE_POOL_RETIREMENT` is allowed.
+- CERTIFICATE_STAKE_REGISTRATION = 0,
+- CERTIFICATE_STAKE_DEREGISTRATION = 1,
+- CERTIFICATE_STAKE_DELEGATION = 2,
+- CERTIFICATE_STAKE_POOL_RETIREMENT = 4,
+- CERTIFICATE_STAKE_REGISTRATION_CONWAY = 7,
+- CERTIFICATE_STAKE_DEREGISTRATION_CONWAY = 8,
+- CERTIFICATE_VOTE_DELEGATION = 9,
+- CERTIFICATE_AUTHORIZE_COMMITTEE_HOT = 14,
+- CERTIFICATE_RESIGN_COMMITTEE_COLD = 15,
+- CERTIFICATE_DREP_REGISTRATION = 16,
+- CERTIFICATE_DREP_DEREGISTRATION = 17,
+- CERTIFICATE_DREP_UPDATE = 18,
+
+For signing mode `SIGN_TX_SIGNINGMODE_MULTISIG_TX`, everything from the above list except `CERTIFICATE_STAKE_POOL_RETIREMENT`
+is allowed.
 
 For signing mode `SIGN_TX_SIGNINGMODE_PLUTUS_TX`, everything from the above list is allowed.
 
-In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR` or `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER` as the signing mode contains a single certificate for stake pool registration which must not be accompanied by other certificates or by withdrawals (due to security concerns about cross-witnessing data between them). This certificate is processed by a state sub-machine. Instructions for this sub-machine are given in P2; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details on accepted P2 values and additional APDU messages needed.
+In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR` or`SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OWNER`
+as the signing mode contains a single certificate for stake pool registration which must not be accompanied
+by other certificates or by withdrawals (due to security concerns about cross-witnessing data between them).
+This certificate is processed by a state sub-machine. Instructions for this sub-machine are given in P2;
+see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details on accepted P2 values
+and additional APDU messages needed.
 
 |Field|Value|
 |-----|-----|
@@ -288,7 +325,8 @@ In addition, a transaction using `SIGN_TX_SIGNINGMODE_POOL_REGISTRATION_OPERATOR
 |-----|--------|---------|
 |Output type| 1 | `CERTIFICATE_STAKE_POOL_REGISTRATION=0x03`|
 
-This only describes the initial certificate message. All the data for this certificate are obtained via a series of additional APDU messages; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details.
+This only describes the initial certificate message. All the data for this certificate are obtained via a series of additional
+APDU messages; see [Stake Pool Registration](ins_sign_stake_pool_registration.md) for the details.
 
 **Data for CERTIFICATE_STAKE_POOL_RETIREMENT**
 
@@ -331,7 +369,10 @@ Optional.
 
 ### Mint
 
-Optional. Starts with the top-level data and ends with the confirmation. The messages in between them describe multiasset tokens (one message for each asset group, followed by messages for tokens included in the group). The asset groups and tokens are serialized into their respective CBOR maps in the same order as they are received. Mint uses signed integers for token amounts, to allow for burning instead of forging.
+Optional. Starts with the top-level data and ends with the confirmation. The messages in between them describe multiasset tokens
+(one message for each asset group, followed by messages for tokens included in the group). The asset groups and tokens are
+serialized into their respective CBOR maps in the same order as they are received. Mint uses signed integers for token amounts,
+to allow for burning instead of forging.
 
 **Command (top-level mint data)**
 
@@ -387,7 +428,8 @@ Optional. Starts with the top-level data and ends with the confirmation. The mes
 
 ### Final confirmation
 
-Depending on `policyForSignTxConfirm` in [src/securityPolicy.c](../src/securityPolicy.c), the user is asked to confirm the transaction after seeing all its components.
+Depending on `policyForSignTxConfirm` in [src/securityPolicy.c](../src/securityPolicy.c),
+the user is asked to confirm the transaction after seeing all its components.
 
 |Field|Value|
 |-----|-----|

@@ -5,58 +5,47 @@
 
 #include "assert.h"
 
-static inline void u1be_write(uint8_t* outBuffer, uint8_t value)
-{
-	outBuffer[0] = value;
+static inline void u1be_write(uint8_t* outBuffer, uint8_t value) {
+    outBuffer[0] = value;
 }
 
-static inline void u2be_write(uint8_t* outBuffer, uint16_t value)
-{
-	u1be_write(outBuffer, value >> 8);
-	u1be_write(outBuffer + 1, value & 0xFF);
+static inline void u2be_write(uint8_t* outBuffer, uint16_t value) {
+    u1be_write(outBuffer, value >> 8);
+    u1be_write(outBuffer + 1, value & 0xFF);
 }
 
-static inline void u4be_write(uint8_t* outBuffer, uint32_t value)
-{
-	u2be_write(outBuffer, value >> 16);
-	u2be_write(outBuffer + 2, value & 0xFFff);
+static inline void u4be_write(uint8_t* outBuffer, uint32_t value) {
+    u2be_write(outBuffer, value >> 16);
+    u2be_write(outBuffer + 2, value & 0xFFff);
 }
 
-static inline void u8be_write(uint8_t* outBuffer, uint64_t value)
-{
-	u4be_write(outBuffer, (value >> 32));
-	u4be_write(outBuffer + 4, value & 0xFFffFFff);
+static inline void u8be_write(uint8_t* outBuffer, uint64_t value) {
+    u4be_write(outBuffer, (value >> 32));
+    u4be_write(outBuffer + 4, value & 0xFFffFFff);
 }
 
-
-static inline uint8_t u1be_read(const uint8_t* inBuffer)
-{
-	return inBuffer[0];
+static inline uint8_t u1be_read(const uint8_t* inBuffer) {
+    return inBuffer[0];
 }
 
-static inline uint16_t u2be_read(const uint8_t* inBuffer)
-{
-	STATIC_ASSERT(sizeof(uint32_t) == sizeof(unsigned), "bad unsigned size");
+static inline uint16_t u2be_read(const uint8_t* inBuffer) {
+    STATIC_ASSERT(sizeof(uint32_t) == sizeof(unsigned), "bad unsigned size");
 
-	// bitwise OR promotes unsigned types smaller than int to unsigned
-	return (uint16_t) (
-	               ((uint32_t) (u1be_read(inBuffer) << 8)) | ((uint32_t) (u1be_read(inBuffer + 1)))
-	       );
+    // bitwise OR promotes unsigned types smaller than int to unsigned
+    return (uint16_t)(((uint32_t)(u1be_read(inBuffer) << 8)) |
+                      ((uint32_t)(u1be_read(inBuffer + 1))));
 }
 
-static inline uint32_t u4be_read(const uint8_t* inBuffer)
-{
-	return ((uint32_t) u2be_read(inBuffer) << 16) | (uint32_t)(u2be_read(inBuffer + 2));
+static inline uint32_t u4be_read(const uint8_t* inBuffer) {
+    return ((uint32_t) u2be_read(inBuffer) << 16) | (uint32_t)(u2be_read(inBuffer + 2));
 }
 
-static inline uint64_t u8be_read(const uint8_t* inBuffer)
-{
-	return ((uint64_t) u4be_read(inBuffer) << 32u) | (uint64_t) (u4be_read(inBuffer + 4));
+static inline uint64_t u8be_read(const uint8_t* inBuffer) {
+    return ((uint64_t) u4be_read(inBuffer) << 32u) | (uint64_t)(u4be_read(inBuffer + 4));
 }
-
 
 #ifdef DEVEL
 void run_endian_test();
-#endif // DEVEL
+#endif  // DEVEL
 
-#endif // H_CARDANO_APP_ENDIAN
+#endif  // H_CARDANO_APP_ENDIAN

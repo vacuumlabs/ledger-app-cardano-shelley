@@ -7,7 +7,7 @@
 // Must be in format x.y.z
 #ifndef APPVERSION
 #error "Missing -DAPPVERSION=x.y.z in Makefile"
-#endif // DEVEL
+#endif  // DEVEL
 handler_fn_t getVersion_handleAPDU;
 
-#endif // H_CARDANO_APP_GET_VERSION
+#endif  // H_CARDANO_APP_GET_VERSION

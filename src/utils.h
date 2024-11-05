@@ -1,51 +1,44 @@
 #ifndef H_CARDANO_APP_UTILS
 #define H_CARDANO_APP_UTILS
 
-#include <os.h>
+#include "os.h"
 
 #include "assert.h"
 
 // Does not compile if x is pointer of some kind
 // See http://zubplot.blogspot.com/2015/01/gcc-is-wonderful-better-arraysize-macro.html
-#define ARRAY_NOT_A_PTR(x) \
-	(sizeof(__typeof__(int[1 - 2 * \
-	                         !!__builtin_types_compatible_p(__typeof__(x), \
-	                               __typeof__(&x[0]))])) * 0)
-
+#define ARRAY_NOT_A_PTR(x)                                                                 \
+    (sizeof(__typeof__(                                                                    \
+         int[1 - 2 * !!__builtin_types_compatible_p(__typeof__(x), __typeof__(&x[0]))])) * \
+     0)
 
 // Safe array length, does not compile if you accidentally supply a pointer
-#define ARRAY_LEN(arr) \
-	(sizeof(arr) / sizeof((arr)[0]) + ARRAY_NOT_A_PTR(arr))
+#define ARRAY_LEN(arr) (sizeof(arr) / sizeof((arr)[0]) + ARRAY_NOT_A_PTR(arr))
 
 #ifndef FUZZING
 // Does not compile if x *might* be a pointer of some kind
 // Might produce false positives on small structs...
 // Note: ARRAY_NOT_A_PTR does not compile if arg is a struct so this is a workaround
-#define SIZEOF_NOT_A_PTR(var) \
-	(sizeof(__typeof(int[0 - (sizeof(var) == sizeof((void *)0))])) * 0)
+#define SIZEOF_NOT_A_PTR(var) (sizeof(__typeof(int[0 - (sizeof(var) == sizeof((void *) 0))])) * 0)
 
 // Safe version of SIZEOF, does not compile if you accidentally supply a pointer
-#define SIZEOF(var) \
-	(sizeof(var) + SIZEOF_NOT_A_PTR(var))
+#define SIZEOF(var) (sizeof(var) + SIZEOF_NOT_A_PTR(var))
 
 #else
 #define SIZEOF(var) sizeof(var)
 #endif
 
 #define ASSERT_TYPE(expr, expected_type) \
-	STATIC_ASSERT( \
-	               __builtin_types_compatible_p(__typeof__((expr)), expected_type), \
-	               "Wrong type" \
-	             )
+    STATIC_ASSERT(__builtin_types_compatible_p(__typeof__((expr)), expected_type), "Wrong type")
 
 // Helper function to check APDU request parameters
-#define VALIDATE(cond, error) \
-	do {\
-		if (!(cond)) { \
-			PRINTF("Validation Error in %s: %d\n", __FILE__, __LINE__); \
-			THROW(error); \
-		} \
-	} while(0)
+#define VALIDATE(cond, error)                                           \
+    do {                                                                \
+        if (!(cond)) {                                                  \
+            PRINTF("Validation Error in %s: %d\n", __FILE__, __LINE__); \
+            THROW(error);                                               \
+        }                                                               \
+    } while (0)
 
 // Helper functions for ranges
 #define BEGIN(buf) buf
@@ -62,31 +55,28 @@
 
 // Note: unused removes unused warning but does not warn if you suddenly
 // start using such variable. deprecated deals with that.
-#define MARK_UNUSED __attribute__ ((unused, deprecated))
+#define MARK_UNUSED __attribute__((unused, deprecated))
 
 // Note: inlining can increase stack memory usage
 // where we really do not want it
 #define __noinline_due_to_stack__ __attribute__((noinline))
 
 #ifdef DEVEL
-#define TRACE(...) \
-	do { \
-		PRINTF("[%s:%d] ", __func__, __LINE__); \
-		PRINTF("" __VA_ARGS__); \
-		PRINTF("\n"); \
-	} while(0)
+#define TRACE(...)                              \
+    do {                                        \
+        PRINTF("[%s:%d] ", __func__, __LINE__); \
+        PRINTF("" __VA_ARGS__);                 \
+        PRINTF("\n");                           \
+    } while (0)
 #else
 #define TRACE(...)
-#endif // DEVEL
-
+#endif  // DEVEL
 
 #ifdef DEVEL
-#define TRACE_BUFFER(BUF, SIZE) \
-	TRACE("%.*h", SIZE, BUF);
+#define TRACE_BUFFER(BUF, SIZE) TRACE("%.*h", SIZE, BUF);
 #else
 #define TRACE_BUFFER(BUF, SIZE)
-#endif // DEVEL
-
+#endif  // DEVEL
 
 #ifdef DEVEL
 // Note: this is an unreliable (potentially very misleading) way of checking
@@ -117,21 +107,20 @@
 #define APP_STACK_CANARY_MAGIC 0xDEAD0031
 extern unsigned int app_stack_canary;
 
-#define TRACE_STACK_USAGE() \
-	do { \
-		volatile uint32_t x = 0; \
-		TRACE("stack position = %d", (int)((void*)&x - (void*)&app_stack_canary)); \
-		if (app_stack_canary != APP_STACK_CANARY_MAGIC) { \
-			TRACE("===================== stack overflow ====================="); \
-		} \
-		\
-	} while(0)
+#define TRACE_STACK_USAGE()                                                             \
+    do {                                                                                \
+        volatile uint32_t x = 0;                                                        \
+        TRACE("stack position = %d", (int) ((void *) &x - (void *) &app_stack_canary)); \
+        if (app_stack_canary != APP_STACK_CANARY_MAGIC) {                               \
+            TRACE("===================== stack overflow =====================");        \
+        }                                                                               \
+                                                                                        \
+    } while (0)
 #else
 #define TRACE_STACK_USAGE()
-#endif // DEVEL
+#endif  // DEVEL
 
 #define IS_SIGNED_TYPE(type) (((type)(-1)) < 0)
-#define IS_SIGNED(var) (((typeof(var))(-1)) < 0)
+#define IS_SIGNED(var)       (((typeof(var))(-1)) < 0)
 
-
-#endif // H_CARDANO_APP_UTILS
+#endif  // H_CARDANO_APP_UTILS

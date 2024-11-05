@@ -1,8 +1,8 @@
-## Get App Version
+# Get App Version
 
 **Description**
 
-Gets the version of the app running on Ledger. 
+Gets the version of the app running on Ledger.
 Could be called at any time.
 
 **Command**
@@ -30,7 +30,6 @@ Flag meanings could be found in [src/getVersion.c](../src/getVersion.c)
 |Mask|Value|Meaning|
 |----|-----|-------|
 |0x01|0x01 |Devel version of the app|
-
 
 **Ledger responsibilities**
 

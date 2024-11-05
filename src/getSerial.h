@@ -5,4 +5,4 @@
 
 handler_fn_t getSerial_handleAPDU;
 
-#endif // H_CARDANO_APP_GET_SERIAL
+#endif  // H_CARDANO_APP_GET_SERIAL

@@ -3,7 +3,8 @@
 ## Dependencies
 
 - Install Docker
-- Pull the required containers as discussed in https://github.com/LedgerHQ/ledger-app-builder/ (lite container is sufficient for a C build):
+- Pull the required containers as discussed in [App Builder](https://github.com/LedgerHQ/ledger-app-builder)
+  (lite container is sufficient for a C build):
 
   `docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest`
 
@@ -11,7 +12,7 @@
 
 ### With CLI
 
-Based on https://developers.ledger.com/docs/nano-app/build/.
+Based on [Dev Portal](https://developers.ledger.com/docs/device-app/getting-started)
 
 ### For Nano S
 
@@ -40,13 +41,9 @@ Don't forget to run `make clean` when switching the SDK.
 ### With CLion
 
 If you choose to use CLion as IDE, you can setup the Docker as toolchain
+
 - Go to **Settings** -> **Build, Execution, Deployment** -> **Toolchains**
-
 - Add new Toolchain by clicking **+** sign (or Alt+Insert)
-
 - Choose Docker, and set `ledger-app-builder-cardano:latest` as image
-
-- Make sure you set Docker as default toolchain by clicking `^` button, if there are no other toolchains set, skip this
-step
-
+- Make sure you set Docker as default toolchain by clicking `^` button, if there are no other toolchains set, skip this step
 - Save the changes, reload makefile. After project loads make commands will be listed on up right corner, near the build (hammer) icon

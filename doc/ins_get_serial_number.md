@@ -1,4 +1,4 @@
-## Get Device Serial Number
+# Get Device Serial Number
 
 **Description**
 

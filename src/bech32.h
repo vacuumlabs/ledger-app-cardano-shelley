@@ -4,10 +4,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-
-#define BECH32_BUFFER_SIZE_MAX 150
+#define BECH32_BUFFER_SIZE_MAX   150
 #define BECH32_PREFIX_LENGTH_MAX 16
-#define BECH32_STRING_SIZE_MAX (1 + 11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX)
+#define BECH32_STRING_SIZE_MAX   (1 + 11 + BECH32_PREFIX_LENGTH_MAX + 2 * BECH32_BUFFER_SIZE_MAX)
 
 /*
  * Encode bytes, using human-readable prefix given in hrp.
@@ -18,11 +17,14 @@
 
  * The output buffer must be capable of storing one more character.
  */
-size_t bech32_encode(const char* hrp, const uint8_t* bytes, size_t bytesSize, char* output, size_t maxOutputSize);
-
+size_t bech32_encode(const char* hrp,
+                     const uint8_t* bytes,
+                     size_t bytesSize,
+                     char* output,
+                     size_t maxOutputSize);
 
 #ifdef DEVEL
 void run_bech32_test();
-#endif // DEVEL
+#endif  // DEVEL
 
-#endif // H_CARDANO_APP_BECH32
+#endif  // H_CARDANO_APP_BECH32

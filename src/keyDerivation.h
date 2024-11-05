@@ -12,23 +12,18 @@
 typedef cx_ecfp_256_extended_private_key_t privateKey_t;
 
 typedef struct {
-	uint8_t code[CHAIN_CODE_SIZE];
+    uint8_t code[CHAIN_CODE_SIZE];
 } chain_code_t;
 
 typedef struct {
-	uint8_t pubKey[PUBLIC_KEY_SIZE];
-	uint8_t chainCode[CHAIN_CODE_SIZE];
+    uint8_t pubKey[PUBLIC_KEY_SIZE];
+    uint8_t chainCode[CHAIN_CODE_SIZE];
 } extendedPublicKey_t;
 
-
-void deriveExtendedPublicKey(
-        const bip44_path_t* pathSpec,
-        extendedPublicKey_t* out
-);
-
+void deriveExtendedPublicKey(const bip44_path_t* pathSpec, extendedPublicKey_t* out);
 
 #ifdef DEVEL
 void run_key_derivation_test();
-#endif // DEVEL
+#endif  // DEVEL
 
-#endif // H_CARDANO_APP_KEY_DERIVATION
+#endif  // H_CARDANO_APP_KEY_DERIVATION
