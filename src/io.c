@@ -1,6 +1,7 @@
 #include "io.h"
 #include "common.h"
 #include "ui.h"
+#include "os_io_seproxyhal.h"
 
 io_state_t io_state;
 
@@ -81,7 +82,9 @@ void io_seproxyhal_display(const bagl_element_t* element) {
 }
 #endif
 
+#if defined(TARGET_NANOS)
 unsigned char G_io_seproxyhal_spi_buffer[IO_SEPROXYHAL_BUFFER_SIZE_B] = {0};
+#endif
 
 #ifndef FUZZING
 unsigned char io_event(unsigned char channel MARK_UNUSED) {

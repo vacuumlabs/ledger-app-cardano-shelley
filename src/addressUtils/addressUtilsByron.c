@@ -4,8 +4,8 @@
 #include "cbor.h"
 #include "cardano.h"
 #include "hash.h"
-#include "crc32.h"
 #include "bufView.h"
+#include "lcx_crc.h"
 
 #if defined(APP_FEATURE_BYRON_ADDRESS_DERIVATION) || defined(APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK)
 

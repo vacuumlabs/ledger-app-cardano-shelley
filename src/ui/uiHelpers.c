@@ -19,9 +19,6 @@ displayState_t displayState;
 // ux is a magic global variable implicitly referenced by the UX_ macros. Apps
 // should never need to reference it directly
 ux_state_t ux;
-#else
-ux_state_t G_ux;
-bolos_ux_params_t G_ux_params;
 #endif
 
 STATIC_ASSERT(SIZEOF(uint8_t) == SIZEOF(char), "bad char size");

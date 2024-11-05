@@ -48,7 +48,7 @@ ICON_FLEX = icons/icon_ada_flex.gif
 CURVE_APP_LOAD_PARAMS = ed25519
 
 # Application allowed derivation paths.
-PATH_APP_LOAD_PARAMS += "44'/1815'" "1852'/1815'" "1853'/1815'" "1854'/1815'" "1855'/1815'" "1694'/1815'"
+PATH_APP_LOAD_PARAMS = "44'/1815'" "1852'/1815'" "1853'/1815'" "1854'/1815'" "1855'/1815'" "1694'/1815'"
 
 # Setting to allow building variant applications
 VARIANT_PARAM = COIN
@@ -83,10 +83,8 @@ ENABLE_BLUETOOTH = 1
 ########################################
 #          Features disablers          #
 ########################################
-# These advanced settings allow to disable some feature that are by
-# default enabled in the SDK `Makefile.standard_app`.
-DISABLE_STANDARD_APP_FILES = 1
 ifeq ($(TARGET_NAME),TARGET_NANOS)
+DEFINES += HAVE_UX_FLOW HAVE_UX_LEGACY
 DISABLE_STANDARD_BAGL_UX_FLOW = 1
 DISABLE_DEBUG_LEDGER_ASSERT = 1
 DISABLE_DEBUG_THROW = 1
@@ -98,7 +96,7 @@ SDK_SOURCE_PATH += lib_u2f
 #  Compiler  #
 ##############
 ## USB U2F
-DEFINES += HAVE_U2F HAVE_IO_U2F U2F_PROXY_MAGIC=\"ADA\" USB_SEGMENT_SIZE=64
+DEFINES += HAVE_IO_U2F U2F_PROXY_MAGIC=\"ADA\"
 
 ## Protect stack overflows
 DEFINES += HAVE_BOLOS_APP_STACK_CANARY
@@ -126,45 +124,6 @@ else
 	DEFINES += APP_FEATURE_BYRON_ADDRESS_DERIVATION
 	DEFINES += APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 endif
-
-################
-#   Analyze    #
-################
-
-# part of CI
-analyze: clean
-	scan-build --use-cc=clang -analyze-headers -enable-checker security -enable-checker unix -enable-checker valist -o scan-build --status-bugs make default
-
-##############
-#   Style    #
-##############
-
-format:
-	astyle --options=.astylerc "src/*.h" "src/*.c" --exclude=src/glyphs.h --exclude=src/glyphs.c --ignore-exclude-errors
-
-##############
-#    Size    #
-##############
-
-# prints app size, max is about 140K
-size: all
-	$(GCCPATH)arm-none-eabi-size --format=gnu bin/app.elf
-
-##############
-#   Device-specific builds
-##############
-
-nanos: clean
-	BOLOS_SDK=$(NANOS_SDK) make
-
-nanosp: clean
-	BOLOS_SDK=$(NANOSP_SDK) make
-
-nanox: clean
-	BOLOS_SDK=$(NANOX_SDK) make
-
-stax: clean
-	BOLOS_SDK=$(STAX_SDK) make
 
 # import generic rules from the sdk
 include $(BOLOS_SDK)/Makefile.standard_app
