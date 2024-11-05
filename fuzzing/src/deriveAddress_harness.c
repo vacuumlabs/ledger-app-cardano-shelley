@@ -5,12 +5,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <deriveAddress.h>
+#include <state.h>
 
 uint8_t G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-    UX_INIT();
-
     uint8_t *input = NULL;
     bool is_first = true;
 

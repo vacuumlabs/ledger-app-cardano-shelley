@@ -46,64 +46,64 @@ set(UX_SOURCE
 )
 
 set(CARDANO_SOURCE
-    ${CARDANO_PATH}/src/addressUtilsByron.c
-    ${CARDANO_PATH}/src/addressUtilsShelley.c
+    ${CARDANO_PATH}/src/addressUtils/addressUtilsByron.c
+    ${CARDANO_PATH}/src/addressUtils/addressUtilsShelley.c
+    ${CARDANO_PATH}/src/auxDataHashBuilder/auxDataHashBuilder.c
+    ${CARDANO_PATH}/src/crypto/bech32.c
+    ${CARDANO_PATH}/src/crypto/bip44.c
+    ${CARDANO_PATH}/src/crypto/crypto.c
+    ${CARDANO_PATH}/src/deriveAddress/deriveAddress.c
+    ${CARDANO_PATH}/src/deriveNativeScriptHash/deriveNativeScriptHash.c
+    ${CARDANO_PATH}/src/deriveNativeScriptHash/deriveNativeScriptHash_ui.c
+    ${CARDANO_PATH}/src/getPublicKey/getPublicKeys.c
+    ${CARDANO_PATH}/src/getPublicKey/getPublicKeys_ui.c
+    ${CARDANO_PATH}/src/handlers/getSerial.c
+    ${CARDANO_PATH}/src/handlers/getVersion.c
+    ${CARDANO_PATH}/src/handlers/handlers.c
+    ${CARDANO_PATH}/src/keyDerivation/keyDerivation.c
+    ${CARDANO_PATH}/src/messageSigning/messageSigning.c
+    ${CARDANO_PATH}/src/nativeScriptHashBuilder/nativeScriptHashBuilder.c
+    ${CARDANO_PATH}/src/securityPolicy/securityPolicy.c
+    ${CARDANO_PATH}/src/signCVote/signCVote.c
+    ${CARDANO_PATH}/src/signCVote/signCVote_ui.c
+    ${CARDANO_PATH}/src/signMsg/signMsg.c
+    ${CARDANO_PATH}/src/signMsg/signMsg_ui.c
+    ${CARDANO_PATH}/src/signOpCert/signOpCert.c
+    ${CARDANO_PATH}/src/signTx/signTx.c
+    ${CARDANO_PATH}/src/signTx/signTxCVoteRegistration.c
+    ${CARDANO_PATH}/src/signTx/signTxCVoteRegistration_ui.c
+    ${CARDANO_PATH}/src/signTx/signTxMint.c
+    ${CARDANO_PATH}/src/signTx/signTxMint_ui.c
+    ${CARDANO_PATH}/src/signTx/signTxOutput.c
+    ${CARDANO_PATH}/src/signTx/signTxOutput_ui.c
+    ${CARDANO_PATH}/src/signTx/signTxPoolRegistration.c
+    ${CARDANO_PATH}/src/signTx/signTxPoolRegistration_ui.c
+    ${CARDANO_PATH}/src/signTx/signTx_ui.c
+    ${CARDANO_PATH}/src/signTx/signTxUtils.c
+    ${CARDANO_PATH}/src/tokens/tokens.c
+    ${CARDANO_PATH}/src/txHashBuilder/txHashBuilder.c
+    ${CARDANO_PATH}/src/ui/ui_callback.c
+    ${CARDANO_PATH}/src/ui/uiHelpers.c
+    ${CARDANO_PATH}/src/ui/bagl/menu_nanox.c
+    ${CARDANO_PATH}/src/ui/bagl/uiHelpers_nanos.c
+    ${CARDANO_PATH}/src/ui/bagl/uiHelpers_nanox.c
+    ${CARDANO_PATH}/src/ui/bagl/uiScreens_bagl.c
+    ${CARDANO_PATH}/src/ui/nbgl/ui_menu_nbgl.c
+    ${CARDANO_PATH}/src/ui/nbgl/ui_nbgl.c
+    ${CARDANO_PATH}/src/ui/nbgl/uiScreens_nbgl.c
+    ${CARDANO_PATH}/src/utils/cbor.c
+    ${CARDANO_PATH}/src/utils/hexUtils.c
+    ${CARDANO_PATH}/src/utils/ipUtils.c
+    ${CARDANO_PATH}/src/utils/textUtils.c
+    ${CARDANO_PATH}/src/votecastHashBuilder/votecastHashBuilder.c
+    ${CARDANO_PATH}/src/test/runTests.c
     ${CARDANO_PATH}/src/app_mode.c
     ${CARDANO_PATH}/src/assert.c
-    ${CARDANO_PATH}/src/auxDataHashBuilder.c
-    ${CARDANO_PATH}/src/base58.c
-    ${CARDANO_PATH}/src/bech32.c
-    ${CARDANO_PATH}/src/bip44.c
     ${CARDANO_PATH}/src/cardano.c
-    ${CARDANO_PATH}/src/cbor.c
-    ${CARDANO_PATH}/src/crc32.c
-    ${CARDANO_PATH}/src/crypto.c
-    ${CARDANO_PATH}/src/deriveAddress.c
-    ${CARDANO_PATH}/src/deriveNativeScriptHash.c
-    ${CARDANO_PATH}/src/deriveNativeScriptHash_ui.c
-    ${CARDANO_PATH}/src/getPublicKeys.c
-    ${CARDANO_PATH}/src/getPublicKeys_ui.c
-    ${CARDANO_PATH}/src/getSerial.c
-    ${CARDANO_PATH}/src/getVersion.c
-    ${CARDANO_PATH}/src/handlers.c
-    ${CARDANO_PATH}/src/hexUtils.c
-    ${CARDANO_PATH}/src/io.c
-    ${CARDANO_PATH}/src/ipUtils.c
-    ${CARDANO_PATH}/src/keyDerivation.c
-    # ${CARDANO_PATH}/src/menu_nanos.c
-    ${CARDANO_PATH}/src/menu_nanox.c
-    ${CARDANO_PATH}/src/messageSigning.c
-    ${CARDANO_PATH}/src/nativeScriptHashBuilder.c
-    ${CARDANO_PATH}/src/runTests.c
-    ${CARDANO_PATH}/src/securityPolicy.c
-    ${CARDANO_PATH}/src/signCVote.c
-    ${CARDANO_PATH}/src/signCVote_ui.c
-    ${CARDANO_PATH}/src/signMsg.c
-    ${CARDANO_PATH}/src/signMsg_ui.c
-    ${CARDANO_PATH}/src/signOpCert.c
-    ${CARDANO_PATH}/src/signTx.c
-    ${CARDANO_PATH}/src/signTxCVoteRegistration.c
-    ${CARDANO_PATH}/src/signTxCVoteRegistration_ui.c
-    ${CARDANO_PATH}/src/signTxMint.c
-    ${CARDANO_PATH}/src/signTxMint_ui.c
-    ${CARDANO_PATH}/src/signTxOutput.c
-    ${CARDANO_PATH}/src/signTxOutput_ui.c
-    ${CARDANO_PATH}/src/signTxPoolRegistration.c
-    ${CARDANO_PATH}/src/signTxPoolRegistration_ui.c
-    ${CARDANO_PATH}/src/signTx_ui.c
-    ${CARDANO_PATH}/src/signTxUtils.c
     ${CARDANO_PATH}/src/state.c
-    ${CARDANO_PATH}/src/textUtils.c
-    ${CARDANO_PATH}/src/tokens.c
-    ${CARDANO_PATH}/src/txHashBuilder.c
-    ${CARDANO_PATH}/src/uiHelpers.c
-    ${CARDANO_PATH}/src/uiHelpers_nanos.c
-    ${CARDANO_PATH}/src/uiHelpers_nanox.c
-    ${CARDANO_PATH}/src/ui_menu_nbgl.c
-    ${CARDANO_PATH}/src/ui_nbgl.c
-    ${CARDANO_PATH}/src/uiScreens_bagl.c
-    ${CARDANO_PATH}/src/uiScreens_nbgl.c
-    ${CARDANO_PATH}/src/votecastHashBuilder.c
+    ${BOLOS_SDK}/lib_standard_app/base58.c
+    ${BOLOS_SDK}/lib_standard_app/read.c
+    ${BOLOS_SDK}/lib_standard_app/write.c
 )
 
 include_directories(
@@ -112,8 +112,33 @@ include_directories(
     ${BOLOS_SDK}/lib_cxng/include
     ${BOLOS_SDK}/lib_bagl/include
     ${BOLOS_SDK}/lib_ux/include
+    ${BOLOS_SDK}/lib_standard_app
 
     ${CARDANO_PATH}/src
+    ${CARDANO_PATH}/src/addressUtils
+    ${CARDANO_PATH}/src/auxDataHashBuilder
+    ${CARDANO_PATH}/src/crypto
+    ${CARDANO_PATH}/src/deriveAddress
+    ${CARDANO_PATH}/src/deriveNativeScriptHash
+    ${CARDANO_PATH}/src/getPublicKey
+    ${CARDANO_PATH}/src/handlers
+    ${CARDANO_PATH}/src/keyDerivation
+    ${CARDANO_PATH}/src/messageSigning
+    ${CARDANO_PATH}/src/nativeScriptHashBuilder
+    ${CARDANO_PATH}/src/securityPolicy
+    ${CARDANO_PATH}/src/signCVote
+    ${CARDANO_PATH}/src/signMsg
+    ${CARDANO_PATH}/src/signOpCert
+    ${CARDANO_PATH}/src/signTx
+    ${CARDANO_PATH}/src/tokens
+    ${CARDANO_PATH}/src/txHashBuilder
+    ${CARDANO_PATH}/src/votecastHashBuilder
+    ${CARDANO_PATH}/src/ui
+    ${CARDANO_PATH}/src/ui/bagl
+    ${CARDANO_PATH}/src/ui/nbgl
+    ${CARDANO_PATH}/src/utils
+    ${CARDANO_PATH}/src/swap
+    ${CARDANO_PATH}/src/test
     ./include
 )
 
@@ -134,6 +159,7 @@ add_compile_definitions(
     OS_IO_SEPROXYHAL
 
     HAVE_ECC
+    HAVE_CRC
     HAVE_BLAKE2
     HAVE_ECC_WEIERSTRASS
     HAVE_SECP256K1_CURVE
@@ -154,6 +180,10 @@ add_compile_definitions(
     APP_FEATURE_POOL_RETIREMENT
     APP_FEATURE_BYRON_ADDRESS_DERIVATION
     APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
+    )
+
+add_compile_options(
+    -Wno-format -Wno-pointer-to-int-cast -Wno-constant-conversion -Wno-tautological-constant-out-of-range-compare
 )
 
 set(SOURCE
@@ -161,6 +191,7 @@ set(SOURCE
     ${CARDANO_SOURCE}
     ./src/os_mocks.c
     ./src/glyphs.c
+    ./src/crc32.c
 )
 
 

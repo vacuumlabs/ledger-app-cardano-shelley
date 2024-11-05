@@ -6,8 +6,26 @@
 #include <string.h>
 #include <ux.h>
 
+ux_state_t G_ux;
+
+bool G_called_from_swap;
+bool G_swap_response_ready;
+
+void __attribute__((noreturn)) swap_finalize_exchange_sign_transaction(bool is_success) {
+    exit(-1);
+}
 void nvm_write(void *dst_adr, void *src_adr, unsigned int src_len) {
     memcpy(dst_adr, src_adr, src_len);
+}
+
+typedef char tx_output_destination_t;
+
+bool swap_check_validity(uint64_t amount, tx_output_destination_t *destination) {
+    return true;
+}
+
+bool swap_check_fee_validity(uint64_t fee) {
+    return true;
 }
 
 unsigned int os_serial(unsigned char *serial, unsigned int maxlength) {
@@ -42,6 +60,9 @@ void halt() {
     for (;;)
         ;
 };
+void io_seproxyhal_display(const bagl_element_t *element) {
+}
+void io_send_buf(unsigned short code, unsigned char *buffer, size_t tx){};
 unsigned short io_exchange(unsigned char chan, unsigned short tx_len) {
     return 0;
 };

@@ -4,48 +4,43 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <state.h>
+#include <parser.h>
 
 uint8_t G_io_apdu_buffer[IO_APDU_BUFFER_SIZE];
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
-    UX_INIT();
-
     uint8_t *input = NULL;
     bool is_first = true;
+    command_t cmd = {0};
 
     while (size > 5) {
         io_state = IO_EXPECT_NONE;
-        uint8_t ins = data[0];
-        uint8_t p1 = data[1];
-        uint8_t p2 = data[2];
-        uint8_t lc = data[3];
+        cmd.ins = data[0];
+        cmd.p1 = data[1];
+        cmd.p2 = data[2];
+        cmd.lc = data[3];
 
         data += sizeof(uint8_t) * 4;
         size -= sizeof(uint8_t) * 4;
 
-        if (size < lc) {
+        if (size < cmd.lc) {
             return 0;
         }
 
-        uint8_t *input = malloc(lc);
+        cmd.data = malloc(cmd.lc);
         if (input == NULL) {
             return 0;
         }
 
-        memcpy(input, data, lc);
+        memcpy(input, data, cmd.lc);
 
-        data += lc;
-        size -= lc;
+        data += cmd.lc;
+        size -= cmd.lc;
 
-        handler_fn_t *handler = lookupHandler(ins);
-
-        if (handler == NULL) {
-            free(input);
-            return 0;
-        }
         BEGIN_TRY {
             TRY {
-                handler(p1, p2, input, lc, is_first);
+                handleApdu(&cmd, is_first);
             }
             CATCH_ALL {
             }
