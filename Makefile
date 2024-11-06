@@ -126,8 +126,6 @@ else
 	DEFINES += APP_FEATURE_BYRON_ADDRESS_DERIVATION
 	DEFINES += APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
 endif
-# always include this, it's important for Plutus users
-DEFINES += APP_FEATURE_TOKEN_MINTING
 
 ################
 #   Analyze    #

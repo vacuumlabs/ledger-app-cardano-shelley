@@ -1,8 +1,6 @@
 #ifndef H_CARDANO_APP_SIGN_TX_MINT_UI
 #define H_CARDANO_APP_SIGN_TX_MINT_UI
 
-#ifdef APP_FEATURE_TOKEN_MINTING
-
 enum {
     HANDLE_MINT_TOP_LEVEL_DATA_DISPLAY = 9200,
     HANDLE_MINT_TOP_LEVEL_DATA_RESPOND,
@@ -35,7 +33,5 @@ enum {
 };
 
 void signTxMint_handleConfirm_ui_runStep();
-
-#endif  // APP_FEATURE_TOKEN_MINTING
 
 #endif  // H_CARDANO_APP_SIGN_TX_MINT_UI

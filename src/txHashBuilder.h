@@ -430,8 +430,6 @@ void txHashBuilder_addAuxData(tx_hash_builder_t* builder,
 void txHashBuilder_addValidityIntervalStart(tx_hash_builder_t* builder,
                                             uint64_t validityIntervalStart);
 
-#ifdef APP_FEATURE_TOKEN_MINTING
-
 void txHashBuilder_enterMint(tx_hash_builder_t* builder);
 
 void txHashBuilder_addMint_topLevelData(tx_hash_builder_t* builder, uint16_t numAssetGroups);
@@ -445,8 +443,6 @@ void txHashBuilder_addMint_token(tx_hash_builder_t* builder,
                                  const uint8_t* assetNameBuffer,
                                  size_t assetNameSize,
                                  int64_t amount);
-
-#endif  // APP_FEATURE_TOKEN_MINTING
 
 void txHashBuilder_addScriptDataHash(tx_hash_builder_t* builder,
                                      const uint8_t* scriptHashData,

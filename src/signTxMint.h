@@ -1,8 +1,6 @@
 #ifndef H_CARDANO_APP_SIGN_TX_MINT
 #define H_CARDANO_APP_SIGN_TX_MINT
 
-#ifdef APP_FEATURE_TOKEN_MINTING
-
 #include "common.h"
 #include "cardano.h"
 #include "addressUtilsShelley.h"
@@ -54,7 +52,5 @@ void signTxMint_init();
 void signTxMint_handleAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize);
 
 bool signTxMint_isFinished();
-
-#endif  // APP_FEATURE_TOKEN_MINTING
 
 #endif  // H_CARDANO_APP_SIGN_TX_MINT

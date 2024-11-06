@@ -191,14 +191,10 @@ void tx_advanceStage() {
             ctx->stage = SIGN_STAGE_BODY_MINT;
 
             if (ctx->includeMint) {
-#ifdef APP_FEATURE_TOKEN_MINTING
                 txHashBuilder_enterMint(&BODY_CTX->txHashBuilder);
                 signTxMint_init();
                 // wait for mint APDU
                 break;
-#else
-                ASSERT(false);
-#endif  // APP_FEATURE_TOKEN_MINTING
             }
 
             __attribute__((fallthrough));
@@ -1788,8 +1784,6 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2,
 
 // ============================== MINT ==============================
 
-#ifdef APP_FEATURE_TOKEN_MINTING
-
 static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size_t wireDataSize) {
     {
         TRACE("p2 = %d", p2);
@@ -1806,8 +1800,6 @@ static void signTx_handleMintAPDU(uint8_t p2, const uint8_t* wireDataBuffer, siz
     VALIDATE(signTxMint_isValidInstruction(p2), ERR_INVALID_REQUEST_PARAMETERS);
     signTxMint_handleAPDU(p2, wireDataBuffer, wireDataSize);
 }
-
-#endif  // APP_FEATURE_TOKEN_MINTING
 
 // ========================= SCRIPT DATA HASH ==========================
 
