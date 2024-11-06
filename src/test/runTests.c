@@ -5,11 +5,7 @@
 #include "hexUtils.h"
 #include "ui.h"
 
-void handleRunTests(uint8_t p1 MARK_UNUSED,
-                    uint8_t p2 MARK_UNUSED,
-                    const uint8_t* wireBuffer MARK_UNUSED,
-                    size_t wireSize MARK_UNUSED,
-                    bool isNewCall MARK_UNUSED) {
+uint16_t handleRunTests() {
     // Note: Make sure to have RESET_ON_CRASH flag disabled
     // as it interferes with tests verifying assertions
     BEGIN_ASSERT_NOEXCEPT {
@@ -42,6 +38,7 @@ void handleRunTests(uint8_t p1 MARK_UNUSED,
 
     io_send_buf(SUCCESS, NULL, 0);
     ui_idle();
+    return ERR_NO_RESPONSE;
 }
 
 #endif  // DEVEL

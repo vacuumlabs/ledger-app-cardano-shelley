@@ -5,7 +5,7 @@
 
 #include "handlers.h"
 
-handler_fn_t handleRunTests;
+uint16_t handleRunTests();
 
 void run_hex_test();
 void run_base58_test();

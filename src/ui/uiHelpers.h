@@ -12,11 +12,6 @@
 
 typedef void ui_callback_fn_t();
 
-#if !defined(TARGET_NANOS)
-extern ux_state_t G_ux;
-extern bolos_ux_params_t G_ux_params;
-#endif
-
 // *INDENT-OFF*
 
 // Warning: Following macros are *NOT* brace-balanced by design!

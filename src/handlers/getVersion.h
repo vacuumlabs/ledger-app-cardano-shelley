@@ -8,6 +8,6 @@
 #ifndef APPVERSION
 #error "Missing -DAPPVERSION=x.y.z in Makefile"
 #endif  // APPVERSION
-handler_fn_t getVersion_handleAPDU;
+uint16_t getVersion_handleAPDU(uint8_t p1, uint8_t p2, size_t wireDataSize);
 
 #endif  // H_CARDANO_APP_GET_VERSION

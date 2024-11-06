@@ -3,6 +3,6 @@
 
 #include "handlers.h"
 
-handler_fn_t getSerial_handleAPDU;
+uint16_t getSerial_handleAPDU(uint8_t p1, uint8_t p2, size_t wireDataSize);
 
 #endif  // H_CARDANO_APP_GET_SERIAL

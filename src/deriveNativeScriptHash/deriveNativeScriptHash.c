@@ -308,11 +308,11 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1) {
     }
 }
 
-void deriveNativeScriptHash_handleAPDU(uint8_t p1,
-                                       uint8_t p2,
-                                       const uint8_t* wireDataBuffer,
-                                       size_t wireDataSize,
-                                       bool isNewCall) {
+uint16_t deriveNativeScriptHash_handleAPDU(uint8_t p1,
+                                           uint8_t p2,
+                                           const uint8_t* wireDataBuffer,
+                                           size_t wireDataSize,
+                                           bool isNewCall) {
     TRACE("P1 = 0x%x, P2 = 0x%x, isNewCall = %u", p1, p2, isNewCall);
     VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
     TRACE_BUFFER(wireDataBuffer, wireDataSize);
@@ -330,6 +330,7 @@ void deriveNativeScriptHash_handleAPDU(uint8_t p1,
     subhandler_fn_t* subhandler = lookup_subhandler(p1);
     VALIDATE(subhandler != NULL, ERR_INVALID_REQUEST_PARAMETERS);
     subhandler(&view);
+    return ERR_NO_RESPONSE;
 }
 
 #undef TRACE_WITH_CTX

@@ -10,11 +10,7 @@ enum {
     FLAG_APP_XS = 1 << 2,
 };
 
-void getVersion_handleAPDU(uint8_t p1,
-                           uint8_t p2,
-                           const uint8_t* wireDataBuffer MARK_UNUSED,
-                           size_t wireDataSize,
-                           bool isNewCall MARK_UNUSED) {
+uint16_t getVersion_handleAPDU(uint8_t p1, uint8_t p2, size_t wireDataSize) {
     // Check that we have format "x.y.z"
     STATIC_ASSERT(SIZEOF(APPVERSION) == 5 + 1, "bad APPVERSION length");
     STATIC_ASSERT(MAJOR_VERSION >= 0 && MAJOR_VERSION <= 9,
@@ -49,4 +45,5 @@ void getVersion_handleAPDU(uint8_t p1,
 
     io_send_buf(SUCCESS, (uint8_t*) &response, sizeof(response));
     ui_idle();
+    return ERR_NO_RESPONSE;
 }

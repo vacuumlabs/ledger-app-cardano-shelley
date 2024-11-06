@@ -7,11 +7,7 @@
 // required by os_serial
 #define SERIAL_LENGTH 7
 
-void getSerial_handleAPDU(uint8_t p1,
-                          uint8_t p2,
-                          const uint8_t* wireDataBuffer MARK_UNUSED,
-                          size_t wireDataSize,
-                          bool isNewCall MARK_UNUSED) {
+uint16_t getSerial_handleAPDU(uint8_t p1, uint8_t p2, size_t wireDataSize) {
     VALIDATE(p1 == P1_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
     VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
     VALIDATE(wireDataSize == 0, ERR_INVALID_REQUEST_PARAMETERS);
@@ -25,4 +21,5 @@ void getSerial_handleAPDU(uint8_t p1,
 
     io_send_buf(SUCCESS, response, SERIAL_LENGTH);
     ui_idle();
+    return ERR_NO_RESPONSE;
 }

@@ -321,7 +321,11 @@ ins_sign_tx_witness_context_t* accessWitnessContext();
 #define BODY_CTX     (accessBodyContext())
 #define WITNESS_CTX  (accessWitnessContext())
 
-handler_fn_t signTx_handleAPDU;
+uint16_t signTx_handleAPDU(uint8_t p1,
+                           uint8_t p2,
+                           const uint8_t* wireDataBuffer,
+                           size_t wireDataSize,
+                           bool isNewCall);
 
 static inline bool signTx_parseIncluded(uint8_t value) {
     switch (value) {

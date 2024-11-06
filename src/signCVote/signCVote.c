@@ -273,13 +273,18 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1) {
     }
 }
 
-void signCVote_handleAPDU(uint8_t p1,
-                          uint8_t p2,
-                          const uint8_t* wireDataBuffer,
-                          size_t wireDataSize,
-                          bool isNewCall) {
-    ASSERT(wireDataBuffer != NULL);
-    ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+uint16_t signCVote_handleAPDU(uint8_t p1,
+                              uint8_t p2,
+                              const uint8_t* wireDataBuffer,
+                              size_t wireDataSize,
+                              bool isNewCall) {
+    if (p1 == 0x03) {
+        ASSERT(wireDataBuffer == NULL);
+        ASSERT(wireDataSize == 0);
+    } else {
+        ASSERT(wireDataBuffer != NULL);
+        ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+    }
 
     if (isNewCall) {
         explicit_bzero(ctx, SIZEOF(*ctx));
@@ -290,4 +295,5 @@ void signCVote_handleAPDU(uint8_t p1,
     subhandler_fn_t* subhandler = lookup_subhandler(p1);
     VALIDATE(subhandler != NULL, ERR_INVALID_REQUEST_PARAMETERS);
     subhandler(wireDataBuffer, wireDataSize);
+    return ERR_NO_RESPONSE;
 }

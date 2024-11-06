@@ -283,11 +283,11 @@ static void deriveAddress_display_ui_runStep() {
 
 /* ========================== TOP-LEVEL HANDLER ========================== */
 
-void deriveAddress_handleAPDU(uint8_t p1,
-                              uint8_t p2,
-                              const uint8_t* wireDataBuffer,
-                              size_t wireDataSize,
-                              bool isNewCall) {
+uint16_t deriveAddress_handleAPDU(uint8_t p1,
+                                  uint8_t p2,
+                                  const uint8_t* wireDataBuffer,
+                                  size_t wireDataSize,
+                                  bool isNewCall) {
     VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
     TRACE_BUFFER(wireDataBuffer, wireDataSize);
 
@@ -315,4 +315,5 @@ void deriveAddress_handleAPDU(uint8_t p1,
         default:
             THROW(ERR_INVALID_REQUEST_PARAMETERS);
     }
+    return ERR_NO_RESPONSE;
 }

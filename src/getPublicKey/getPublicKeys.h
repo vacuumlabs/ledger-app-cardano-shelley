@@ -29,7 +29,11 @@ typedef struct {
     bool silent_export;
 } ins_get_keys_context_t;
 
-handler_fn_t getPublicKeys_handleAPDU;
+uint16_t getPublicKeys_handleAPDU(uint8_t p1,
+                                  uint8_t p2,
+                                  const uint8_t* wireDataBuffer,
+                                  size_t wireDataSize,
+                                  bool isNewCall);
 
 void runGetOnePublicKeyUIFlow();
 void keys_advanceStage();

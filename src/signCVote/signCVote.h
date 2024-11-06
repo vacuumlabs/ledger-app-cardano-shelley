@@ -40,7 +40,11 @@ typedef struct {
     };
 } ins_sign_cvote_context_t;
 
-handler_fn_t signCVote_handleAPDU;
+uint16_t signCVote_handleAPDU(uint8_t p1,
+                              uint8_t p2,
+                              const uint8_t* wireDataBuffer,
+                              size_t wireDataSize,
+                              bool isNewCall);
 
 void vote_advanceStage();
 #endif  // H_CARDANO_APP_SIGN_CVOTE

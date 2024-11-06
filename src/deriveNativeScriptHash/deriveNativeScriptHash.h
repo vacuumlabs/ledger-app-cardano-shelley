@@ -9,7 +9,11 @@
 #include "handlers.h"
 #include "nativeScriptHashBuilder.h"
 
-handler_fn_t deriveNativeScriptHash_handleAPDU;
+uint16_t deriveNativeScriptHash_handleAPDU(uint8_t p1,
+                                           uint8_t p2,
+                                           const uint8_t* wireDataBuffer,
+                                           size_t wireDataSize,
+                                           bool isNewCall);
 
 // a special type for distinguishing what to show in the UI, makes it easier
 // to handle PUBKEY DEVICE_OWNED vs THIRD_PARTY

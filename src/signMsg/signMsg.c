@@ -352,13 +352,18 @@ static subhandler_fn_t* lookup_subhandler(uint8_t p1) {
     }
 }
 
-void signMsg_handleAPDU(uint8_t p1,
-                        uint8_t p2,
-                        const uint8_t* wireDataBuffer,
-                        size_t wireDataSize,
-                        bool isNewCall) {
+uint16_t signMsg_handleAPDU(uint8_t p1,
+                            uint8_t p2,
+                            const uint8_t* wireDataBuffer,
+                            size_t wireDataSize,
+                            bool isNewCall) {
     TRACE("P1 = 0x%x, P2 = 0x%x, isNewCall = %d", p1, p2, isNewCall);
-    ASSERT(wireDataBuffer != NULL);
+    if (p1 == 0x03) {
+        ASSERT(wireDataBuffer == NULL);
+        ASSERT(wireDataSize == 0);
+    } else {
+        ASSERT(wireDataBuffer != NULL);
+    }
     ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
 
     VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
@@ -371,4 +376,5 @@ void signMsg_handleAPDU(uint8_t p1,
     subhandler_fn_t* subhandler = lookup_subhandler(p1);
     VALIDATE(subhandler != NULL, ERR_INVALID_REQUEST_PARAMETERS);
     subhandler(wireDataBuffer, wireDataSize);
+    return ERR_NO_RESPONSE;
 }

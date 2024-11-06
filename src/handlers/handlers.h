@@ -2,13 +2,8 @@
 #define H_CARDANO_APP_HANDLERS
 
 #include "common.h"
+#include "parser.h"
 
-typedef void handler_fn_t(uint8_t p1,
-                          uint8_t p2,
-                          const uint8_t* wireBuffer,
-                          size_t wireSize,
-                          bool isNewCall);
-
-handler_fn_t* lookupHandler(uint8_t ins);
+uint16_t handleApdu(command_t *cmd, bool isNewCall);
 
 #endif  // H_CARDANO_APP_HANDLERS

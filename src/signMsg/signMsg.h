@@ -9,7 +9,11 @@
 #include "bip44.h"
 #include "keyDerivation.h"
 
-handler_fn_t signMsg_handleAPDU;
+uint16_t signMsg_handleAPDU(uint8_t p1,
+                            uint8_t p2,
+                            const uint8_t* wireDataBuffer,
+                            size_t wireDataSize,
+                            bool isNewCall);
 
 #define CIP8_MSG_HASH_LENGTH 28
 
@@ -50,7 +54,5 @@ typedef struct {
     sign_msg_stage_t stage;
     int ui_step;
 } ins_sign_msg_context_t;
-
-handler_fn_t signMsg_handleAPDU;
 
 #endif  // H_CARDANO_APP_SIGN_MSG

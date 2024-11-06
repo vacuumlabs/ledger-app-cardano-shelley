@@ -9,7 +9,11 @@
 #include "bip44.h"
 #include "keyDerivation.h"
 
-handler_fn_t signOpCert_handleAPDU;
+uint16_t signOpCert_handleAPDU(uint8_t p1,
+                               uint8_t p2,
+                               const uint8_t* wireDataBuffer,
+                               size_t wireDataSize,
+                               bool isNewCall);
 
 #define KES_PUBLIC_KEY_LENGTH 32
 

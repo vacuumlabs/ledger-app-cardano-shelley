@@ -13,6 +13,22 @@
 #include "assert.h"
 #include "utils.h"
 
+#define CLA 0xD7
+// 0x0* -  app status calls
+// 0x1* -  public-key/address related
+// 0x2* -  signing related
+// 0xF* -  debug_mode related
+#define INS_GET_VERSION               0x00
+#define INS_GET_SERIAL                0x01
+#define INS_GET_PUBLIC_KEY            0x10
+#define INS_DERIVE_ADDRESS            0x11
+#define INS_DERIVE_NATIVE_SCRIPT_HASH 0x12
+#define INS_SIGN_TX                   0x21
+#define INS_SIGN_OP_CERT              0x22
+#define INS_SIGN_CVOTE                0x23
+#define INS_SIGN_MSG                  0x24
+#define INS_RUN_TESTS                 0xF0
+
 enum { P1_UNUSED = 0, P2_UNUSED = 0 };
 
 enum { ITEM_INCLUDED_NO = 1, ITEM_INCLUDED_YES = 2 };
@@ -41,8 +57,6 @@ enum {
     // Some part of request data is invalid (or unknown to this app)
     // (includes not enough data and too much data)
     ERR_INVALID_DATA = 0x6E07,
-    // previously used for rejected BIP44 paths, now we use ERR_REJECTED_BY_POLICY
-    // ERR_INVALID_BIP44_PATH         = 0x6E08,
 
     // User rejected the action
     ERR_REJECTED_BY_USER = 0x6E09,
@@ -51,9 +65,6 @@ enum {
 
     // Pin screen
     ERR_DEVICE_LOCKED = 0x6E11,
-
-    // previously used for unsupported Shelley address types
-    // ERR_UNSUPPORTED_ADDRESS_TYPE   = 0x6E12,
 
     // end of errors which trigger automatic response
     _ERR_AUTORESPOND_END = 0x6E13,
@@ -74,6 +85,9 @@ enum {
 
     // cbor
     ERR_UNEXPECTED_TOKEN = 0x4720,
+
+    // Explicit return value to not send any response from main loop
+    ERR_NO_RESPONSE = 0x0000,
 };
 
 bool device_is_unlocked();

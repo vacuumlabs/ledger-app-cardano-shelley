@@ -36,11 +36,11 @@ enum {
     UI_STEP_INVALID,
 };
 
-void signOpCert_handleAPDU(uint8_t p1,
-                           uint8_t p2,
-                           const uint8_t* wireDataBuffer,
-                           size_t wireDataSize,
-                           bool isNewCall) {
+uint16_t signOpCert_handleAPDU(uint8_t p1,
+                               uint8_t p2,
+                               const uint8_t* wireDataBuffer,
+                               size_t wireDataSize,
+                               bool isNewCall) {
     // Initialize state
     if (isNewCall) {
         explicit_bzero(ctx, SIZEOF(*ctx));
@@ -132,6 +132,7 @@ void signOpCert_handleAPDU(uint8_t p1,
             THROW(ERR_NOT_IMPLEMENTED);
     }
     signOpCert_ui_runStep();
+    return ERR_NO_RESPONSE;
 }
 
 static void signOpCert_ui_runStep() {

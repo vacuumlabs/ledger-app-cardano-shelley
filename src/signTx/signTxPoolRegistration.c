@@ -927,7 +927,13 @@ void signTxPoolRegistration_handleAPDU(uint8_t p2,
                                        size_t wireDataSize) {
     TRACE_STACK_USAGE();
     TRACE("p2 = 0x%x", p2);
-    ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+    if (p2 == APDU_INSTRUCTION_CONFIRMATION) {
+        ASSERT(wireDataBuffer == NULL);
+        ASSERT(wireDataSize == 0);
+    } else {
+        ASSERT(wireDataBuffer != NULL);
+        ASSERT(wireDataSize < BUFFER_SIZE_PARANOIA);
+    }
 
     pool_registration_context_t* subctx = accessSubcontext();
     explicit_bzero(&subctx->stateData, SIZEOF(subctx->stateData));

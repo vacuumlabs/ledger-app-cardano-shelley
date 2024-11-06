@@ -6,7 +6,11 @@
 #include "handlers.h"
 #include "addressUtilsShelley.h"
 
-handler_fn_t deriveAddress_handleAPDU;
+uint16_t deriveAddress_handleAPDU(uint8_t p1,
+                                  uint8_t p2,
+                                  const uint8_t* wireDataBuffer,
+                                  size_t wireDataSize,
+                                  bool isNewCall);
 
 typedef struct {
     uint16_t responseReadyMagic;
