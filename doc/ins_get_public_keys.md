@@ -61,7 +61,7 @@ Concatenation of `pub_key` and `chain_code` representing the extended public key
 - `0x9000` OK
 - `0x6E10` Request rejected by app policy
 - `0x6E09` Request rejected by user
-- for more errors, see [src/errors.h](../src/errors.h)
+- for more errors, see [errors](../src/common.h)
 
 **Ledger responsibilities**
 

@@ -48,7 +48,7 @@ where `SW1 SW2` represents the return code.
 Known error codes are:
 
 - 0x9000 = OK
-- see [src/errors.h](../src/errors.h) for the full listing of other errors
+- see [errors](../src/common.h) for the full listing of other errors
 
 ## Instructions
 
