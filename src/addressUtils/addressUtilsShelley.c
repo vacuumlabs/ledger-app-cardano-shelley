@@ -611,7 +611,7 @@ void view_parseAddressParams(read_view_t* view, addressParams_t* params) {
             params->stakingKeyBlockchainPointer.blockIndex = parse_u4be(view);
             params->stakingKeyBlockchainPointer.txIndex = parse_u4be(view);
             params->stakingKeyBlockchainPointer.certificateIndex = parse_u4be(view);
-            TRACE("Stake key pointer: [%d, %d, %d]\n",
+            TRACE("Stake key pointer: [%d, %d, %d]",
                   params->stakingKeyBlockchainPointer.blockIndex,
                   params->stakingKeyBlockchainPointer.txIndex,
                   params->stakingKeyBlockchainPointer.certificateIndex);

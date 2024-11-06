@@ -7,7 +7,7 @@
 #include "getSerial.h"
 #include "getPublicKeys.h"
 #include "runTests.h"
-#include "errors.h"
+#include "common.h"
 #include "deriveAddress.h"
 #include "deriveNativeScriptHash.h"
 #include "signTx.h"

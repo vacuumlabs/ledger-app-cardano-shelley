@@ -156,21 +156,21 @@ static inline void ui_crash_handler() {
 #endif
 }
 
-#define TRY_CATCH_UI(ui_call)             \
-    BEGIN_TRY {                           \
-        TRY {                             \
-            ui_call;                      \
-        }                                 \
-        CATCH(EXCEPTION_IO_RESET) {       \
-            THROW(EXCEPTION_IO_RESET);    \
-        }                                 \
-        CATCH_OTHER(e) {                  \
-            TRACE("Error %d\n", (int) e); \
-            ui_crash_handler();           \
-        }                                 \
-        FINALLY {                         \
-        }                                 \
-    }                                     \
+#define TRY_CATCH_UI(ui_call)           \
+    BEGIN_TRY {                         \
+        TRY {                           \
+            ui_call;                    \
+        }                               \
+        CATCH(EXCEPTION_IO_RESET) {     \
+            THROW(EXCEPTION_IO_RESET);  \
+        }                               \
+        CATCH_OTHER(e) {                \
+            TRACE("Error %d", (int) e); \
+            ui_crash_handler();         \
+        }                               \
+        FINALLY {                       \
+        }                               \
+    }                                   \
     END_TRY;
 
 #endif  // H_CARDANO_APP_UI_HELPERS

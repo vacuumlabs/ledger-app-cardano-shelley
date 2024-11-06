@@ -128,7 +128,7 @@ static void deriveAddress_handleReturn() {
 }
 
 static void deriveAddress_return_ui_runStep() {
-    TRACE("step %d\n", ctx->ui_step);
+    TRACE("step %d", ctx->ui_step);
     ASSERT(ctx->responseReadyMagic == RESPONSE_READY_MAGIC);
     ui_callback_fn_t* this_fn = deriveAddress_return_ui_runStep;
 

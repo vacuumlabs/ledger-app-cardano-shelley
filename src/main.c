@@ -24,11 +24,10 @@
 #include <stdbool.h>
 #include "os_io_seproxyhal.h"
 #include "os.h"
-
 #include "getVersion.h"
 #include "handlers.h"
 #include "state.h"
-#include "errors.h"
+#include "common.h"
 #include "menu.h"
 #include "assert.h"
 #include "io.h"

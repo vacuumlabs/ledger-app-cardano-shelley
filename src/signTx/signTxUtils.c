@@ -1,5 +1,4 @@
-#include "io.h"
-#include "errors.h"
+#include "common.h"
 #include "uiHelpers.h"
 #include "utils.h"
 #include "signTxUtils.h"

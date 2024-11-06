@@ -1,8 +1,7 @@
 #include "os_io_seproxyhal.h"
 #include <stdint.h>
 
-#include "assert.h"
-#include "errors.h"
+#include "common.h"
 #include "keyDerivation.h"
 #include "cbor.h"
 #include "hash.h"

@@ -3,7 +3,7 @@
 
 #include "os.h"
 
-#include "errors.h"
+#include "common.h"
 
 typedef enum {
     POLICY_DENY = 1,
