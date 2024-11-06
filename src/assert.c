@@ -2,6 +2,7 @@
 #include "assert.h"
 #include "uiHelpers.h"
 #include "uiScreens_nbgl.h"
+#include "os_io_seproxyhal.h"
 
 // Note(ppershing): In DEBUG we need to keep going
 // because rendering on display takes multiple SEPROXYHAL

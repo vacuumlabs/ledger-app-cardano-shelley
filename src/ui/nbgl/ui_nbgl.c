@@ -21,6 +21,7 @@
 #include "uiHelpers.h"
 #include "uiScreens_nbgl.h"
 #include "signTx_ui.h"
+#include "ui_callback.h"
 
 #define MAX_LINE_PER_PAGE_COUNT   NB_MAX_LINES_IN_REVIEW
 #define MAX_TAG_TITLE_LINE_LENGTH 30

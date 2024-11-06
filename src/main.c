@@ -30,7 +30,6 @@
 #include "common.h"
 #include "menu.h"
 #include "assert.h"
-#include "io.h"
 
 #ifdef HAVE_BAGL
 #include "uiScreens_bagl.h"
@@ -38,9 +37,31 @@
 #include "uiScreens_nbgl.h"
 #endif
 
+#if defined(TARGET_NANOS)
+ux_state_t ux;
+#endif
+
 static const int INS_NONE = -1;
 
 static const uint8_t CLA = 0xD7;
+
+bool device_is_unlocked() {
+    return os_global_pin_is_validated() == BOLOS_UX_OK;  // Seems to work for api 9/10
+}
+
+void io_send_buf(uint16_t code, uint8_t* buffer, size_t tx) {
+    // Note(ppershing): we do both checks due to potential overflows
+    ASSERT(tx < sizeof(G_io_apdu_buffer));
+    ASSERT(tx + 2u < sizeof(G_io_apdu_buffer));
+
+    memmove(G_io_apdu_buffer, buffer, tx);
+    U2BE_ENCODE(G_io_apdu_buffer, tx, code);
+    tx += 2;
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+
+    // From now on we can receive new APDU
+    io_state = IO_EXPECT_IO;
+}
 
 // This is the main loop that reads and writes APDUs. It receives request
 // APDUs from the computer, looks up the corresponding command handler, and

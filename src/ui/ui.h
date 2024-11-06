@@ -1,7 +1,6 @@
 #ifndef H_CARDANO_APP_UI_H
 #define H_CARDANO_APP_UI_H
 
-#include "io.h"
 #include "uiHelpers.h"
 #ifdef HAVE_NBGL
 #include "nbgl_use_case.h"

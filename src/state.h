@@ -10,6 +10,19 @@
 #include "signOpCert.h"
 #include "signCVote.h"
 
+// This was added for sanity checking -- our program should always be awaiting on something
+// and it should be exactly the expected handler
+typedef enum {
+    // We are doing IO, display handlers should not fire
+    IO_EXPECT_IO = 42,  // Note: random constants
+    // We are displaying things, IO handlers should not fire
+    IO_EXPECT_UI = 47,
+    // We should not be handling events
+    IO_EXPECT_NONE = 49,
+} io_state_t;
+
+extern io_state_t io_state;
+
 typedef union {
     // Here should go states of all instructions
     ins_get_keys_context_t getKeysContext;

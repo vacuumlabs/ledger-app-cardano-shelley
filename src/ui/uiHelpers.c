@@ -3,23 +3,13 @@
 #include "uiHelpers.h"
 #include "uiElements.h"
 #include "assert.h"
-#include "io.h"
 #include "utils.h"
 #include "securityPolicy.h"
 #include "ui.h"
 
-displayState_t displayState;
+io_state_t io_state;
 
-// These are global variables declared in ux.h. They can't be defined there
-// because multiple files include ux.h; they need to be defined in exactly one
-// place. See ux.h for their descriptions.
-// To save memory, we store all the context types in a single global union,
-// taking advantage of the fact that only one command is executed at a time.
-#if defined(TARGET_NANOS)
-// ux is a magic global variable implicitly referenced by the UX_ macros. Apps
-// should never need to reference it directly
-ux_state_t ux;
-#endif
+displayState_t displayState;
 
 STATIC_ASSERT(SIZEOF(uint8_t) == SIZEOF(char), "bad char size");
 

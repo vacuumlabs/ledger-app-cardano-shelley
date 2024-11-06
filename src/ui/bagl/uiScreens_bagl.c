@@ -11,6 +11,7 @@
 #include "uiHelpers.h"
 #include "menu.h"
 #include "signTx_ui.h"
+#include "ui_callback.h"
 
 static const int INS_NONE = -1;
 

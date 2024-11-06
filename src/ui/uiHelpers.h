@@ -7,6 +7,8 @@
 #include "ux.h"
 
 #include "utils.h"
+#include "state.h"
+#include "os_io_seproxyhal.h"
 
 typedef void ui_callback_fn_t();
 

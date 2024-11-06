@@ -11,8 +11,11 @@
 
 // ours
 #include "assert.h"
-#include "io.h"
 #include "utils.h"
+
+enum { P1_UNUSED = 0, P2_UNUSED = 0 };
+
+enum { ITEM_INCLUDED_NO = 1, ITEM_INCLUDED_YES = 2 };
 
 enum {
     // Successful responses
@@ -71,5 +74,9 @@ enum {
 
     // cbor
     ERR_UNEXPECTED_TOKEN = 0x4720,
-
 };
+
+bool device_is_unlocked();
+
+// Normal code should use just this helper function
+void io_send_buf(uint16_t code, uint8_t* buffer, size_t tx);

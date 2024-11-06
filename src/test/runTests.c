@@ -3,6 +3,7 @@
 #include "runTests.h"
 #include "testUtils.h"
 #include "hexUtils.h"
+#include "ui.h"
 
 void handleRunTests(uint8_t p1 MARK_UNUSED,
                     uint8_t p2 MARK_UNUSED,
