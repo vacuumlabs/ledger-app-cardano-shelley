@@ -15,6 +15,7 @@
 #include "signOpCert.h"
 #include "signCVote.h"
 #include "parser.h"
+#include "swap.h"
 
 uint16_t handleApdu(command_t *cmd, bool isNewCall) {
     uint16_t sw = ERR_NOT_IMPLEMENTED;
@@ -22,6 +23,20 @@ uint16_t handleApdu(command_t *cmd, bool isNewCall) {
     if (cmd->cla != CLA) {
         return ERR_BAD_CLA;
     }
+
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        if ((cmd->ins != INS_GET_PUBLIC_KEY) && (cmd->ins != INS_DERIVE_ADDRESS) &&
+            (cmd->ins != INS_GET_VERSION) && (cmd->ins != INS_SIGN_TX)) {
+            PRINTF("Refused INS when in SWAP mode\n");
+            return ERR_UNKNOWN_INS;
+        }
+        if ((cmd->ins == INS_DERIVE_ADDRESS) && (cmd->p1 != 0x01)) {
+            PRINTF("Refused 'derive_address' with other than 'return' when in SWAP mode\n");
+            return ERR_UNKNOWN_INS;
+        }
+    }
+#endif  // HAVE_SWAP
 
     switch (cmd->ins) {
         case INS_GET_VERSION:

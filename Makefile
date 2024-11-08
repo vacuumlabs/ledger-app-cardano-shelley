@@ -76,6 +76,7 @@ HAVE_APPLICATION_FLAG_BOLOS_SETTINGS = 1
 #         NBGL custom features         #
 ########################################
 ENABLE_NBGL_QRCODE = 1
+ENABLE_SWAP = 1
 
 ########################################
 # Application communication interfaces #

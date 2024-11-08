@@ -37,6 +37,9 @@ enum {
     // Successful responses
     SUCCESS = 0x9000,
 
+    // Invalid INS in swap mode
+    ERR_SWAP_FAIL = 0x6001,
+
     // Start of error which trigger automatic response
     // Note that any such error will reset
     // multi-APDU exchange

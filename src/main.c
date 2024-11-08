@@ -33,6 +33,8 @@
 #include "common.h"
 #include "menu.h"
 #include "assert.h"
+#include "swap.h"
+#include "io_swap.h"
 
 #ifdef HAVE_BAGL
 #include "uiScreens_bagl.h"
@@ -76,11 +78,17 @@ void app_main(void) {
     uint16_t sw = ERR_NOT_IMPLEMENTED;
     bool isNewCall = false;
 
-    ui_idle();
+#ifdef HAVE_SWAP
+    if (!G_called_from_swap)
+#endif
+    {
+        ui_idle();
 #ifdef HAVE_NBGL
-    ui_idle_flow();
+        ui_idle_flow();
 #endif  // HAVE_NBGL
+    }
     io_state = IO_EXPECT_IO;
+    currentInstruction = INS_NONE;
 
     for (;;) {
         BEGIN_TRY {
@@ -138,23 +146,36 @@ void app_main(void) {
 #endif
             }
             CATCH_OTHER(e) {
-                if (e >= _ERR_AUTORESPOND_START && e < _ERR_AUTORESPOND_END) {
-                    io_send_buf(e, NULL, 0);
-                    flags = IO_ASYNCH_REPLY;
-#ifdef HAVE_NBGL
-                    if (e != ERR_REJECTED_BY_USER) {
-                        ui_idle();
-                        display_error();
+#ifdef HAVE_SWAP
+                if (G_called_from_swap) {
+                    if (e == ERR_UNKNOWN_INS) {
+                        send_swap_error(ERROR_GENERIC, APP_CODE_BAD_INS, NULL);
+                    } else {
+                        send_swap_error(ERROR_GENERIC, APP_CODE_DEFAULT, NULL);
                     }
+                    // unreachable
+                    os_sched_exit(0);
+                } else
+#endif
+                {
+                    if (e >= _ERR_AUTORESPOND_START && e < _ERR_AUTORESPOND_END) {
+                        io_send_buf(e, NULL, 0);
+                        flags = IO_ASYNCH_REPLY;
+#ifdef HAVE_NBGL
+                        if (e != ERR_REJECTED_BY_USER) {
+                            ui_idle();
+                            display_error();
+                        }
 #else
-                    ui_idle();
+                        ui_idle();
 #endif
-                } else {
-                    PRINTF("Uncaught error 0x%x", (unsigned) e);
+                    } else {
+                        PRINTF("Uncaught error 0x%x", (unsigned) e);
 #ifdef RESET_ON_CRASH
-                    // Reset device
-                    io_seproxyhal_se_reset();
+                        // Reset device
+                        io_seproxyhal_se_reset();
 #endif
+                    }
                 }
             }
             FINALLY {
