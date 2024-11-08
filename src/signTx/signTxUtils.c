@@ -11,12 +11,18 @@
 #include "nbgl_use_case.h"
 #include "uiScreens_nbgl.h"
 #endif
+#include "swap.h"
 
 void respondSuccessEmptyMsg() {
     TRACE();
     io_send_buf(SUCCESS, NULL, 0);
 #ifdef HAVE_BAGL
-    ui_displayBusy();  // displays dots, called only after I/O to avoid freezing
+#ifdef HAVE_SWAP
+    if (!G_called_from_swap)
+#endif
+    {
+        ui_displayBusy();  // displays dots, called only after I/O to avoid freezing
+    }
 #endif
 }
 

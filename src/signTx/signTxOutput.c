@@ -9,6 +9,9 @@
 #include "tokens.h"
 #include "hexUtils.h"
 #include "signTxOutput_ui.h"
+#include "swap.h"
+#include "handle_sign_transaction.h"
+#include "io_swap.h"
 
 static common_tx_data_t* commonTxData = &(instructionState.signTxContext.commonTxData);
 static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
@@ -179,12 +182,30 @@ static void handleOutput_addressBytes() {
         .includeRefScript = subctx->includeRefScript,
     };
 
-    security_policy_t policy = policyForSignTxOutputAddressBytes(&output,
-                                                                 commonTxData->txSigningMode,
-                                                                 commonTxData->networkId,
-                                                                 commonTxData->protocolMagic);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        if (!swap_check_destination_validity(&output.destination)) {
+            send_swap_error(ERROR_WRONG_DESTINATION, APP_CODE_DEFAULT, NULL);
+            // unreachable
+            os_sched_exit(0);
+        }
+        if (!swap_check_amount_validity(output.amount)) {
+            send_swap_error(ERROR_WRONG_AMOUNT, APP_CODE_DEFAULT, NULL);
+            // unreachable
+            os_sched_exit(0);
+        }
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxOutputAddressBytes(&output,
+                                                   commonTxData->txSigningMode,
+                                                   commonTxData->networkId,
+                                                   commonTxData->protocolMagic);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
     subctx->outputSecurityPolicy = policy;
     subctx->outputTokensSecurityPolicy = policy;  // tokens shown iff output is shown
 
@@ -964,12 +985,20 @@ static void handleConfirmAPDU_output(const uint8_t* wireDataBuffer MARK_UNUSED,
     }
 
     output_context_t* subctx = accessSubcontext();
-    security_policy_t policy = policyForSignTxOutputConfirm(subctx->outputSecurityPolicy,
-                                                            subctx->numAssetGroups,
-                                                            subctx->includeDatum,
-                                                            subctx->includeRefScript);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxOutputConfirm(subctx->outputSecurityPolicy,
+                                              subctx->numAssetGroups,
+                                              subctx->includeDatum,
+                                              subctx->includeRefScript);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // select UI step

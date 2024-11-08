@@ -15,6 +15,9 @@
 #include "bufView.h"
 #include "securityPolicy.h"
 #include "signTx_ui.h"
+#include "swap.h"
+#include "io_swap.h"
+#include "handle_sign_transaction.h"
 
 static ins_sign_tx_context_t* ctx = &(instructionState.signTxContext);
 
@@ -480,6 +483,21 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2,
         VALIDATE(p2 == P2_UNUSED, ERR_INVALID_REQUEST_PARAMETERS);
     }
 
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        if (G_swap_response_ready) {
+            // Safety against trying to make the app sign multiple TX
+            // This code should never be triggered as the app is supposed to exit after
+            // sending the signed transaction
+            PRINTF("Safety against double signing triggered\n");
+            swap_finalize_exchange_sign_transaction(false);
+            os_sched_exit(-1);
+        }
+        // We will quit the app after this transaction, whether it succeeds or fails
+        PRINTF("Swap response is ready, the app will quit after the next send\n");
+        G_swap_response_ready = true;
+    }
+#endif
     {
         // parse data
 
@@ -602,8 +620,8 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2,
         ctx->numWitnesses = (uint16_t) u4be_read(wireHeader->numWitnesses);
 
         TRACE(
-            "num inputs, outputs, certificates, withdrawals, collateral inputs, required signers, "
-            "reference inputs, voting procedures, witnesses: %d %d %d %d %d %d %d %d %d",
+            "inputs: %d, outputs: %d, certificates: %d, withdrawals: %d, collateral inputs: %d,"
+            " required signers: %d, reference inputs: %d, voting procedures: %d, witnesses: %d",
             ctx->numInputs,
             ctx->numOutputs,
             ctx->numCertificates,
@@ -635,25 +653,33 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2,
         ctx->shouldDisplayTxid = false;
     }
 
-    security_policy_t policy = policyForSignTxInit(ctx->commonTxData.txSigningMode,
-                                                   ctx->commonTxData.networkId,
-                                                   ctx->commonTxData.protocolMagic,
-                                                   ctx->numOutputs,
-                                                   ctx->numCertificates,
-                                                   ctx->numWithdrawals,
-                                                   ctx->includeMint,
-                                                   ctx->includeScriptDataHash,
-                                                   ctx->numCollateralInputs,
-                                                   ctx->numRequiredSigners,
-                                                   ctx->includeNetworkId,
-                                                   ctx->includeCollateralOutput,
-                                                   ctx->includeTotalCollateral,
-                                                   ctx->numReferenceInputs,
-                                                   ctx->numVotingProcedures,
-                                                   ctx->includeTreasury,
-                                                   ctx->includeDonation);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxInit(ctx->commonTxData.txSigningMode,
+                                     ctx->commonTxData.networkId,
+                                     ctx->commonTxData.protocolMagic,
+                                     ctx->numOutputs,
+                                     ctx->numCertificates,
+                                     ctx->numWithdrawals,
+                                     ctx->includeMint,
+                                     ctx->includeScriptDataHash,
+                                     ctx->numCollateralInputs,
+                                     ctx->numRequiredSigners,
+                                     ctx->includeNetworkId,
+                                     ctx->includeCollateralOutput,
+                                     ctx->includeTotalCollateral,
+                                     ctx->numReferenceInputs,
+                                     ctx->numVotingProcedures,
+                                     ctx->includeTreasury,
+                                     ctx->includeDonation);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
     {
         // select UI steps
         switch (policy) {
@@ -724,9 +750,17 @@ __noinline_due_to_stack__ static void signTx_handleAuxDataAPDU(uint8_t p2,
         VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
     }
 
-    security_policy_t policy = policyForSignTxAuxData(AUX_DATA_CTX->auxDataType);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxAuxData(AUX_DATA_CTX->auxDataType);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     switch (AUX_DATA_CTX->auxDataType) {
         case AUX_DATA_TYPE_ARBITRARY_HASH: {
@@ -835,9 +869,17 @@ __noinline_due_to_stack__ static void signTx_handleInputAPDU(uint8_t p2,
 
     parseInput(wireDataBuffer, wireDataSize);
 
-    security_policy_t policy = policyForSignTxInput(ctx->commonTxData.txSigningMode);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxInput(ctx->commonTxData.txSigningMode);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // add to tx
@@ -899,11 +941,22 @@ __noinline_due_to_stack__ static void signTx_handleFeeAPDU(uint8_t p2,
         BODY_CTX->feeReceived = true;
     }
 
-    security_policy_t policy =
-        policyForSignTxFee(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.fee);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
-
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        if (!swap_check_fee_validity(BODY_CTX->stageData.fee)) {
+            send_swap_error(ERROR_WRONG_FEES, APP_CODE_DEFAULT, NULL);
+            // unreachable
+            os_sched_exit(0);
+        }
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxFee(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.fee);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
     {
         // add to tx
         TRACE("Adding fee to tx hash");
@@ -950,9 +1003,17 @@ __noinline_due_to_stack__ static void signTx_handleTtlAPDU(uint8_t p2,
         BODY_CTX->ttlReceived = true;
     }
 
-    security_policy_t policy = policyForSignTxTtl(BODY_CTX->stageData.ttl);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxTtl(BODY_CTX->stageData.ttl);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // add to tx
@@ -1355,12 +1416,20 @@ static bool _handlePoolRegistrationIfNeeded(uint8_t p2,
 #endif  // APP_FEATURE_POOL_REGISTRATION
 
 static void _handleCertificateStaking() {
-    security_policy_t policy =
-        policyForSignTxCertificateStaking(ctx->commonTxData.txSigningMode,
-                                          BODY_CTX->stageData.certificate.type,
-                                          &BODY_CTX->stageData.certificate.stakeCredential);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy =
+            policyForSignTxCertificateStaking(ctx->commonTxData.txSigningMode,
+                                              BODY_CTX->stageData.certificate.type,
+                                              &BODY_CTX->stageData.certificate.stakeCredential);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     _addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
 
@@ -1381,12 +1450,20 @@ static void _handleCertificateStaking() {
 }
 
 static void _handleCertificateVoteDeleg() {
-    security_policy_t policy =
-        policyForSignTxCertificateVoteDelegation(ctx->commonTxData.txSigningMode,
-                                                 &BODY_CTX->stageData.certificate.stakeCredential,
-                                                 &BODY_CTX->stageData.certificate.drep);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxCertificateVoteDelegation(
+            ctx->commonTxData.txSigningMode,
+            &BODY_CTX->stageData.certificate.stakeCredential,
+            &BODY_CTX->stageData.certificate.drep);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     _addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
 
@@ -1408,12 +1485,20 @@ static void _handleCertificateVoteDeleg() {
 }
 
 static void _handleCertificateCommitteeAuth() {
-    security_policy_t policy = policyForSignTxCertificateCommitteeAuth(
-        ctx->commonTxData.txSigningMode,
-        &BODY_CTX->stageData.certificate.committeeColdCredential,
-        &BODY_CTX->stageData.certificate.committeeHotCredential);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxCertificateCommitteeAuth(
+            ctx->commonTxData.txSigningMode,
+            &BODY_CTX->stageData.certificate.committeeColdCredential,
+            &BODY_CTX->stageData.certificate.committeeHotCredential);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     _addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
 
@@ -1434,11 +1519,19 @@ static void _handleCertificateCommitteeAuth() {
 }
 
 static void _handleCertificateCommitteeResign() {
-    security_policy_t policy = policyForSignTxCertificateCommitteeResign(
-        ctx->commonTxData.txSigningMode,
-        &BODY_CTX->stageData.certificate.committeeColdCredential);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxCertificateCommitteeResign(
+            ctx->commonTxData.txSigningMode,
+            &BODY_CTX->stageData.certificate.committeeColdCredential);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     _addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
 
@@ -1459,11 +1552,18 @@ static void _handleCertificateCommitteeResign() {
 }
 
 static void _handleCertificateDRep() {
-    security_policy_t policy =
-        policyForSignTxCertificateDRep(ctx->commonTxData.txSigningMode,
-                                       &BODY_CTX->stageData.certificate.dRepCredential);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxCertificateDRep(ctx->commonTxData.txSigningMode,
+                                                &BODY_CTX->stageData.certificate.dRepCredential);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     _addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
 
@@ -1499,12 +1599,20 @@ static void _handleCertificatePoolRegistration() {
 #ifdef APP_FEATURE_POOL_RETIREMENT
 
 static void _handleCertificatePoolRetirement() {
-    security_policy_t policy = policyForSignTxCertificateStakePoolRetirement(
-        ctx->commonTxData.txSigningMode,
-        &BODY_CTX->stageData.certificate.poolCredential,
-        BODY_CTX->stageData.certificate.epoch);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxCertificateStakePoolRetirement(
+            ctx->commonTxData.txSigningMode,
+            &BODY_CTX->stageData.certificate.poolCredential,
+            BODY_CTX->stageData.certificate.epoch);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     _addCertificateDataToTx(&BODY_CTX->stageData.certificate, &BODY_CTX->txHashBuilder);
 
@@ -1547,6 +1655,9 @@ __noinline_due_to_stack__ static void signTx_handleCertificateAPDU(uint8_t p2,
     // a new certificate arrived
     explicit_bzero(&BODY_CTX->stageData.certificate, SIZEOF(BODY_CTX->stageData.certificate));
     _parseCertificateData(wireDataBuffer, wireDataSize, &BODY_CTX->stageData.certificate);
+#ifdef HAVE_SWAP
+    if (!G_called_from_swap)
+#endif
     {
         // basic policy that just decides if the certificate type is allowed
         security_policy_t policy = policyForSignTxCertificate(ctx->commonTxData.txSigningMode,
@@ -1702,11 +1813,18 @@ __noinline_due_to_stack__ static void signTx_handleWithdrawalAPDU(uint8_t p2,
         VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
     }
 
-    security_policy_t policy =
-        policyForSignTxWithdrawal(ctx->commonTxData.txSigningMode,
-                                  &BODY_CTX->stageData.withdrawal.stakeCredential);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxWithdrawal(ctx->commonTxData.txSigningMode,
+                                           &BODY_CTX->stageData.withdrawal.stakeCredential);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     const bool validateCanonicalOrdering = BODY_CTX->currentWithdrawal > 0;
     _addWithdrawalToTxHash(validateCanonicalOrdering);
@@ -1752,9 +1870,17 @@ static void signTx_handleValidityIntervalStartAPDU(uint8_t p2,
         BODY_CTX->validityIntervalStartReceived = true;
     }
 
-    security_policy_t policy = policyForSignTxValidityIntervalStart();
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxValidityIntervalStart();
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         TRACE("Adding validity interval start to tx hash");
@@ -1826,9 +1952,17 @@ static void signTx_handleScriptDataHashAPDU(uint8_t p2,
         BODY_CTX->scriptDataHashReceived = true;
     }
 
-    security_policy_t policy = policyForSignTxScriptDataHash(ctx->commonTxData.txSigningMode);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxScriptDataHash(ctx->commonTxData.txSigningMode);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // add to tx
@@ -1882,10 +2016,18 @@ signTx_handleCollateralInputAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size
 
     parseInput(wireDataBuffer, wireDataSize);
 
-    security_policy_t policy = policyForSignTxCollateralInput(ctx->commonTxData.txSigningMode,
-                                                              ctx->includeTotalCollateral);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxCollateralInput(ctx->commonTxData.txSigningMode,
+                                                ctx->includeTotalCollateral);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // add to tx
@@ -1937,10 +2079,18 @@ __noinline_due_to_stack__ static void signTx_handleRequiredSignerAPDU(uint8_t p2
         VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
     }
 
-    security_policy_t policy = policyForSignTxRequiredSigner(ctx->commonTxData.txSigningMode,
-                                                             &BODY_CTX->stageData.requiredSigner);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxRequiredSigner(ctx->commonTxData.txSigningMode,
+                                               &BODY_CTX->stageData.requiredSigner);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // add to tx
@@ -2022,9 +2172,17 @@ signTx_handleTotalCollateralAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size
         TRACE_UINT64(BODY_CTX->stageData.totalCollateral);
     }
 
-    security_policy_t policy = policyForSignTxTotalCollateral();
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxTotalCollateral();
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // add to tx
@@ -2078,9 +2236,17 @@ __noinline_due_to_stack__ static void signTx_handleReferenceInputAPDU(uint8_t p2
     // Parsed in same way as the inputs
     parseInput(wireDataBuffer, wireDataSize);
 
-    security_policy_t policy = policyForSignTxReferenceInput(ctx->commonTxData.txSigningMode);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxReferenceInput(ctx->commonTxData.txSigningMode);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // add to tx
@@ -2227,11 +2393,18 @@ signTx_handleVotingProcedureAPDU(uint8_t p2, const uint8_t* wireDataBuffer, size
         VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
     }
 
-    security_policy_t policy =
-        policyForSignTxVotingProcedure(ctx->commonTxData.txSigningMode,
-                                       &BODY_CTX->stageData.votingProcedure.voter);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxVotingProcedure(ctx->commonTxData.txSigningMode,
+                                                &BODY_CTX->stageData.votingProcedure.voter);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     // Note: if more than one voter is ever allowed, we need to check canonical ordering
     // of voters and possibly canonical ordering of governance actions in the subordinated map
@@ -2285,10 +2458,18 @@ __noinline_due_to_stack__ static void signTx_handleTreasuryAPDU(uint8_t p2,
         BODY_CTX->treasuryReceived = true;
     }
 
-    security_policy_t policy =
-        policyForSignTxTreasury(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.treasury);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy =
+            policyForSignTxTreasury(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.treasury);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // add to tx
@@ -2337,10 +2518,18 @@ __noinline_due_to_stack__ static void signTx_handleDonationAPDU(uint8_t p2,
         BODY_CTX->donationReceived = true;
     }
 
-    security_policy_t policy =
-        policyForSignTxDonation(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.donation);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy =
+            policyForSignTxDonation(ctx->commonTxData.txSigningMode, BODY_CTX->stageData.donation);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
 
     {
         // add to tx
@@ -2401,10 +2590,17 @@ __noinline_due_to_stack__ static void signTx_handleConfirmAPDU(uint8_t p2,
         VALIDATE(wireDataSize == 0, ERR_INVALID_DATA);
     }
 
-    security_policy_t policy = policyForSignTxConfirm();
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
-
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxConfirm();
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
     {
         // compute txHash
         TRACE("Finalizing tx hash");
@@ -2463,14 +2659,20 @@ __noinline_due_to_stack__ static void signTx_handleWitnessAPDU(uint8_t p2,
         PRINTF("\n");
     }
 
-    security_policy_t policy =
-        policyForSignTxWitness(ctx->commonTxData.txSigningMode,
-                               &WITNESS_CTX->stageData.witness.path,
-                               ctx->includeMint,
-                               ctx->poolOwnerByPath ? &ctx->poolOwnerPath : NULL);
-    TRACE("Policy: %d", (int) policy);
-    ENSURE_NOT_DENIED(policy);
-
+    security_policy_t policy = POLICY_DENY;
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        policy = POLICY_ALLOW_WITHOUT_PROMPT;
+    } else
+#endif
+    {
+        policy = policyForSignTxWitness(ctx->commonTxData.txSigningMode,
+                                        &WITNESS_CTX->stageData.witness.path,
+                                        ctx->includeMint,
+                                        ctx->poolOwnerByPath ? &ctx->poolOwnerPath : NULL);
+        TRACE("Policy: %d", (int) policy);
+        ENSURE_NOT_DENIED(policy);
+    }
     {
         // compute witness
         TRACE("getWitness");
@@ -2502,6 +2704,14 @@ __noinline_due_to_stack__ static void signTx_handleWitnessAPDU(uint8_t p2,
         }
     }
     signTx_handleWitness_ui_runStep();
+#ifdef HAVE_SWAP
+    if (G_called_from_swap) {
+        if (ctx->stage == SIGN_STAGE_NONE) {
+            // Consider step is completed
+            swap_finalize_exchange_sign_transaction(true);
+        }
+    }
+#endif
 }
 
 // ============================== MAIN HANDLER ==============================
