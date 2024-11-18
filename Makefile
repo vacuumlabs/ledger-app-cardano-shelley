@@ -63,6 +63,8 @@ DEFINES += RESET_ON_CRASH
 ifeq ($(DEVEL), 1)
 	DEBUG = 1
 	DEFINES += DEVEL
+	# Enabling Debug of the stack memory consumption
+	# DEFINES += DEVEL_STACK
 endif
 
 ########################################

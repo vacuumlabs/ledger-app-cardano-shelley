@@ -78,7 +78,7 @@
 #define TRACE_BUFFER(BUF, SIZE)
 #endif  // DEVEL
 
-#ifdef DEVEL
+#ifdef DEVEL_STACK
 // Note: this is an unreliable (potentially very misleading) way of checking
 // stack memory consumption because the compiler might allocate the space
 // for all the local variables at the beginning of a function call.
