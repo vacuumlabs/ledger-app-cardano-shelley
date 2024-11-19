@@ -17,21 +17,31 @@ static const uint32_t MAX_REASONABLE_ADDRESS = 1000000;
 static const uint32_t MAX_REASONABLE_COLD_KEY_INDEX = 1000000;
 static const uint32_t MAX_REASONABLE_MINT_POLICY_INDEX = 1000000;
 
-size_t bip44_parseFromWire(bip44_path_t* pathSpec, const uint8_t* dataBuffer, size_t dataSize) {
-    // Ensure we have length
-    VALIDATE(dataSize >= 1, ERR_INVALID_DATA);
+bool bip44_check_path(bip44_path_t* pathSpec, const uint8_t* dataBuffer, size_t dataSize) {
+    if (dataSize < 1) {
+        PRINTF("ERROR: Invalid data size\n");
+        return false;
+    }
 
-    // Cast length to size_t
     size_t length = dataBuffer[0];
 
-    // Ensure length is valid
-    VALIDATE(length <= ARRAY_LEN(pathSpec->path), ERR_INVALID_DATA);
-    VALIDATE(length * 4 + 1 <= dataSize, ERR_INVALID_DATA);
-
+    if (length > ARRAY_LEN(pathSpec->path)) {
+        PRINTF("ERROR: Invalid path too long\n");
+        return false;
+    }
+    if (length * 4 + 1 > dataSize) {
+        PRINTF("ERROR: Invalid path length\n");
+        return false;
+    }
     pathSpec->length = length;
+    return true;
+}
+
+size_t bip44_parseFromWire(bip44_path_t* pathSpec, const uint8_t* dataBuffer, size_t dataSize) {
+    VALIDATE(bip44_check_path(pathSpec, dataBuffer, dataSize), ERR_INVALID_DATA);
 
     size_t offset = 1;
-    for (size_t i = 0; i < length; i++) {
+    for (size_t i = 0; i < pathSpec->length; i++) {
         pathSpec->path[i] = u4be_read(dataBuffer + offset);
         offset += 4;
     }

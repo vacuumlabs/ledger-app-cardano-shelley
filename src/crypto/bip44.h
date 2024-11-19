@@ -31,6 +31,7 @@ bool isHardened(uint32_t value);
 uint32_t harden(uint32_t value);
 uint32_t unharden(uint32_t value);
 
+bool bip44_check_path(bip44_path_t* pathSpec, const uint8_t* dataBuffer, size_t dataSize);
 size_t bip44_parseFromWire(bip44_path_t* pathSpec, const uint8_t* dataBuffer, size_t dataSize);
 
 // Indexes into pathSpec
