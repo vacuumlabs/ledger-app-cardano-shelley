@@ -26,7 +26,6 @@ The key derivation scheme for pool cold keys is described in [CIP 1853 - HD Stak
 | Issue counter            |  8       | Big endian. |
 | Pool cold key path       | variable | BIP44 path. See [GetExtColdKey call](ins_get_cold_key.md) for a format example. |
 
-
 There are restrictions on the path; see `policyForSignOpCert` in [src/securityPolicy.c](../src/securityPolicy.c) for the details.
 
 **Response**
@@ -34,4 +33,3 @@ There are restrictions on the path; see `policyForSignOpCert` in [src/securityPo
 |Field|Length| Comments|
 |-----|-----|-----|
 |Signature|64| Operational certificate signature.|
-

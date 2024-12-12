@@ -15,15 +15,16 @@ extern void assert(int cond, const char* msgStr);
 // because it captures reader's attention.
 #define ASSERT_WITH_MSG(cond, msg) assert(cond, msg)
 
-
 #define _FILE_LINE_ __FILE__ ":" _TO_STR2_(__LINE__)
 
-#define ASSERT(cond) \
-	do { \
-		if (!(cond)) { \
-			PRINTF("ASSERT failed at "_FILE_LINE_"\n"); \
-		} \
-		assert((cond), NULL); \
-	} while (0)
+#define ASSERT(cond)                           \
+    do {                                       \
+        if (!(cond)) {                         \
+            PRINTF(                            \
+                "ASSERT failed at "_FILE_LINE_ \
+                "\n");                         \
+        }                                      \
+        assert((cond), NULL);                  \
+    } while (0)
 
-#endif // H_CARDANO_APP_ASSERT
+#endif  // H_CARDANO_APP_ASSERT
