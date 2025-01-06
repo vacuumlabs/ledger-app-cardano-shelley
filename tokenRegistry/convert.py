@@ -43,4 +43,3 @@ allLines = ",\n".join([tokenLine(t) for t in registry])
 outputFile = open('token_data.c', 'w')
 outputFile.write(allLines)
 outputFile.write('\n')
-

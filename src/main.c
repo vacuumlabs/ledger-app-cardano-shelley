@@ -1,37 +1,40 @@
 /*******************************************************************************
-*
-*  (c) 2016 Ledger
-*  (c) 2018 Nebulous
-*  (c) 2019 VacuumLabs
-*
-*  Licensed under the Apache License, Version 2.0 (the "License");
-*  you may not use this file except in compliance with the License.
-*  You may obtain a copy of the License at
-*
-*      http://www.apache.org/licenses/LICENSE-2.0
-*
-*  Unless required by applicable law or agreed to in writing, software
-*  distributed under the License is distributed on an "AS IS" BASIS,
-*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-*  See the License for the specific language governing permissions and
-*  limitations under the License.
-********************************************************************************/
+ *
+ *  (c) 2016 Ledger
+ *  (c) 2018 Nebulous
+ *  (c) 2019 VacuumLabs
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ********************************************************************************/
 
 // For a nice primer on writing/understanding Ledger NANO S apps
 // see https://github.com/LedgerHQ/ledger-app-sia/
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <os_io_seproxyhal.h>
-#include <os.h>
-
+#include "os_io_seproxyhal.h"
+#include "parser.h"
+#include "os.h"
 #include "getVersion.h"
+#include "getSerial.h"
+#include "runTests.h"
 #include "handlers.h"
 #include "state.h"
-#include "errors.h"
+#include "common.h"
 #include "menu.h"
 #include "assert.h"
-#include "io.h"
+#include "swap.h"
+#include "io_swap.h"
 
 #ifdef HAVE_BAGL
 #include "uiScreens_bagl.h"
@@ -39,9 +42,27 @@
 #include "uiScreens_nbgl.h"
 #endif
 
+void app_exit(void);
+
 static const int INS_NONE = -1;
 
-static const uint8_t CLA = 0xD7;
+bool device_is_unlocked() {
+    return os_global_pin_is_validated() == BOLOS_UX_OK;  // Seems to work for api 9/10
+}
+
+void io_send_buf(uint16_t code, uint8_t* buffer, size_t tx) {
+    // Note(ppershing): we do both checks due to potential overflows
+    ASSERT(tx < sizeof(G_io_apdu_buffer));
+    ASSERT(tx + 2u < sizeof(G_io_apdu_buffer));
+
+    memmove(G_io_apdu_buffer, buffer, tx);
+    U2BE_ENCODE(G_io_apdu_buffer, tx, code);
+    tx += 2;
+    io_exchange(CHANNEL_APDU | IO_RETURN_AFTER_TX, tx);
+
+    // From now on we can receive new APDU
+    io_state = IO_EXPECT_IO;
+}
 
 // This is the main loop that reads and writes APDUs. It receives request
 // APDUs from the computer, looks up the corresponding command handler, and
@@ -50,198 +71,116 @@ static const uint8_t CLA = 0xD7;
 // subsequent io_exchange call. The handler may also throw an exception, which
 // will be caught, converted to an error code, appended to the response APDU,
 // and sent in the next io_exchange call.
-static void cardano_main(void)
-{
-	volatile size_t rx = 0;
-	volatile size_t tx = 0;
-	volatile uint8_t flags = 0;
+void app_main(void) {
+    volatile uint32_t rx = 0;
+    volatile uint8_t flags = 0;
+    command_t cmd = {0};
+    uint16_t sw = ERR_NOT_IMPLEMENTED;
+    bool isNewCall = false;
 
-	// Exchange APDUs until EXCEPTION_IO_RESET is thrown.
-	for (;;) {
-		// The Ledger SDK implements a form of exception handling. In addition
-		// to explicit THROWs in user code, syscalls (prefixed with os_ or
-		// cx_) may also throw exceptions.
-		//
-		// In sia_main, this TRY block serves to catch any thrown exceptions
-		// and convert them to response codes, which are then sent in APDUs.
-		// However, EXCEPTION_IO_RESET will be re-thrown and caught by the
-		// "true" main function defined at the bottom of this file.
-		BEGIN_TRY {
-			TRY {
-				rx = tx;
-				tx = 0; // ensure no race in CATCH_OTHER if io_exchange throws an error
-				ASSERT((unsigned int) rx < sizeof(G_io_apdu_buffer));
-				rx = (unsigned int) io_exchange((uint8_t) (CHANNEL_APDU | flags), (uint16_t) rx);
-				flags = 0;
+#ifdef HAVE_SWAP
+    if (!G_called_from_swap)
+#endif
+    {
+        ui_idle();
+#ifdef HAVE_NBGL
+        ui_idle_flow();
+#endif  // HAVE_NBGL
+    }
+    io_state = IO_EXPECT_IO;
+    currentInstruction = INS_NONE;
 
-				// We should be awaiting APDU
-				ASSERT(io_state == IO_EXPECT_IO);
-				io_state = IO_EXPECT_NONE;
+    for (;;) {
+        BEGIN_TRY {
+            TRY {
+                ASSERT(rx < sizeof(G_io_apdu_buffer));
+                rx = io_exchange(CHANNEL_APDU | flags, (uint16_t) rx);
+                flags = 0;
 
-				// No APDU received; trigger a reset.
-				if (rx == 0)
-				{
-					THROW(EXCEPTION_IO_RESET);
-				}
+                // We should be awaiting APDU
+                ASSERT(io_state == IO_EXPECT_IO);
+                io_state = IO_EXPECT_NONE;
 
-				VALIDATE(device_is_unlocked(), ERR_DEVICE_LOCKED);
+                VALIDATE(device_is_unlocked(), ERR_DEVICE_LOCKED);
 
-				// Note(ppershing): unsafe to access before checks
-				// Warning(ppershing): in case of unlikely change of APDU format
-				// make sure you read wider values as big endian
-				struct {
-					uint8_t cla;
-					uint8_t ins;
-					uint8_t p1;
-					uint8_t p2;
-					uint8_t lc;
-				}* header = (void*) G_io_apdu_buffer;
+                if (apdu_parser(&cmd, G_io_apdu_buffer, rx) == false) {
+                    PRINTF("=> BAD LENGTH: %d\n", rx);
+                    sw = ERR_MALFORMED_REQUEST_HEADER;
+                } else {
+                    VALIDATE(cmd.cla == CLA, ERR_BAD_CLA);
+                    TRACE("=> CLA=%02x, INS=%02x, P1=%02x, P2=%02x, LC=%02x, CDATA=%.*h",
+                          cmd.cla,
+                          cmd.ins,
+                          cmd.p1,
+                          cmd.p2,
+                          cmd.lc,
+                          cmd.lc,
+                          cmd.data);
 
-				VALIDATE(rx >= SIZEOF(*header), ERR_MALFORMED_REQUEST_HEADER);
+                    isNewCall = false;
+                    if (currentInstruction == INS_NONE) {
+                        explicit_bzero(&instructionState, SIZEOF(instructionState));
+                        isNewCall = true;
+                        currentInstruction = cmd.ins;
+                    } else {
+                        VALIDATE(cmd.ins == currentInstruction, ERR_STILL_IN_CALL);
+                    }
 
-				// check that data is safe to access
-				VALIDATE(rx == header->lc + SIZEOF(*header), ERR_MALFORMED_REQUEST_HEADER);
-
-				uint8_t* data = G_io_apdu_buffer + SIZEOF(*header);
-
-				VALIDATE(header->cla == CLA, ERR_BAD_CLA);
-
-				TRACE("APDU: ins = %d,   p1 = %d,    p2 = %d", header->ins, header->p1, header->p2);
-
-				// Lookup and call the requested command handler.
-				handler_fn_t* handlerFn = lookupHandler(header->ins);
-
-				VALIDATE(handlerFn != NULL, ERR_UNKNOWN_INS);
-
-				bool isNewCall = false;
-				if (currentInstruction == INS_NONE)
-				{
-					explicit_bzero(&instructionState, SIZEOF(instructionState));
-					isNewCall = true;
-					currentInstruction = header->ins;
-				} else
-				{
-					VALIDATE(header->ins == currentInstruction, ERR_STILL_IN_CALL);
-				}
-
-
-				// Note: handlerFn is responsible for calling io_send
-				// either during its call or subsequent UI actions
-				handlerFn(header->p1,
-				          header->p2,
-				          data,
-				          header->lc,
-				          isNewCall);
-				flags = IO_ASYNCH_REPLY;
-			}
-			CATCH(EXCEPTION_IO_RESET)
-			{
-				THROW(EXCEPTION_IO_RESET);
-			}
-			CATCH(ERR_ASSERT)
-			{
-				// Note(ppershing): assertions should not auto-respond
-				#ifdef RESET_ON_CRASH
-				// Reset device
-				io_seproxyhal_se_reset();
-				#endif
-			}
-			CATCH_OTHER(e)
-			{
-				if (e >= _ERR_AUTORESPOND_START && e < _ERR_AUTORESPOND_END) {
-					io_send_buf(e, NULL, 0);
-					flags = IO_ASYNCH_REPLY;
-					#ifdef HAVE_NBGL
-					if (e != ERR_REJECTED_BY_USER) {
-						ui_idle();
-						display_error();
-					}
-					#else
-					ui_idle();
-					#endif
-				} else {
-					PRINTF("Uncaught error 0x%x", (unsigned) e);
-					#ifdef RESET_ON_CRASH
-					// Reset device
-					io_seproxyhal_se_reset();
-					#endif
-				}
-			}
-			FINALLY {
-			}
-		}
-		END_TRY;
-	}
-}
-
-
-// Everything below this point is Ledger magic. And the magic isn't well-
-// documented, so if you want to understand it, you'll need to read the
-// source, which you can find in the nanos-secure-sdk repo. Fortunately, you
-// don't need to understand any of this in order to write an app.
-//
-
-
-static void app_exit(void)
-{
-	BEGIN_TRY_L(exit) {
-		TRY_L(exit) {
-			os_sched_exit(-1);
-		}
-		FINALLY_L(exit) {
-		}
-	}
-	END_TRY_L(exit);
-}
-
-__attribute__((section(".boot"))) int main(void)
-{
-	// exit critical section
-	__asm volatile("cpsie i");
-
-	for (;;) {
-		UX_INIT();
-		os_boot();
-		BEGIN_TRY {
-			TRY {
-				io_seproxyhal_init();
-
-				#if defined(HAVE_BLE)
-				// grab the current plane mode setting
-				G_io_app.plane_mode = os_setting_get(OS_SETTING_PLANEMODE, NULL, 0);
-				#endif
-
-				USB_power(0);
-				USB_power(1);
-				ui_idle();
-
-				#ifdef HAVE_NBGL
-				ui_idle_flow();
-				#endif // HAVE_NBGL
-
-				#if defined(HAVE_BLE)
-				BLE_power(0, NULL);
-				BLE_power(1, NULL);
-				#endif
-
-				io_state = IO_EXPECT_IO;
-				cardano_main();
-			}
-			CATCH(EXCEPTION_IO_RESET)
-			{
-				// reset IO and UX before continuing
-				CLOSE_TRY;
-				continue;
-			}
-			CATCH_ALL {
-				CLOSE_TRY;
-				break;
-			}
-			FINALLY {
-			}
-		}
-		END_TRY;
-	}
-	app_exit();
-	return 0;
+                    sw = handleApdu(&cmd, isNewCall);
+                    flags = IO_ASYNCH_REPLY;
+                }
+                if (sw != ERR_NO_RESPONSE) {
+                    THROW(sw);
+                }
+            }
+            CATCH(EXCEPTION_IO_RESET) {
+                // reset IO and UX before continuing
+                CLOSE_TRY;
+                app_exit();
+            }
+            CATCH(ERR_ASSERT) {
+// Note(ppershing): assertions should not auto-respond
+#ifdef RESET_ON_CRASH
+                // Reset device
+                io_seproxyhal_se_reset();
+#endif
+            }
+            CATCH_OTHER(e) {
+#ifdef HAVE_SWAP
+                if (G_called_from_swap) {
+                    if (e == ERR_UNKNOWN_INS) {
+                        send_swap_error(ERROR_GENERIC, APP_CODE_BAD_INS, NULL);
+                    } else {
+                        send_swap_error(ERROR_GENERIC, APP_CODE_DEFAULT, NULL);
+                    }
+                    // unreachable
+                    os_sched_exit(0);
+                } else
+#endif
+                {
+                    if (e >= _ERR_AUTORESPOND_START && e < _ERR_AUTORESPOND_END) {
+                        io_send_buf(e, NULL, 0);
+                        flags = IO_ASYNCH_REPLY;
+#ifdef HAVE_NBGL
+                        if (e != ERR_REJECTED_BY_USER) {
+                            ui_idle();
+                            display_error();
+                        }
+#else
+                        ui_idle();
+#endif
+                    } else {
+                        PRINTF("Uncaught error 0x%x", (unsigned) e);
+#ifdef RESET_ON_CRASH
+                        // Reset device
+                        io_seproxyhal_se_reset();
+#endif
+                    }
+                }
+            }
+            FINALLY {
+            }
+        }
+        END_TRY;
+    }
 }

@@ -38,4 +38,3 @@ jobs:
         fuzz-seconds: 300 # 5 minutes
         mode: ${{ matrix.mode }}
         sanitizer: ${{ matrix.sanitizer }}
-     
