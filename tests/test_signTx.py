@@ -34,7 +34,10 @@ from input_files.signTx import poolRegistrationOwnerTestCases, poolRegistrationO
 from input_files.signTx import transactionInitRejectTestCases, addressParamsRejectTestCases, certificateStakingRejectTestCases
 from input_files.signTx import withdrawalRejectTestCases, witnessRejectTestCases, testsInvalidTokenBundleOrdering
 from input_files.signTx import singleAccountRejectTestCases, collateralOutputRejectTestCases, testsCVoteRegistrationRejects
-
+from input_files.signTx import certificateRejectTestCases, certificateStakePoolRetirementRejectTestCases
+from input_files.signTx import poolRegistrationOwnerRejectTestCases, invalidCertificates, invalidPoolMetadataTestCases
+from input_files.signTx import invalidRelayTestCases, stakePoolRegistrationPoolIdRejectTestCases
+from input_files.signTx import stakePoolRegistrationOwnerRejectTestCases, outputRejectTestCases
 from utils import idTestFunc, verify_signature
 
 
@@ -1189,7 +1192,11 @@ def _gatherWitnessPaths(testCase: SignTxTestCase) -> List[str]:
     "testCase",
     transactionInitRejectTestCases + addressParamsRejectTestCases + certificateStakingRejectTestCases + \
     withdrawalRejectTestCases + witnessRejectTestCases + testsInvalidTokenBundleOrdering + \
-    singleAccountRejectTestCases + collateralOutputRejectTestCases + testsCVoteRegistrationRejects,
+    singleAccountRejectTestCases + collateralOutputRejectTestCases + testsCVoteRegistrationRejects + \
+    certificateRejectTestCases + certificateStakePoolRetirementRejectTestCases +\
+    poolRegistrationOwnerRejectTestCases + invalidCertificates + invalidPoolMetadataTestCases + \
+    invalidRelayTestCases + stakePoolRegistrationPoolIdRejectTestCases + \
+    stakePoolRegistrationPoolIdRejectTestCases + stakePoolRegistrationOwnerRejectTestCases + outputRejectTestCases,
     ids=idTestFunc
 )
 def test_signTx_reject(firmware: Firmware,
