@@ -151,7 +151,7 @@ def _signMsg_confirm(firmware: Firmware,
     return response.data
 
 
-def _check_result(testCase: SignMsgTestCase, data: bytes) -> None:
+def _check_result(testCase: SignMsgTestCase, buffer: bytes) -> None:
     """Check the response, containing
     - ED25519 signature (64 bytes)
     - Public key (32 bytes)
@@ -163,17 +163,13 @@ def _check_result(testCase: SignMsgTestCase, data: bytes) -> None:
     PUBLIC_KEY_LENGTH = 32
     MAX_ADDRESS_SIZE = 128
     # Check the response length
-    assert len(data) <= ED25519_SIGNATURE_LENGTH + PUBLIC_KEY_LENGTH + 4 + MAX_ADDRESS_SIZE
-    # Check the signature
-    buffer = data
+    assert len(buffer) <= ED25519_SIGNATURE_LENGTH + PUBLIC_KEY_LENGTH + 4 + MAX_ADDRESS_SIZE
+    # Get the signature
     buffer, signature = pop_sized_buf_from_buffer(buffer, ED25519_SIGNATURE_LENGTH)
-    assert signature.hex() == testCase.expected.signatureHex
-    # Check the public key
+    # Get the public key
     buffer, signingPublicKey = pop_sized_buf_from_buffer(buffer, PUBLIC_KEY_LENGTH)
-    assert signingPublicKey.hex() == testCase.expected.signingPublicKeyHex
-    # Check the address field
+    # Get the address field
     buffer, _, addressField = pop_size_prefixed_buf_from_buf(buffer, 4)
-    assert addressField.hex() == testCase.expected.addressFieldHex
 
     # Check the public key
     pk, _ = get_device_pubkey(testCase.msgData.signingPath)
@@ -190,11 +186,11 @@ def _check_result(testCase: SignMsgTestCase, data: bytes) -> None:
         assert addressField == address[1:]
 
     # Check the signature
-    payload = _generate_payload(testCase)
+    payload = _generate_payload(testCase, addressField)
     verify_signature(testCase.msgData.signingPath, signature, payload)
 
 
-def _generate_payload(testCase: SignMsgTestCase) -> bytes:
+def _generate_payload(testCase: SignMsgTestCase, addressField: bytes) -> bytes:
     """Generate the payload to sign
 
     Args:
@@ -207,7 +203,7 @@ def _generate_payload(testCase: SignMsgTestCase) -> bytes:
     array = []
     dico = {
         1: -8,
-        "address": bytes.fromhex(testCase.expected.addressFieldHex)
+        "address": addressField
     }
 
     array.append("Signature1")

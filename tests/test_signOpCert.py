@@ -59,8 +59,6 @@ def test_opCert(firmware: Firmware,
     assert response and response.status == Errors.SW_SUCCESS
 
     # Check the response
-    assert response.data.hex() == testCase.expected.signatureHex
-
     msg = bytes()
     msg += bytes.fromhex(testCase.opCert.kesPublicKeyHex)
     msg += testCase.opCert.issueCounter.to_bytes(8, 'big')
