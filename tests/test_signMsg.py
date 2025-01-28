@@ -40,15 +40,6 @@ def test_sign_message(firmware: Firmware,
     # Use the app interface instead of raw interface
     client = CommandSender(backend)
 
-    if firmware == Firmware.NANOS:
-        moves = {
-            "init": [NavInsID.RIGHT_CLICK] + [NavInsID.BOTH_CLICK] * 2,
-            "chunk": [NavInsID.BOTH_CLICK],
-            "confirm": [NavInsID.BOTH_CLICK] + [NavInsID.RIGHT_CLICK]
-        }
-        if testCase.msgData.messageHex:
-            moves["chunk"] += [NavInsID.BOTH_CLICK]
-
     # Send the INIT APDU
     _signMsg_init(firmware, navigator, client, testCase)
 
@@ -79,9 +70,9 @@ def _signMsg_init(firmware: Firmware,
         if firmware.is_nano:
             if firmware == Firmware.NANOS:
                 moves = [NavInsID.RIGHT_CLICK] + [NavInsID.BOTH_CLICK] * 2
-                navigator.navigate(moves)
             else:
-                navigator.navigate(testCase.nav.init)
+                moves = testCase.nav.init
+            navigator.navigate(moves)
         else:
             navigator.navigate([NavInsID.SWIPE_CENTER_TO_LEFT])
     # Check the status (Asynchronous)
@@ -102,16 +93,15 @@ def _signMsg_chunk(firmware: Firmware,
         testCase (SignMsgTestCase): The test case
     """
 
-    if firmware == Firmware.NANOS:
-        moves = [NavInsID.BOTH_CLICK]
-        if testCase.msgData.messageHex:
-            moves += [NavInsID.BOTH_CLICK]
     with client.sign_msg_chunk(testCase):
         if firmware.is_nano:
             if firmware == Firmware.NANOS:
-                navigator.navigate(moves)
+                moves = [NavInsID.BOTH_CLICK]
+                if testCase.msgData.messageHex:
+                    moves += [NavInsID.BOTH_CLICK]
             else:
-                navigator.navigate(testCase.nav.chunk)
+                moves = testCase.nav.chunk
+            navigator.navigate(moves)
         else:
             navigator.navigate([NavInsID.TAPPABLE_CENTER_TAP])
     # Check the status (Asynchronous)
@@ -140,9 +130,9 @@ def _signMsg_confirm(firmware: Firmware,
         if firmware.is_nano:
             if firmware == Firmware.NANOS:
                 moves = [NavInsID.BOTH_CLICK] + [NavInsID.RIGHT_CLICK]
-                navigator.navigate(moves)
             else:
-                navigator.navigate(testCase.nav.confirm)
+                moves = testCase.nav.confirm
+            navigator.navigate(moves)
         else:
             scenario_navigator.address_review_approve(do_comparison=False)
     # Check the status (Asynchronous)

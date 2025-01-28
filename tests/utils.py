@@ -14,7 +14,7 @@ from bip_utils.bip.bip32.bip32_path import Bip32Path, Bip32PathParser
 from ecdsa.curves import Ed25519
 from ecdsa.keys import VerifyingKey
 from ragger.bip import calculate_public_key_and_chaincode, CurveChoice
-from ragger.conftest.configuration import OPTIONAL
+from ragger.bip.seed import SPECULOS_MNEMONIC
 
 from application_client.app_def import AddressType
 
@@ -91,7 +91,7 @@ def _deriveAddressByron(testCase: DeriveAddressTestCase) -> str:
     """Derive the Byron address from the path"""
 
    # Generate seed from mnemonic
-    seed_bytes = Bip39SeedGenerator(OPTIONAL.CUSTOM_SEED).Generate()
+    seed_bytes = Bip39SeedGenerator(SPECULOS_MNEMONIC).Generate()
 
     # Construct from seed
     bip44_mst_ctx = Bip44.FromSeed(seed_bytes, Bip44Coins.CARDANO_BYRON_LEDGER)
@@ -144,6 +144,7 @@ def _appenduint32(value: int) -> str:
     result += f"{chunks.pop():02x}"
     return result
 
+
 def get_device_pubkey(path: str) -> Tuple[bytes, str]:
     """ Retrieve the Public Key
 
@@ -153,9 +154,7 @@ def get_device_pubkey(path: str) -> Tuple[bytes, str]:
     Returns:
         The Reference PK and the byte Chain Code
     """
-    ref_pk, ref_chain_code = calculate_public_key_and_chaincode(CurveChoice.Ed25519Kholaw,
-                                                   path,
-                                                   OPTIONAL.CUSTOM_SEED)
+    ref_pk, ref_chain_code = calculate_public_key_and_chaincode(CurveChoice.Ed25519Kholaw, path)
     return bytes.fromhex(ref_pk[2:]), ref_chain_code
 
 

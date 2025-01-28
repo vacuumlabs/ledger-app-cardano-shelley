@@ -41,12 +41,9 @@ def test_opCert(firmware: Firmware,
 
     if firmware.is_nano:
         moves = []
-        moves += [NavInsID.BOTH_CLICK] * 2
-        moves += [NavInsID.RIGHT_CLICK]
-        moves += [NavInsID.BOTH_CLICK]
-        moves += [NavInsID.RIGHT_CLICK]
-        moves += [NavInsID.BOTH_CLICK]
         moves += [NavInsID.BOTH_CLICK] * 3
+        moves += [NavInsID.RIGHT_CLICK]
+        moves += [NavInsID.BOTH_CLICK] * 4
 
     # Send the INIT APDU
     with client.sign_opCert(testCase):

@@ -55,7 +55,7 @@ byronTestCases = [
                   Testnet,
                   AddressType.BYRON,
                   "m/44'/1815'/1'/0/12'",
-                  result="2657WMsDfac5GGdHMD6sR22tyhmFvuPrBZ79hvEvuisyUK9XCcB3nu8JecKuCXEkr"),
+                  result="2657WMsDfac5679tC5DgShwENgGLwAuGNanDjDaCzuEEqXDsP6i2345FcVkwRYVqX"),
 ]
 
 

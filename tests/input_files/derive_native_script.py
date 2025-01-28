@@ -73,7 +73,7 @@ ValidNativeScriptTestCases = [
     ValidNativeScriptTestCase("PUBKEY - device owned",
                               NativeScript(NativeScriptType.PUBKEY_DEVICE_OWNED,
                                            NativeScriptParamsPubkey("m/1852'/1815'/0'/0/0")),
-                              SignedData("5102a193b3d5f0c256fcc425836ffb15e7d96d3389f5e57dc6bea726")),
+                              SignedData("e02316efa0632d53c28c521fc7bcade6e929849ff8b44efb5a2cffc0")),
     ValidNativeScriptTestCase("PUBKEY - third party",
                               NativeScript(NativeScriptType.PUBKEY_THIRD_PARTY,
                                            NativeScriptParamsPubkey("3a55d9f68255dfbefa1efd711f82d005fae1be2e145d616c90cf0fa9")),
