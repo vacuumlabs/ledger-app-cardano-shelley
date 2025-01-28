@@ -18,17 +18,29 @@ from ragger.bip.seed import SPECULOS_MNEMONIC
 
 from application_client.app_def import AddressType
 
-from input_files.derive_address import DeriveAddressTestCase
-from input_files.pubkey import PubKeyTestCase
 from input_files.cvote import CVoteTestCase
+from input_files.derive_address import DeriveAddressTestCase
+from input_files.derive_native_script import ValidNativeScriptTestCase
+from input_files.pubkey import PubKeyTestCase
 from input_files.signOpCert import OpCertTestCase
 from input_files.signMsg import SignMsgTestCase
+from input_files.signTx import SignTxTestCase
 
 
 ROOT_SCREENSHOT_PATH = Path(__file__).parent.resolve()
 
 
-def idTestFunc(testCase: Union[DeriveAddressTestCase, PubKeyTestCase, CVoteTestCase, OpCertTestCase, SignMsgTestCase]) -> str:
+TestCases = Union[
+    CVoteTestCase,
+    DeriveAddressTestCase,
+    ValidNativeScriptTestCase,
+    PubKeyTestCase,
+    OpCertTestCase,
+    SignMsgTestCase,
+    SignTxTestCase
+]
+
+def idTestFunc(testCase: TestCases) -> str:
     """Retrieve the test case name for friendly display
 
     Args:
