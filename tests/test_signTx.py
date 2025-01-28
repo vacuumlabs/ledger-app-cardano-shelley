@@ -1214,4 +1214,4 @@ def test_signTx_reject(firmware: Firmware,
     with pytest.raises(ExceptionRAPDU) as err:
         # Send the APDU
         test_signTx(firmware, backend, navigator, scenario_navigator, testCase, appFlags)
-    assert err.value.status == testCase.expected.sw
+    assert err.value.status == testCase.expected_sw

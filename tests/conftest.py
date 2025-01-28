@@ -12,11 +12,6 @@ from application_client.command_sender import CommandSender
 #  ragger.configuration.OPTIONAL_CONFIGURATION
 # Please refer to ragger/conftest/configuration.py for their descriptions and accepted values
 
-# TODO: Remove the seed override when tests are all ported, and the expected hardcoded results are removed
-# pylint: disable=line-too-long
-configuration.OPTIONAL.CUSTOM_SEED = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-# pylint: enable=line-too-long
-
 
 #########################
 ### CONFIGURATION END ###

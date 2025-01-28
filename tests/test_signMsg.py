@@ -40,15 +40,6 @@ def test_sign_message(firmware: Firmware,
     # Use the app interface instead of raw interface
     client = CommandSender(backend)
 
-    if firmware == Firmware.NANOS:
-        moves = {
-            "init": [NavInsID.RIGHT_CLICK] + [NavInsID.BOTH_CLICK] * 2,
-            "chunk": [NavInsID.BOTH_CLICK],
-            "confirm": [NavInsID.BOTH_CLICK] + [NavInsID.RIGHT_CLICK]
-        }
-        if testCase.msgData.messageHex:
-            moves["chunk"] += [NavInsID.BOTH_CLICK]
-
     # Send the INIT APDU
     _signMsg_init(firmware, navigator, client, testCase)
 
@@ -79,9 +70,9 @@ def _signMsg_init(firmware: Firmware,
         if firmware.is_nano:
             if firmware == Firmware.NANOS:
                 moves = [NavInsID.RIGHT_CLICK] + [NavInsID.BOTH_CLICK] * 2
-                navigator.navigate(moves)
             else:
-                navigator.navigate(testCase.nav.init)
+                moves = testCase.nav.init
+            navigator.navigate(moves)
         else:
             navigator.navigate([NavInsID.SWIPE_CENTER_TO_LEFT])
     # Check the status (Asynchronous)
@@ -102,16 +93,15 @@ def _signMsg_chunk(firmware: Firmware,
         testCase (SignMsgTestCase): The test case
     """
 
-    if firmware == Firmware.NANOS:
-        moves = [NavInsID.BOTH_CLICK]
-        if testCase.msgData.messageHex:
-            moves += [NavInsID.BOTH_CLICK]
     with client.sign_msg_chunk(testCase):
         if firmware.is_nano:
             if firmware == Firmware.NANOS:
-                navigator.navigate(moves)
+                moves = [NavInsID.BOTH_CLICK]
+                if testCase.msgData.messageHex:
+                    moves += [NavInsID.BOTH_CLICK]
             else:
-                navigator.navigate(testCase.nav.chunk)
+                moves = testCase.nav.chunk
+            navigator.navigate(moves)
         else:
             navigator.navigate([NavInsID.TAPPABLE_CENTER_TAP])
     # Check the status (Asynchronous)
@@ -140,9 +130,9 @@ def _signMsg_confirm(firmware: Firmware,
         if firmware.is_nano:
             if firmware == Firmware.NANOS:
                 moves = [NavInsID.BOTH_CLICK] + [NavInsID.RIGHT_CLICK]
-                navigator.navigate(moves)
             else:
-                navigator.navigate(testCase.nav.confirm)
+                moves = testCase.nav.confirm
+            navigator.navigate(moves)
         else:
             scenario_navigator.address_review_approve(do_comparison=False)
     # Check the status (Asynchronous)
@@ -151,7 +141,7 @@ def _signMsg_confirm(firmware: Firmware,
     return response.data
 
 
-def _check_result(testCase: SignMsgTestCase, data: bytes) -> None:
+def _check_result(testCase: SignMsgTestCase, buffer: bytes) -> None:
     """Check the response, containing
     - ED25519 signature (64 bytes)
     - Public key (32 bytes)
@@ -163,17 +153,13 @@ def _check_result(testCase: SignMsgTestCase, data: bytes) -> None:
     PUBLIC_KEY_LENGTH = 32
     MAX_ADDRESS_SIZE = 128
     # Check the response length
-    assert len(data) <= ED25519_SIGNATURE_LENGTH + PUBLIC_KEY_LENGTH + 4 + MAX_ADDRESS_SIZE
-    # Check the signature
-    buffer = data
+    assert len(buffer) <= ED25519_SIGNATURE_LENGTH + PUBLIC_KEY_LENGTH + 4 + MAX_ADDRESS_SIZE
+    # Get the signature
     buffer, signature = pop_sized_buf_from_buffer(buffer, ED25519_SIGNATURE_LENGTH)
-    assert signature.hex() == testCase.expected.signatureHex
-    # Check the public key
+    # Get the public key
     buffer, signingPublicKey = pop_sized_buf_from_buffer(buffer, PUBLIC_KEY_LENGTH)
-    assert signingPublicKey.hex() == testCase.expected.signingPublicKeyHex
-    # Check the address field
+    # Get the address field
     buffer, _, addressField = pop_size_prefixed_buf_from_buf(buffer, 4)
-    assert addressField.hex() == testCase.expected.addressFieldHex
 
     # Check the public key
     pk, _ = get_device_pubkey(testCase.msgData.signingPath)
@@ -190,11 +176,11 @@ def _check_result(testCase: SignMsgTestCase, data: bytes) -> None:
         assert addressField == address[1:]
 
     # Check the signature
-    payload = _generate_payload(testCase)
+    payload = _generate_payload(testCase, addressField)
     verify_signature(testCase.msgData.signingPath, signature, payload)
 
 
-def _generate_payload(testCase: SignMsgTestCase) -> bytes:
+def _generate_payload(testCase: SignMsgTestCase, addressField: bytes) -> bytes:
     """Generate the payload to sign
 
     Args:
@@ -207,7 +193,7 @@ def _generate_payload(testCase: SignMsgTestCase) -> bytes:
     array = []
     dico = {
         1: -8,
-        "address": bytes.fromhex(testCase.expected.addressFieldHex)
+        "address": addressField
     }
 
     array.append("Signature1")

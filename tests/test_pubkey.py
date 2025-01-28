@@ -18,7 +18,7 @@ from application_client.app_def import Errors
 from application_client.command_sender import CommandSender
 from application_client.command_builder import P1Type
 
-from input_files.pubkey import PubKeyTestCase, expectedPubKey
+from input_files.pubkey import PubKeyTestCase
 from input_files.pubkey import rejectTestCases, testsShelleyUsualNoConfirm, testsCVoteKeysNoConfirm
 from input_files.pubkey import byronTestCases, testsShelleyUsual, testsShelleyUnusual, testsColdKeys, testsCVoteKeys
 
@@ -59,7 +59,7 @@ def test_pubkey_confirm(firmware: Firmware,
     assert response and response.status == Errors.SW_SUCCESS
 
     # Check the response
-    _check_pubkey_result(response.data, testCase.path, testCase.expected)
+    _check_pubkey_result(response.data, testCase.path)
 
 
 @pytest.mark.parametrize(
@@ -106,7 +106,7 @@ def test_pubkey_several(firmware: Firmware,
         assert response and response.status == Errors.SW_SUCCESS
 
         # Check the response
-        _check_pubkey_result(response.data, test.path, test.expected)
+        _check_pubkey_result(response.data, test.path)
 
         remainingKeysData = 0
         p1 = P1Type.P1_KEY_NEXT
@@ -130,7 +130,7 @@ def test_pubkey(backend: BackendInterface, testCase: PubKeyTestCase) -> None:
     assert response and response.status == Errors.SW_SUCCESS
 
     # Check the response
-    _check_pubkey_result(response.data, testCase.path, testCase.expected)
+    _check_pubkey_result(response.data, testCase.path)
 
 
 @pytest.mark.parametrize(
@@ -151,8 +151,6 @@ def test_pubkey_reject(backend: BackendInterface,
     assert err.value.status == Errors.SW_REJECTED_BY_POLICY
 
 
-def _check_pubkey_result(data: bytes, path: str, expected: expectedPubKey) -> None:
+def _check_pubkey_result(data: bytes, path: str) -> None:
     ref_pk, ref_chaincode = get_device_pubkey(path)
-    assert data.hex() == expected.publicKey + expected.chainCode
-    assert expected.publicKey == ref_pk.hex()
-    assert expected.chainCode == ref_chaincode
+    assert data.hex() == ref_pk.hex() + ref_chaincode

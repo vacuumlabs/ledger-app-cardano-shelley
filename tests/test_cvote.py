@@ -39,7 +39,7 @@ def test_cvote(firmware: Firmware,
     _cvote_init(firmware, navigator, client, testCase)
 
     # Send the CONFIRM APDUs
-    msgData = _cvote_confirm(firmware, navigator, scenario_navigator, client, testCase)
+    msgData = _cvote_confirm(firmware, navigator, scenario_navigator, client)
 
     # Send the WITNESS APDUs
     msgSig = _cvote_witness(firmware, navigator, scenario_navigator, client, testCase)
@@ -87,8 +87,7 @@ def _cvote_init(firmware: Firmware,
 def _cvote_confirm(firmware: Firmware,
                    navigator: Navigator,
                    scenario_navigator: NavigateWithScenario,
-                   client: CommandSender,
-                   testCase: CVoteTestCase) -> bytes:
+                   client: CommandSender) -> bytes:
     """cVOTE CONFIRM
 
     Args:
@@ -96,7 +95,6 @@ def _cvote_confirm(firmware: Firmware,
         navigator (Navigator): The navigator instance
         scenario_navigator (NavigateWithScenario): the NavigateWithScenario instance
         client (CommandSender): The command sender instance
-        testCase (CVoteTestCase): The test case
 
     Return:
         data hash to be signed
@@ -114,9 +112,6 @@ def _cvote_confirm(firmware: Firmware,
     # Check the status (Asynchronous)
     response = client.get_async_response()
     assert response and response.status == Errors.SW_SUCCESS
-
-    # Check the response
-    assert response.data.hex() == testCase.expected.dataHashHex
     return response.data
 
 
@@ -151,7 +146,4 @@ def _cvote_witness(firmware: Firmware,
     # Check the status (Asynchronous)
     response = client.get_async_response()
     assert response and response.status == Errors.SW_SUCCESS
-
-    # Check the response
-    assert response.data.hex() == testCase.expected.witnessSignatureHex
     return response.data
