@@ -41,7 +41,7 @@ size_t str_formatDecimalAmount(uint64_t amount, size_t places, char* out, size_t
 
     // Size without terminating character
     STATIC_ASSERT(sizeof(ptr - scratchBuffer) == sizeof(size_t), "bad size_t size");
-    size_t rawSize = (size_t)(ptr - scratchBuffer);
+    size_t rawSize = (size_t) (ptr - scratchBuffer);
     ASSERT(rawSize + 1 <= outSize);
 
     // Copy reversed & append terminator
@@ -121,7 +121,7 @@ uint64_t abs_int64(int64_t number) {
         if (number == INT64_MIN) {
             return ((uint64_t) INT64_MAX) + 1;
         } else {
-            return (uint64_t)(-number);
+            return (uint64_t) (-number);
         }
     } else {
         return (uint64_t) number;

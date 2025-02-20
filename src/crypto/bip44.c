@@ -344,7 +344,7 @@ size_t bip44_printToStr(const bip44_path_t* pathSpec, char* out, size_t outSize)
     {                                                                                 \
         ASSERT(ptr <= end);                                                           \
         STATIC_ASSERT(sizeof(end - ptr) == sizeof(size_t), "bad size_t size");        \
-        size_t availableSize = (size_t)(end - ptr);                                   \
+        size_t availableSize = (size_t) (end - ptr);                                  \
         /* Note(ppershing): We do not bother checking return */                       \
         /* value of snprintf as it always returns 0. */                               \
         /* Go figure ... */                                                           \
