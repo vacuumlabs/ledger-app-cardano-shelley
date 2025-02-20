@@ -148,13 +148,8 @@ void app_main(void) {
             CATCH_OTHER(e) {
 #ifdef HAVE_SWAP
                 if (G_called_from_swap) {
-                    if (e == ERR_UNKNOWN_INS) {
-                        send_swap_error(ERROR_GENERIC, APP_CODE_BAD_INS, NULL);
-                    } else {
-                        send_swap_error(ERROR_GENERIC, APP_CODE_DEFAULT, NULL);
-                    }
-                    // unreachable
-                    os_sched_exit(0);
+                    uint8_t app_code = (e == ERR_UNKNOWN_INS ? APP_CODE_BAD_INS : APP_CODE_DEFAULT);
+                    send_swap_error_simple(ERR_SWAP_FAIL, SWAP_EC_ERROR_GENERIC, app_code);
                 } else
 #endif
                 {
