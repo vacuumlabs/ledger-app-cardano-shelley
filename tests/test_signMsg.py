@@ -44,7 +44,7 @@ def test_sign_message(firmware: Firmware,
     _signMsg_init(firmware, navigator, client, testCase)
 
     # Send the CHUNK APDUs
-    _signMsg_chunk(firmware, navigator, client, testCase)
+    _signMsg_chunk(firmware, backend, navigator, client, testCase)
 
     # Send the CONFIRM APDUs
     signedData = _signMsg_confirm(firmware, navigator, scenario_navigator, client, testCase)
@@ -81,6 +81,7 @@ def _signMsg_init(firmware: Firmware,
 
 
 def _signMsg_chunk(firmware: Firmware,
+                   backend: BackendInterface,
                    navigator: Navigator,
                    client: CommandSender,
                    testCase: SignMsgTestCase) -> None:
@@ -103,7 +104,11 @@ def _signMsg_chunk(firmware: Firmware,
                 moves = testCase.nav.chunk
             navigator.navigate(moves)
         else:
-            navigator.navigate([NavInsID.TAPPABLE_CENTER_TAP])
+            if len(testCase.msgData.messageHex) > 0:
+                backend.wait_for_text_not_on_screen("Processing")
+            navigator.navigate([NavInsID.TAPPABLE_CENTER_TAP],
+                               screen_change_before_first_instruction=False,
+                               screen_change_after_last_instruction=False)
     # Check the status (Asynchronous)
     response = client.get_async_response()
     assert response and response.status == Errors.SW_SUCCESS
