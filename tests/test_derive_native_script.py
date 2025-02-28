@@ -99,12 +99,14 @@ def _deriveNativeScriptHash_addSimpleScript(firmware: Firmware,
             if complex_nav or script.type == NativeScriptType.PUBKEY_THIRD_PARTY:
                 moves += [NavInsID.RIGHT_CLICK]
             moves += [NavInsID.BOTH_CLICK]
+            navigator.navigate(moves)
         else:
             if complex_nav:
                 moves += [NavInsID.TAPPABLE_CENTER_TAP]
             moves += [NavInsID.SWIPE_CENTER_TO_LEFT]
-
-        navigator.navigate(moves)
+            navigator.navigate(moves,
+                               screen_change_before_first_instruction=False,
+                               screen_change_after_last_instruction=False)
     # Check the status (Asynchronous)
     response = client.get_async_response()
     assert response and response.status == Errors.SW_SUCCESS
