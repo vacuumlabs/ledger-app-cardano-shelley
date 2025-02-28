@@ -72,7 +72,6 @@ def test_pubkey_confirm(firmware: Firmware,
 def test_pubkey_several(firmware: Firmware,
                         backend: BackendInterface,
                         navigator: Navigator,
-                        scenario_navigator: NavigateWithScenario,
                         testCase: List[PubKeyTestCase]) -> None:
     """Check Several Public Key with confirmation"""
 
@@ -85,6 +84,7 @@ def test_pubkey_several(firmware: Firmware,
         else:
             valid_instr = [NavInsID.BOTH_CLICK]
     else:
+        nav_inst = NavInsID.SWIPE_CENTER_TO_LEFT
         valid_instr = [NavInsID.USE_CASE_ADDRESS_CONFIRMATION_CONFIRM]
     p1 = P1Type.P1_KEY_INIT
     remainingKeysData = len(testCase) - 1
@@ -98,7 +98,8 @@ def test_pubkey_several(firmware: Firmware,
                 if firmware.is_nano:
                     navigator.navigate_until_text(nav_inst, valid_instr, "Confirm")
                 else:
-                    scenario_navigator.address_review_approve(do_comparison=False)
+                    navigator.navigate_until_text(nav_inst, valid_instr, "Confirm",
+                                   screen_change_after_last_instruction=False)
             else:
                 pass
         # Check the status (Asynchronous)
