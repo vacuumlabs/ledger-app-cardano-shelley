@@ -3,9 +3,9 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master, develop ]
+    branches: [master, develop]
   pull_request:
-    branches: [ master, develop ]
+    branches: [master, develop]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -38,12 +38,12 @@ jobs:
           BOLOS_SDK=${BOLOS_SDK} DEVEL=1 DEFINES+=HEADLESS make
           echo "Build complete"
       - name: Install Node.js
-        run : apk add --update nodejs npm
-      - name : Install yarn
+        run: apk add --update nodejs npm
+      - name: Install yarn
         run: npm install --global yarn
       - name: Install Cardano JS Library
         run: git clone https://github.com/vacuumlabs/ledgerjs-cardano-shelley.git
-      - name : Run tests
+      - name: Run tests
         run: |
           BUILD_DEVICE_NAME="$(echo ${{ matrix.device }} | sed 's/nanosp/nanos2/')"
           speculos --model ${{ matrix.device }} build/$BUILD_DEVICE_NAME/bin/app.elf --seed "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --display headless &

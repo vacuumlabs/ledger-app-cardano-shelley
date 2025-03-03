@@ -11,7 +11,7 @@ uint8_t hex_parseNibble(const char c) {
 uint8_t hex_parseNibblePair(const char* buffer) {
     uint8_t first = hex_parseNibble(buffer[0]);
     uint8_t second = hex_parseNibble(buffer[1]);
-    return (uint8_t)((first << 4) + second);
+    return (uint8_t) ((first << 4) + second);
 }
 
 size_t decode_hex(const char* inStr, uint8_t* outBuffer, size_t outMaxSize) {

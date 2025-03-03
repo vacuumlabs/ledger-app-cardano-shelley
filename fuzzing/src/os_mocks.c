@@ -10,10 +10,8 @@ ux_state_t G_ux;
 
 bool G_called_from_swap;
 bool G_swap_response_ready;
+bool G_swap_signing_return_value_address;
 
-void __attribute__((noreturn)) swap_finalize_exchange_sign_transaction(bool is_success) {
-    exit(-1);
-}
 void nvm_write(void *dst_adr, void *src_adr, unsigned int src_len) {
     memcpy(dst_adr, src_adr, src_len);
 }

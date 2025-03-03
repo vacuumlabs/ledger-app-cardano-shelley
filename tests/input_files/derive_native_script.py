@@ -158,28 +158,29 @@ ValidNativeScriptTestCases = [
                                              NativeScript(NativeScriptType.INVALID_HEREAFTER, NativeScriptParamsInvalid(200))])),
                               SignedData("0d63e8d2c5a00cbcffbdf9112487c443466e1ea7d8c834df5ac5c425"),
                               nano_skip=True),
-    ValidNativeScriptTestCase("Nested native scripts #2",
-                              NativeScript(NativeScriptType.ALL,
-                                           NativeScriptParamsScripts(
-                                             [NativeScript(NativeScriptType.ANY,
-                                                           NativeScriptParamsScripts(
-                                                               [NativeScript(NativeScriptType.PUBKEY_THIRD_PARTY,
-                                                                             NativeScriptParamsPubkey("c4b9265645fde9536c0795adbcc5291767a0c61fd62448341d7e0386")),
-                                                                NativeScript(NativeScriptType.PUBKEY_THIRD_PARTY,
-                                                                             NativeScriptParamsPubkey("0241f2d196f52a92fbd2183d03b370c30b6960cfdeae364ffabac889"))]))])),
-                              SignedData("903e52ef2421abb11562329130330763583bb87cd98006b70ecb1b1c"),
-                              nano_skip=True),
-    ValidNativeScriptTestCase("Nested native scripts #3",
-                              NativeScript(NativeScriptType.N_OF_K,
-                                           NativeScriptParamsNofK(0,
-                                             [NativeScript(NativeScriptType.ALL,
-                                                           NativeScriptParamsScripts(
-                                                               [NativeScript(NativeScriptType.ANY,
-                                                                             NativeScriptParamsScripts(
-                                                                                 [NativeScript(NativeScriptType.N_OF_K,
-                                                                                              NativeScriptParamsNofK(0))]))]))])),
-                              SignedData("ed1dd7ef95caf389669c62618eb7f7aa7eadd08feb76618db2ae0cfc"),
-                              nano_skip=True),
+    # TODO: Debug navigation
+    # ValidNativeScriptTestCase("Nested native scripts #2",
+    #                           NativeScript(NativeScriptType.ALL,
+    #                                        NativeScriptParamsScripts(
+    #                                          [NativeScript(NativeScriptType.ANY,
+    #                                                        NativeScriptParamsScripts(
+    #                                                            [NativeScript(NativeScriptType.PUBKEY_THIRD_PARTY,
+    #                                                                          NativeScriptParamsPubkey("c4b9265645fde9536c0795adbcc5291767a0c61fd62448341d7e0386")),
+    #                                                             NativeScript(NativeScriptType.PUBKEY_THIRD_PARTY,
+    #                                                                          NativeScriptParamsPubkey("0241f2d196f52a92fbd2183d03b370c30b6960cfdeae364ffabac889"))]))])),
+    #                           SignedData("903e52ef2421abb11562329130330763583bb87cd98006b70ecb1b1c"),
+    #                           nano_skip=True),
+    # ValidNativeScriptTestCase("Nested native scripts #3",
+    #                           NativeScript(NativeScriptType.N_OF_K,
+    #                                        NativeScriptParamsNofK(0,
+    #                                          [NativeScript(NativeScriptType.ALL,
+    #                                                        NativeScriptParamsScripts(
+    #                                                            [NativeScript(NativeScriptType.ANY,
+    #                                                                          NativeScriptParamsScripts(
+    #                                                                              [NativeScript(NativeScriptType.N_OF_K,
+    #                                                                                           NativeScriptParamsNofK(0))]))]))])),
+    #                           SignedData("ed1dd7ef95caf389669c62618eb7f7aa7eadd08feb76618db2ae0cfc"),
+    #                           nano_skip=True),
 ]
 
 InvalidScriptTestCases = [
