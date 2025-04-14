@@ -38,7 +38,7 @@ jobs:
           BOLOS_SDK=${BOLOS_SDK} DEVEL=1 DEFINES+=HEADLESS make
           echo "Build complete"
       - name: Install Node.js
-        run: apk add --update nodejs npm
+        run: apt-get install --no-install-recommends -y nodejs npm g++
       - name: Install yarn
         run: npm install --global yarn
       - name: Install Cardano JS Library
@@ -47,7 +47,6 @@ jobs:
         run: |
           BUILD_DEVICE_NAME="$(echo ${{ matrix.device }} | sed 's/nanosp/nanos2/')"
           speculos --model ${{ matrix.device }} build/$BUILD_DEVICE_NAME/bin/app.elf --seed "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --display headless &
-          apk add g++ libusb-dev libusb eudev-dev eudev &&
           cd ledgerjs-cardano-shelley &&
           yarn install &&
           yarn test-speculos
