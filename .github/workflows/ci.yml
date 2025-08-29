@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        device: ["nanos", "nanox", "nanosp", "stax", "flex"]
+        device: ["nanox", "nanosp", "stax", "flex", "apex_p"]
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest

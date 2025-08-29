@@ -29,8 +29,8 @@ APPNAME      = "Cardano ADA"
 
 # Application version
 APPVERSION_M = 7
-APPVERSION_N = 2
-APPVERSION_P = 3
+APPVERSION_N = 3
+APPVERSION_P = 0
 APPVERSION   = "$(APPVERSION_M).$(APPVERSION_N).$(APPVERSION_P)"
 
 # Application source files
@@ -43,6 +43,7 @@ ICON_NANOX = icons/icon_ada_nanox.gif
 ICON_NANOSP = icons/icon_ada_nanox.gif
 ICON_STAX = icons/icon_ada_stax.gif
 ICON_FLEX = icons/icon_ada_flex.gif
+ICON_APEX_P = icons/icon_ada_apex_p.png
 
 # Application allowed derivation curves.
 CURVE_APP_LOAD_PARAMS = ed25519

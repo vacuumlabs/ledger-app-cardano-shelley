@@ -183,7 +183,7 @@ static void _display_confirmation(void) {
                                       .tuneId = TUNE_TAP_CASUAL};
 
     nbgl_pageContent_t content = {.type = INFO_LONG_PRESS,
-                                  .infoLongPress.icon = &C_cardano_64,
+                                  .infoLongPress.icon = &ICON_APP,
                                   .infoLongPress.text = uiContext.pageText[0],
                                   .infoLongPress.longPressText = "Hold to sign",
                                   .infoLongPress.longPressToken = CONFIRMATION_STATUS_TOKEN,
@@ -211,7 +211,7 @@ static void _display_light_confirmation(void) {
     // TODO "reject transaction" is used as a constant string in several places
     // and then applied also for signing messages and operational certificates.
     // We should change this as part of the upcoming larger UX rewrite.
-    nbgl_useCaseChoice(&C_cardano_64,
+    nbgl_useCaseChoice(&ICON_APP,
                        uiContext.pageText[0],
                        "",
                        "Confirm",
@@ -304,7 +304,7 @@ static void _display_page(void) {
 static void _display_prompt(void) {
     TRACE("_prompt");
 
-    nbgl_useCaseReviewStart(&C_cardano_64,
+    nbgl_useCaseReviewStart(&ICON_APP,
                             uiContext.pageText[0],
                             uiContext.pageText[1],
                             "Reject transaction",
@@ -319,7 +319,7 @@ static void _display_prompt(void) {
 static void _display_warning(void) {
     TRACE("_warning");
 
-    nbgl_useCaseReviewStart(&C_Warning_64px,
+    nbgl_useCaseReviewStart(&ICON_WARNING,
                             "WARNING",
                             uiContext.pageText[0],
                             "Reject if not sure",
@@ -342,7 +342,7 @@ static void display_choice_callback(bool choice) {
 static void _display_choice(void) {
     TRACE("_choice");
 
-    nbgl_useCaseChoice(&C_Important_Circle_64px,
+    nbgl_useCaseChoice(&ICON_INFO,
                        uiContext.pageText[0],
                        uiContext.pageText[1],
                        "Allow",
@@ -562,7 +562,7 @@ void display_address(callback_t userAcceptCallback, callback_t userRejectCallbac
 
     nbgl_useCaseAddressReview(uiContext.tagContent[address_index],
                               &uiContext.pairList,
-                              &C_cardano_64,
+                              &ICON_APP,
                               "Verify Cardano address",
                               NULL,
                               light_confirm_callback);
@@ -619,7 +619,7 @@ void display_warning_fee(void) {
     info.topRightStyle = NO_BUTTON_STYLE;
     info.tuneId = TUNE_LOOK_AT_ME;
 
-    info.centeredInfo.icon = &C_Important_Circle_64px;
+    info.centeredInfo.icon = &ICON_INFO;
     info.centeredInfo.text1 = "Fee are above\n5 ADA";
     info.centeredInfo.text3 = "Swipe to review";
     info.centeredInfo.style = LARGE_CASE_GRAY_INFO;

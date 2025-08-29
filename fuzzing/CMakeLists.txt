@@ -113,6 +113,8 @@ include_directories(
     ${BOLOS_SDK}/lib_bagl/include
     ${BOLOS_SDK}/lib_ux/include
     ${BOLOS_SDK}/lib_standard_app
+    ${BOLOS_SDK}/io/include
+    ${BOLOS_SDK}/io_legacy/include
 
     ${CARDANO_PATH}/src
     ${CARDANO_PATH}/src/addressUtils
