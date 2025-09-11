@@ -28,23 +28,6 @@ set(SDK_PATH ${BOLOS_SDK})
 set(UX_PATH ${SDK_PATH}/lib_ux)
 set(CARDANO_PATH ..)
 
-set(UX_SOURCE
-    ${UX_PATH}/src/ux_flow_engine.c
-    ${UX_PATH}/src/ux_layout_bb.c
-    ${UX_PATH}/src/ux_layout_bn.c
-    ${UX_PATH}/src/ux_layout_bnn.c
-    ${UX_PATH}/src/ux_layout_bnnn.c
-    ${UX_PATH}/src/ux_layout_nn.c
-    ${UX_PATH}/src/ux_layout_paging.c
-    ${UX_PATH}/src/ux_layout_paging_compute.c
-    ${UX_PATH}/src/ux_layout_pbb.c
-    ${UX_PATH}/src/ux_layout_pb.c
-    ${UX_PATH}/src/ux_layout_pn.c
-    ${UX_PATH}/src/ux_layout_pnn.c
-    ${UX_PATH}/src/ux_layout_utils.c
-    ${UX_PATH}/src/ux_stack.c
-)
-
 set(CARDANO_SOURCE
     ${CARDANO_PATH}/src/addressUtils/addressUtilsByron.c
     ${CARDANO_PATH}/src/addressUtils/addressUtilsShelley.c
@@ -84,10 +67,6 @@ set(CARDANO_SOURCE
     ${CARDANO_PATH}/src/txHashBuilder/txHashBuilder.c
     ${CARDANO_PATH}/src/ui/ui_callback.c
     ${CARDANO_PATH}/src/ui/uiHelpers.c
-    ${CARDANO_PATH}/src/ui/bagl/menu_nanox.c
-    ${CARDANO_PATH}/src/ui/bagl/uiHelpers_nanos.c
-    ${CARDANO_PATH}/src/ui/bagl/uiHelpers_nanox.c
-    ${CARDANO_PATH}/src/ui/bagl/uiScreens_bagl.c
     ${CARDANO_PATH}/src/ui/nbgl/ui_menu_nbgl.c
     ${CARDANO_PATH}/src/ui/nbgl/ui_nbgl.c
     ${CARDANO_PATH}/src/ui/nbgl/uiScreens_nbgl.c
@@ -108,10 +87,11 @@ set(CARDANO_SOURCE
 
 include_directories(
     ${BOLOS_SDK}/include
-    ${BOLOS_SDK}/target/nanox/include
+    ${BOLOS_SDK}/target/stax/include
+    ${BOLOS_SDK}/lib_nbgl/include
     ${BOLOS_SDK}/lib_cxng/include
-    ${BOLOS_SDK}/lib_bagl/include
     ${BOLOS_SDK}/lib_ux/include
+    ${BOLOS_SDK}/lib_ux_nbgl
     ${BOLOS_SDK}/lib_standard_app
     ${BOLOS_SDK}/io/include
     ${BOLOS_SDK}/io_legacy/include
@@ -146,10 +126,12 @@ include_directories(
 
 add_compile_definitions(
     FUZZING
-    HAVE_BAGL
-    BAGL_WIDTH=128
-    BAGL_HEIGHT=64
-    HAVE_UX_FLOW
+    HAVE_NBGL
+    NBGL_PAGE
+    HAVE_PIEZO_SOUND
+    TARGET_STAX
+    HAVE_SE_TOUCH
+    SCREEN_SIZE_WALLET
 
     MAJOR_VERSION=1
     MINOR_VERSION=1
@@ -182,6 +164,8 @@ add_compile_definitions(
     APP_FEATURE_POOL_RETIREMENT
     APP_FEATURE_BYRON_ADDRESS_DERIVATION
     APP_FEATURE_BYRON_PROTOCOL_MAGIC_CHECK
+
+    OS_IO_SEPH_BUFFER_SIZE=300
     )
 
 add_compile_options(
@@ -189,10 +173,9 @@ add_compile_options(
 )
 
 set(SOURCE
-    ${UX_SOURCE}
     ${CARDANO_SOURCE}
     ./src/os_mocks.c
-    ./src/glyphs.c
+    ./src/ui_mocks.c
     ./src/crc32.c
 )
 
