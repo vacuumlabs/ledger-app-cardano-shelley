@@ -330,7 +330,12 @@ void tx_advanceStage() {
         case SIGN_STAGE_WITNESSES:
             ctx->stage = SIGN_STAGE_NONE;
             ui_idle();  // we are done with this tx
-            endTxStatus();
+#ifdef HAVE_SWAP
+            if (!G_called_from_swap)
+#endif
+            {
+                endTxStatus();
+            }
             break;
 
         case SIGN_STAGE_NONE:
