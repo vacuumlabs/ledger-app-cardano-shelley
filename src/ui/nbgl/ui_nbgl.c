@@ -319,7 +319,7 @@ static void _display_prompt(void) {
 static void _display_warning(void) {
     TRACE("_warning");
 
-    nbgl_useCaseReviewStart(&ICON_WARNING,
+    nbgl_useCaseReviewStart(&LARGE_WARNING_ICON,
                             "WARNING",
                             uiContext.pageText[0],
                             "Reject if not sure",
@@ -342,7 +342,7 @@ static void display_choice_callback(bool choice) {
 static void _display_choice(void) {
     TRACE("_choice");
 
-    nbgl_useCaseChoice(&ICON_INFO,
+    nbgl_useCaseChoice(&IMPORTANT_CIRCLE_ICON,
                        uiContext.pageText[0],
                        uiContext.pageText[1],
                        "Allow",
@@ -619,7 +619,7 @@ void display_warning_fee(void) {
     info.topRightStyle = NO_BUTTON_STYLE;
     info.tuneId = TUNE_LOOK_AT_ME;
 
-    info.centeredInfo.icon = &ICON_INFO;
+    info.centeredInfo.icon = &IMPORTANT_CIRCLE_ICON;
     info.centeredInfo.text1 = "Fee are above\n5 ADA";
     info.centeredInfo.text3 = "Swipe to review";
     info.centeredInfo.style = LARGE_CASE_GRAY_INFO;

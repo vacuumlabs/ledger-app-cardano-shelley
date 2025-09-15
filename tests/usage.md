@@ -21,7 +21,7 @@ docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
 cd <your app repository>
 
 docker run --user "$(id -u)":"$(id -g)" --rm -ti -v "$(realpath .):/app" --privileged -v "/dev/bus/usb:/dev/bus/usb" ledger-app-builder-lite:latest
-make clean && make BOLOS_SDK=$<device>_SDK      # replace <device> with one of [NANOS, NANOX, NANOSP, STAX, FLEX, APEX_P]
+make clean && make BOLOS_SDK=$<device>_SDK      # replace <device> with the targeted device
 exit
 ```
 
@@ -45,7 +45,7 @@ docker pull ghcr.io/ledgerhq/ledger-app-builder/ledger-app-builder-lite:latest
 cd app-<appname>/
 
 docker run --user "$(id -u)":"$(id -g)" --rm -ti -v "$(realpath .):/app" --privileged -v "/dev/bus/usb:/dev/bus/usb" ledger-app-builder-lite:latest
-make clean && make BOLOS_SDK=$<device>_SDK load     # replace <device> with one of [NANOS, NANOX, NANOSP, STAX, FLEX, APEX_P]
+make clean && make BOLOS_SDK=$<device>_SDK load     # replace <device> with the targeted device
 exit
 ```
 

@@ -43,7 +43,7 @@ ICON_NANOX = icons/icon_ada_nanox.gif
 ICON_NANOSP = icons/icon_ada_nanox.gif
 ICON_STAX = icons/icon_ada_stax.gif
 ICON_FLEX = icons/icon_ada_flex.gif
-ICON_APEX_P = icons/icon_ada_apex_p.png
+ICON_APEX_P = icons/icon_ada_apex.png
 
 # Application allowed derivation curves.
 CURVE_APP_LOAD_PARAMS = ed25519

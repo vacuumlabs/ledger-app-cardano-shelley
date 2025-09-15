@@ -51,13 +51,9 @@ void display_warning_fee(void);
 void fee_high_cb(int token, uint8_t index);
 
 #if defined(TARGET_STAX) || defined(TARGET_FLEX)
-#define ICON_APP     C_cardano_64
-#define ICON_WARNING C_Warning_64px
-#define ICON_INFO    C_Info_Circle_64px
+#define ICON_APP C_cardano_64
 #elif defined(TARGET_APEX_P)
-#define ICON_APP     C_cardano_48
-#define ICON_WARNING LARGE_WARNING_ICON
-#define ICON_INFO    C_Info_Circle_48px
+#define ICON_APP C_cardano_48
 #endif
 
 #endif
