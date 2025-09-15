@@ -7,7 +7,11 @@
 #define _TO_STR1_(x) #x
 #define _TO_STR2_(x) _TO_STR1_(x)
 
+#ifdef FUZZING
+#define STATIC_ASSERT(...)
+#else
 #define STATIC_ASSERT _Static_assert
+#endif
 
 extern void assert(int cond, const char* msgStr);
 
