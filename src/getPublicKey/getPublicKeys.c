@@ -127,7 +127,7 @@ static void getPublicKeys_handleInitAPDU(const uint8_t* wireDataBuffer, size_t w
                 ASSERT_TYPE(ctx->numPaths, uint16_t);
                 ASSERT(remainingPaths < UINT16_MAX);
 
-                ctx->numPaths = (uint16_t)(remainingPaths + 1);
+                ctx->numPaths = (uint16_t) (remainingPaths + 1);
 
                 VALIDATE(view_remainingSize(&view) == 0, ERR_INVALID_DATA);
 

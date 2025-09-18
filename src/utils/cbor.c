@@ -95,7 +95,7 @@ cbor_token_t cbor_parseToken(const uint8_t* buf, size_t size) {
         }
         int64_t negativeValue;
         if (result.value < INT64_MAX) {
-            negativeValue = -((int64_t)(result.value + 1));
+            negativeValue = -((int64_t) (result.value + 1));
         } else {
             negativeValue = INT64_MIN;
         }
@@ -133,7 +133,7 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
             if (negativeValue >= 0) {
                 THROW(ERR_UNEXPECTED_TOKEN);
             }
-            value = (uint64_t)(-negativeValue) - 1;
+            value = (uint64_t) (-negativeValue) - 1;
         }
             __attribute__((fallthrough));
         case CBOR_TYPE_UNSIGNED:
@@ -153,7 +153,7 @@ size_t cbor_writeToken(uint8_t type, uint64_t value, uint8_t* buffer, size_t buf
 
     if (value < VALUE_W1_UPPER_THRESHOLD) {
         CHECK_BUF_LEN(1);
-        u1be_write(buffer, (uint8_t)(type | value));
+        u1be_write(buffer, (uint8_t) (type | value));
         return 1;
     } else if (value < VALUE_W2_UPPER_THRESHOLD) {
         CHECK_BUF_LEN(1 + 1);

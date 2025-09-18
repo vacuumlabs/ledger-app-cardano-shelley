@@ -19,6 +19,7 @@
                 has_thrown = true;                                        \
             }                                                             \
             CATCH_OTHER(e) {                                              \
+                UNUSED(e);                                                \
                 /* pass */                                                \
             }                                                             \
             FINALLY {                                                     \

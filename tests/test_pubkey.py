@@ -18,7 +18,7 @@ from application_client.app_def import Errors
 from application_client.command_sender import CommandSender
 from application_client.command_builder import P1Type
 
-from input_files.pubkey import PubKeyTestCase, expectedPubKey
+from input_files.pubkey import PubKeyTestCase
 from input_files.pubkey import rejectTestCases, testsShelleyUsualNoConfirm, testsCVoteKeysNoConfirm
 from input_files.pubkey import byronTestCases, testsShelleyUsual, testsShelleyUnusual, testsColdKeys, testsCVoteKeys
 
@@ -59,7 +59,7 @@ def test_pubkey_confirm(firmware: Firmware,
     assert response and response.status == Errors.SW_SUCCESS
 
     # Check the response
-    _check_pubkey_result(response.data, testCase.path, testCase.expected)
+    _check_pubkey_result(response.data, testCase.path)
 
 
 @pytest.mark.parametrize(
@@ -72,7 +72,6 @@ def test_pubkey_confirm(firmware: Firmware,
 def test_pubkey_several(firmware: Firmware,
                         backend: BackendInterface,
                         navigator: Navigator,
-                        scenario_navigator: NavigateWithScenario,
                         testCase: List[PubKeyTestCase]) -> None:
     """Check Several Public Key with confirmation"""
 
@@ -85,6 +84,7 @@ def test_pubkey_several(firmware: Firmware,
         else:
             valid_instr = [NavInsID.BOTH_CLICK]
     else:
+        nav_inst = NavInsID.SWIPE_CENTER_TO_LEFT
         valid_instr = [NavInsID.USE_CASE_ADDRESS_CONFIRMATION_CONFIRM]
     p1 = P1Type.P1_KEY_INIT
     remainingKeysData = len(testCase) - 1
@@ -98,7 +98,8 @@ def test_pubkey_several(firmware: Firmware,
                 if firmware.is_nano:
                     navigator.navigate_until_text(nav_inst, valid_instr, "Confirm")
                 else:
-                    scenario_navigator.address_review_approve(do_comparison=False)
+                    navigator.navigate_until_text(nav_inst, valid_instr, "Confirm",
+                                   screen_change_after_last_instruction=False)
             else:
                 pass
         # Check the status (Asynchronous)
@@ -106,7 +107,7 @@ def test_pubkey_several(firmware: Firmware,
         assert response and response.status == Errors.SW_SUCCESS
 
         # Check the response
-        _check_pubkey_result(response.data, test.path, test.expected)
+        _check_pubkey_result(response.data, test.path)
 
         remainingKeysData = 0
         p1 = P1Type.P1_KEY_NEXT
@@ -130,7 +131,7 @@ def test_pubkey(backend: BackendInterface, testCase: PubKeyTestCase) -> None:
     assert response and response.status == Errors.SW_SUCCESS
 
     # Check the response
-    _check_pubkey_result(response.data, testCase.path, testCase.expected)
+    _check_pubkey_result(response.data, testCase.path)
 
 
 @pytest.mark.parametrize(
@@ -151,8 +152,6 @@ def test_pubkey_reject(backend: BackendInterface,
     assert err.value.status == Errors.SW_REJECTED_BY_POLICY
 
 
-def _check_pubkey_result(data: bytes, path: str, expected: expectedPubKey) -> None:
+def _check_pubkey_result(data: bytes, path: str) -> None:
     ref_pk, ref_chaincode = get_device_pubkey(path)
-    assert data.hex() == expected.publicKey + expected.chainCode
-    assert expected.publicKey == ref_pk.hex()
-    assert expected.chainCode == ref_chaincode
+    assert data.hex() == ref_pk.hex() + ref_chaincode

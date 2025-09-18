@@ -330,7 +330,12 @@ void tx_advanceStage() {
         case SIGN_STAGE_WITNESSES:
             ctx->stage = SIGN_STAGE_NONE;
             ui_idle();  // we are done with this tx
-            endTxStatus();
+#ifdef HAVE_SWAP
+            if (!G_called_from_swap)
+#endif
+            {
+                endTxStatus();
+            }
             break;
 
         case SIGN_STAGE_NONE:
@@ -487,11 +492,8 @@ __noinline_due_to_stack__ static void signTx_handleInitAPDU(uint8_t p2,
     if (G_called_from_swap) {
         if (G_swap_response_ready) {
             // Safety against trying to make the app sign multiple TX
-            // This code should never be triggered as the app is supposed to exit after
-            // sending the signed transaction
             PRINTF("Safety against double signing triggered\n");
-            swap_finalize_exchange_sign_transaction(false);
-            os_sched_exit(-1);
+            send_swap_error_simple(ERR_SWAP_FAIL, SWAP_EC_ERROR_INTERNAL, APP_CODE_MULTI_SIGN);
         }
         // We will quit the app after this transaction, whether it succeeds or fails
         PRINTF("Swap response is ready, the app will quit after the next send\n");
@@ -945,9 +947,7 @@ __noinline_due_to_stack__ static void signTx_handleFeeAPDU(uint8_t p2,
 #ifdef HAVE_SWAP
     if (G_called_from_swap) {
         if (!swap_check_fee_validity(BODY_CTX->stageData.fee)) {
-            send_swap_error(ERROR_WRONG_FEES, APP_CODE_DEFAULT, NULL);
-            // unreachable
-            os_sched_exit(0);
+            send_swap_error_simple(ERR_SWAP_FAIL, SWAP_EC_ERROR_WRONG_FEES, APP_CODE_DEFAULT);
         }
         policy = POLICY_ALLOW_WITHOUT_PROMPT;
     } else
@@ -2708,7 +2708,8 @@ __noinline_due_to_stack__ static void signTx_handleWitnessAPDU(uint8_t p2,
     if (G_called_from_swap) {
         if (ctx->stage == SIGN_STAGE_NONE) {
             // Consider step is completed
-            swap_finalize_exchange_sign_transaction(true);
+            *G_swap_signing_return_value_address = true;
+            os_lib_end();
         }
     }
 #endif

@@ -14,9 +14,6 @@ typedef struct swap_validated_s {
 
 static swap_validated_t G_swap_validated;
 
-// Save the BSS address where we will write the return value when finished
-static uint8_t* G_swap_sign_return_value_address;
-
 // Save the data validated during the Exchange app flow
 bool swap_copy_transaction_parameters(create_transaction_parameters_t* params) {
     PRINTF("Inside swap_copy_transaction_parameters\n");
@@ -67,9 +64,6 @@ bool swap_copy_transaction_parameters(create_transaction_parameters_t* params) {
 
     // Full reset the global variables
     os_explicit_zero_BSS_segment();
-
-    // Keep the address at which we'll reply the signing status
-    G_swap_sign_return_value_address = &params->result;
 
     // Commit from stack to global data, params becomes tainted but we won't access it anymore
     memcpy(&G_swap_validated, &swap_validated, sizeof(swap_validated));
@@ -179,12 +173,6 @@ bool swap_check_fee_validity(uint64_t fee) {
     }
     PRINTF("VALID!\n");
     return true;
-}
-
-void __attribute__((noreturn)) swap_finalize_exchange_sign_transaction(bool is_success) {
-    PRINTF("is_success: %d\n", is_success);
-    *G_swap_sign_return_value_address = is_success;
-    os_lib_end();
 }
 
 #endif  // HAVE_SWAP

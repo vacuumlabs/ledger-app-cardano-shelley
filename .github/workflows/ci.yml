@@ -3,9 +3,9 @@ name: CI
 on:
   # Triggers the workflow on push or pull request events but only for the master branch
   push:
-    branches: [ master, develop ]
+    branches: [master, develop]
   pull_request:
-    branches: [ master, develop ]
+    branches: [master, develop]
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -21,7 +21,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        device: ["nanos", "nanox", "nanosp", "stax", "flex"]
+        device: ["nanox", "nanosp", "stax", "flex", "apex_p"]
     runs-on: ubuntu-latest
     container:
       image: ghcr.io/ledgerhq/ledger-app-builder/ledger-app-dev-tools:latest
@@ -38,16 +38,15 @@ jobs:
           BOLOS_SDK=${BOLOS_SDK} DEVEL=1 DEFINES+=HEADLESS make
           echo "Build complete"
       - name: Install Node.js
-        run : apk add --update nodejs npm
-      - name : Install yarn
+        run: apt-get install --no-install-recommends -y nodejs npm g++
+      - name: Install yarn
         run: npm install --global yarn
       - name: Install Cardano JS Library
         run: git clone https://github.com/vacuumlabs/ledgerjs-cardano-shelley.git
-      - name : Run tests
+      - name: Run tests
         run: |
           BUILD_DEVICE_NAME="$(echo ${{ matrix.device }} | sed 's/nanosp/nanos2/')"
           speculos --model ${{ matrix.device }} build/$BUILD_DEVICE_NAME/bin/app.elf --seed "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about" --display headless &
-          apk add g++ libusb-dev libusb eudev-dev eudev &&
           cd ledgerjs-cardano-shelley &&
           yarn install &&
           yarn test-speculos

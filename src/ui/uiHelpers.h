@@ -162,6 +162,7 @@ static inline void ui_crash_handler() {
             THROW(EXCEPTION_IO_RESET);  \
         }                               \
         CATCH_OTHER(e) {                \
+            UNUSED(e);                  \
             TRACE("Error %d", (int) e); \
             ui_crash_handler();         \
         }                               \

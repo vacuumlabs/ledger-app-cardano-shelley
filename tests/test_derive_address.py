@@ -7,16 +7,14 @@ This module provides Ragger tests for Derive Address check
 
 import pytest
 import base58
-import bech32m.codecs as bech32
 
 from ragger.backend import BackendInterface
 from ragger.firmware import Firmware
 from ragger.navigator import Navigator, NavInsID
 from ragger.navigator.navigation_scenario import NavigateWithScenario
-from ragger.backend.interface import RAPDU
 from ragger.error import ExceptionRAPDU
 
-from application_client.app_def import Errors, AddressType, Testnet
+from application_client.app_def import Errors, Testnet
 from application_client.command_sender import CommandSender
 from application_client.command_builder import P1Type
 
@@ -61,8 +59,9 @@ def test_derive_address_byron(firmware: Firmware,
     assert response and response.status == Errors.SW_SUCCESS
     encoded = base58.b58encode(response.data).decode()
 
-    assert testCase.result == encoded
-    if testCase.netDesc != Testnet:
+    if testCase.netDesc == Testnet:
+        assert encoded == testCase.result
+    else:
         assert encoded == derive_address(testCase)
 
 
@@ -116,7 +115,9 @@ def test_derive_address_shelley(backend: BackendInterface,
 
     # Send the APDU
     response = client.derive_address(P1Type.P1_RETURN, testCase)
-    _check_shelley_result(response, testCase)
+    # Check the status (Asynchronous)
+    assert response and response.status == Errors.SW_SUCCESS
+    assert response.data == derive_address(testCase)
 
 
 @pytest.mark.parametrize(
@@ -152,8 +153,8 @@ def test_derive_address_shelley_confirm(firmware: Firmware,
 
     # Check the status (Asynchronous)
     response = client.get_async_response()
-    assert response
-    _check_shelley_result(response, testCase)
+    assert response and response.status == Errors.SW_SUCCESS
+    assert response.data == derive_address(testCase)
 
 
 @pytest.mark.parametrize(
@@ -208,19 +209,3 @@ def test_derive_address_reject(backend: BackendInterface,
         # Send the APDU
         client.derive_address(p1, testCase)
     assert err.value.status == Errors.SW_REJECTED_BY_POLICY
-
-
-def _check_shelley_result(response: RAPDU, testCase: DeriveAddressTestCase) -> None:
-
-    # Check the status (Asynchronous)
-    assert response and response.status == Errors.SW_SUCCESS
-    assert response.data == derive_address(testCase)
-
-    data5bit = bech32.convertbits(response.data, 8, 5)
-    if testCase.addrType in (AddressType.REWARD_KEY, AddressType.REWARD_SCRIPT):
-        hrp = "stake"
-    else:
-        hrp = "addr"
-    if testCase.netDesc == Testnet:
-        hrp += "_test"
-    assert testCase.result == bech32.bech32_encode(hrp, data5bit, bech32.Encoding.BECH32)

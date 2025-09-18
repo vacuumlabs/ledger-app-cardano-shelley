@@ -344,7 +344,8 @@ static size_t deriveAddress_reward(const addressParams_t* addressParams,
     { view_appendBuffer(&out, &addressHeader, 1); }
     {
         // no payment data
-    } {
+    }
+    {
         if (addressType == REWARD_KEY) {
             const bip44_path_t* stakingKeyPath = &addressParams->stakingKeyPath;
             // stake key path expected (corresponds to reward account)

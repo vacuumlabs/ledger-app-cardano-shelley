@@ -6,14 +6,10 @@
 #include <string.h>
 #include <ux.h>
 
-ux_state_t G_ux;
-
 bool G_called_from_swap;
 bool G_swap_response_ready;
+bool G_swap_signing_return_value_address;
 
-void __attribute__((noreturn)) swap_finalize_exchange_sign_transaction(bool is_success) {
-    exit(-1);
-}
 void nvm_write(void *dst_adr, void *src_adr, unsigned int src_len) {
     memcpy(dst_adr, src_adr, src_len);
 }
@@ -60,8 +56,7 @@ void halt() {
     for (;;)
         ;
 };
-void io_seproxyhal_display(const bagl_element_t *element) {
-}
+
 void io_send_buf(unsigned short code, unsigned char *buffer, size_t tx){};
 unsigned short io_exchange(unsigned char chan, unsigned short tx_len) {
     return 0;
@@ -93,11 +88,7 @@ unsigned int io_seph_is_status_sent(void) {
 bolos_bool_t os_perso_isonboarded(void) {
     return (bolos_bool_t) BOLOS_UX_OK;
 };
-void io_seproxyhal_display_default(const bagl_element_t *bagl) {
-    if (bagl->text) {
-        printf("[-] %s\n", bagl->text);
-    }
-}
+
 void io_seproxyhal_init_ux(void){};
 bolos_task_status_t os_sched_last_status(unsigned int task_idx) {
     return 1;

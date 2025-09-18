@@ -49,6 +49,13 @@ void display_error(void);
 void nbgl_reset_transaction_full_context(void);
 void display_warning_fee(void);
 void fee_high_cb(int token, uint8_t index);
+
+#if defined(TARGET_STAX) || defined(TARGET_FLEX)
+#define ICON_APP C_cardano_64
+#elif defined(TARGET_APEX_P)
+#define ICON_APP C_cardano_48
+#endif
+
 #endif
 
 #ifdef HAVE_BAGL

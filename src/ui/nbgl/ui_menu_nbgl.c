@@ -91,7 +91,7 @@ void ui_idle_flow(void) {
     switches[0].initState = app_mode_expert();
 
     nbgl_useCaseHomeAndSettings("Cardano",
-                                &C_cardano_64,
+                                &ICON_APP,
                                 NULL,
                                 INIT_HOME_PAGE,
                                 &settingContents,
